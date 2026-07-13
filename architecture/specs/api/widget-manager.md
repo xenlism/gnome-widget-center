@@ -1,0 +1,1 @@
+# Widget Manager API

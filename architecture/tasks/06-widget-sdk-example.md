@@ -1,0 +1,100 @@
+# Task 06 — Widget SDK Example Pack
+
+## Goal
+
+เดิม task นี้ทำแค่ widget นาฬิกาตัวเดียว — ขยายเป็น **"SDK example pack"** สอง widget
+เพื่อโชว์ขอบเขตการใช้ `WidgetAPI` ให้ครบกว่าเดิม คล้ายแนวทางของ KDE Plasma ที่ widget ตัวอย่าง
+มักมีทั้งแบบง่าย (แสดงข้อมูล) และแบบที่ต้องคุยกับ service ภายนอกของระบบ (เช่น Plasma's
+"Media Player" widget ที่คุย MPRIS):
+
+1. **`widgets/clock/`** — เหมือนเดิมทุกประการ (ดู Steps 1 ด้านล่าง คัดลอกมาจาก
+   `06-example-widget-clock.md` เวอร์ชันก่อนหน้า ไม่มีอะไรเปลี่ยน)
+2. **`widgets/media-player/`** (ใหม่) — Now-Playing widget ที่อ่าน/ควบคุมเพลงที่กำลังเล่นอยู่
+   ผ่าน **MPRIS2** (`org.mpris.MediaPlayer2.*` บน session DBus) — มาตรฐาน freedesktop.org
+   ที่ media player บน Linux แทบทุกตัวรองรับอยู่แล้ว (Spotify, VLC, Rhythmbox, Firefox ฯลฯ)
+
+widget ตัวที่สองนี้คือจุดสำคัญของ task นี้: มันพิสูจน์ว่า `WidgetAPI` ปัจจุบันรองรับ widget
+ที่ต้องคุยกับ **external system service** (ไม่ใช่แค่อ่าน settings/แสดงข้อมูล static) ได้โดยไม่ต้อง
+แก้ core — ถ้าทำไม่ได้ด้วย API ปัจจุบัน ให้หยุดแล้วรายงานกลับไปที่ `docs/WIDGET_API.md` แทนที่จะ
+แอบเพิ่ม hook พิเศษเฉพาะ widget นี้
+
+## Depends on
+
+`03-settings-store.md`
+
+*งานนี้ทำขนานกับ Phase 1 ท้าย ๆ ได้ — เริ่มจาก actor เปล่า ๆ ตั้งแต่หลัง task 01 เสร็จ
+แล้วค่อยเพิ่ม settings จริงตอน task 03 เสร็จ*
+
+## Context — `docs/WIDGET_API.md` §8
+
+`docs/WIDGET_API.md` ถูกเพิ่มหัวข้อ §8 "เข้าถึง external system DBus service (เช่น media
+player) จาก `widget.js`" แล้ว (นิยาม MPRIS proxy pattern + กติกาบังคับเรื่อง graceful
+degradation, ห้าม poll, ต้อง cleanup) — อ่านหัวข้อนี้ให้ครบก่อนเริ่มเขียน `media-player/widget.js`
+เพราะเป็นสเปกเดียวที่ widget นี้ต้อง enforce ตาม
+
+## Files to touch
+
+- `widgets/clock/metadata.json`, `widgets/clock/widget.js`, `widgets/clock/prefs.js`,
+  `widgets/clock/stylesheet.css` (เหมือนเดิมจาก task เวอร์ชันก่อนหน้า — ดู Steps 1)
+- `widgets/media-player/metadata.json`, `widgets/media-player/widget.js`,
+  `widgets/media-player/prefs.js`, `widgets/media-player/stylesheet.css` (ใหม่ทั้งหมด)
+
+(`docs/WIDGET_API.md` §8 ถูกเพิ่มไว้ล่วงหน้าแล้วตอนวางแผน task นี้ — **ไม่ต้องแก้ซ้ำ** นอกจาก
+พบว่าสเปกไม่พอจริงๆ ระหว่างเขียนโค้ด ถ้าเจอให้หยุดแล้วรายงานแทนที่จะแก้เอง)
+
+**ห้ามแก้ไฟล์ใด ๆ ใน `extension/`** — นี่คือจุดพิสูจน์ว่าระบบปลั๊กอินทำงานได้จริงตามเป้าหมาย
+โปรเจกต์ (เหมือนเดิมจาก version ก่อนหน้าของ task นี้) ถ้าพบว่าจำเป็นต้องแก้ core เพื่อให้
+widget ใดตัวหนึ่งทำงาน แปลว่า `WIDGET_API.md`/loader มีช่องโหว่ ให้หยุดแล้วรายงานกลับไปที่
+task 01/02 แทนที่จะแอบแก้
+
+## Steps (แนะนำ)
+
+### 1. `widgets/clock/` (ไม่เปลี่ยนจากเดิม)
+
+- `widget.js`: แสดงเวลาปัจจุบัน อัปเดตทุกวินาที (หรือทุกนาทีถ้า `showSeconds: false`) ใช้
+  `GLib.timeout_add_seconds` — ต้อง remove source ใน `disable()`
+- Settings: `format24h`, `showSeconds`, `showDate`, `fontSize`
+- `prefs.js`: switch row ต่อ boolean setting + `Adw.SpinRow` สำหรับ `fontSize`
+- `stylesheet.css`: namespace ด้วย prefix `clock-widget-`
+
+### 2. `widgets/media-player/` (ใหม่)
+
+1. `widget.js`:
+   - ตอน `enable()`: watch `org.freedesktop.DBus` หา service ที่ชื่อขึ้นต้นด้วย
+     `org.mpris.MediaPlayer2.` (อาจมีมากกว่า 1 ตัวเปิดพร้อมกัน — เวอร์ชันแรกเลือกตัวแรกที่เจอพอ
+     บันทึกไว้เป็น known limitation ใน Notes)
+   - สร้าง `Gio.DBusProxy` ผูกกับ interface `org.mpris.MediaPlayer2.Player` แล้วอ่าน
+     `Metadata` (title/artist/art), `PlaybackStatus`
+   - แสดง: ชื่อเพลง, ศิลปิน, ปุ่ม Play/Pause, Previous, Next (เรียก method `PlayPause()`,
+     `Previous()`, `Next()` ของ interface เดียวกัน)
+   - ไม่มี media player เปิดอยู่ → แสดง placeholder เช่น "No media playing" ไม่ throw
+2. Settings ที่รองรับ (ตาม `getDefaultSettings()`):
+   - `showArtwork: boolean`
+   - `compactMode: boolean` (ซ่อนปุ่ม previous/next เหลือแค่ play/pause — คล้าย compact
+     representation ของ Plasma widget)
+3. `prefs.js`: switch row สำหรับสอง setting ข้างบน
+4. `stylesheet.css`: namespace ด้วย prefix `media-player-widget-`
+
+## Acceptance criteria
+
+- [ ] `widgets/clock/` ผ่าน acceptance เดิมทุกข้อ (โชว์เวลาถูกต้อง, เปลี่ยน `format24h` ผ่าน
+      Control Center แล้วอัปเดตโดยไม่ต้อง restart)
+- [ ] `widgets/media-player/` วางในโฟลเดอร์ bundled แล้ว: เปิด media player ที่รองรับ MPRIS
+      (เช่น เปิดเพลงใน Firefox/VLC) → widget แสดงชื่อเพลง/ศิลปินถูกต้องภายในไม่กี่วินาที
+- [ ] กด Play/Pause/Next/Previous บน widget → media player ตอบสนองจริง
+- [ ] ปิด media player ทั้งหมดระหว่าง widget กำลังแสดงผล → widget ไม่ crash, กลับไปแสดง
+      placeholder "No media playing"
+- [ ] ปิด/เปิด widget ทั้งสองตัวซ้ำๆ หลายรอบ ไม่มี memory leak / timer / DBus proxy ค้าง
+      (เช็คด้วย Looking Glass หรือ `ps`/`top`)
+- [ ] `docs/WIDGET_API.md` §8 ถูกเพิ่มจริง และ widget ทั้งสองใช้ทดสอบ regression ของทุก task
+      ก่อนหน้า (00-05) ผ่านหมดเมื่อรันร่วมกัน
+
+## Out of scope
+
+- Seek/progress bar, volume control, queue/playlist (เพิ่มทีหลังได้ถ้าต้องการ เปิด task ใหม่)
+- เลือก media player ที่ต้องการเองเมื่อมีหลายตัวเปิดพร้อมกัน (เวอร์ชันแรกเลือกตัวแรกที่เจอ)
+- Timezone อื่นนอกจาก timezone ของระบบสำหรับ `clock` (เหมือนเดิมจาก task เวอร์ชันก่อนหน้า)
+
+## Notes from implementation
+
+_(เติมหลังทำเสร็จ)_

@@ -1,0 +1,12 @@
+{
+  "id": "template-widget",
+  "name": "Template Widget",
+  "description": "Empty template used to exercise the widget loader pipeline end-to-end. Copy this folder as a starting point for a real widget.",
+  "version": "1.0.0",
+  "author": "gnome-widget-center",
+  "api-version": 1,
+  "entry": "widget.js",
+  "prefs": "prefs.js",
+  "default-size": { "width": 160, "height": 60 },
+  "default-position": { "x": 40, "y": 40, "monitor": 0 }
+}

@@ -1,0 +1,67 @@
+# ROADMAP.md — สถานะงานทั้งหมด (source of truth)
+
+อัปเดตทุกครั้งที่ทำ task เสร็จ — นี่คือไฟล์ที่ต้องแนบให้ AI ตัวใหม่ดูก่อนเริ่มงานเสมอ
+
+## Phase 0 — Validate ความเป็นไปได้ (ต้องทำก่อนอย่างอื่นทั้งหมด)
+
+- [x] `00-project-setup.md` — ตั้ง repo skeleton + validate feasibility บน GNOME 50/Wayland จริง
+
+## Phase 1 — Core host extension (ทำเรียงตามลำดับ)
+
+- [ ] `01-widget-loader-core.md` — ระบบ discover/load widget จากโฟลเดอร์
+- [ ] `02-widget-layer-rendering.md` — ชั้นแสดงผล (Widget Layer) บนพื้นโต๊ะ
+- [ ] `03-settings-store.md` — JSON settings store ต่อ widget
+- [ ] `04-drag-reposition.md` — ลาก widget เปลี่ยนตำแหน่งได้ (Super+drag)
+
+## Phase 2 — UX / Control Center
+
+- [ ] `05-prefs-control-center.md` — GUI จัดการ widget (list/enable/disable/settings)
+- [ ] `07-multi-monitor-support.md` — รองรับหลายจอ/เปลี่ยนความละเอียด
+
+*(ทำขนานกับ Phase 1 ท้าย ๆ ได้ ถ้า loader/layer นิ่งพอแล้ว)*
+
+## Phase 3 — Developer experience
+
+- [ ] `06-widget-sdk-example.md` — widget SDK example pack (นาฬิกา + media-player ผ่าน MPRIS)
+      ใช้ทดสอบทุก task ก่อนหน้า
+- [ ] `08-hot-reload-dev-mode.md` — โหมด dev ให้แก้ widget แล้วเห็นผลไม่ต้อง restart shell ทั้งก้อน
+- [ ] `09-packaging-third-party-docs.md` — ทำ `widgets/_template/` + คู่มือแจก widget แยกจากโปรเจกต์
+
+## Phase 4 — Release
+
+- [ ] `10-testing-release.md` — เทส end-to-end, เขียน CHANGELOG, เตรียมขึ้น extensions.gnome.org
+
+## Phase 5 — Post-release feature
+
+- [ ] `11-theme-backup-restore.md` — Export/Import settings ทั้งหมดเป็นไฟล์ theme เดียว (JSON)
+
+## Notes (2026-07-13)
+
+`03-settings-store.md` และ `04-drag-reposition.md` เคยถูกแก้ให้อ้าง DBus + SQLite service
+แยกโปรเซส ("Widget Center Service") ซึ่งขัดกับ `docs/ARCHITECTURE.md`/`docs/SETTINGS_SPEC.md`
+โดยตรงและไม่เคยมีสเปกรองรับ — แก้กลับมาเป็น JSON in-process ตามเอกสารเดิมแล้ว (ดูหมายเหตุใน
+ไฟล์ task ทั้งสอง) ฟีเจอร์ export/import เป็น theme ที่ตั้งใจไว้เดิม ถูกแยกออกเป็น
+`11-theme-backup-restore.md` แทน เพราะ scope ต่างจาก per-widget settings store
+
+`06-example-widget-clock.md` ถูกเปลี่ยนชื่อเป็น `06-widget-sdk-example.md` และขยาย scope
+เป็น example pack 2 widget (clock + media-player ผ่าน MPRIS) เพื่อโชว์ว่า `WidgetAPI` รองรับ
+widget ที่คุยกับ external system DBus service ได้โดยไม่ต้องแก้ core — ดู §8 ใหม่ใน
+`docs/WIDGET_API.md`
+
+**แก้ code-level bug 3 จุดที่จะบล็อก task 03/04 ก่อนเริ่มได้จริง (รายละเอียดใน Notes from
+implementation ของ task 02/03 แต่ละไฟล์):**
+1. `settingsService.js` เดิม throw เสมอตอน `init()` เพราะมองหา schema ที่ติดตั้งระดับระบบ —
+   แก้เป็นใช้ `Extension.getSettings()` + เพิ่ม `extension/schemas/*.gschema.xml` ที่ compile
+   ไว้ในตัว extension เอง
+2. `WidgetLayer` (task 02) ไม่เคยรับ actor จริงจาก widget เลย, `extension.js` ไม่เคยแนบ layer
+   เข้า `background_group` — widget ที่โหลดสำเร็จไม่เคยโผล่บนพื้นโต๊ะจริง แก้ให้ครบ data flow
+   ตาม `docs/ARCHITECTURE.md` §4 แล้ว (ยังไม่ยืนยันบนเครื่องจริง)
+3. `docs/SETTINGS_SPEC.md` ขัดกันเองเรื่อง `host.json` vs GSettings — เลือกทาง GSettings
+   เท่านั้นสำหรับ host-level settings, `host.json` ไม่มีอยู่จริง (task 11 แก้ตามแล้ว)
+
+## Parallelizable tasks (ทำพร้อมกันได้ถ้ามี AI/เวลาหลายชุด)
+
+- หลัง 01 เสร็จ: 03 (settings store) กับ 06 (widget ตัวอย่าง แบบ actor เปล่า ๆ ก่อน) ทำขนานได้
+- หลัง 02 เสร็จ: 04 (drag) กับ 07 (multi-monitor) ทำขนานได้ เพราะแตะคนละไฟล์ในกลุ่ม
+  `widgetLayer.js` vs `dragController.js` (แต่ต้อง sync กันเรื่อง coordinate system)
+- 09 (docs/template) ทำขนานกับเกือบทุก phase ได้ เพราะเป็นเอกสาร ไม่ใช่โค้ด core
