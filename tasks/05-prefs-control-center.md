@@ -45,3 +45,25 @@
 
 - ไม่ต้องทำหน้า "install widget จาก URL/store ออนไลน์" ใน task นี้ (อาจเป็น task แยกในอนาคต
   ถ้าต้องการทำ "widget store" จริง ๆ — ปัจจุบันติดตั้งด้วยการ copy โฟลเดอร์เองพอ)
+
+## Notes from implementation
+
+- Toggle ปิด/เปิด widget สะท้อนผลบนพื้นโต๊ะ**ทันทีจริง** ไม่ต้อง restart shell — implement ผ่าน
+  `SettingsService.onChanged('disabled-widgets', ...)` ใน `extension.js` (แก้เพิ่มนอกเหนือจาก
+  `Files to touch` เดิม เพราะ acceptance criteria ข้อนี้ทำไม่ได้เลยถ้าไม่แตะ host — prefs.js
+  ปรับ GSettings key เดียวกับที่ `extension.js` ฟัง, ทั้งสอง process อ่าน/เขียน dconf ตัวเดียวกัน
+  จึงไม่ต้องมี IPC เพิ่มเอง) `WidgetLoader` เพิ่ม `loadOne()`/`unloadOne()` (แยกจาก body เดิมของ
+  `loadAll()`/`unloadAll()`) ให้ `extension.js`'s `_applyDisabledWidgets()` เรียกได้ทีละ widget
+  โดยไม่กระทบตัวอื่น
+- ค่า settings ที่แก้จากหน้า "Settings" ของ widget (กด Settings ใน Control Center) **ไม่**
+  สะท้อนผลบนพื้นโต๊ะแบบ real-time — เขียนลง `widgets/<id>.json` ผ่าน `WidgetSettings`/
+  `StorageService` เหมือนกัน แต่ instance ที่รันอยู่ใน Shell process มี settings proxy เป็น
+  in-memory ของตัวเอง คนละ process กับ prefs จึงไม่รู้ว่าไฟล์เปลี่ยน ต้อง toggle ปิด/เปิด widget
+  นั้น (หรือ restart shell) ถึงจะเห็นค่าใหม่ — ตรงตามทางเลือก "ช้า" ที่ acceptance criteria
+  อนุญาตไว้ การทำ real-time ข้าม process ต้องมี notification channel เพิ่ม (เช่น file watcher ใน
+  `widget.js` เอง) ซึ่งเกินขอบเขต task นี้
+- ใช้ `Adw.PreferencesWindow.present_subpage()` สำหรับหน้า Settings ของแต่ละ widget (ยังใช้ได้ใน
+  libadwaita ที่มากับ GNOME 45+ แม้จะมี `Adw.NavigationView` เป็นทางเลือกใหม่กว่า) เลือกอันนี้
+  เพราะเรียบง่ายกว่าและ `docs/WIDGET_API.md`/prompt ของ task ไม่ได้ระบุ pattern เฉพาะ
+- Error ของ widget ที่ metadata.json พัง มาจาก `WidgetLoader.discover()`/`.errors` โดยตรง (ของเดิม
+  จาก task 01) — `prefsWidgetList.js` แค่ pass through ไม่ได้ทำ validation ซ้ำ

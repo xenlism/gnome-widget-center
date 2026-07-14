@@ -100,4 +100,52 @@ export class SettingsService {
 
         Gio.Settings.sync();
     }
+
+    /**
+     * @method isReady
+     * @description Whether init() has completed successfully — callers
+     *   (extension.js, prefs.js) treat SettingsService as non-essential
+     *   per its own init() doc comment, so this lets them check once
+     *   instead of wrapping every call in try/catch.
+     * @returns {boolean}
+     */
+    get isReady() {
+        return this._isInitialized;
+    }
+
+    /**
+     * @method onChanged
+     * @description Subscribes to live GSettings changes for one key (task
+     * 05 — lets the Control Center's toggle switches take effect on the
+     * desktop immediately, without a shell restart: prefs.js runs in a
+     * separate GTK4 process, but both processes are watching the SAME
+     * dconf-backed key, so this fires in the Shell process whenever the
+     * prefs process changes it). Returns the GObject signal handler id,
+     * to be passed to disconnect() during teardown.
+     * @param {string} key
+     * @param {function(*):void} callback - called with the new unpacked
+     *   value every time the key changes, from either process.
+     * @returns {number} handlerId
+     */
+    onChanged(key, callback) {
+        if (!this._isInitialized) {
+            throw new Error('SettingsService has not been initialized yet.');
+        }
+
+        return this._globalSettings.connect(`changed::${key}`, () => {
+            callback(this.getGlobalValue(key));
+        });
+    }
+
+    /**
+     * @method disconnect
+     * @description Disconnects a handler previously returned by
+     * onChanged(). Safe to call with a null/undefined handlerId (no-op) so
+     * callers don't need to guard every teardown path themselves.
+     * @param {number} [handlerId]
+     */
+    disconnect(handlerId) {
+        if (this._globalSettings && handlerId != null)
+            this._globalSettings.disconnect(handlerId);
+    }
 }

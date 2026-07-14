@@ -156,74 +156,98 @@ export class WidgetLoader {
 
     /**
      * discover() + loadModule() + instantiate + buildActor() + enable() for
-     * every widget found. Every step is isolated per-widget with try/catch
-     * so one bad widget (bad JSON, bad import, throwing constructor,
-     * throwing buildActor/enable) can never abort the others. Returns the
-     * list of successfully started entries; failures land in this.errors.
+     * every widget found (except any id in `disabledIds` — task 05's
+     * Control Center toggles, see extension.js — skipped before
+     * loadModule() ever runs, so a disabled widget's widget.js is never
+     * even imported). Every step is isolated per-widget with try/catch so
+     * one bad widget (bad JSON, bad import, throwing constructor, throwing
+     * buildActor/enable) can never abort the others. Returns the list of
+     * successfully started entries; failures land in this.errors.
+     * @param {Set<string>} [disabledIds] - widget ids to skip entirely.
      */
-    async loadAll() {
-        const widgets = this.discover();
+    async loadAll(disabledIds = new Set()) {
+        const widgets = this.discover().filter(w => !disabledIds.has(w.id));
         const started = [];
 
         for (const widgetInfo of widgets) {
-            const ModuleClass = await this.loadModule(widgetInfo);
-            if (!ModuleClass)
-                continue;
-
-            // Live proxy backed by widgets/<id>.json — no defaults applied
-            // yet, since defaults come from the instance we're about to
-            // construct (see widgetSettings.js header comment for why this
-            // has to be two-phase).
-            const settings = this._storageService
-                ? WidgetSettings.load(widgetInfo.id, this._storageService)
-                : {};
-
-            const api = this._buildApi(widgetInfo, settings);
-
-            let instance;
-            try {
-                instance = new ModuleClass(api);
-            } catch (e) {
-                this._recordError(widgetInfo, `constructor threw: ${e.message}`);
-                continue;
-            }
-
-            if (this._storageService) {
-                try {
-                    const defaults = instance.getDefaultSettings?.() ?? {};
-                    WidgetSettings.applyDefaults(settings, defaults);
-                } catch (e) {
-                    this._recordError(widgetInfo, `getDefaultSettings() threw: ${e.message}`);
-                }
-            }
-
-            let actor;
-            try {
-                actor = instance.buildActor();
-                if (!actor) {
-                    this._recordError(widgetInfo, 'buildActor() returned null/undefined');
-                    continue;
-                }
-            } catch (e) {
-                this._recordError(widgetInfo, `buildActor() threw: ${e.message}`);
-                continue;
-            }
-
-            try {
-                instance.enable?.();
-            } catch (e) {
-                // actor exists but enable() failed - still track the entry
-                // so unloadAll() cleans it up instead of leaking it.
-                this._recordError(widgetInfo, `enable() threw: ${e.message}`);
-            }
-
-            const entry = {...widgetInfo, ModuleClass, instance, actor};
-            this._instances.set(widgetInfo.id, entry);
-            started.push(entry);
-            this._logger.log?.(`[widget-loader] loaded "${widgetInfo.id}" from ${widgetInfo.path}`);
+            const entry = await this.loadOne(widgetInfo);
+            if (entry)
+                started.push(entry);
         }
 
         return started;
+    }
+
+    /**
+     * Loads and starts a single already-discovered widget — the per-widget
+     * body factored out of loadAll() so task 05's Control Center can turn a
+     * single widget back on (via its GSettings toggle) without re-running
+     * the whole discovery pipeline. No-op (returns the existing entry) if
+     * this widget id is already loaded, since addWidgetActor() would
+     * otherwise throw on the duplicate.
+     * @param {{id, metadata, path}} widgetInfo - one entry from discover()
+     * @returns {Promise<object|null>} the started entry, or null on any
+     *   failure (recorded in this.errors, same as loadAll()).
+     */
+    async loadOne(widgetInfo) {
+        if (this._instances.has(widgetInfo.id))
+            return this._instances.get(widgetInfo.id);
+
+        const ModuleClass = await this.loadModule(widgetInfo);
+        if (!ModuleClass)
+            return null;
+
+        // Live proxy backed by widgets/<id>.json — no defaults applied
+        // yet, since defaults come from the instance we're about to
+        // construct (see widgetSettings.js header comment for why this
+        // has to be two-phase).
+        const settings = this._storageService
+            ? WidgetSettings.load(widgetInfo.id, this._storageService)
+            : {};
+
+        const api = this._buildApi(widgetInfo, settings);
+
+        let instance;
+        try {
+            instance = new ModuleClass(api);
+        } catch (e) {
+            this._recordError(widgetInfo, `constructor threw: ${e.message}`);
+            return null;
+        }
+
+        if (this._storageService) {
+            try {
+                const defaults = instance.getDefaultSettings?.() ?? {};
+                WidgetSettings.applyDefaults(settings, defaults);
+            } catch (e) {
+                this._recordError(widgetInfo, `getDefaultSettings() threw: ${e.message}`);
+            }
+        }
+
+        let actor;
+        try {
+            actor = instance.buildActor();
+            if (!actor) {
+                this._recordError(widgetInfo, 'buildActor() returned null/undefined');
+                return null;
+            }
+        } catch (e) {
+            this._recordError(widgetInfo, `buildActor() threw: ${e.message}`);
+            return null;
+        }
+
+        try {
+            instance.enable?.();
+        } catch (e) {
+            // actor exists but enable() failed - still track the entry
+            // so unloadAll()/unloadOne() cleans it up instead of leaking it.
+            this._recordError(widgetInfo, `enable() threw: ${e.message}`);
+        }
+
+        const entry = {...widgetInfo, ModuleClass, instance, actor};
+        this._instances.set(widgetInfo.id, entry);
+        this._logger.log?.(`[widget-loader] loaded "${widgetInfo.id}" from ${widgetInfo.path}`);
+        return entry;
     }
 
     /**
@@ -238,19 +262,45 @@ export class WidgetLoader {
         // now-cancelled GLib timeout.
         WidgetSettings.flushAll();
 
-        for (const [id, entry] of this._instances) {
-            try {
-                entry.instance.disable?.();
-            } catch (e) {
-                this._logger.error?.(`[widget-loader] "${id}" disable() threw: ${e.message}`);
-            }
-            try {
-                entry.actor?.destroy?.();
-            } catch (e) {
-                this._logger.error?.(`[widget-loader] "${id}" actor destroy threw: ${e.message}`);
-            }
+        for (const id of Array.from(this._instances.keys()))
+            this._unloadOneInternal(id);
+    }
+
+    /**
+     * Unloads a single widget by id (task 05 — a Control Center toggle
+     * switching one widget off, without disabling the whole extension).
+     * Flushes that widget's own pending debounced settings write
+     * individually first, since unloadAll()'s single flushAll() call isn't
+     * involved in this path. Safe to call for an id that isn't currently
+     * loaded (no-op).
+     * @param {string} widgetId
+     */
+    unloadOne(widgetId) {
+        if (!this._instances.has(widgetId))
+            return;
+
+        WidgetSettings.flush(widgetId);
+        this._unloadOneInternal(widgetId);
+    }
+
+    /** @private shared teardown body for unloadAll()/unloadOne() — assumes
+     * any relevant settings flush already happened. */
+    _unloadOneInternal(id) {
+        const entry = this._instances.get(id);
+        if (!entry)
+            return;
+
+        try {
+            entry.instance.disable?.();
+        } catch (e) {
+            this._logger.error?.(`[widget-loader] "${id}" disable() threw: ${e.message}`);
         }
-        this._instances.clear();
+        try {
+            entry.actor?.destroy?.();
+        } catch (e) {
+            this._logger.error?.(`[widget-loader] "${id}" actor destroy threw: ${e.message}`);
+        }
+        this._instances.delete(id);
     }
 
     _recordError(widgetInfo, reason) {

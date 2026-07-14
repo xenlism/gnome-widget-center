@@ -97,4 +97,19 @@ task 01/02 แทนที่จะแอบแก้
 
 ## Notes from implementation
 
-_(เติมหลังทำเสร็จ)_
+- `widgets/clock/` implement ตามเดิมทุกประการ ไม่มีการแก้ `extension/` เลย ใช้
+  `GLib.timeout_add_seconds` ตัวเดียวต่อ instance, remove ใน `disable()`
+- `widgets/media-player/` เลือก media player ตัวแรกที่เจอจริงตามที่ระบุไว้ (ทั้งจาก
+  `ListNames` ตอน `enable()` และจาก `NameOwnerChanged` หลังจากนั้น) — ตัวที่สองที่เปิดพร้อมกัน
+  จะถูกมองข้ามจนกว่าตัวแรกจะปิด (`NameOwnerChanged` ที่ `newOwner` ว่างของ bus name เดิม)
+- ไม่ poll ด้วย timer เลยตามกติกาบังคับ §8 — ใช้ `g-properties-changed` ของ `Gio.DBusProxy`
+  สำหรับ Metadata/PlaybackStatus และ `NameOwnerChanged` ของ `org.freedesktop.DBus` สำหรับ
+  player เปิด/ปิด
+- ข้อมูลที่อ่านจาก MPRIS (ชื่อเพลง, ศิลปิน, art, playback status) เก็บเป็น local variable ใน
+  `_renderFromProxy()` เท่านั้น ไม่เคยเขียนลง `this._settings` — มีแค่ `showArtwork`/
+  `compactMode` (ที่ผู้ใช้ตั้งเอง) ที่ผ่าน settings จริง
+- ทดสอบ syntax ด้วย `node --check` ผ่านทุกไฟล์ (ไม่มี GNOME Shell จริงในสภาพแวดล้อมนี้ให้รัน
+  end-to-end ผ่าน Looking Glass/`ps` ตาม acceptance criteria ได้ — ต้องการเครื่อง GNOME 50 จริง
+  เพื่อ verify ข้อ MPRIS/leak เหล่านั้น)
+- ไม่ได้แก้ไฟล์ใดใน `extension/` สำหรับ task นี้ตามที่กำหนด — `WidgetAPI` ปัจจุบัน (settings,
+  logger) เพียงพอสำหรับทั้งสอง widget แล้วจริง ไม่ต้องรายงานช่องโหว่กลับไปที่ task 01/02
