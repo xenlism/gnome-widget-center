@@ -13,6 +13,10 @@
 - [ ] `03-settings-store.md` — JSON settings store ต่อ widget
 - [ ] `04-drag-reposition.md` — ลาก widget เปลี่ยนตำแหน่งได้ (Super+drag)
 
+*(checkbox 4 อันนี้ยังไม่ติ๊กแม้โค้ดจะเขียนครบและ acceptance criteria ผ่านหมดในระดับ logic
+แล้ว — ไม่มี GNOME Shell จริงให้รันในสภาพแวดล้อมที่ implement อยู่ ดู "Notes (2026-07-14)"
+ด้านล่างสำหรับสถานะละเอียดต่อ task ก่อนติ๊กจริงต้องทดสอบบนเครื่องที่มี GNOME Shell 45+ ก่อน)*
+
 ## Phase 2 — UX / Control Center
 
 - [ ] `05-prefs-control-center.md` — GUI จัดการ widget (list/enable/disable/settings)
@@ -58,6 +62,21 @@ implementation ของ task 02/03 แต่ละไฟล์):**
    ตาม `docs/ARCHITECTURE.md` §4 แล้ว (ยังไม่ยืนยันบนเครื่องจริง)
 3. `docs/SETTINGS_SPEC.md` ขัดกันเองเรื่อง `host.json` vs GSettings — เลือกทาง GSettings
    เท่านั้นสำหรับ host-level settings, `host.json` ไม่มีอยู่จริง (task 11 แก้ตามแล้ว)
+
+## Notes (2026-07-14)
+
+`03-settings-store.md` และ `04-drag-reposition.md` — เขียนโค้ดครบตาม spec แล้ว
+(`extension/lib/widgetSettings.js`, `extension/lib/dragController.js` ใหม่ทั้งคู่ + เชื่อมเข้า
+`widgetLoader.js`/`extension.js`), acceptance criteria ผ่านหมดในระดับ logic:
+
+- Task 03: มี unit test จริง (mock `GLib`/`StorageService` ใน Node เพราะไม่ต้องพึ่ง Clutter)
+  ครอบ debounce-collapse, default-merge, path ตรงสเปก, สอง widget ไม่ชนกัน — รันผ่านหมด
+- Task 04: ตรวจแค่อ่านโค้ด + syntax-check เพราะพึ่ง `Clutter`/`global.stage` ซึ่ง mock ยากกว่า —
+  **ยังไม่ยืนยันบนเครื่องจริง** เหมือนกับ task 01/02 (ดู bug ที่แก้ไปแล้วของสองอันนั้นด้านบน)
+
+เจอ + แก้บั๊กเดิมไปด้วยระหว่างทำ: `storageService.js` เขียนไฟล์ widget settings เป็น
+`widget-<id>.json` ที่ root ของ storage dir ตรงๆ ซึ่งขัดกับ path ที่ `docs/SETTINGS_SPEC.md`
+กำหนด (`widgets/<id>.json`) — แก้ให้สร้างโฟลเดอร์ย่อย `widgets/` แล้วตรงสเปกแล้ว
 
 ## Parallelizable tasks (ทำพร้อมกันได้ถ้ามี AI/เวลาหลายชุด)
 

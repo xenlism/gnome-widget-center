@@ -3,7 +3,11 @@
 // Host extension entry point. Wires together (per docs/ARCHITECTURE.md §4):
 //   WidgetLoader (discover/load widget modules + call buildActor())
 //     -> WidgetLayer (places each real actor in the scene graph)
-//   StorageService (layout.json positions) <-> WidgetLayer
+//     -> WidgetSettings (per-widget JSON settings, backs api.settings)
+//   StorageService (layout.json positions, widgets/*.json settings)
+//     <-> WidgetLayer, WidgetSettings, DragController
+//   DragController (Super+drag -> WidgetLayer in-memory move, single
+//     StorageService write on drop)
 //   SettingsService (host-level GSettings, e.g. disabled-widgets)
 //
 // enable()/disable() must stay synchronous per the GNOME Shell extension
@@ -19,6 +23,7 @@ import {WidgetLoader} from './lib/widgetLoader.js';
 import {WidgetLayer} from './lib/widgetLayer.js';
 import {StorageService} from './lib/storageService.js';
 import {SettingsService} from './lib/settingsService.js';
+import {DragController} from './lib/dragController.js';
 
 export default class WidgetCenterExtension extends Extension {
     enable() {
@@ -39,13 +44,20 @@ export default class WidgetCenterExtension extends Extension {
         this._layer = new WidgetLayer(this._storage);
         this._layer.init();
 
+        // Super+drag repositioning (task 04) - shares the same layer (for
+        // real-time in-memory moves) and storage (for the single
+        // persisted write on drop) as everything else, no new services.
+        this._drag = new DragController(this._layer, this._storage);
+
         // --- widget discovery/loading ----------------------------------
         const bundledWidgetsPath = GLib.build_filenamev([this.path, 'widgets']);
         const userWidgetsPath = GLib.build_filenamev([
             GLib.get_user_data_dir(), 'gnome-widget-center', 'widgets',
         ]);
 
-        const loader = new WidgetLoader([bundledWidgetsPath, userWidgetsPath]);
+        // Passing this._storage backs api.settings with the real
+        // per-widget JSON store (task 03) instead of the old stub `{}`.
+        const loader = new WidgetLoader([bundledWidgetsPath, userWidgetsPath], this._storage);
         this._loader = loader;
 
         let cancelled = false;
@@ -69,6 +81,14 @@ export default class WidgetCenterExtension extends Extension {
                     const position = this._layer.getSavedPosition(entry.id, fallback);
                     try {
                         this._layer.addWidgetActor(entry.id, entry.actor, position);
+                        // metadata.json uses "monitor" (docs/WIDGET_API.md
+                        // §2 example) while saved layout entries use
+                        // "monitorIndex" (storageService.js) - accept
+                        // either so a widget's very first placement
+                        // (before it's ever been dragged) still gets a
+                        // sane monitorIndex instead of always 0.
+                        const monitorIndex = position.monitorIndex ?? position.monitor ?? 0;
+                        this._drag.attach(entry.id, entry.actor, monitorIndex);
                     } catch (e) {
                         console.error(`[widget-center] "${entry.id}" could not be placed in the layer`, e);
                     }
@@ -80,6 +100,11 @@ export default class WidgetCenterExtension extends Extension {
     disable() {
         this._cancelLoad?.();
         this._cancelLoad = null;
+
+        // Disconnect all drag signals BEFORE anything below destroys the
+        // actors they're attached to.
+        this._drag?.destroy();
+        this._drag = null;
 
         // Detach actors from the layer BEFORE the loader destroys them, so
         // the layer never holds a reference to an already-destroyed actor.

@@ -36,18 +36,31 @@ SQLite service แยกโปรเซส ซึ่ง**ขัดกับ `doc
 ## Files to touch
 
 - `extension/lib/widgetSettings.js` (สร้างใหม่ — ตาม class `WidgetSettings` ที่ระบุใน
-  `docs/SETTINGS_SPEC.md` หัวข้อ "Host-side: WidgetSettings class") — **ยังไม่ได้ทำ**
+  `docs/SETTINGS_SPEC.md` หัวข้อ "Host-side: WidgetSettings class") — **ทำแล้ว**:
+  `load(widgetId, storageService)` คืน Proxy auto-save (debounce 300ms ผ่าน
+  `GLib.timeout_add`/`source_remove`), `applyDefaults(proxy, defaults)` backfill key ที่ขาด
+  ผ่าน proxy เดิม (ดู "two-phase load" ด้านล่างว่าทำไมแยกเป็น 2 เมธอด), `flush()`/`flushAll()`
+  สำหรับเขียนทันทีตอน disable() (ดู Notes from implementation)
 - `extension/lib/storageService.js` — **ทำแล้ว**: เพิ่ม `_sanitizeWidgetId()`,
-  `getWidgetPosition()`, `updateWidgetPosition()`, ใช้ sanitize ใน
-  `getWidgetSettings()`/`saveWidgetSettings()` ครบแล้ว (ดู Notes from implementation)
+  `getWidgetPosition()`, `updateWidgetPosition()` ไว้ตั้งแต่รอบก่อน + **แก้เพิ่ม
+  (2026-07-14)**: `getWidgetSettings()`/`saveWidgetSettings()` เดิมเขียนไฟล์เป็น
+  `widget-<id>.json` ที่ root ของ storage dir ตรงๆ ซึ่งขัดกับ path ที่
+  `docs/SETTINGS_SPEC.md` กำหนด (`widgets/<id>.json`) — แก้ให้สร้างโฟลเดอร์ย่อย `widgets/`
+  ใน `init()` แล้วอ่าน/เขียนที่ `widgets/<id>.json` ตรงสเปกแล้ว
 - `extension/schemas/org.gnome.shell.extensions.widget-center.gschema.xml` — **ทำแล้ว**
   (compile ด้วย `glib-compile-schemas extension/schemas/` ให้ `gschemas.compiled` อยู่ใน
   โฟลเดอร์เดียวกัน — ห้ามลืม re-compile ทุกครั้งที่แก้ `.gschema.xml`)
 - `extension/lib/settingsService.js` — **ทำแล้ว**: แก้ให้ใช้ `Extension.getSettings()`
   แทน `Gio.SettingsSchemaSource.get_default()` (ของเดิม throw เสมอเพราะมองหาแค่ schema
   ที่ติดตั้งระดับระบบ — ดู `docs/SETTINGS_SPEC.md` "Host settings เอง")
-- `extension/extension.js` (แก้จุดที่สร้าง `WidgetAPI` ให้ส่ง `settings` จาก
-  `WidgetSettings.load()` แทนของเดิม — **ยังไม่ได้ทำ**, รอ `widgetSettings.js`)
+- `extension/lib/widgetLoader.js` — **ทำแล้ว (2026-07-14)**: constructor รับ
+  `storageService` เพิ่ม, `loadAll()` เรียก `WidgetSettings.load()` ก่อนสร้าง instance แล้ว
+  เรียก `WidgetSettings.applyDefaults()` หลังสร้าง instance เสร็จ (แก้ปัญหาลำดับ
+  constructor-ต้องมี-settings-ก่อน แต่ defaults มาจาก instance — ดู header comment ใน
+  `widgetSettings.js`), `unloadAll()` เรียก `WidgetSettings.flushAll()` ก่อน cleanup
+- `extension/extension.js` — **ทำแล้ว (2026-07-14)**: ส่ง `this._storage` เข้า
+  `new WidgetLoader(...)` แทนเดิมที่ไม่ส่งอะไรเลย (`WidgetAPI.settings` ถูกสร้างจริงใน
+  `widgetLoader.js._buildApi()` ไม่ใช่ตรงนี้ — ที่นี่แค่ต้อง thread storageService ผ่านไป)
 
 ## Steps (แนะนำ)
 
@@ -66,14 +79,18 @@ SQLite service แยกโปรเซส ซึ่ง**ขัดกับ `doc
 
 ## Acceptance criteria
 
-- [ ] Widget ตัวอย่าง (`_template`) เรียก `api.settings.someKey = value` แล้วไฟล์
+- [x] Widget ตัวอย่าง (`_template`) เรียก `api.settings.someKey = value` แล้วไฟล์
       `~/.config/gnome-widget-center/widgets/<id>.json` ถูกเขียนจริงภายใน ~300ms
-- [ ] ลบไฟล์ settings ทิ้งแล้วโหลด widget ใหม่ → ไฟล์ถูกสร้างใหม่จาก `getDefaultSettings()`
-- [ ] แก้ไฟล์ settings มือ (ลบ key บางตัวออก) แล้ว reload → key ที่หายไปถูก merge กลับมาจาก defaults
+- [x] ลบไฟล์ settings ทิ้งแล้วโหลด widget ใหม่ → ไฟล์ถูกสร้างใหม่จาก `getDefaultSettings()`
+- [x] แก้ไฟล์ settings มือ (ลบ key บางตัวออก) แล้ว reload → key ที่หายไปถูก merge กลับมาจาก defaults
       โดยไม่ทับค่าที่ผู้ใช้ตั้งไว้ใน key อื่น
-- [ ] ลอง set `widgetId` ที่มี `../` ปนอยู่ (จำลอง path traversal) → ต้องถูก sanitize/reject
+- [x] ลอง set `widgetId` ที่มี `../` ปนอยู่ (จำลอง path traversal) → ต้องถูก sanitize/reject
       ไม่เขียนไฟล์นอก `~/.config/gnome-widget-center/widgets/`
-- [ ] widget สองตัวตั้งค่ากันคนละไฟล์ ไม่ชนกัน (ทดสอบพร้อมกัน 2 instance)
+- [x] widget สองตัวตั้งค่ากันคนละไฟล์ ไม่ชนกัน (ทดสอบพร้อมกัน 2 instance)
+
+(เช็คแล้วด้วย unit test จำลอง `GLib`/`StorageService` ใน Node — ครอบคลุมทั้ง 5 ข้อข้างต้น
+รวมถึง debounce-collapse, `flush()`/`flushAll()` แต่**ยังไม่ได้รันบน GNOME Shell จริง**
+เหมือนกับ task 01/02 — ดู note เดียวกันใน ROADMAP.md)
 
 ## Out of scope
 
@@ -84,8 +101,28 @@ SQLite service แยกโปรเซส ซึ่ง**ขัดกับ `doc
 
 ## Notes from implementation
 
-**สถานะ (2026-07-13): แก้ prerequisite bug 2 ตัวที่จะบล็อก task นี้ทั้งหมด — `widgetSettings.js`
-เอง (งานหลักของ task) ยังไม่ได้เริ่ม**
+**สถานะ (2026-07-14): เสร็จ** — `widgetSettings.js` สร้างแล้ว เชื่อมกับ `widgetLoader.js`/
+`extension.js` ครบ และแก้ path bug ใน `storageService.js` ที่ค้างจากรอบก่อนด้วย
+(รายละเอียด "ยังไม่ได้ทำ" ท้ายไฟล์นี้ล้าสมัยแล้ว)
+
+**เพิ่มเติมจากที่ spec ระบุไว้ตรงๆ (ตัดสินใจระหว่างimplement):**
+
+1. **Two-phase load แทน `load(widgetId, defaults)` ตัวเดียวตามที่ spec เขียนไว้** — เจอปัญหา
+   ลำดับจริง: `api.settings` ต้องมีอยู่ก่อน widget constructor รัน (`this._settings =
+   api.settings` ตาม `docs/WIDGET_API.md` §3) แต่ defaults มาจาก
+   `instance.getDefaultSettings()` ซึ่งต้องมี instance ก่อนถึงเรียกได้ — แก้เป็น
+   `WidgetSettings.load(widgetId, storageService)` (ไม่รับ defaults, คืน proxy จากของที่มีอยู่
+   ในไฟล์ก่อน) แล้วเรียก `WidgetSettings.applyDefaults(proxy, defaults)` แยกหลังสร้าง instance
+   เสร็จ — เขียนผ่าน proxy ตัวเดิม (object identity ไม่เปลี่ยน) ให้ widget ที่ capture
+   reference ไว้ตั้งแต่ constructor ยังใช้งานได้ปกติ
+2. **เพิ่ม `flush()`/`flushAll()`** ที่ spec ไม่ได้ระบุไว้ตรงๆ — ป้องกันกรณี debounce 300ms
+   ยังไม่ทันเขียนไฟล์ตอน `disable()` ถูกเรียก (ค่าที่เพิ่ง set จะหายไปเฉยๆ ถ้าไม่ flush)
+   เรียกจาก `widgetLoader.js unloadAll()` ก่อนเริ่ม cleanup instance ใดๆ
+
+---
+
+*(เก็บ note เดิมของรอบก่อนไว้ด้านล่างเพื่อ context — ตอนนั้นแก้แค่ prerequisite bug 2 ตัว
+ที่บล็อก task นี้ ยังไม่ได้เริ่มตัว `widgetSettings.js` เอง)*
 
 1. **`settingsService.js` เดิม throw เสมอตอน `init()`** — เรียก
    `Gio.SettingsSchemaSource.get_default().lookup()` ซึ่งมองหาแค่ schema ที่ compile ติดตั้ง

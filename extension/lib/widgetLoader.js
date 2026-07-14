@@ -8,11 +8,13 @@
 // full contract this enforces.
 //
 // Per task 01 scope: buildActor() is called but the returned actor is NOT
-// added to the stage here (task 02's job), and `api.settings` is a stub
-// empty object (task 03's job) - see _buildStubApi() below.
+// added to the stage here (task 02's job). `api.settings` is now backed by
+// the real per-widget JSON store (task 03, see widgetSettings.js) when a
+// StorageService is passed to the constructor - see _buildApi() below.
 
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
+import {WidgetSettings} from './widgetSettings.js';
 
 const REQUIRED_METADATA_FIELDS = ['id', 'name', 'entry'];
 
@@ -20,10 +22,16 @@ export class WidgetLoader {
     /**
      * @param {string[]} searchPaths - directories to scan; each is expected
      *   to contain one subfolder per widget: <searchPath>/<widget-id>/metadata.json
+     * @param {StorageService} [storageService] - task 03's file layer, used
+     *   to back `api.settings` with the real per-widget JSON store
+     *   (WidgetSettings). Optional only so existing tests/callers that
+     *   don't care about settings persistence keep working — without it,
+     *   widgets get an inert `{}` for api.settings (same as before task 03).
      * @param {object} [logger] - optional {log,warn,error} - defaults to console
      */
-    constructor(searchPaths, logger = console) {
+    constructor(searchPaths, storageService = null, logger = console) {
         this._searchPaths = searchPaths;
+        this._storageService = storageService;
         this._logger = logger;
         this._instances = new Map(); // id -> {id, metadata, path, ModuleClass, instance, actor}
         this._errors = [];           // [{id, path, reason}]
@@ -162,7 +170,15 @@ export class WidgetLoader {
             if (!ModuleClass)
                 continue;
 
-            const api = this._buildStubApi(widgetInfo);
+            // Live proxy backed by widgets/<id>.json — no defaults applied
+            // yet, since defaults come from the instance we're about to
+            // construct (see widgetSettings.js header comment for why this
+            // has to be two-phase).
+            const settings = this._storageService
+                ? WidgetSettings.load(widgetInfo.id, this._storageService)
+                : {};
+
+            const api = this._buildApi(widgetInfo, settings);
 
             let instance;
             try {
@@ -170,6 +186,15 @@ export class WidgetLoader {
             } catch (e) {
                 this._recordError(widgetInfo, `constructor threw: ${e.message}`);
                 continue;
+            }
+
+            if (this._storageService) {
+                try {
+                    const defaults = instance.getDefaultSettings?.() ?? {};
+                    WidgetSettings.applyDefaults(settings, defaults);
+                } catch (e) {
+                    this._recordError(widgetInfo, `getDefaultSettings() threw: ${e.message}`);
+                }
             }
 
             let actor;
@@ -207,6 +232,12 @@ export class WidgetLoader {
      * to call multiple times / on an empty loader.
      */
     unloadAll() {
+        // Flush pending debounced settings writes (task 03) before
+        // destroying anything — a setting a widget set just before
+        // disable() shouldn't be silently dropped along with its
+        // now-cancelled GLib timeout.
+        WidgetSettings.flushAll();
+
         for (const [id, entry] of this._instances) {
             try {
                 entry.instance.disable?.();
@@ -227,12 +258,16 @@ export class WidgetLoader {
         this._logger.warn?.(`[widget-loader] "${widgetInfo.id}": ${reason}`);
     }
 
-    // TODO(task 03): replace with the real per-widget JSON settings store
-    // from docs/SETTINGS_SPEC.md. TODO(task 02): api.position should write
-    // through to the Widget Layer instead of being a no-op.
-    _buildStubApi(widgetInfo) {
+    // TODO(task 04/07): api.position is still a no-op stub — the drag
+    // controller (task 04) currently writes positions straight through
+    // WidgetLayer/StorageService rather than this API surface, so a widget
+    // reading its own `api.position` won't see drag updates live. Left
+    // out of task 04's scope on purpose (see tasks/04-drag-reposition.md
+    // "Out of scope"); revisit if a widget actually needs to react to
+    // being dragged.
+    _buildApi(widgetInfo, settings) {
         return {
-            settings: {},
+            settings,
             monitorInfo: null,
             position: {x: 0, y: 0, setPosition() {}},
             bus: {emit() {}, on() {}, off() {}},

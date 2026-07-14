@@ -16,6 +16,11 @@ export class StorageService {
         this._storageDir = null;
         /** @private {Gio.File} Target file pointer for global layout schema */
         this._layoutFile = null;
+        /** @private {Gio.File} Subfolder holding one JSON file per widget's
+         * own settings — `widgets/<id>.json`, per docs/SETTINGS_SPEC.md
+         * (task 03). Kept separate from layout.json, which is host-owned
+         * position data, not widget settings. */
+        this._widgetsDir = null;
         /** @private {boolean} Internal initialization flag */
         this._isInitialized = false;
     }
@@ -41,7 +46,19 @@ export class StorageService {
         // กำหนดพาธไฟล์ศูนย์กลางสำหรับการจัดระเบียบผังตาราง Widget
         const layoutPath = GLib.build_filenamev([baseDirPath, 'layout.json']);
         this._layoutFile = Gio.File.new_for_path(layoutPath);
-        
+
+        // widgets/ — หนึ่งไฟล์ต่อ widget สำหรับ settings ของตัวเอง ตาม
+        // docs/SETTINGS_SPEC.md (`widgets/<widget-id>.json`) — แก้ไข
+        // 2026-07-14: เดิมโค้ดนี้ยังไม่มีโฟลเดอร์ย่อยเลย เขียนไฟล์แบบ
+        // `widget-<id>.json` ตรง root ของ storage dir ซึ่งขัดกับสเปกที่
+        // task 03 อ้างอิง (และ acceptance criteria เช็ค path ตรงๆ) แก้ให้
+        // ตรงกันแล้ว
+        const widgetsDirPath = GLib.build_filenamev([baseDirPath, 'widgets']);
+        this._widgetsDir = Gio.File.new_for_path(widgetsDirPath);
+        if (!this._widgetsDir.query_exists(null)) {
+            this._widgetsDir.make_directory_with_parents(null);
+        }
+
         this._isInitialized = true;
     }
 
@@ -190,7 +207,7 @@ export class StorageService {
         if (!this._isInitialized) this.init();
         const id = this._sanitizeWidgetId(instanceId);
 
-        const widgetSettingsPath = GLib.build_filenamev([this._storageDir.get_path(), `widget-${id}.json`]);
+        const widgetSettingsPath = GLib.build_filenamev([this._widgetsDir.get_path(), `${id}.json`]);
         const widgetSettingsFile = Gio.File.new_for_path(widgetSettingsPath);
 
         if (!widgetSettingsFile.query_exists(null)) {
@@ -221,7 +238,7 @@ export class StorageService {
         const id = this._sanitizeWidgetId(instanceId);
 
         try {
-            const widgetSettingsPath = GLib.build_filenamev([this._storageDir.get_path(), `widget-${id}.json`]);
+            const widgetSettingsPath = GLib.build_filenamev([this._widgetsDir.get_path(), `${id}.json`]);
             const widgetSettingsFile = Gio.File.new_for_path(widgetSettingsPath);
 
             const jsonString = JSON.stringify(settingsData, null, 4);
