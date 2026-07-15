@@ -303,6 +303,105 @@ export class WidgetLoader {
         this._instances.delete(id);
     }
 
+    /**
+     * @method reloadWidget
+     * @description Task 08 — hot-reloads a single already-loaded widget:
+     * re-imports its entry file (cache-busted so GJS's module cache doesn't
+     * just hand back the stale copy from before the edit) and builds a
+     * fresh instance/actor. The OLD instance is only disable()'d and its
+     * actor only destroyed once the NEW one has successfully imported,
+     * constructed, and built an actor — if anything throws before that
+     * point, the old widget is left completely untouched and still
+     * running. This is a stricter ordering than loadOne()'s (which has
+     * nothing "old" to protect) specifically so a mid-edit syntax error
+     * can never leave the desktop with a missing widget, per
+     * tasks/08-hot-reload-dev-mode.md acceptance criteria.
+     *
+     * Actor PLACEMENT (removing the old actor from / adding the new one to
+     * the Widget Layer at the same position) is the caller's job —
+     * extension.js's dev-mode wiring — same separation as loadOne()'s
+     * caller doing _placeEntry(); this method only ever touches module
+     * loading and instance lifecycle, never WidgetLayer/scene graph.
+     * @param {string} widgetId
+     * @returns {Promise<object|null>} the new entry on success, or null if
+     *   the reload failed (old entry keeps running unchanged, reason
+     *   logged via `logger.error`) or the widget wasn't loaded at all.
+     */
+    async reloadWidget(widgetId) {
+        const oldEntry = this._instances.get(widgetId);
+        if (!oldEntry) {
+            this._logger.warn?.(`[widget-loader] reloadWidget("${widgetId}") — not currently loaded`);
+            return null;
+        }
+
+        const widgetInfo = {id: oldEntry.id, metadata: oldEntry.metadata, path: oldEntry.path};
+
+        let ModuleClass;
+        try {
+            const entryName = widgetInfo.metadata.entry ?? 'widget.js';
+            const entryPath = GLib.build_filenamev([widgetInfo.path, entryName]);
+            const entryFile = Gio.File.new_for_path(entryPath);
+            if (!entryFile.query_exists(null))
+                throw new Error(`entry file "${entryName}" not found`);
+
+            // Cache-bust: re-importing the exact same file:// URL would
+            // just return the module object GJS already has cached from
+            // before the edit. A throwaway query string makes this import
+            // a distinct cache entry every time.
+            const module = await import(`file://${entryPath}?t=${Date.now()}`);
+            if (typeof module.default !== 'function')
+                throw new Error(`${entryName} has no default export class`);
+            ModuleClass = module.default;
+        } catch (e) {
+            this._logger.error?.(`[widget-loader] "${widgetId}" hot-reload import failed: ${e.message} — keeping previous version running`);
+            return null;
+        }
+
+        const settings = this._storageService
+            ? WidgetSettings.load(widgetId, this._storageService)
+            : {};
+        const api = this._buildApi(widgetInfo, settings);
+
+        let instance, actor;
+        try {
+            instance = new ModuleClass(api);
+            if (this._storageService) {
+                const defaults = instance.getDefaultSettings?.() ?? {};
+                WidgetSettings.applyDefaults(settings, defaults);
+            }
+            actor = instance.buildActor();
+            if (!actor)
+                throw new Error('buildActor() returned null/undefined');
+        } catch (e) {
+            this._logger.error?.(`[widget-loader] "${widgetId}" hot-reload build failed: ${e.message} — keeping previous version running`);
+            return null;
+        }
+
+        // New instance/actor confirmed working — safe to retire the old
+        // one now. Failures past this point are logged but can no longer
+        // "fall back to old", since we've already committed to the swap.
+        try {
+            oldEntry.instance.disable?.();
+        } catch (e) {
+            this._logger.error?.(`[widget-loader] "${widgetId}" old instance disable() threw during hot-reload: ${e.message}`);
+        }
+        try {
+            oldEntry.actor?.destroy?.();
+        } catch (e) {
+            this._logger.error?.(`[widget-loader] "${widgetId}" old actor destroy threw during hot-reload: ${e.message}`);
+        }
+        try {
+            instance.enable?.();
+        } catch (e) {
+            this._logger.error?.(`[widget-loader] "${widgetId}" new instance enable() threw during hot-reload: ${e.message}`);
+        }
+
+        const newEntry = {...widgetInfo, ModuleClass, instance, actor};
+        this._instances.set(widgetId, newEntry);
+        this._logger.log?.(`[widget-loader] hot-reloaded "${widgetId}"`);
+        return newEntry;
+    }
+
     _recordError(widgetInfo, reason) {
         this._errors.push({id: widgetInfo.id, path: widgetInfo.path, reason});
         this._logger.warn?.(`[widget-loader] "${widgetInfo.id}": ${reason}`);
