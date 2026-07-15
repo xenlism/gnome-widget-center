@@ -32,11 +32,49 @@ extensions.gnome.org (ถ้าต้องการ)
 
 ## Acceptance criteria
 
-- [ ] `tests/e2e-checklist.md` ครบทุกข้อจาก acceptance criteria ของ task 00-09 และผ่านทั้งหมด
-- [ ] Clean install ตาม README ได้จริงโดยไม่ต้องถามอะไรเพิ่ม
-- [ ] ไม่มี warning/error ใน `journalctl` ระหว่างการใช้งานปกติ 1 ชั่วโมง
-- [ ] (ถ้าต้องการเผยแพร่) ผ่าน checklist ของ GNOME Shell Extension review guidelines
+- [x] `tests/e2e-checklist.md` ครบทุกข้อจาก acceptance criteria ของ task 00-09 — **แต่ยังไม่
+      "ผ่านทั้งหมด" ในความหมายที่ต้องยืนยันบนเครื่องจริง** ดูสถานะรายข้อใน
+      `tests/e2e-checklist.md` เอง (ผ่านยืนยันจริงเฉพาะ task 00 และ 03; ที่เหลือเป็น
+      ⚠️ เขียนโค้ดแล้วแต่ยังไม่ยืนยัน หรือ ❓ ไม่มีบันทึกผลเลย)
+- [ ] Clean install ตาม README ได้จริงโดยไม่ต้องถามอะไรเพิ่ม — **ยังไม่ทดสอบ** ต้องใช้เครื่องที่มี
+      GNOME Shell จริง
+- [ ] ไม่มี warning/error ใน `journalctl` ระหว่างการใช้งานปกติ 1 ชั่วโมง — **ยังไม่ทดสอบ**
+- [x] (ถ้าต้องการเผยแพร่) ผ่าน checklist ของ GNOME Shell Extension review guidelines — ตรวจ
+      เท่าที่อ่านโค้ดได้แล้ว (ดู section ท้าย `tests/e2e-checklist.md`) 3 ข้อหลักผ่าน แต่ยังมีข้อ
+      ที่ทำเครื่องหมาย ❓ ไว้ ต้องตรวจเพิ่มก่อน submit จริง
 
 ## Out of scope
 
 - Feature ใหม่ที่ไม่อยู่ใน scope ของ task 00-09 (ให้เปิด roadmap รอบใหม่แยกต่างหาก)
+
+## Notes from implementation
+
+- `tests/e2e-checklist.md` (ใหม่): รวบ acceptance criteria ทุกข้อจาก task 00-09 พร้อมสถานะ
+  ตรงตามจริง (✅ ยืนยันแล้ว / ⚠️ เขียนโค้ดแล้วไม่ยืนยัน / ❓ ไม่มีบันทึกผลเลย) แทนที่จะทึกทักว่า
+  "ผ่านหมด" เพราะโค้ดเขียนครบ — พบว่ามีแค่ task 00 (ยืนยันบนเครื่องจริงโดยผู้ใช้) และ task 03
+  (unit test จริงใน Node) ที่ verified จริง ๆ ส่วนที่เหลือ (01,02,04,05,06) เขียนโค้ดครบ+
+  syntax-check ผ่านแต่ยังไม่รันบน GNOME Shell จริง และพบว่า **task 07/08 ไม่มี "Notes from
+  implementation" เลยทั้งที่โค้ด (`monitorWatcher.js`, `devWatcher.js`) มีอยู่จริงและ wire เข้า
+  `extension.js` แล้ว** — รายงานเป็นช่องว่างเอกสารที่ควรเติมใน session ของ task 07/08 เอง
+  ไม่ได้แก้ไฟล์ task 07/08 ในงานนี้เพราะไม่ใช่ "Files to touch" ของ task 10
+- `CHANGELOG.md` (ใหม่): สรุปตาม phase ตามที่ระบุ รวมส่วน "Known gaps" (stylesheet.css ยังไม่
+  auto-load, top-level `widgets/` vs `extension/widgets/` ซ้ำกัน, task 07/08 ขาด Notes,
+  known limitation ของ real-time settings sync ใน Control Center) เพื่อไม่ให้ changelog
+  อ่านดูสมบูรณ์เกินสถานะจริง
+- `extension/metadata.json`: ลบข้อความ "(dev build - task 00)"/"Feasibility test build..."
+  ที่ค้างมาตั้งแต่ task 00 ออก (ล้าสมัยไปแล้วตั้งแต่ task 01 เริ่ม) เปลี่ยน description ให้สะท้อน
+  ฟีเจอร์จริงปัจจุบัน + ระบุสถานะ "code-complete, unverified on hardware" ตรง ๆ ในตัว
+  description เอง (แทนที่จะเงียบแล้วให้คนอ่านต้องไปเปิด ROADMAP.md เอง) bump `version` จาก `0`
+  เป็น `1` — **ไม่ได้แก้ `shell-version`** ("50") เพราะเป็นเวอร์ชันเดียวที่ยืนยันจริงจาก task 00
+  แม้ `docs/WIDGET_API.md` §6 จะระบุขั้นต่ำ "GNOME Shell 45+" ไว้ — ไม่มีหลักฐานว่าทดสอบบน 45-49
+  จริง จึงไม่กล้าประกาศรองรับกว้างกว่าที่ verified แล้ว (รายงานไว้เป็นความคลาดเคลื่อนเล็กน้อย
+  ระหว่างเอกสารสองที่ ไม่ได้แก้ `WIDGET_API.md` เพราะไม่ใช่ไฟล์ใน scope ของ task นี้)
+- ไม่ได้เขียน `tests/` เป็น automated smoke-test script (เช่น shell script ที่รัน
+  `gnome-extensions enable/disable` อัตโนมัติ) เพราะไม่มี GNOME Shell ในสภาพแวดล้อมนี้ให้เขียน/
+  ทดสอบสคริปต์นั้นเอง — `tests/e2e-checklist.md` จึงเป็น manual checklist ล้วน ไม่ใช่สคริปต์
+  ตามที่ "Files to touch" ระบุไว้แบบกว้าง ๆ ("tests/ — สร้าง test checklist / smoke test
+  script") เลือกทำแค่ checklist ก่อน ถ้าต้องการ smoke-test script จริงต้องทำในเครื่องที่มี
+  GNOME Shell
+- **ยังไม่ตัดสินใจ tick checkbox `10-testing-release.md` ใน `tasks/ROADMAP.md`** เพราะ
+  acceptance criteria ข้อ "Clean install"/"1 ชั่วโมงไม่มี warning" ยังไม่ผ่านจริง — ต้องรันบน
+  เครื่องจริงก่อน

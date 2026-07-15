@@ -197,7 +197,22 @@ export default class MediaPlayerWidget {
         return button;
     }
 
-    /** @private */
+    
+    _variantToJS(value) {
+        while (value && (typeof value.deep_unpack==='function' || typeof value.unpack==='function'))
+            value = value.deep_unpack ? value.deep_unpack() : value.unpack();
+        if (Array.isArray(value))
+            return value.map(v=>this._variantToJS(v));
+        if (value && typeof value==='object') {
+            const o={};
+            for (const [k,v] of Object.entries(value))
+                o[k]=this._variantToJS(v);
+            return o;
+        }
+        return value;
+    }
+
+/** @private */
     _renderNoPlayer() {
         this._titleLabel.set_text('No media playing');
         this._artistLabel.set_text('');
@@ -216,12 +231,12 @@ export default class MediaPlayerWidget {
         // docs/WIDGET_API.md §8 MUST rules this is kept in local variables
         // only, never written into this._settings (that file is for
         // user-chosen settings, not what happens to be playing right now).
-        const metadata = this._playerProxy.get_cached_property('Metadata')?.deep_unpack() ?? {};
-        const status = this._playerProxy.get_cached_property('PlaybackStatus')?.deep_unpack() ?? 'Stopped';
+        const metadata = this._variantToJS(this._playerProxy.get_cached_property('Metadata')) ?? {};
+        const status = String(this._variantToJS(this._playerProxy.get_cached_property('PlaybackStatus')) ?? 'Stopped');
 
-        const title = metadata['xesam:title'] || 'Unknown title';
+        const title = String(metadata['xesam:title'] ?? 'Unknown title');
         const artists = metadata['xesam:artist'];
-        const artist = Array.isArray(artists) ? artists.join(', ') : (artists ?? '');
+        const artist = Array.isArray(artists)?artists.map(a=>String(a)).join(', '):String(artists??'');
 
         this._titleLabel.set_text(title);
         this._artistLabel.set_text(artist);
@@ -236,10 +251,15 @@ export default class MediaPlayerWidget {
         this._nextButton.visible = !compact;
 
         const showArtwork = this._settings.showArtwork ?? true;
-        const artUrl = metadata['mpris:artUrl'];
+        const artUrl = String(metadata['mpris:artUrl'] ?? '');
         if (showArtwork && typeof artUrl === 'string' && artUrl.length > 0) {
             try {
-                this._art.gicon = Gio.Icon.new_for_string(artUrl);
+                let file;
+                if (artUrl.startsWith('file://'))
+                    file = Gio.File.new_for_uri(artUrl);
+                else
+                    file = Gio.File.new_for_path(artUrl);
+                this._art.gicon = new Gio.FileIcon({ file });
             } catch (e) {
                 this._art.icon_name = 'audio-x-generic-symbolic';
             }

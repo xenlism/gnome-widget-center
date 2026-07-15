@@ -29,7 +29,7 @@
 - [ ] `06-widget-sdk-example.md` — widget SDK example pack (นาฬิกา + media-player ผ่าน MPRIS)
       ใช้ทดสอบทุก task ก่อนหน้า
 - [ ] `08-hot-reload-dev-mode.md` — โหมด dev ให้แก้ widget แล้วเห็นผลไม่ต้อง restart shell ทั้งก้อน
-- [ ] `09-packaging-third-party-docs.md` — ทำ `widgets/_template/` + คู่มือแจก widget แยกจากโปรเจกต์
+- [x] `09-packaging-third-party-docs.md` — ทำ `widgets/_template/` + คู่มือแจก widget แยกจากโปรเจกต์
 
 ## Phase 4 — Release
 
@@ -84,3 +84,24 @@ implementation ของ task 02/03 แต่ละไฟล์):**
 - หลัง 02 เสร็จ: 04 (drag) กับ 07 (multi-monitor) ทำขนานได้ เพราะแตะคนละไฟล์ในกลุ่ม
   `widgetLayer.js` vs `dragController.js` (แต่ต้อง sync กันเรื่อง coordinate system)
 - 09 (docs/template) ทำขนานกับเกือบทุก phase ได้ เพราะเป็นเอกสาร ไม่ใช่โค้ด core
+
+## Notes (2026-07-15)
+
+`09-packaging-third-party-docs.md` เสร็จแล้ว (ติ๊กแล้วด้านบน) — `docs/PUBLISHING_A_WIDGET.md`
+ใหม่, `widgets/_template/` (ทั้ง 2 ชุด — ดูหมายเหตุ duplicate ด้านล่าง) มี TODO ครบ
+
+`10-testing-release.md` — เขียน `tests/e2e-checklist.md` (รวบ acceptance criteria 00-09 พร้อม
+สถานะจริงต่อข้อ) และ `CHANGELOG.md` แล้ว, bump `extension/metadata.json` version 0→1 และลบ
+ข้อความ "dev build - task 00" ที่ค้างมาตั้งแต่ต้น **แต่ยังไม่ติ๊ก checkbox ด้านบน** เพราะ
+acceptance criteria หลัก (clean install, 1 ชั่วโมงไม่มี warning ใน journalctl) ต้องยืนยันบน
+เครื่องที่มี GNOME Shell จริงก่อน — ดูรายละเอียดใน "Notes from implementation" ของ
+`tasks/10-testing-release.md` เอง
+
+**พบช่องว่างเอกสารระหว่างทำ 10 ที่ควรตามแก้ในรอบถัดไป (ไม่ได้แก้ในงานนี้เพราะนอก scope):**
+1. `07-multi-monitor-support.md` และ `08-hot-reload-dev-mode.md` ไม่มี section "Notes from
+   implementation" เลย ทั้งที่โค้ด (`monitorWatcher.js`, `devWatcher.js`) มีอยู่จริงและ wire
+   เข้า `extension.js` แล้ว — ควรเปิด session ใหม่เติม Notes ให้ทั้งสอง task ก่อน tick checkbox
+2. top-level `widgets/` กับ `extension/widgets/` มีเนื้อหาซ้ำกันทุก byte (`_template`, `clock`,
+   `media-player`) แต่ host (`extension/extension.js`) โหลด bundled widget จาก
+   `extension/widgets/` เท่านั้น — ต้องตัดสินใจว่าจะ sync สองโฟลเดอร์นี้ด้วย build step
+   (`tools/`) หรือลบโฟลเดอร์ top-level ทิ้ง ก่อน package สำหรับแจกจริง

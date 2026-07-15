@@ -203,6 +203,10 @@ Documentation is available in:
 docs/
 ```
 
+Building your own widget? Start with
+[`docs/PUBLISHING_A_WIDGET.md`](docs/PUBLISHING_A_WIDGET.md) — copy `widgets/_template/`,
+edit 3 files, and it's on your desktop.
+
 Architecture specifications:
 
 ```

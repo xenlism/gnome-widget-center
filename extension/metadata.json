@@ -1,10 +1,10 @@
 {
   "uuid": "gnome-widget-center@xenlism.github.io",
-  "name": "GNOME Widget Center (dev build - task 00)",
-  "description": "Feasibility test build for tasks/00-project-setup.md. Draws one test box actor to validate scene-graph placement below the window group on GNOME 50 / Wayland. Not a real widget host yet — see tasks/ROADMAP.md.",
+  "name": "GNOME Widget Center",
+  "description": "Desktop widget platform for GNOME Shell — a plugin loader, per-widget JSON settings, drag & drop, and a Control Center for managing widgets. Ships with clock and media-player (MPRIS) example widgets. See tasks/ROADMAP.md and tests/e2e-checklist.md for current verification status — core (tasks 00-09) is code-complete but not yet confirmed end-to-end on real GNOME Shell hardware.",
   "shell-version": [
     "50"
   ],
   "url": "https://github.com/xenlism/gnome-widget-center",
-  "version": 0
+  "version": 1
 }

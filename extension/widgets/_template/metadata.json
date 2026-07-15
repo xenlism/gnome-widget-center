@@ -1,9 +1,9 @@
 {
-  "id": "template-widget",
-  "name": "Template Widget",
-  "description": "Empty template used to exercise the widget loader pipeline end-to-end. Copy this folder as a starting point for a real widget.",
+  "id": "my-widget",
+  "name": "My Widget",
+  "description": "TODO: one line describing what this widget does.",
   "version": "1.0.0",
-  "author": "gnome-widget-center",
+  "author": "TODO: your name",
   "api-version": 1,
   "entry": "widget.js",
   "prefs": "prefs.js",
