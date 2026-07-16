@@ -123,36 +123,52 @@ The SDK provides a stable API while hiding runtime implementation details from w
 
 # Project Structure
 
+Split into two top-level parts: everything needed to *build* the project
+(`development/`), and everything that ships to end users (`products/`).
+
 ```
 gnome-widget-center/
 
-├── architecture/
-│   System architecture and design documents
+├── development/
+│   ├── architecture/
+│   │   System architecture and design documents
+│   │
+│   ├── docs/
+│   │   Documentation (widget API, settings spec, contributing guide, spec drafts)
+│   │
+│   ├── tasks/
+│   │   Development tasks + ROADMAP.md (source of truth for task status)
+│   │
+│   ├── tests/
+│   │   Test checklists / smoke tests
+│   │
+│   └── tools/
+│       Development tools (build/sync scripts)
 │
-├── extension/
-│   GNOME Shell Extension
+├── products/
+│   ├── extension/
+│   │   GNOME Shell Extension (the shippable core)
+│   │
+│   ├── app/
+│   │   GTK4 / Libadwaita application
+│   │
+│   ├── sdk/
+│   │   Widget SDK
+│   │
+│   ├── assets/
+│   │   Screenshots, icons and branding
+│   │
+│   └── CHANGELOG.md
+│       Release history of the shipped product
 │
-├── app/
-│   GTK4 / Libadwaita application
-│
-├── sdk/
-│   Widget SDK
-│
-├── widgets/
-│   Official widgets
-│
-├── docs/
-│   Documentation
-│
-├── tasks/
-│   Development tasks
-│
-├── assets/
-│   Screenshots, icons and branding
-│
-└── tools/
-│   Development tools
+├── README.md
+└── LICENSE
 ```
+
+*(bundled widgets live at `products/extension/widgets/` — a separate top-level `widgets/`
+was considered and rejected on 2026-07-16: nothing in the codebase ever loaded from it, only
+`products/extension/widgets/` is read by `extension.js`. See
+`development/tasks/ROADMAP.md`'s 2026-07-16 decision note.)*
 
 ---
 
@@ -200,12 +216,12 @@ gnome-widget-center/
 Documentation is available in:
 
 ```
-docs/
+development/docs/
 ```
 
 Building your own widget? Start with
-[`docs/PUBLISHING_A_WIDGET.md`](docs/PUBLISHING_A_WIDGET.md) — copy `widgets/_template/`,
-edit 3 files, and it's on your desktop.
+[`development/docs/PUBLISHING_A_WIDGET.md`](development/docs/PUBLISHING_A_WIDGET.md) — copy
+`products/extension/widgets/_template/`, edit 3 files, and it's on your desktop.
 
 Architecture specifications:
 
