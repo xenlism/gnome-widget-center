@@ -1,0 +1,45 @@
+/* products/extension/stylesheet.css
+ *
+ * Host-level chrome for Widget Edit Mode (task 12) and Widget Drag & Drop
+ * (task 13). Loaded automatically by GNOME Shell for any extension with a
+ * stylesheet.css at its root — separate from each widget's own
+ * auto-namespaced widgets/<id>/stylesheet.css (see
+ * development/docs/WIDGET_API.md folder structure), because this styles
+ * the HOST's own back-side/placeholder actors, not anything a widget
+ * author supplies.
+ */
+
+.widget-edit-mode-back {
+    background-color: rgba(30, 30, 30, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 8px;
+    spacing: 6px;
+}
+
+.widget-edit-mode-action {
+    padding: 6px 10px;
+    border-radius: 6px;
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.widget-edit-mode-action:hover {
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+.widget-edit-mode-action-remove,
+.widget-edit-mode-action-uninstall {
+    color: #ff8a8a;
+}
+
+.widget-edit-mode-placeholder {
+    background-color: rgba(255, 255, 255, 0.08);
+    border: 2px dashed rgba(255, 255, 255, 0.4);
+    border-radius: 6px;
+}
+
+.widget-edit-mode-placeholder-collision {
+    border-color: rgba(230, 80, 80, 0.8);
+    background-color: rgba(230, 80, 80, 0.12);
+}

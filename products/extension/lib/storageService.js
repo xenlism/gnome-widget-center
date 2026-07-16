@@ -273,4 +273,56 @@ export class StorageService {
         currentSettings[key] = value;
         this.saveWidgetSettings(instanceId, currentSettings);
     }
+
+    /**
+     * @method resetWidgetSettings
+     * @description Task 12 (Widget Edit Mode) "Reset" back-side action —
+     * deletes this widget's own `widgets/<id>.json` settings file
+     * entirely (not just clearing keys to `{}`), so the NEXT load goes
+     * through the exact same first-run path documented in
+     * widgetSettings.js: `WidgetSettings.load()` finds nothing on disk,
+     * then `WidgetLoader` calls `applyDefaults()` with the widget's own
+     * `getDefaultSettings()`, recreating the file from scratch. Safe to
+     * call for a widget with no settings file yet (no-op).
+     * @param {string} instanceId
+     */
+    resetWidgetSettings(instanceId) {
+        if (!this._isInitialized) this.init();
+        const id = this._sanitizeWidgetId(instanceId);
+
+        const widgetSettingsPath = GLib.build_filenamev([this._widgetsDir.get_path(), `${id}.json`]);
+        const widgetSettingsFile = Gio.File.new_for_path(widgetSettingsPath);
+
+        try {
+            if (widgetSettingsFile.query_exists(null))
+                widgetSettingsFile.delete(null);
+        } catch (error) {
+            logError(error, `Failed to reset settings for widget instance: ${instanceId}`);
+            throw error;
+        }
+    }
+
+    /**
+     * @method removeWidgetLayoutEntry
+     * @description Task 12 "Reset" also drops the widget's saved
+     * position from layout.json (read-modify-write, same one-entry-only
+     * discipline as updateWidgetPosition() — see that method's doc
+     * comment) so the widget reappears at its `metadata.json`
+     * `default-position` on next load instead of the spot it was reset
+     * from. Safe to call for a widget with no saved position yet
+     * (no-op).
+     * @param {string} widgetId
+     */
+    removeWidgetLayoutEntry(widgetId) {
+        const id = this._sanitizeWidgetId(widgetId);
+        const layoutData = this.loadLayout();
+        if (!layoutData?.widgets)
+            return;
+
+        const next = layoutData.widgets.filter(w => w.id !== id);
+        if (next.length === layoutData.widgets.length)
+            return; // nothing to remove
+
+        this.saveLayout(next);
+    }
 }

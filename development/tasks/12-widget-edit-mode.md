@@ -2,9 +2,7 @@
 
 > **หมายเหตุการรวมไฟล์ (2026-07-16):** task นี้มาจาก spec package ที่ส่งเข้ามาใหม่ ต้นทางตั้งชื่อ
 > `07-widget-edit-mode.md` แต่เลข 07 ถูกใช้แล้วโดย `07-multi-monitor-support.md` — เปลี่ยนเลขเป็น
-> 12 เพื่อไม่ให้ทับกัน เนื้อหาต้นฉบับเป็นแค่ one-liner (`Implemented target: Widget Edit Mode.`)
-> รายละเอียดเต็มต้องอ้างอิง spec draft ด้านล่าง ยังไม่ได้เขียน Steps/Acceptance criteria แบบ
-> ละเอียดเหมือน task อื่น เพราะ spec เองยังเป็น Draft
+> 12 เพื่อไม่ให้ทับกัน
 
 ## Goal
 
@@ -13,32 +11,65 @@ back-side actions, state machine ของตัวเอง) ตามที่
 
 ## Spec reference
 
-`development/architecture/specs/ui/widget-edit-mode.md` (status: Draft) — ครอบ Normal/Edit modes, flip animation,
-back side actions, state machine, interaction rules, accessibility, APIs
+`development/architecture/specs/ui/widget-edit-mode.md` — ครอบ Normal/Edit modes, flip animation,
+back side actions, state machine, interaction rules, accessibility
 
 ## Depends on
 
 `02-widget-layer-rendering.md` (ต้องมี widget actor บนพื้นโต๊ะก่อนถึงจะมีอะไรให้ toggle โหมด),
-น่าจะเกี่ยวกับ `05-prefs-control-center.md` ด้วยถ้า back-side actions เชื่อมกับ settings ต่อ widget
+`05-prefs-control-center.md` (ปุ่ม "Settings" เปิด Control Center เดิม — ไม่ได้สร้างหน้าจอใหม่),
+`03-settings-store.md` (ปุ่ม "Reset" ใช้ `StorageService` ตัวเดิม)
 
 ## Files to touch
 
-_(ยังไม่ระบุ — ต้องขยาย spec ให้ครบก่อนถึงจะ map เป็นไฟล์โค้ดจริงได้ เช่น
-`products/extension/lib/widgetLayer.js` น่าจะต้องแก้เพื่อรองรับ state ใหม่)_
+- `products/extension/lib/widgetEditMode.js` (สร้างใหม่) — state machine ต่อ widget, flip animation,
+  back-side actor + ปุ่ม 4 อัน
+- `products/extension/lib/storageService.js` (แก้ — เพิ่ม `resetWidgetSettings()` และ
+  `removeWidgetLayoutEntry()` สำหรับปุ่ม "Reset")
+- `products/extension/extension.js` (แก้ — instantiate `WidgetEditMode`, wire callback
+  onSettings/onRemove/onUninstall, attach/detach ตาม lifecycle เดียวกับ `DragController`)
+- `products/extension/stylesheet.css` (สร้างใหม่) — style ของ back-side card/ปุ่ม (host-level เท่านั้น
+  ไม่ใช่ per-widget stylesheet)
 
 ## Steps
 
-_(รอ spec `development/architecture/specs/ui/widget-edit-mode.md` ขยายจาก Draft ให้มี state machine/interaction rules
-ละเอียดพอก่อนเริ่ม implement)_
+1. Right-click (`Clutter.BUTTON_SECONDARY`) บน widget actor → toggle ระหว่าง NORMAL/HOVER กับ EDIT
+2. เข้า EDIT → flip actor 180° รอบจุดศูนย์กลางของตัวเอง (ตั้ง `pivot_point` ที่ (0.5, 0.5) ก่อน) และสลับ
+   front/back ตอนกึ่งกลาง (90°) เพื่อไม่ให้เห็นด้านหน้ากลับด้านตอนครึ่งหลังของการ flip
+3. ระหว่าง EDIT: front actor `reactive = false` (เนื้อหา widget เองกดไม่ได้), back actor (สร้างแบบ lazy
+   ตอน flip ครั้งแรก) แสดงปุ่ม Settings/Reset/Remove/Uninstall (Uninstall โชว์เฉพาะ widget ที่ติดตั้งเอง
+   ของผู้ใช้ ไม่ใช่ bundled)
+4. ESC (เฉพาะตอน EDIT เท่านั้น — connect key handler แบบ lazy ตอนเข้า EDIT, disconnect ตอนออก) หรือ
+   right-click ซ้ำ → กลับ NORMAL
+5. Callback ของแต่ละปุ่มส่งกลับไปให้ `extension.js` เป็นคนจัดการจริง (เปิด Control Center / เขียน
+   `disabled-widgets` GSettings / ลบไฟล์) — `WidgetEditMode` เองไม่ยุ่งกับ `SettingsService`/`WidgetLoader`
+   โดยตรง
 
 ## Acceptance criteria
 
-- [ ] _(รอกำหนดจาก spec ฉบับเต็ม)_
+- [ ] Right-click widget → เห็น flip animation ไปด้านหลัง เห็นปุ่ม 4 อัน (หรือ 3 อันถ้าเป็น bundled widget)
+- [ ] กด Settings → Control Center เปิดขึ้นมา
+- [ ] กด Reset → widget กลับไปตำแหน่ง/ค่า default (ทดสอบด้วยการแก้ settings ก่อนแล้วกด Reset)
+- [ ] กด Remove → widget หายจากพื้นโต๊ะทันที และ toggle ใน Control Center เปลี่ยนเป็นปิดด้วย (คนละ entry
+      point เดียวกันของ task 05)
+- [ ] กด Uninstall (widget ที่ติดตั้งเอง) → widget หายและโฟลเดอร์ถูกลบจากดิสก์จริง
+- [ ] ESC หรือ right-click ซ้ำ → flip กลับด้านหน้า เนื้อหา widget กดได้ตามปกติอีกครั้ง
+- [ ] ระหว่าง EDIT เนื้อหาด้านหน้าของ widget (เช่นปุ่ม play/pause ของ media-player) กดไม่ได้
 
 ## Out of scope
 
-_(ยังไม่ระบุ)_
+- ปุ่ม "Settings" ยังเปิดแค่หน้า list บนของ Control Center ไม่ deep-link ไปหน้า settings ของ widget
+  ตัวนั้นโดยตรง (ต้องแก้ `prefs.js` เพิ่มถึงจะรับ hint ได้ — ไม่ได้ทำในรอบนี้)
+- Uninstall ไม่มี confirmation dialog ก่อนลบไฟล์จริง — ถือว่าเป็นความเสี่ยงที่ยอมรับได้สำหรับ MVP
+  แต่ควรเพิ่มก่อน release จริง
+- Screen reader/high-contrast accessibility สำหรับปุ่ม back-side ยังไม่ได้ทำ (ปุ่มเป็น `St.Button`
+  ธรรมดา ไม่มี custom `accessible_name`)
 
 ## Notes from implementation
 
-_(เติมหลังทำเสร็จ)_
+- `pivot_point` ต้องตั้งก่อนหมุน ไม่งั้น flip จะหมุนรอบมุมบนซ้ายแทนที่จะหมุนรอบจุดศูนย์กลางของ widget เอง
+- back actor เป็น sibling ของ front actor (คนละตัวกัน วางซ้อนตำแหน่งเดียวกัน) ไม่ใช่ child — เพราะถ้าเป็น
+  child มันจะหมุนตาม `rotation_angle_y` ของ front ไปด้วยและกลับด้านผิด
+- **ยังไม่ยืนยันบนเครื่องจริง** เหมือน task ก่อนหน้าที่ไม่มี GNOME Shell จริงในสภาพแวดล้อมที่ implement —
+  `node --check` ผ่านทุกไฟล์ที่แก้/สร้างใหม่ (syntax level เท่านั้น) ไม่ติ๊ก acceptance criteria จนกว่าจะ
+  ทดสอบบนเครื่องที่มี GNOME Shell 45+ จริง
