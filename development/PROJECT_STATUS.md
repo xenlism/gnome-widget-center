@@ -82,16 +82,53 @@ that distinction matters.
   `docs/WIDGET_API.md` is the one authoritative contract; the `architecture/specs/` copy is now
   just a pointer to it, so future API additions (e.g. from task 12) go in one place only.
 
+## Resolved decisions (2026-07-18)
+
+- **Task 12 back-side buttons — text label → icon + tooltip + `accessible_name`** — the
+  Accessibility gap `widget-edit-mode.md` used to flag ("plain `St.Button` with a text label
+  only, no explicit `accessible_name`") is closed: buttons now render as symbolic icons with an
+  explicit `accessible_name` (screen reader) and a custom hover tooltip (`St` has no built-in
+  tooltip widget, unlike Gtk's `tooltip-text` on the prefs side). Also fixes 4 text buttons
+  wrapping/clipping in the back-side card at small widget sizes. No state-machine or callback
+  changes. Details in `development/tasks/12-widget-edit-mode.md`'s 2026-07-18 implementation
+  note. Still not verified on real GNOME Shell hardware — same caveat as every other item in
+  this file; tooltip positioning in particular reads `get_preferred_height/width` before first
+  allocation, worth an explicit check.
+- **Task 05 — declarative `settings` schema, auto-generated prefs UI** — a widget can now list
+  its settings as a plain array in `metadata.json` (`string`/`number`/`range`/`boolean`/
+  `dropdown`/`color`) instead of hand-writing `prefs.js`; the Control Center builds the
+  `Adw.PreferencesPage` automatically (`settingsSchemaUI.js`). `WidgetLoader.discover()`
+  validates the schema and rejects the whole widget (same as a broken `metadata.json`) if it's
+  malformed. A widget with both a schema and a hand-written `prefs.js` gets the hand-written one
+  — author's explicit code always wins over auto-generation. File/folder/desktop-file/command/
+  date/time/password/url/icon/font types are NOT yet supported (documented as out of scope in
+  `development/tasks/05-prefs-control-center.md`) — still need `prefs.js` for those. Still
+  inherits the existing cross-process limitation noted above (settings changed here don't
+  reflect on the desktop in real time) — that's the next item on the list, not fixed by this
+  change. Not yet verified on real GNOME Shell hardware.
+
 ## Next Milestone
 
-1. Implement Widget Edit Mode (task 12)
-2. Implement Drag & Drop (task 13)
-3. Implement Grid Engine (task 14)
-4. Layout persistence
-5. Testing
+> อัปเดต 2026-07-18: 3 รายการเดิม (Widget Edit Mode/Drag & Drop/Grid Engine) implement ไปแล้วตั้งแต่
+> ก่อนหน้านี้ (ดู "Logic-complete" ด้านบน) — รายการนี้แก้เป็น backlog ที่เหลือจริงแทน
+
+1. **Task 05 (ต่อ) — Cross-process Live Update** — settings ที่แก้จาก Prefs (ทั้ง `prefs.js` เดิม
+   และ auto-generated schema page ใหม่) ยังไม่สะท้อนผลบนพื้นโต๊ะแบบ real-time, ต้องมี notification
+   channel ข้าม process
+2. **Workspace Visibility** — `development/architecture/specs/ui/workspace.md` ยังเป็นไฟล์เปล่า
+   (มีแค่หัวข้อ) ต้องเขียนสเปคเต็มก่อน แล้วค่อยตั้งเลข task
+3. **Task 13 (เพิ่ม) — Monitor Lock** — ยังไม่มีการป้องกันลาก widget ข้าม monitor ระหว่าง Edit Mode
+4. **Task 14 (ขยาย) — Widget size constraints** — ตอนนี้ grid engine snap แค่ตำแหน่ง ไม่ได้บังคับขนาด
+   widget ให้อยู่ใน preset ที่กำหนด
+5. Layout persistence (เดิม)
+6. Testing (เดิม — ดู task 10)
 
 ---
-_Last updated: 2026-07-16 — merged incoming task specs (Widget Edit Mode, Drag & Drop, Grid
-Engine + supporting drafts) into `development/tasks/`; consolidated the drafts into
+_Last updated: 2026-07-18 — Task 05: added declarative `settings` schema + auto-generated prefs
+UI. Task 12: back-side buttons switched from text labels to icon + tooltip + `accessible_name`
+(see "Resolved decisions (2026-07-18)" above). Refreshed "Next Milestone" — task 12/13/14 were
+stale entries there (already implemented, see "Logic-complete" above). Previous update
+2026-07-16: merged incoming task specs (Widget Edit Mode, Drag & Drop, Grid Engine + supporting
+drafts) into `development/tasks/`; consolidated the drafts into
 `development/architecture/specs/` instead of a separate `docs/spec/` folder; and cleared all
-four known open items (see "Resolved decisions" above)._
+four known open items._

@@ -31,6 +31,7 @@
 
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
+import GLib from 'gi://GLib';
 
 export const EditModeState = Object.freeze({
     NORMAL: 'normal',
@@ -45,6 +46,14 @@ export const EditModeState = Object.freeze({
 // visibility at the 90° mark rather than crossfading.
 const FLIP_HALFWAY_DEGREES = 90;
 const FLIP_DURATION_MS = 250;
+
+// How long the pointer has to sit still over a back-side icon button
+// before its tooltip label appears. St has no built-in tooltip widget
+// (unlike Gtk's tooltip-text — see prefs.js for that side), so this file
+// rolls its own: a plain St.Label shown/hidden on enter-event/leave-event,
+// same technique most Shell extensions use since imports.ui.tooltips was
+// removed upstream.
+const TOOLTIP_SHOW_DELAY_MS = 500;
 
 export class WidgetEditMode {
     /**
@@ -300,28 +309,45 @@ export class WidgetEditMode {
             visible: false,
         });
 
-        const addButton = (label, styleClass, onClicked) => {
+        // Icon + tooltip instead of a text label: at the widget's own
+        // size (as small as 2 grid cells) four text buttons stacked in a
+        // BoxLayout wrap/clip badly, and an icon reads faster at a
+        // glance once you know the set. `accessible_name` is set
+        // explicitly on every button below so screen readers still get
+        // the full label even though nothing visible spells it out
+        // anymore — this is also what closes the accessibility gap the
+        // spec previously flagged ("plain St.Button with a text label
+        // only, no explicit accessible_name").
+        entry.tooltipCleanups = [];
+        const addButton = (iconName, label, styleClass, onClicked) => {
             const button = new St.Button({
                 style_class: `widget-edit-mode-action ${styleClass}`,
-                label,
+                accessible_name: label,
                 x_expand: true,
+                child: new St.Icon({
+                    icon_name: iconName,
+                    style_class: 'widget-edit-mode-action-icon',
+                }),
             });
             button.connect('clicked', onClicked);
             back.add_child(button);
+            entry.tooltipCleanups.push(this._attachTooltip(button, back, label));
         };
 
-        addButton('Settings', 'widget-edit-mode-action-settings', () => this._onSettings(widgetId));
+        addButton('preferences-system-symbolic', 'Settings',
+            'widget-edit-mode-action-settings', () => this._onSettings(widgetId));
 
-        addButton('Reset', 'widget-edit-mode-action-reset', () => {
+        addButton('view-refresh-symbolic', 'Reset', 'widget-edit-mode-action-reset', () => {
             this._storage?.resetWidgetSettings(widgetId);
             this._storage?.removeWidgetLayoutEntry(widgetId);
             this._exitEdit(widgetId);
         });
 
-        addButton('Remove', 'widget-edit-mode-action-remove', () => this._onRemove(widgetId));
+        addButton('window-close-symbolic', 'Remove',
+            'widget-edit-mode-action-remove', () => this._onRemove(widgetId));
 
         if (this._onUninstall && entry.isUserInstalled) {
-            addButton('Uninstall', 'widget-edit-mode-action-uninstall',
+            addButton('user-trash-symbolic', 'Uninstall', 'widget-edit-mode-action-uninstall',
                 () => this._onUninstall(widgetId, entry.isUserInstalled));
         }
 
@@ -336,6 +362,81 @@ export class WidgetEditMode {
         back.set_pivot_point(0.5, 0.5);
 
         return back;
+    }
+
+    /**
+     * @private builds hover-tooltip behavior for a single back-side
+     * button. Returns `{destroy()}` so the caller (entry.tooltipCleanups,
+     * consumed by detach()) can tear it down along with everything else
+     * for that widget — mirrors the disposal pattern the rest of this
+     * class already uses for signal ids.
+     * @param {St.Button} button
+     * @param {St.Widget} back - the back-side actor the tooltip label is
+     *   parented into (same actor the button itself lives in), so it
+     *   flips/hides/gets destroyed together with everything else on the
+     *   back side rather than needing separate lifecycle tracking.
+     * @param {string} text
+     */
+    _attachTooltip(button, back, text) {
+        let showTimeoutId = null;
+        let tooltipLabel = null;
+
+        const hide = () => {
+            if (showTimeoutId != null) {
+                GLib.source_remove(showTimeoutId);
+                showTimeoutId = null;
+            }
+            tooltipLabel?.destroy();
+            tooltipLabel = null;
+        };
+
+        const enterId = button.connect('enter-event', () => {
+            showTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, TOOLTIP_SHOW_DELAY_MS, () => {
+                showTimeoutId = null;
+                tooltipLabel = new St.Label({
+                    style_class: 'widget-edit-mode-tooltip',
+                    text,
+                });
+                back.insert_child_above(tooltipLabel, button);
+
+                // Position above the button, centered — read after
+                // insertion so the label has a real preferred size to
+                // measure instead of guessing a fixed offset.
+                const [buttonX, buttonY] = button.get_position();
+                const [, labelHeight] = tooltipLabel.get_preferred_height(-1);
+                const [, labelWidth] = tooltipLabel.get_preferred_width(-1);
+                tooltipLabel.set_position(
+                    buttonX + (button.width - labelWidth) / 2,
+                    buttonY - labelHeight - 4
+                );
+
+                return GLib.SOURCE_REMOVE;
+            });
+            return Clutter.EVENT_PROPAGATE;
+        });
+        const leaveId = button.connect('leave-event', () => {
+            hide();
+            return Clutter.EVENT_PROPAGATE;
+        });
+        // A click flips the card away immediately (Settings/Remove) or
+        // resets/exits (Reset) — either way the tooltip must not be left
+        // dangling on an actor that's about to be hidden/rebuilt.
+        const clickedId = button.connect('clicked', hide);
+
+        return {
+            destroy() {
+                hide();
+                try {
+                    button.disconnect(enterId);
+                    button.disconnect(leaveId);
+                    button.disconnect(clickedId);
+                } catch (e) {
+                    // button may already be destroyed by the caller (back
+                    // actor teardown in detach()) - same defensive pattern
+                    // used elsewhere in this file.
+                }
+            },
+        };
     }
 
     /** @private only transitions HOVER<->NORMAL, never touches EDIT or
@@ -376,6 +477,9 @@ export class WidgetEditMode {
             // left to disconnect from, same defensive pattern as
             // WidgetLayer.removeWidgetActor().
         }
+
+        for (const cleanup of entry.tooltipCleanups ?? [])
+            cleanup.destroy();
 
         entry.back?.destroy();
         this._widgets.delete(widgetId);

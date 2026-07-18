@@ -28,21 +28,27 @@ may start.
 
 ## Back side — available actions
 
-- **Settings** — opens the Control Center (`development/tasks/05-prefs-control-center.md`)
-  to the top-level widget list (no per-widget deep link yet — see Out of
-  scope in the task doc).
-- **Reset** — clears this widget's saved settings (`widgets/<id>.json`)
-  AND its saved position (`layout.json` entry), so it reappears at its
-  `metadata.json` defaults on next load. Exits Edit Mode immediately
-  afterward.
-- **Remove** — same effect as switching the widget off in the Control
-  Center (adds it to the `disabled-widgets` GSettings key) — does not
-  delete anything from disk, the widget can be re-enabled later with all
-  its settings/position intact.
-- **Uninstall** — only shown for user-installed widgets (never for
-  bundled ones). Removes the widget the same way Remove does, then
-  deletes its folder from disk. This is destructive and not currently
-  guarded by a confirmation dialog — see Out of scope in the task doc.
+Each action is rendered as a small icon button (not a text label) with a
+hover tooltip and an explicit `accessible_name` carrying the label below
+— see Accessibility.
+
+- **Settings** (`preferences-system-symbolic`) — opens the Control Center
+  (`development/tasks/05-prefs-control-center.md`) to the top-level
+  widget list (no per-widget deep link yet — see Out of scope in the
+  task doc).
+- **Reset** (`view-refresh-symbolic`) — clears this widget's saved
+  settings (`widgets/<id>.json`) AND its saved position (`layout.json`
+  entry), so it reappears at its `metadata.json` defaults on next load.
+  Exits Edit Mode immediately afterward.
+- **Remove** (`window-close-symbolic`) — same effect as switching the
+  widget off in the Control Center (adds it to the `disabled-widgets`
+  GSettings key) — does not delete anything from disk, the widget can be
+  re-enabled later with all its settings/position intact.
+- **Uninstall** (`user-trash-symbolic`) — only shown for user-installed
+  widgets (never for bundled ones). Removes the widget the same way
+  Remove does, then deletes its folder from disk. This is destructive and
+  not currently guarded by a confirmation dialog — see Out of scope in
+  the task doc.
 
 ## Exit
 
@@ -83,10 +89,19 @@ dropping, which task 13 returns to EDIT, not NORMAL directly.
 - Keyboard: ESC exits Edit Mode.
 - Focus follows the normal actor focus chain — no custom focus trap is
   installed for the back side.
-- Screen reader / high-contrast: not yet addressed — the back-side
-  buttons are plain `St.Button` with a text label only, no explicit
-  `accessible_name`/role beyond what `St.Button` provides by default. See
-  Out of scope.
+- Screen reader: each back-side button carries an explicit
+  `accessible_name` (e.g. `"Settings"`, `"Reset"`) even though the
+  visible content is icon-only — screen readers get the same label a
+  sighted user gets from the hover tooltip.
+- Hover tooltip: since `St` has no built-in tooltip widget (unlike Gtk's
+  `tooltip-text`, used on the prefs side), each button shows a small
+  `St.Label` after ~500ms of hover, dismissed on `leave-event`/`clicked`.
+  Purely a sighted-pointer-user affordance — doesn't affect the
+  screen-reader path above.
+- High-contrast: not yet addressed — icon color/contrast against
+  `.widget-edit-mode-back`'s background hasn't been checked against a
+  high-contrast theme. Still open, unlike the text-label gap this section
+  used to flag.
 
 ## Non-goals
 

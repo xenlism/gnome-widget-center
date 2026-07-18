@@ -62,8 +62,8 @@ back side actions, state machine, interaction rules, accessibility
   ตัวนั้นโดยตรง (ต้องแก้ `prefs.js` เพิ่มถึงจะรับ hint ได้ — ไม่ได้ทำในรอบนี้)
 - Uninstall ไม่มี confirmation dialog ก่อนลบไฟล์จริง — ถือว่าเป็นความเสี่ยงที่ยอมรับได้สำหรับ MVP
   แต่ควรเพิ่มก่อน release จริง
-- Screen reader/high-contrast accessibility สำหรับปุ่ม back-side ยังไม่ได้ทำ (ปุ่มเป็น `St.Button`
-  ธรรมดา ไม่มี custom `accessible_name`)
+- High-contrast theme สำหรับ icon back-side ยังไม่ได้เช็ค (ดู "Notes from implementation" ด้านล่าง —
+  ส่วน screen reader ปิดไปแล้ว)
 
 ## Notes from implementation
 
@@ -73,3 +73,22 @@ back side actions, state machine, interaction rules, accessibility
 - **ยังไม่ยืนยันบนเครื่องจริง** เหมือน task ก่อนหน้าที่ไม่มี GNOME Shell จริงในสภาพแวดล้อมที่ implement —
   `node --check` ผ่านทุกไฟล์ที่แก้/สร้างใหม่ (syntax level เท่านั้น) ไม่ติ๊ก acceptance criteria จนกว่าจะ
   ทดสอบบนเครื่องที่มี GNOME Shell 45+ จริง
+
+### 2026-07-18 — ปุ่ม back-side เปลี่ยนจาก text label เป็น icon + tooltip
+
+- ปุ่มทั้ง 4 (Settings/Reset/Remove/Uninstall) เปลี่ยนจาก `St.Button({label})` เป็น
+  `St.Button({child: St.Icon})` ด้วย symbolic icon (`preferences-system-symbolic`,
+  `view-refresh-symbolic`, `window-close-symbolic`, `user-trash-symbolic`) — แก้ปัญหาที่ปุ่มข้อความ 4
+  อันสตริงในการ์ดที่เล็กสุดแค่ 2 grid cell แล้ว wrap/ล้นได้
+- เพิ่ม `accessible_name` ให้แต่ละปุ่มตรงๆ (ปิดช่องว่าง accessibility ที่ spec เคยระบุไว้ — เดิม "ปุ่มเป็น
+  `St.Button` ธรรมดา ไม่มี custom `accessible_name`")
+- เพิ่ม hover tooltip เอง (`_attachTooltip()` ใน `widgetEditMode.js`) เพราะ `St` ไม่มี tooltip widget
+  ในตัวเหมือน Gtk's `tooltip-text` (ฝั่ง `prefs.js`) — โชว์ `St.Label` หลัง hover ค้าง 500ms
+  (`TOOLTIP_SHOW_DELAY_MS`), ซ่อนตอน `leave-event`/`clicked`
+- Tooltip cleanup ผูกกับ `entry.tooltipCleanups`, เรียกใน `detach()` ก่อน destroy back actor — ตาม
+  pattern การ disconnect signal ที่ไฟล์นี้ใช้อยู่แล้วสำหรับ front actor
+- ไม่กระทบ state machine, callback signature (`onSettings`/`onRemove`/`onUninstall`), หรือ
+  acceptance criteria เดิมเลย — เปลี่ยนแค่สิ่งที่อยู่ *ข้างใน* ปุ่มแต่ละอัน
+- **ยังไม่ยืนยันบนเครื่องจริง** เหมือนกับข้อข้างบน — โดยเฉพาะเรื่อง tooltip position
+  (`get_preferred_height`/`get_preferred_width` ก่อน allocate ครั้งแรกอาจได้ 0 บนบางระบบ ต้องเช็คบน
+  Shell จริง)

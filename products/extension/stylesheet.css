@@ -33,6 +33,19 @@
     color: #ff8a8a;
 }
 
+.widget-edit-mode-action-icon {
+    icon-size: 16px;
+}
+
+.widget-edit-mode-tooltip {
+    background-color: rgba(20, 20, 20, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    padding: 3px 8px;
+    color: #ffffff;
+    font-size: 0.85em;
+}
+
 .widget-edit-mode-placeholder {
     background-color: rgba(255, 255, 255, 0.08);
     border: 2px dashed rgba(255, 255, 255, 0.4);

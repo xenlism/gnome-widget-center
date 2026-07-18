@@ -16,6 +16,12 @@
 
 - `products/extension/prefs.js` (สร้าง/แก้ — entrypoint ของ prefs process)
 - `products/extension/lib/prefsWidgetList.js` (สร้างใหม่ — logic แยกจาก UI marshalling)
+- `products/extension/lib/settingsSchema.js` (สร้างใหม่ 2026-07-18 — validate + extract defaults
+  ของ declarative `settings` schema, pure JS ใช้ได้ทั้งสอง process)
+- `products/extension/lib/settingsSchemaUI.js` (สร้างใหม่ 2026-07-18 — build `Adw.PreferencesPage`
+  จาก schema, prefs process เท่านั้น)
+- `products/extension/lib/widgetLoader.js` (แก้ 2026-07-18 — validate schema ใน `discover()`,
+  merge schema defaults เข้ากับ `getDefaultSettings()` ใน `loadOne()`/`reloadWidget()`)
 
 ## Steps (แนะนำ)
 
@@ -40,11 +46,23 @@
       พื้นโต๊ะแบบ real-time (หรืออย่างช้าคือหลัง toggle ปิดเปิดใหม่ — ระบุพฤติกรรมจริงไว้ใน
       Notes from implementation)
 - [ ] Widget ที่จงใจทำให้ metadata.json พัง → โชว์ error ใน list ไม่ทำให้ Control Center ทั้งหน้าพัง
+- [ ] Widget ที่ไม่มี `prefs.js` แต่มี `settings` schema ใน metadata.json → ปุ่ม Settings โผล่ และกดแล้ว
+      เห็นหน้า Adw ที่สร้างอัตโนมัติ ตรงตาม field ที่ประกาศไว้ (string/number/range/boolean/dropdown/color)
+- [ ] แก้ค่าในหน้า auto-generated settings → เขียนลง `widgets/<id>.json` เหมือน prefs.js ธรรมดา
+      (เปิดใหม่ยังเห็นค่าที่แก้)
+- [ ] Widget ที่มี `settings` schema ผิดโครงสร้าง (เช่น `range` ไม่มี `min`/`max`) → ไม่ถูกโหลด
+      ทั้งตัว โผล่ในรายการ error พร้อมเหตุผลชัดเจน
+- [ ] Widget ที่มีทั้ง `prefs.js` และ `settings` schema → เปิด `prefs.js` (ไม่ใช่หน้า auto-generated)
 
 ## Out of scope
 
 - ไม่ต้องทำหน้า "install widget จาก URL/store ออนไลน์" ใน task นี้ (อาจเป็น task แยกในอนาคต
   ถ้าต้องการทำ "widget store" จริง ๆ — ปัจจุบันติดตั้งด้วยการ copy โฟลเดอร์เองพอ)
+- Declarative `settings` schema (2026-07-18) รองรับแค่ 6 type แรก (`string`/`number`/`range`/
+  `boolean`/`dropdown`/`color`) — `file`/`folder`/`desktop-file`/`command`/`date`/`time`/
+  `password`/`url`/`icon`/`font` ยังไม่ทำ (ต้องมี picker dialog หรือ sanitization เพิ่มเติมที่ไม่ใช่
+  งาน UI ธรรมดา) ต้องใช้ `prefs.js` เขียนเองไปก่อนถ้าต้องการ type เหล่านี้ — ดูรายละเอียดใน
+  `development/docs/WIDGET_API.md` §2.1
 
 ## Notes from implementation
 
@@ -67,3 +85,24 @@
   เพราะเรียบง่ายกว่าและ `development/docs/WIDGET_API.md`/prompt ของ task ไม่ได้ระบุ pattern เฉพาะ
 - Error ของ widget ที่ metadata.json พัง มาจาก `WidgetLoader.discover()`/`.errors` โดยตรง (ของเดิม
   จาก task 01) — `prefsWidgetList.js` แค่ pass through ไม่ได้ทำ validation ซ้ำ
+
+### 2026-07-18 — Declarative `settings` schema (auto-generated prefs UI)
+
+- เพิ่ม `settingsSchema.js` (pure JS, import ได้ทั้ง Shell/Prefs process — `validateSettingsSchema()`
+  + `getSchemaDefaults()`) กับ `settingsSchemaUI.js` (Prefs process เท่านั้น, import Adw/Gtk/Gdk —
+  `buildSettingsPage()` แปล schema เป็น `Adw.PreferencesPage`)
+- `WidgetLoader.discover()` เรียก `validateSettingsSchema()` ต่อจาก duplicate-id check — widget ที่มี
+  schema พังถูก reject ทั้งตัวเหมือน metadata.json พัง ไม่ใช่แค่ตัด field ที่ผิดทิ้ง (กันหน้า prefs
+  auto-gen ครึ่งๆ กลางๆ)
+- `loadOne()`/`reloadWidget()` merge `getSchemaDefaults(metadata.settings)` เข้ากับผลลัพธ์ของ
+  `instance.getDefaultSettings()` — schema เป็น base, `getDefaultSettings()` ทับได้ถ้า key ซ้ำ (เผื่อ
+  widget อยากมี default บาง key ที่ซับซ้อนกว่าที่ schema ประกาศตรงๆ ได้)
+- `prefs.js`'s `_openWidgetPrefs()` แยกเป็น 2 path: มี `prefs.js` → path เดิมทุกอย่าง (แค่ย้ายไป
+  `_openHandWrittenPrefs()`), ไม่มีแต่มี `settings` schema → `buildSettingsPage()` แล้ว
+  `present_subpage()` เหมือนกัน — ฝั่งเรียกไม่ต้องรู้ว่ามาจากไหน
+- Auto-generated rows เขียนผ่าน settings proxy ตัวเดียวกับที่ `prefs.js` ธรรมดาใช้ (`WidgetSettings.load()`)
+  — ติด limitation cross-process เดียวกับที่โน้ตไว้ด้านบนทุกประการ (ไม่ real-time ข้าม process จนกว่าจะ
+  toggle ปิด/เปิดหรือ restart shell) — task ถัดไปที่วางแผนไว้จะแก้เรื่องนี้โดยเฉพาะ
+- **ยังไม่ยืนยันบนเครื่องจริง** เหมือน task อื่นทั้งหมดในไฟล์นี้ — `node --check` ผ่านทุกไฟล์
+  ที่แก้/สร้างใหม่ (syntax level เท่านั้น) โดยเฉพาะ `Adw.ComboRow`/`Gtk.ColorDialogButton` ที่ยังไม่ได้
+  ลองรันจริงว่า API ตรงกับเวอร์ชัน GNOME Shell 45+ ที่ target ไว้หรือไม่

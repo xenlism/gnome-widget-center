@@ -11,9 +11,16 @@
 //      extension.js watches (see extension.js's onChanged() wiring) — so
 //      toggling a row here takes effect on the desktop immediately, no
 //      shell restart, even though this is a different process.
-//   2. A "Settings" button per widget that HAS a prefs.js — dynamically
-//      imports just that file (safe here, per widget author contract) and
-//      embeds its buildPrefsWidget() as an Adw.PreferencesWindow subpage.
+//   2. A "Settings" button per widget that has EITHER a prefs.js OR a
+//      declarative `settings` schema in metadata.json (task 05):
+//        - prefs.js present -> dynamically imports just that file (safe
+//          here, per widget author contract) and embeds its
+//          buildPrefsWidget() as an Adw.PreferencesWindow subpage.
+//        - no prefs.js but a `settings` schema present -> auto-builds an
+//          Adw page from it instead (settingsSchemaUI.js) — a widget
+//          author can skip writing GTK4 entirely for simple settings.
+//        - prefs.js wins if a widget somehow has both — see
+//          _openWidgetPrefs()'s doc comment for why.
 //   3. A separate error section for any widget whose metadata.json is
 //      broken, so one bad widget can't take down the whole window.
 //
@@ -39,6 +46,7 @@ import {PrefsWidgetList} from './lib/prefsWidgetList.js';
 import {SettingsService} from './lib/settingsService.js';
 import {StorageService} from './lib/storageService.js';
 import {WidgetSettings} from './lib/widgetSettings.js';
+import {buildSettingsPage} from './lib/settingsSchemaUI.js';
 
 export default class WidgetCenterPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
@@ -115,7 +123,7 @@ export default class WidgetCenterPreferences extends ExtensionPreferences {
             this._setWidgetEnabled(settings, widget.id, row.active);
         });
 
-        if (widget.hasPrefs) {
+        if (widget.hasPrefs || widget.hasSettingsSchema) {
             const settingsButton = new Gtk.Button({
                 icon_name: 'go-next-symbolic',
                 valign: Gtk.Align.CENTER,
@@ -147,11 +155,37 @@ export default class WidgetCenterPreferences extends ExtensionPreferences {
     }
 
     /**
-     * @private Dynamically imports the widget's OWN prefs.js (only this
-     * file, never widget.js — see development/docs/WIDGET_API.md §4) and embeds its
-     * buildPrefsWidget() as a subpage of the Control Center window.
+     * @private Opens a widget's settings page as a subpage of the
+     * Control Center window. Two sources, in priority order:
+     *   1. The widget's own prefs.js, dynamically imported (only this
+     *      file, never widget.js — see development/docs/WIDGET_API.md §4) and embedded
+     *      via its buildPrefsWidget() — same as before task 05's schema
+     *      addition, unchanged behavior for every widget that already
+     *      has one.
+     *   2. A declarative `settings` array in metadata.json (task 05),
+     *      auto-built into an Adw page by settingsSchemaUI.js — only
+     *      reached for widgets with NO prefs.js of their own. A widget
+     *      with both gets #1: hand-written code can do anything a
+     *      schema can plus more (custom layout, live preview, whatever),
+     *      so it's treated as the author's deliberate choice to opt out
+     *      of auto-generation rather than something to merge with it.
      */
     _openWidgetPrefs(window, storage, widget) {
+        if (widget.hasPrefs) {
+            this._openHandWrittenPrefs(window, storage, widget);
+            return;
+        }
+
+        // Scoped to this widget only, same WidgetSettings class
+        // extension.js's WidgetLoader uses — the auto-generated rows
+        // read/write it exactly like a hand-written prefs.js would.
+        const settingsHandle = WidgetSettings.load(widget.id, storage);
+        const prefsPage = buildSettingsPage(widget.metadata.settings, settingsHandle, widget.name);
+        window.present_subpage(prefsPage);
+    }
+
+    /** @private the pre-task-05 hand-written-prefs.js path, unchanged. */
+    _openHandWrittenPrefs(window, storage, widget) {
         const entryPath = GLib.build_filenamev([widget.path, widget.metadata.prefs]);
         const entryFile = Gio.File.new_for_path(entryPath);
         if (!entryFile.query_exists(null)) {

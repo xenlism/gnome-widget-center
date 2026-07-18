@@ -15,6 +15,7 @@
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import {WidgetSettings} from './widgetSettings.js';
+import {validateSettingsSchema, getSchemaDefaults} from './settingsSchema.js';
 
 const REQUIRED_METADATA_FIELDS = ['id', 'name', 'entry'];
 
@@ -112,6 +113,25 @@ export class WidgetLoader {
                     this._recordError(
                         {id: metadata.id, path: widgetPath},
                         `duplicate widget id, already loaded from ${found.get(metadata.id).path}`
+                    );
+                    continue;
+                }
+
+                // Optional declarative "settings" array (task 05's
+                // schema-driven prefs UI, see settingsSchema.js) — a
+                // widget isn't required to have one (it may use its own
+                // prefs.js instead, or no settings UI at all), but if
+                // present it must be well-formed. Same reject-the-whole-
+                // widget-and-record-why treatment as a broken
+                // metadata.json, rather than silently ignoring bad
+                // entries, so an author finds out immediately instead of
+                // shipping a schema that produces a blank/broken prefs
+                // page.
+                const settingsProblems = validateSettingsSchema(metadata.settings);
+                if (settingsProblems.length > 0) {
+                    this._recordError(
+                        {id: metadata.id, path: widgetPath},
+                        `invalid "settings" schema: ${settingsProblems.join('; ')}`
                     );
                     continue;
                 }
@@ -226,7 +246,14 @@ export class WidgetLoader {
 
         if (this._storageService) {
             try {
-                const defaults = instance.getDefaultSettings?.() ?? {};
+                // Schema-declared defaults (task 05) are the base layer;
+                // an explicit instance.getDefaultSettings() return wins
+                // on any key both define, since author-written code is
+                // more specific than a declarative shorthand. A widget
+                // using ONLY a schema (no getDefaultSettings() override)
+                // gets its defaults from the schema alone here.
+                const schemaDefaults = getSchemaDefaults(widgetInfo.metadata.settings);
+                const defaults = {...schemaDefaults, ...(instance.getDefaultSettings?.() ?? {})};
                 WidgetSettings.applyDefaults(settings, defaults);
             } catch (e) {
                 this._recordError(widgetInfo, `getDefaultSettings() threw: ${e.message}`);
@@ -375,7 +402,8 @@ export class WidgetLoader {
         try {
             instance = new ModuleClass(api);
             if (this._storageService) {
-                const defaults = instance.getDefaultSettings?.() ?? {};
+                const schemaDefaults = getSchemaDefaults(widgetInfo.metadata.settings);
+                const defaults = {...schemaDefaults, ...(instance.getDefaultSettings?.() ?? {})};
                 WidgetSettings.applyDefaults(settings, defaults);
             }
             actor = instance.buildActor();

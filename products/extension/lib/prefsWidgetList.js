@@ -28,16 +28,19 @@ export class PrefsWidgetList {
     /**
      * @returns {{
      *   ok: Array<{id: string, name: string, description: string,
-     *              hasPrefs: boolean, metadata: object, path: string}>,
+     *              hasPrefs: boolean, hasSettingsSchema: boolean,
+     *              metadata: object, path: string}>,
      *   errors: Array<{id: string, path: string, reason: string}>
      * }}
-     *   `ok` only contains widgets whose metadata.json is valid —
+     *   `ok` only contains widgets whose metadata.json (and, if present,
+     *   its declarative `settings` schema — task 05) is valid —
      *   discover() already excludes anything malformed, missing a
-     *   required field, or a duplicate id, filing those in `errors`
-     *   instead (see WidgetLoader.discover()). This satisfies the
-     *   acceptance criterion "widget ที่จงใจทำให้ metadata.json พัง → โชว์
-     *   error ใน list ไม่ทำให้ Control Center ทั้งหน้าพัง" — the caller just
-     *   renders `errors` as its own list of rows instead of throwing.
+     *   required field, a duplicate id, or an invalid settings schema,
+     *   filing those in `errors` instead (see WidgetLoader.discover()).
+     *   This satisfies the acceptance criterion "widget ที่จงใจทำให้
+     *   metadata.json พัง → โชว์ error ใน list ไม่ทำให้ Control Center
+     *   ทั้งหน้าพัง" — the caller just renders `errors` as its own list
+     *   of rows instead of throwing.
      */
     list() {
         const found = this._loader.discover();
@@ -47,6 +50,7 @@ export class PrefsWidgetList {
             name: metadata.name ?? id,
             description: metadata.description ?? '',
             hasPrefs: typeof metadata.prefs === 'string' && metadata.prefs.length > 0,
+            hasSettingsSchema: Array.isArray(metadata.settings) && metadata.settings.length > 0,
             metadata,
             path,
         }));

@@ -38,6 +38,63 @@ my-widget/
 - `api-version` ใช้เช็ค compatibility — ถ้า host เปลี่ยน API แบบ breaking จะขยับเลขนี้ และ
   widget เก่าจะถูกปิดใช้งานพร้อมแจ้งเตือนแทนที่จะ crash
 
+### 2.1 `settings` (optional) — declarative settings schema (task 05)
+
+ทางเลือกแทนการเขียน `prefs.js` เอง: ประกาศ field ของ settings เป็น array ตรงๆ ใน
+`metadata.json` แล้ว Control Center จะสร้างหน้า GTK4/Libadwaita ให้อัตโนมัติ
+(`settingsSchemaUI.js`) — widget author ไม่ต้องรู้จัก Gtk/Adw เลยสำหรับ settings ธรรมดา
+
+```json
+{
+  "id": "clock",
+  "name": "Clock",
+  "entry": "widget.js",
+  "settings": [
+    {
+      "id": "format24h",
+      "type": "boolean",
+      "label": "24-hour format",
+      "default": true
+    },
+    {
+      "id": "fontSize",
+      "type": "range",
+      "label": "Font size",
+      "description": "Size in points",
+      "default": 32,
+      "min": 12,
+      "max": 96,
+      "step": 1
+    },
+    {
+      "id": "accentColor",
+      "type": "color",
+      "label": "Accent color",
+      "default": "#3584e4"
+    }
+  ]
+}
+```
+
+**Type ที่รองรับใน v1:** `string`, `number`, `range`, `boolean`, `dropdown`, `color`
+(field-level กฎเต็มอยู่ใน `products/extension/lib/settingsSchema.js`'s `validateSettingsSchema()`
+— เช่น `range` ต้องมี `min`/`max`, `dropdown` ต้องมี `options`)
+
+**ยังไม่รองรับในรอบนี้ (out of scope):** `file`, `folder`, `desktop-file`, `command`, `date`,
+`time`, `password`, `url`, `icon`, `font`, `label`/`separator`/`group` (structural) — ต้องใช้
+`prefs.js` เขียนเองไปก่อนถ้าต้องการ type พวกนี้
+
+**ถ้ามีทั้ง `prefs.js` และ `settings` พร้อมกัน:** `prefs.js` ชนะเสมอ — ถือว่าเป็นการเลือกเอง
+ของ author ที่จะ opt-out จาก auto-generation (โค้ดเขียนเองทำอะไรก็ได้มากกว่า schema อยู่แล้ว)
+
+**Default value:** มาจาก `settings[].default` เสมอ — รวมเข้ากับ (และถูก
+`instance.getDefaultSettings()` ทับได้ถ้า key ซ้ำกัน) ตอนโหลด widget ครั้งแรก เหมือนกับ
+defaults ที่มาจาก `getDefaultSettings()` เดิมทุกประการ (ดู `development/docs/SETTINGS_SPEC.md`)
+
+**Validation:** ถ้า `settings` array มีปัญหาโครงสร้าง (เช่น `id` ซ้ำ, `type` ไม่รู้จัก, `range`
+ไม่มี `min`/`max`) — widget ทั้งตัวจะไม่ถูกโหลด และไปโผล่ในรายการ error ของ Control Center
+เหมือน `metadata.json` พังปกติ (ดู `WidgetLoader.discover()`)
+
 ## 3. widget.js — ต้อง export default class ที่มีเมธอดตามนี้
 
 ```js
