@@ -197,6 +197,26 @@ export class StorageService {
     }
 
     /**
+     * @method getWidgetSettingsPath
+     * @description Resolves the on-disk path of one widget's settings file
+     * (`widgets/<id>.json`, per development/docs/SETTINGS_SPEC.md) WITHOUT reading it —
+     * used by SettingsWatcher (cross-process live update) to point a
+     * `Gio.FileMonitor` at the exact same file getWidgetSettings()/
+     * saveWidgetSettings() below read/write, without duplicating the path
+     * layout in a second place. Sanitizes instanceId the same way every
+     * other widget-settings method here does.
+     * @param {string} instanceId
+     * @returns {string} absolute path — the file may not exist yet (a
+     *   brand-new widget with no settings written) - callers that need to
+     *   watch it (Gio.File.monitor_file) don't need it to exist first.
+     */
+    getWidgetSettingsPath(instanceId) {
+        if (!this._isInitialized) this.init();
+        const id = this._sanitizeWidgetId(instanceId);
+        return GLib.build_filenamev([this._widgetsDir.get_path(), `${id}.json`]);
+    }
+
+    /**
      * @method getWidgetSettings
      * @description Retrieves isolated private configuration for a specific widget instance.
      * @param {string} instanceId - Unique identifier for the widget instance.
@@ -207,7 +227,7 @@ export class StorageService {
         if (!this._isInitialized) this.init();
         const id = this._sanitizeWidgetId(instanceId);
 
-        const widgetSettingsPath = GLib.build_filenamev([this._widgetsDir.get_path(), `${id}.json`]);
+        const widgetSettingsPath = this.getWidgetSettingsPath(instanceId);
         const widgetSettingsFile = Gio.File.new_for_path(widgetSettingsPath);
 
         if (!widgetSettingsFile.query_exists(null)) {
@@ -235,10 +255,9 @@ export class StorageService {
      */
     saveWidgetSettings(instanceId, settingsData) {
         if (!this._isInitialized) this.init();
-        const id = this._sanitizeWidgetId(instanceId);
 
         try {
-            const widgetSettingsPath = GLib.build_filenamev([this._widgetsDir.get_path(), `${id}.json`]);
+            const widgetSettingsPath = this.getWidgetSettingsPath(instanceId);
             const widgetSettingsFile = Gio.File.new_for_path(widgetSettingsPath);
 
             const jsonString = JSON.stringify(settingsData, null, 4);
@@ -288,9 +307,8 @@ export class StorageService {
      */
     resetWidgetSettings(instanceId) {
         if (!this._isInitialized) this.init();
-        const id = this._sanitizeWidgetId(instanceId);
 
-        const widgetSettingsPath = GLib.build_filenamev([this._widgetsDir.get_path(), `${id}.json`]);
+        const widgetSettingsPath = this.getWidgetSettingsPath(instanceId);
         const widgetSettingsFile = Gio.File.new_for_path(widgetSettingsPath);
 
         try {

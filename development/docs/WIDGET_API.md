@@ -125,6 +125,16 @@ export default class MyWidget {
     getDefaultSettings() {
         return { refreshInterval: 60 };
     }
+
+    // Optional — เรียกเมื่อ settings ของ widget นี้เปลี่ยนจาก "นอก" process
+    // ของ widget เอง (เช่น ผู้ใช้แก้ค่าใน Control Center ซึ่งรันอยู่คนละ
+    // process กับตัว widget) โดย `api.settings` (this._settings) จะถูก
+    // อัปเดตให้ตรงกับค่าใหม่บนดิสก์แล้ว "ก่อน" เรียก hook นี้เสมอ — ใช้ทำ
+    // อะไรก็ตามที่ buildActor() ไม่ได้ทำอัตโนมัติซ้ำทุก frame อยู่แล้ว เช่น
+    // อัปเดต label ที่ set ไว้ครั้งเดียวตอน enable(), หรือ re-fetch ข้อมูล
+    // จาก DBus service ด้วยค่า config ใหม่ ไม่จำเป็นต้องมีถ้า widget อ่าน
+    // this._settings สดใหม่ทุกครั้งอยู่แล้ว (เช่นใน timer update loop)
+    onSettingsChanged(settings) {}
 }
 ```
 
@@ -164,7 +174,7 @@ export default class MyWidgetPrefs {
 
 | Property/Method | คำอธิบาย |
 |---|---|
-| `api.settings` | object อ่าน/เขียนได้ ผูกกับไฟล์ settings เฉพาะของ widget นี้ (ดู SETTINGS_SPEC.md) |
+| `api.settings` | object อ่าน/เขียนได้ ผูกกับไฟล์ settings เฉพาะของ widget นี้ (ดู SETTINGS_SPEC.md) — object เดียวกันนี้จะถูกอัปเดตให้เองแบบ live ถ้ามีการแก้ผ่าน Control Center (คนละ process) ด้วย ดู `onSettingsChanged()` ด้านบน |
 | `api.monitorInfo` | ข้อมูลจอปัจจุบัน (geometry, scale) |
 | `api.position` | ตำแหน่งปัจจุบันของ widget + `setPosition(x, y, monitorIndex)` |
 | `api.bus.emit(name, data)` / `api.bus.on(name, cb)` | event bus กลาง สำหรับ widget ที่ต้องการสื่อสารกันแบบ opt-in เท่านั้น |

@@ -24,16 +24,20 @@
 //   3. A separate error section for any widget whose metadata.json is
 //      broken, so one bad widget can't take down the whole window.
 //
-// Known limitation (documented, not fixed here — see Notes from
-// implementation in development/tasks/05-prefs-control-center.md): a setting changed
-// through a widget's prefs page is written straight to
+// Cross-process live update (previously a documented known limitation of
+// task 05 — see git history / ROADMAP.md for the old wording): a setting
+// changed through a widget's prefs page is written straight to
 // widgets/<id>.json via WidgetSettings/StorageService, exactly like
-// extension.js does — but the *already-running* widget instance in the
-// Shell process has its own in-memory settings proxy and has no way to
-// know the file changed from this separate process. It picks up the new
-// value the next time it's loaded (i.e. after a toggle off/on here, or a
-// shell restart) — real-time reflection would need a cross-process
-// notification channel that's out of scope for this task.
+// extension.js does. The *already-running* widget instance in the Shell
+// process no longer has to wait for its next load to notice — extension.js's
+// WidgetLoader watches each loaded widget's settings file
+// (lib/settingsWatcher.js) and merges external changes straight into the
+// SAME live `api.settings` proxy the widget already holds, calling its
+// optional `onSettingsChanged()` hook if it has one (development/docs/WIDGET_API.md §3).
+// Nothing in THIS file changes to make that work — it's entirely a Shell-
+// process concern — this comment stays here only because it's the natural
+// place someone reading prefs.js would look for "what happens to the
+// running widget after I save".
 
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';

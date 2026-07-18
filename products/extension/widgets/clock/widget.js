@@ -64,6 +64,22 @@ export default class ClockWidget {
         };
     }
 
+    // Cross-process live update (see development/docs/WIDGET_API.md §3): most of
+    // this._settings is already read fresh on every _render() call, so a
+    // format24h/showDate/fontSize change made in the Control Center (a
+    // separate process) shows up on the NEXT scheduled tick with zero
+    // extra code here. `showSeconds` is the one exception — enable()
+    // only reads it once to pick the timer's interval (1s vs 60s), so
+    // without this hook toggling it would silently wait up to 60s for
+    // the render cadence itself to catch up. Re-render immediately too,
+    // so the change is visible right away rather than at the next tick
+    // of whichever interval was already running.
+    onSettingsChanged() {
+        this._render();
+        this.disable();
+        this.enable();
+    }
+
     /** @private */
     _render() {
         const now = GLib.DateTime.new_now_local();

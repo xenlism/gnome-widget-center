@@ -16,6 +16,7 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import {WidgetSettings} from './widgetSettings.js';
 import {validateSettingsSchema, getSchemaDefaults} from './settingsSchema.js';
+import {SettingsWatcher} from './settingsWatcher.js';
 
 const REQUIRED_METADATA_FIELDS = ['id', 'name', 'entry'];
 
@@ -34,8 +35,14 @@ export class WidgetLoader {
         this._searchPaths = searchPaths;
         this._storageService = storageService;
         this._logger = logger;
-        this._instances = new Map(); // id -> {id, metadata, path, ModuleClass, instance, actor}
+        this._instances = new Map(); // id -> {id, metadata, path, ModuleClass, instance, actor, settings}
         this._errors = [];           // [{id, path, reason}]
+
+        // Cross-process live update — only meaningful with a real
+        // StorageService (same optionality as `settings` itself below;
+        // callers that pass none, e.g. lightweight tests, simply never
+        // get file monitors installed).
+        this._settingsWatcher = storageService ? new SettingsWatcher(storageService) : null;
     }
 
     /** Errors recorded during the most recent discover()/loadAll() call. */
@@ -280,9 +287,31 @@ export class WidgetLoader {
             this._recordError(widgetInfo, `enable() threw: ${e.message}`);
         }
 
-        const entry = {...widgetInfo, ModuleClass, instance, actor};
+        const entry = {...widgetInfo, ModuleClass, instance, actor, settings};
         this._instances.set(widgetInfo.id, entry);
         this._logger.log?.(`[widget-loader] loaded "${widgetInfo.id}" from ${widgetInfo.path}`);
+
+        // Cross-process live update — start watching THIS widget's
+        // settings file for changes made by another process (e.g. the
+        // Control Center's prefs.js, task 05) now that it's actually
+        // loaded. Looks the entry up fresh from `_instances` at fire time
+        // rather than closing over `entry`/`settings` directly, so a
+        // later hot-reload (reloadWidget()) swapping in a new instance/
+        // settings proxy for the same widgetId is picked up automatically
+        // without re-registering the watch — see settingsWatcher.js.
+        this._settingsWatcher?.watch(widgetInfo.id, () => {
+            const changed = WidgetSettings.reloadFromDisk(widgetInfo.id, this._storageService);
+            if (!changed)
+                return; // event fired but nothing actually differs (e.g. an echo of our own save)
+
+            const current = this._instances.get(widgetInfo.id);
+            try {
+                current?.instance.onSettingsChanged?.(current.settings);
+            } catch (e) {
+                this._logger.error?.(`[widget-loader] "${widgetInfo.id}" onSettingsChanged() threw: ${e.message}`);
+            }
+        });
+
         return entry;
     }
 
@@ -300,6 +329,12 @@ export class WidgetLoader {
 
         for (const id of Array.from(this._instances.keys()))
             this._unloadOneInternal(id);
+
+        // Defensive belt-and-braces: every id normally gets unwatched
+        // individually inside _unloadOneInternal() above, but this
+        // guarantees zero leftover Gio.FileMonitors even if `_instances`
+        // and `_settingsWatcher`'s internal map were ever to drift apart.
+        this._settingsWatcher?.unwatchAll();
     }
 
     /**
@@ -325,6 +360,16 @@ export class WidgetLoader {
         const entry = this._instances.get(id);
         if (!entry)
             return;
+
+        // Cross-process live update teardown — stop watching this
+        // widget's settings file (no more Gio.FileMonitor sitting around
+        // for a widget that isn't running) and drop it from
+        // WidgetSettings' live-targets registry, so a stray/late file
+        // event can never try to write into a proxy nothing references
+        // anymore. Order doesn't matter relative to the disable()/
+        // destroy() calls below - this is independent cleanup.
+        this._settingsWatcher?.unwatch(id);
+        WidgetSettings.release(id);
 
         try {
             entry.instance.disable?.();
@@ -433,9 +478,15 @@ export class WidgetLoader {
             this._logger.error?.(`[widget-loader] "${widgetId}" new instance enable() threw during hot-reload: ${e.message}`);
         }
 
-        const newEntry = {...widgetInfo, ModuleClass, instance, actor};
+        const newEntry = {...widgetInfo, ModuleClass, instance, actor, settings};
         this._instances.set(widgetId, newEntry);
         this._logger.log?.(`[widget-loader] hot-reloaded "${widgetId}"`);
+        // No need to re-register the settings watch (task 08 hot-reload
+        // keeps the same widgetId/file path throughout) — the existing
+        // watch from loadOne() already looks entries up fresh from
+        // `_instances` each time it fires, so it picks up this new
+        // instance/settings proxy automatically. See loadOne()'s watch()
+        // callback and its doc comment.
         return newEntry;
     }
 
