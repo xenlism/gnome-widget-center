@@ -8,5 +8,6 @@
   "entry": "widget.js",
   "prefs": "prefs.js",
   "default-size": { "width": 220, "height": 90 },
-  "default-position": { "x": 40, "y": 40, "monitor": 0 }
+  "default-position": { "x": 40, "y": 40, "monitor": 0 },
+  "size-constraints": { "minW": 100, "minH": 60, "maxW": 500, "maxH": 500 }
 }

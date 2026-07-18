@@ -17,6 +17,7 @@
 // afterwards, which is what attach()/_onRelease() do below.
 
 import Clutter from 'gi://Clutter';
+import {MonitorLockManager} from './monitorLockManager.js';
 
 export class DragController {
     /**
@@ -98,9 +99,14 @@ export class DragController {
         const newX = this._drag.startX + (stageX - this._drag.grabX);
         const newY = this._drag.startY + (stageY - this._drag.grabY);
 
+        // Task 13: Monitor Lock - clamp position to current monitor so the
+        // widget can never be dragged off-screen or across the monitor edge.
+        const [width, height] = this._drag.actor.get_size();
+        const locked = MonitorLockManager.clamp(this._drag.monitorIndex, newX, newY, width, height);
+
         // In-memory only - never touches disk. Called on every motion
         // event during the drag, unlike updateWidgetPosition() below.
-        this._layer.setWidgetPosition(this._drag.widgetId, newX, newY);
+        this._layer.setWidgetPosition(this._drag.widgetId, locked.x, locked.y);
 
         return Clutter.EVENT_STOP;
     }

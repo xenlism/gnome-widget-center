@@ -35,6 +35,7 @@ import {DevWatcher} from './lib/devWatcher.js';
 import {GridEngine} from './lib/gridEngine.js';
 import {WidgetEditMode} from './lib/widgetEditMode.js';
 import {EditModeDragController} from './lib/editModeDragController.js';
+import {SizeConstraintManager} from './lib/sizeConstraintManager.js';
 
 export default class WidgetCenterExtension extends Extension {
     enable() {
@@ -221,6 +222,21 @@ export default class WidgetCenterExtension extends Extension {
         const position = this._layer.getSavedPosition(entry.id, fallback);
         try {
             this._layer.addWidgetActor(entry.id, entry.actor, position);
+
+            // Task 14: apply size constraints AFTER the actor is placed in
+            // the layer (not before) — pre-placement the actor has never
+            // been parented/allocated, so actor.get_size() would read back
+            // (0, 0) and clamp every widget down to its minimum size
+            // regardless of its real/natural size. See
+            // sizeConstraintManager.js's doc comment for the full reasoning
+            // (it also falls back to natural/preferred size defensively,
+            // this ordering fix is belt-and-suspenders on top of that).
+            try {
+                SizeConstraintManager.applyConstraints(entry.metadata, entry.actor);
+            } catch (e) {
+                console.error(`[widget-center] Failed to apply size constraints for "${entry.id}"`, e);
+            }
+
             // Task 07: WidgetLayer.addWidgetActor() itself resolves a
             // missing/no-longer-valid monitorIndex to the primary monitor
             // (see widgetLayer.js _resolveMonitorIndex()) - ask it what the

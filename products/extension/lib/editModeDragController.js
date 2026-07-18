@@ -12,6 +12,7 @@
 
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
+import {MonitorLockManager} from './monitorLockManager.js';
 
 export class EditModeDragController {
     /**
@@ -120,9 +121,13 @@ export class EditModeDragController {
         const newX = this._drag.startX + (stageX - this._drag.grabX);
         const newY = this._drag.startY + (stageY - this._drag.grabY);
 
+        // Task 13: Monitor Lock - clamp position to current monitor so the
+        // widget can never be dragged off-screen or across the monitor edge.
+        const locked = MonitorLockManager.clamp(this._drag.monitorIndex, newX, newY, this._drag.width, this._drag.height);
+
         // Preview: unsnapped, follows the pointer exactly (in-memory
         // only, same as task 04 - never touches disk per motion event).
-        this._layer.setWidgetPosition(this._drag.widgetId, newX, newY);
+        this._layer.setWidgetPosition(this._drag.widgetId, locked.x, locked.y);
 
         // Placeholder: shows the grid cell it would actually land in if
         // released right now, including collision avoidance, so the user
@@ -131,7 +136,7 @@ export class EditModeDragController {
         const others = this._othersFor(this._drag);
         const bounds = this._monitorBoundsFor(this._drag.monitorIndex);
         const target = this._grid.findNearestFreeCell(
-            newX, newY, this._drag.width, this._drag.height,
+            locked.x, locked.y, this._drag.width, this._drag.height,
             bounds, others, this._drag.widgetId);
 
         this._drag.placeholder.set_position(target.x, target.y);
