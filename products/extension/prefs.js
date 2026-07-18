@@ -123,8 +123,18 @@ export default class WidgetCenterPreferences extends ExtensionPreferences {
             subtitle: widget.description,
             active: !isDisabled,
         });
-        row.connect('notify::active', () => {
-            this._setWidgetEnabled(settings, widget.id, row.active);
+        const handlerId = row.connect('notify::active', () => {
+            const ok = this._setWidgetEnabled(settings, widget.id, row.active);
+            if (!ok) {
+                // Write failed (see _setWidgetEnabled) — the switch already
+                // flipped visually before this handler ran, but the
+                // underlying value never changed, so revert it rather than
+                // leave the UI showing a state that isn't real. Block the
+                // handler while reverting so this doesn't just recurse.
+                row.block_signal_handler(handlerId);
+                row.active = !row.active;
+                row.unblock_signal_handler(handlerId);
+            }
         });
 
         if (widget.hasPrefs || widget.hasSettingsSchema) {
@@ -143,19 +153,30 @@ export default class WidgetCenterPreferences extends ExtensionPreferences {
         return row;
     }
 
-    /** @private flips one widget id in/out of the `disabled-widgets` GSettings array. */
+    /**
+     * @private flips one widget id in/out of the `disabled-widgets`
+     * GSettings array.
+     * @returns {boolean} true if the write succeeded, false otherwise (so
+     *   the caller can revert a switch that already flipped visually).
+     */
     _setWidgetEnabled(settings, widgetId, enabled) {
         if (!settings.isReady) {
             logError(new Error(`SettingsService not ready — could not ${enabled ? 'enable' : 'disable'} "${widgetId}"`));
-            return;
+            return false;
         }
 
-        const current = new Set(settings.getGlobalValue('disabled-widgets'));
-        if (enabled)
-            current.delete(widgetId);
-        else
-            current.add(widgetId);
-        settings.setGlobalValue('disabled-widgets', Array.from(current));
+        try {
+            const current = new Set(settings.getGlobalValue('disabled-widgets'));
+            if (enabled)
+                current.delete(widgetId);
+            else
+                current.add(widgetId);
+            settings.setGlobalValue('disabled-widgets', Array.from(current));
+            return true;
+        } catch (e) {
+            logError(e, `could not ${enabled ? 'enable' : 'disable'} "${widgetId}"`);
+            return false;
+        }
     }
 
     /**

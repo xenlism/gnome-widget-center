@@ -292,38 +292,52 @@ export class WidgetEditMode {
         });
     }
 
-    /** @private builds the back-side St.Widget with the four action
-     * buttons, sized to match the front actor. Built lazily (only once,
-     * on first flip) rather than in attach() for every widget up front -
-     * most widgets may never be right-clicked in a session, so this
-     * avoids a St.BoxLayout + 4 St.Buttons per widget that never get
-     * used. */
+    /** @private builds the back-side St.Widget with up to four action
+     * icons laid out in a single horizontal row, sized to match the
+     * front actor EXACTLY (same width AND height — the widget's on-screen
+     * footprint never changes between front/back). Built lazily (only
+     * once, on first flip) rather than in attach() for every widget up
+     * front - most widgets may never be right-clicked in a session, so
+     * this avoids a St.BoxLayout + 4 St.Buttons per widget that never get
+     * used.
+     *
+     * Real-hardware bug (2026-07-18): this used to be a VERTICAL stack of
+     * full-width buttons, forced into a box the same height as the front
+     * actor. Three-plus stacked buttons need more height than small
+     * widgets (e.g. clock's ~90px) have to give, and St.BoxLayout doesn't
+     * clip overflowing children by default, so the last button rendered
+     * outside/below the visible card with no background behind it —
+     * looked like a stray icon floating under the widget. A horizontal
+     * row of icon-only buttons needs far less height than a vertical
+     * stack of labeled ones (one icon row vs N stacked rows), so it fits
+     * comfortably inside every bundled widget's front size without
+     * growing the card at all. */
     _buildBackActor(widgetId, entry) {
         const [width, height] = entry.actor.get_size();
 
         const back = new St.BoxLayout({
             style_class: 'widget-edit-mode-back',
-            vertical: true,
+            vertical: false, // single horizontal row of icons, not stacked
             reactive: false, // flipped to true only while actually showing, see _flip()
-            width, height,
+            width, height, // exactly the front actor's footprint - never grows
             visible: false,
         });
 
-        // Icon + tooltip instead of a text label: at the widget's own
-        // size (as small as 2 grid cells) four text buttons stacked in a
-        // BoxLayout wrap/clip badly, and an icon reads faster at a
-        // glance once you know the set. `accessible_name` is set
-        // explicitly on every button below so screen readers still get
-        // the full label even though nothing visible spells it out
-        // anymore — this is also what closes the accessibility gap the
-        // spec previously flagged ("plain St.Button with a text label
-        // only, no explicit accessible_name").
+        // Icon-only (no visible text label) so a row of 4 fits inside
+        // even a small widget's width without wrapping/clipping.
+        // `accessible_name` is set explicitly on every button below so
+        // screen readers still get the full label even though nothing
+        // visible spells it out — this is also what closes the
+        // accessibility gap the spec previously flagged ("plain
+        // St.Button with a text label only, no explicit
+        // accessible_name").
         entry.tooltipCleanups = [];
         const addButton = (iconName, label, styleClass, onClicked) => {
             const button = new St.Button({
                 style_class: `widget-edit-mode-action ${styleClass}`,
                 accessible_name: label,
                 x_expand: true,
+                y_align: Clutter.ActorAlign.CENTER,
                 child: new St.Icon({
                     icon_name: iconName,
                     style_class: 'widget-edit-mode-action-icon',

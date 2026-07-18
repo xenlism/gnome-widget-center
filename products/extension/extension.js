@@ -300,9 +300,13 @@ export default class WidgetCenterExtension extends Extension {
             console.warn(`[widget-center] "${widgetId}" could not be removed — SettingsService unavailable`);
             return;
         }
-        const current = new Set(this._settings.getGlobalValue('disabled-widgets'));
-        current.add(widgetId);
-        this._settings.setGlobalValue('disabled-widgets', Array.from(current));
+        try {
+            const current = new Set(this._settings.getGlobalValue('disabled-widgets'));
+            current.add(widgetId);
+            this._settings.setGlobalValue('disabled-widgets', Array.from(current));
+        } catch (e) {
+            console.error(`[widget-center] "${widgetId}" could not be removed via disabled-widgets`, e);
+        }
     }
 
     /**

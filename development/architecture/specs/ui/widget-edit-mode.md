@@ -111,3 +111,22 @@ dropping, which task 13 returns to EDIT, not NORMAL directly.
   a "rearrange icons" mode on a phone home screen might.
 - Resize is NOT supported — flipping never changes width/height, only
   rotation/opacity (and, via task 13, position).
+
+## Real-hardware findings (2026-07-18)
+
+First actual test on GNOME Shell surfaced a layout bug: the back-side
+card used a VERTICAL stack of full-width labeled buttons, forced into a
+box the exact height of the front actor. Small widgets (e.g. clock,
+~90px tall) aren't tall enough for 3+ stacked buttons — `St.BoxLayout`
+doesn't clip overflowing children by default, so the last button
+rendered outside/below the visible card with no background behind it
+(looked like a stray icon floating under the widget).
+
+**Fixed:** the back side is now a single HORIZONTAL row of icon-only
+buttons instead of a vertical stack. This needs far less height (one
+row vs N stacked rows) so it fits inside the front actor's exact
+footprint without growing the card at all — the widget's on-screen size
+is identical between front and back, per the original "same footprint"
+intent, this time without the overflow. Still not re-verified on real
+hardware after this specific fix.
+

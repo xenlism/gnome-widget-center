@@ -95,7 +95,21 @@ export class SettingsService {
         }
 
         const keyType = this._globalSettings.settings_schema.get_key(key).get_value_type().get_string();
-        const variant = GLib.Variant.new(keyType, value);
+        // NOTE (real-hardware bug, 2026-07-18): `GLib.Variant.new(type, value)`
+        // is NOT a valid GJS call — `g_variant_new()` is a variadic C
+        // function, which GObject-Introspection does not expose as a
+        // bindable static method, so `GLib.Variant.new` is `undefined` and
+        // calling it throws a TypeError. That exception happened inside
+        // whatever called setGlobalValue() (prefs.js's switch-row handler,
+        // or extension.js's Edit Mode "Remove" action) — never here, never
+        // logged by gnome-shell itself — so every write silently failed:
+        // the switch would visually flip but `disabled-widgets` in dconf
+        // never actually changed, so `changed::disabled-widgets` never
+        // fired and the widget never got removed from the desktop. Fixed
+        // by using GJS's own `new GLib.Variant(type, value)` constructor,
+        // which IS specifically provided by gjs's GLib.Variant override to
+        // pack an arbitrary JS value given a GVariant type string.
+        const variant = new GLib.Variant(keyType, value);
         this._globalSettings.set_value(key, variant);
 
         Gio.Settings.sync();
