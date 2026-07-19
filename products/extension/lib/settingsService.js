@@ -94,7 +94,17 @@ export class SettingsService {
             throw new Error(`The key '${key}' does not exist in the schema '${this._schemaId}'.`);
         }
 
-        const keyType = this._globalSettings.settings_schema.get_key(key).get_value_type().get_string();
+        // NOTE (real-hardware bug, 2026-07-19): `get_value_type()` returns a
+        // GVariantType, and GVariantType has NO `get_string()` method —
+        // that's a GVariant method (for reading a string *value* out), not
+        // a GVariantType one (for reading the type *signature* out). Calling
+        // it threw `TypeError: ...get_string is not a function` on every
+        // single setGlobalValue() call, one line before ever reaching the
+        // GLib.Variant.new fix below — so that earlier fix never actually
+        // got exercised on real hardware yet. The correct call for reading
+        // a GVariantType's signature back out as a JS string is
+        // `dup_string()` (binds `g_variant_type_dup_string()`).
+        const keyType = this._globalSettings.settings_schema.get_key(key).get_value_type().dup_string();
         // NOTE (real-hardware bug, 2026-07-18): `GLib.Variant.new(type, value)`
         // is NOT a valid GJS call — `g_variant_new()` is a variadic C
         // function, which GObject-Introspection does not expose as a

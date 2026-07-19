@@ -35,7 +35,7 @@ import {DevWatcher} from './lib/devWatcher.js';
 import {GridEngine} from './lib/gridEngine.js';
 import {WidgetEditMode} from './lib/widgetEditMode.js';
 import {EditModeDragController} from './lib/editModeDragController.js';
-import {SizeConstraintManager} from './lib/sizeConstraintManager.js';
+import {BlockSizeManager} from './lib/blockSizeManager.js';
 
 export default class WidgetCenterExtension extends Extension {
     enable() {
@@ -220,22 +220,23 @@ export default class WidgetCenterExtension extends Extension {
     _placeEntry(entry) {
         const fallback = entry.metadata['default-position'] ?? {x: 40, y: 40};
         const position = this._layer.getSavedPosition(entry.id, fallback);
+
+        // Task 14: block-type size system (2026-07-19) — sets the actor's
+        // pixel size directly from its declared `cols x rows` grid-cell
+        // span (metadata['block-size']) times GridEngine.cellSize. Unlike
+        // the old pixel min/max system this never reads the actor's
+        // current size, so there's no ordering dependency on
+        // addWidgetActor() below anymore — see blockSizeManager.js's doc
+        // comment for why the old system needed that ordering and this
+        // one doesn't.
+        try {
+            BlockSizeManager.applyBlockSize(entry.metadata, entry.actor, this._grid.cellSize);
+        } catch (e) {
+            console.error(`[widget-center] Failed to apply block size for "${entry.id}"`, e);
+        }
+
         try {
             this._layer.addWidgetActor(entry.id, entry.actor, position);
-
-            // Task 14: apply size constraints AFTER the actor is placed in
-            // the layer (not before) — pre-placement the actor has never
-            // been parented/allocated, so actor.get_size() would read back
-            // (0, 0) and clamp every widget down to its minimum size
-            // regardless of its real/natural size. See
-            // sizeConstraintManager.js's doc comment for the full reasoning
-            // (it also falls back to natural/preferred size defensively,
-            // this ordering fix is belt-and-suspenders on top of that).
-            try {
-                SizeConstraintManager.applyConstraints(entry.metadata, entry.actor);
-            } catch (e) {
-                console.error(`[widget-center] Failed to apply size constraints for "${entry.id}"`, e);
-            }
 
             // Task 07: WidgetLayer.addWidgetActor() itself resolves a
             // missing/no-longer-valid monitorIndex to the primary monitor

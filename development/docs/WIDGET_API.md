@@ -29,14 +29,23 @@ my-widget/
   "api-version": 1,
   "entry": "widget.js",
   "prefs": "prefs.js",
-  "default-size": { "width": 220, "height": 140 },
-  "default-position": { "x": 40, "y": 40, "monitor": 0 }
+  "block-size": { "cols": 14, "rows": 9 },
+  "default-position": { "x": 40, "y": 40, "monitor": 0 },
+  "size-constraints": { "minCols": 7, "minRows": 4, "maxCols": 31, "maxRows": 31 }
 }
 ```
 
 - `id` ต้องตรงกับชื่อโฟลเดอร์ และห้ามชนกับ widget อื่น (host เช็คและ reject ถ้าซ้ำ)
 - `api-version` ใช้เช็ค compatibility — ถ้า host เปลี่ยน API แบบ breaking จะขยับเลขนี้ และ
   widget เก่าจะถูกปิดใช้งานพร้อมแจ้งเตือนแทนที่จะ crash
+- `block-size` (`{cols, rows}`) — ขนาดจริงบนจอ **เป็นจำนวน grid cell** ไม่ใช่ pixel
+  ตรงๆ (ดู `development/architecture/specs/ui/size-constraints.md` — ระบบ block-type)
+  host จะคูณด้วย `GridEngine.cellSize` (ปัจจุบัน 16px/cell) ให้เองตอนวาง widget ไม่ต้อง
+  ประกาศ `default-size` เป็น pixel อีกต่อไป ถ้าไม่ประกาศ field นี้เลย จะได้ค่า default
+  กลาง (`10 x 6` cell) แทน
+- `size-constraints` (optional, `{minCols, minRows, maxCols, maxRows}`) — จำกัดขอบเขต
+  ของ `block-size` เป็นจำนวน cell เช่นกัน ประกาศแค่บาง field ก็ได้ ที่เหลือ fallback เป็น
+  ค่า default กลาง
 
 ### 2.1 `settings` (optional) — declarative settings schema (task 05)
 
