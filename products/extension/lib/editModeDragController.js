@@ -73,6 +73,9 @@ export class EditModeDragController {
          * static list because it must reflect live positions, not a
          * snapshot taken at attach() time. */
         this._getOthersOnMonitor = null;
+
+        /** @private Guard flag to prevent cyclical _onMotion execution loop */
+        this._isProcessingMotion = false;
     }
 
     /**
@@ -151,7 +154,7 @@ export class EditModeDragController {
             this._logger.debug('edit-drag', `drag started ("${widgetId}")`);
 
             const {actor, monitorIndex} = entry;
-            const [stageX, stageY] = event.get_coords();
+            const [stageX, stageY] = global.get_pointer();
             const [startX, startY] = actor.get_position();
             const [width, height] = actor.get_size();
 
@@ -192,39 +195,49 @@ export class EditModeDragController {
         if (!this._drag)
             return Clutter.EVENT_PROPAGATE;
 
-        const [stageX, stageY] = event.get_coords();
-        const newX = this._drag.startX + (stageX - this._drag.grabX);
-        const newY = this._drag.startY + (stageY - this._drag.grabY);
+        if (this._isProcessingMotion)
+            return Clutter.EVENT_PROPAGATE;
 
-        // Task 13: Monitor Lock - clamp position to current monitor so the
-        // widget can never be dragged off-screen or across the monitor edge.
-        const locked = MonitorLockManager.clamp(this._drag.monitorIndex, newX, newY, this._drag.width, this._drag.height);
+        this._isProcessingMotion = true;
 
-        // Preview: unsnapped, follows the pointer exactly (in-memory
-        // only, same as task 04 - never touches disk per motion event).
-        this._layer.setWidgetPosition(this._drag.widgetId, locked.x, locked.y);
+        try {
+            // FIX: ใช้ global.get_pointer() ตามคำแนะนำเพื่อดึงพิกัดปัจจุบันระดับ Stage โดยไม่ต้องพึ่งเมธอดของ MotionEvent
+            const [stageX, stageY] = global.get_pointer();
+            const newX = this._drag.startX + (stageX - this._drag.grabX);
+            const newY = this._drag.startY + (stageY - this._drag.grabY);
 
-        // The front actor moved above is what WidgetLayer/StorageService
-        // know about, but it's invisible for the whole drag (Edit Mode
-        // still active) — move the BACK actor to the same spot every
-        // frame so the user actually sees the widget follow the pointer.
-        this._drag.backActor.set_position(locked.x, locked.y);
+            // Task 13: Monitor Lock - clamp position to current monitor so the
+            // widget can never be dragged off-screen or across the monitor edge.
+            const locked = MonitorLockManager.clamp(this._drag.monitorIndex, newX, newY, this._drag.width, this._drag.height);
 
-        // Placeholder: shows the grid cell it would actually land in if
-        // released right now, including collision avoidance, so the user
-        // sees the real drop target rather than just a raw grid snap
-        // that might overlap another widget.
-        const others = this._othersFor(this._drag);
-        const bounds = this._monitorBoundsFor(this._drag.monitorIndex);
-        const target = this._grid.findNearestFreeCell(
-            locked.x, locked.y, this._drag.width, this._drag.height,
-            bounds, others, this._drag.widgetId);
+            // Preview: unsnapped, follows the pointer exactly (in-memory
+            // only, same as task 04 - never touches disk per motion event).
+            this._layer.setWidgetPosition(this._drag.widgetId, locked.x, locked.y);
 
-        this._drag.placeholder.set_position(target.x, target.y);
-        this._drag.placeholder.set_style_class_name(
-            target.collided
-                ? 'widget-edit-mode-placeholder widget-edit-mode-placeholder-collision'
-                : 'widget-edit-mode-placeholder');
+            // The front actor moved above is what WidgetLayer/StorageService
+            // know about, but it's invisible for the whole drag (Edit Mode
+            // still active) — move the BACK actor to the same spot every
+            // frame so the user actually sees the widget follow the pointer.
+            this._drag.backActor.set_position(locked.x, locked.y);
+
+            // Placeholder: shows the grid cell it would actually land in if
+            // released right now, including collision avoidance, so the user
+            // sees the real drop target rather than just a raw grid snap
+            // that might overlap another widget.
+            const others = this._othersFor(this._drag);
+            const bounds = this._monitorBoundsFor(this._drag.monitorIndex);
+            const target = this._grid.findNearestFreeCell(
+                locked.x, locked.y, this._drag.width, this._drag.height,
+                bounds, others, this._drag.widgetId);
+
+            this._drag.placeholder.set_position(target.x, target.y);
+            this._drag.placeholder.set_style_class_name(
+                target.collided
+                    ? 'widget-edit-mode-placeholder widget-edit-mode-placeholder-collision'
+                    : 'widget-edit-mode-placeholder');
+        } finally {
+            this._isProcessingMotion = false;
+        }
 
         return Clutter.EVENT_STOP;
     }
