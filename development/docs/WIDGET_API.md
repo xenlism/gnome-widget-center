@@ -30,8 +30,7 @@ my-widget/
   "entry": "widget.js",
   "prefs": "prefs.js",
   "block-size": { "cols": 14, "rows": 9 },
-  "default-position": { "x": 40, "y": 40, "monitor": 0 },
-  "size-constraints": { "minCols": 7, "minRows": 4, "maxCols": 31, "maxRows": 31 }
+  "default-position": { "x": 40, "y": 40, "monitor": 0 }
 }
 ```
 
@@ -42,10 +41,8 @@ my-widget/
   ตรงๆ (ดู `development/architecture/specs/ui/size-constraints.md` — ระบบ block-type)
   host จะคูณด้วย `GridEngine.cellSize` (ปัจจุบัน 16px/cell) ให้เองตอนวาง widget ไม่ต้อง
   ประกาศ `default-size` เป็น pixel อีกต่อไป ถ้าไม่ประกาศ field นี้เลย จะได้ค่า default
-  กลาง (`10 x 6` cell) แทน
-- `size-constraints` (optional, `{minCols, minRows, maxCols, maxRows}`) — จำกัดขอบเขต
-  ของ `block-size` เป็นจำนวน cell เช่นกัน ประกาศแค่บาง field ก็ได้ ที่เหลือ fallback เป็น
-  ค่า default กลาง
+  กลาง (`10 x 6` cell) แทน — ขนาดนี้คือขนาดจริงตายตัว **ไม่มี min/max และผู้ใช้ resize
+  เองไม่ได้** (ดู size-constraints.md — ไม่มี field `size-constraints` อีกต่อไป)
 
 ### 2.1 `settings` (optional) — declarative settings schema (task 05)
 
@@ -80,17 +77,41 @@ my-widget/
       "type": "color",
       "label": "Accent color",
       "default": "#3584e4"
+    },
+    {
+      "id": "labelFont",
+      "type": "font",
+      "label": "Label font",
+      "default": "Sans Bold 12"
+    },
+    {
+      "id": "iconSize",
+      "type": "size",
+      "label": "Icon size",
+      "description": "Pixels",
+      "default": 32,
+      "min": 16,
+      "max": 128,
+      "step": 1
     }
   ]
 }
 ```
 
-**Type ที่รองรับใน v1:** `string`, `number`, `range`, `boolean`, `dropdown`, `color`
+**Type ที่รองรับใน v1:** `string`, `number`, `range`, `boolean`, `dropdown`, `color`, `font`, `size`
 (field-level กฎเต็มอยู่ใน `products/extension/lib/settingsSchema.js`'s `validateSettingsSchema()`
-— เช่น `range` ต้องมี `min`/`max`, `dropdown` ต้องมี `options`)
+— เช่น `range`/`size` (ถ้าประกาศ `min`/`max`) ต้องมี `min`/`max` เป็นตัวเลขคู่กัน, `dropdown`
+ต้องมี `options`, `font` ต้องมี `default` เป็น string อย่าง `"Sans 10"`)
+
+- `size` ต่างจาก `range` ตรงที่ `min`/`max` เป็น **optional** — ถ้าไม่ประกาศจะได้ช่วงกว้างๆ
+  0–10000px แทน (เหมาะกับ "ขนาดพิกเซลทั่วไป ไม่อยากบังคับขอบเขต" ต่างจาก `range` ที่บังคับ
+  `min`/`max` เสมอ) ค่าที่เก็บ/อ่านจาก `api.settings` เป็นตัวเลข pixel ธรรมดา
+- `font` เก็บ/อ่านจาก `api.settings` เป็น **string** ธรรมดา (ผลลัพธ์ของ
+  `Pango.FontDescription.to_string()`, เช่น `"Sans Bold 12"`) — widget.js ไม่ต้อง import
+  Pango เองเพื่ออ่านค่านี้ แค่ parse string เองถ้าต้องใช้ family/size แยกกัน
 
 **ยังไม่รองรับในรอบนี้ (out of scope):** `file`, `folder`, `desktop-file`, `command`, `date`,
-`time`, `password`, `url`, `icon`, `font`, `label`/`separator`/`group` (structural) — ต้องใช้
+`time`, `password`, `url`, `icon`, `label`/`separator`/`group` (structural) — ต้องใช้
 `prefs.js` เขียนเองไปก่อนถ้าต้องการ type พวกนี้
 
 **ถ้ามีทั้ง `prefs.js` และ `settings` พร้อมกัน:** `prefs.js` ชนะเสมอ — ถือว่าเป็นการเลือกเอง
@@ -254,3 +275,68 @@ proxy.connect('g-properties-changed', (_p, changed) => { /* ... */ });
 - ถ้า service เป้าหมายอาจมีมากกว่า 1 instance เปิดพร้อมกัน (เช่น media player หลายตัว) ให้
   documentation ของ widget ระบุพฤติกรรมการเลือกไว้ชัดเจน (เช่น "เลือกตัวแรกที่เจอ")
   ไม่ใช่ crash หรือสุ่มเอา
+
+## 9. อ่านค่า System Metrics (CPU / RAM / Network) จาก `widget.js`
+
+widget ที่ต้องการแสดงสถานะเครื่อง (CPU, RAM, network throughput, รายชื่อ network
+device) ใช้ `SystemMetricsService` จาก `lib/systemMetricsApi.js` ได้เลย — เป็น
+class เดียวกับที่ `widgets/system-stats/widget.js` (bundled) ใช้อยู่ ไม่ต้องเขียน
+`/proc` parsing เองใหม่
+
+**ข้อจำกัดสำคัญ:** import แบบ relative path (`../../lib/systemMetricsApi.js`) ใช้ได้
+เฉพาะ widget ที่ bundle มากับ extension นี้เท่านั้น (เช่น `system-stats`) — widget
+ของบุคคลภายนอกที่ติดตั้งไว้ที่ `~/.local/share/gnome-widget-center/widgets/` จะ
+**import ไฟล์นี้ไม่ได้** เพราะอยู่คนละโฟลเดอร์กันโดยสิ้นเชิง ไม่มี path เชื่อมถึงกัน
+(เหมือนกับข้อจำกัดของ `lib/mediaApi.js` ใน §8) ไฟล์นี้ยังไม่ถูก expose เป็น
+`api.system` ให้ widget ทุกตัวเรียกได้ — ถ้าต้องการแบบนั้นในอนาคต เป็นการเพิ่ม API
+แบบตั้งใจ (ต้องแก้ `widgetLoader.js`'s `_buildApi()` + เอกสารนี้คู่กัน) ไม่ใช่ผลพลอยได้
+เงียบๆ จากการเปลี่ยนแปลงอื่น
+
+```js
+import {SystemMetricsService} from '../../lib/systemMetricsApi.js';
+
+export default class MyWidget {
+    constructor(api) {
+        this._api = api;
+        // instance เดียวต่อ widget instance เดียว — ค่า CPU%/network
+        // throughput เป็นค่า "delta ตั้งแต่ครั้งก่อนที่เรียกเมธอดเดิม" จึงต้อง
+        // เก็บ state ไว้ใน object นี้ (ดูคอมเมนต์ในไฟล์ systemMetricsApi.js)
+        this._metrics = new SystemMetricsService();
+    }
+
+    enable() {
+        this._timerId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 2, () => {
+            const {cpu, memory, network, devices} = this._metrics.sample();
+            // cpu.percent, memory.percent, network.totalRxBytesPerSec, ...
+            return GLib.SOURCE_CONTINUE;
+        });
+    }
+
+    disable() {
+        GLib.source_remove(this._timerId);
+    }
+}
+```
+
+**เมธอดที่มี** (แต่ละอันเป็น synchronous snapshot อ่านครั้งเดียว ไม่มี timer/polling
+ของตัวเอง — widget เป็นคนตั้ง timer เรียกเองตามจังหวะที่ต้องการ):
+
+| เมธอด | คืนค่า |
+|---|---|
+| `getCpuUsage()` | `{percent}` — CPU รวมทุก core ตั้งแต่ครั้งก่อนที่เรียกเมธอดนี้ (ครั้งแรกได้ 0 เสมอ) |
+| `getMemoryUsage()` | `{totalKb, availableKb, usedKb, percent}` — ค่า ณ ขณะนั้น ไม่ต้องมีค่าครั้งก่อน |
+| `getNetworkUsage()` | `{interfaces: [{name, rxBytesPerSec, txBytesPerSec, rxTotalBytes, txTotalBytes}], totalRxBytesPerSec, totalTxBytesPerSec}` — throughput ตั้งแต่ครั้งก่อน (ครั้งแรกได้ 0 เสมอ) |
+| `listNetworkDevices()` | `[{name}]` — รายชื่อ interface ทั้งหมดที่เจอ (รวม `lo`, กรองเองถ้าไม่ต้องการ) |
+| `sample()` | รวมทั้ง 4 อย่างข้างบนไว้ใน `{cpu, memory, network, devices}` เดียว — สะดวกถ้า widget มี timer เดียวที่อยากได้ทุกอย่างพร้อมกัน |
+
+### กติกาบังคับ (MUST)
+
+- **ห้าม** เรียกเมธอดเหล่านี้จาก timer ที่ถี่กว่าที่จำเป็นจริง (เช่นทุก 100ms) —
+  เป็นการอ่านไฟล์ `/proc/*` ทุกครั้ง ถี่เกินไปสิ้นเปลือง CPU โดยใช่เหตุ ค่า default ของ
+  `system-stats` เอง (ทุก 1-10 วินาที ปรับได้ผ่าน settings) เป็นตัวอย่างช่วงเวลาที่เหมาะสม
+- แต่ละ widget instance ต้องมี `SystemMetricsService` เป็นของตัวเอง (`new` ใน
+  constructor) — อย่า share instance เดียวกันข้าม widget เพราะ state ของ CPU%/network
+  delta จะปนกัน
+- `getCpuUsage()`/`getNetworkUsage()` คืนค่า 0 เสมอในการเรียกครั้งแรก (ยังไม่มีค่าครั้ง
+  ก่อนให้ diff) — เป็นพฤติกรรมที่ตั้งใจ ไม่ใช่ bug ถ้า widget ต้องการค่าที่ "ถูกต้อง" ตั้งแต่
+  เฟรมแรก ให้เรียกเมธอดนี้ทิ้งหนึ่งครั้งตอน `enable()` ก่อนเริ่ม timer จริง

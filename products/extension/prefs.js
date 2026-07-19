@@ -206,6 +206,53 @@ export default class WidgetCenterPreferences extends ExtensionPreferences {
         // read/write it exactly like a hand-written prefs.js would.
         const settingsHandle = WidgetSettings.load(widget.id, storage);
         const prefsPage = buildSettingsPage(widget.metadata.settings, settingsHandle, widget.name);
+        this._presentPrefsPage(window, widget, prefsPage);
+    }
+
+    /**
+     * @private Real-hardware bug report (2026-07-19): a widget's settings
+     * subpage had no visible "Save"/"Close" of its own — every row
+     * writes straight through to disk on change (see settingsSchemaUI.js
+     * / widgets' own hand-written prefs.js), so there was never a
+     * separate "Save" step, and closing relied entirely on the Control
+     * Center window's own title-bar chrome. That's not obvious enough on
+     * its own, so every settings subpage now gets an explicit action bar:
+     * "Close" just navigates back, "Save & Close" additionally flushes
+     * any pending debounced write immediately (WidgetSettings already
+     * auto-saves within ~300ms either way — this just makes "my change is
+     * saved" visible and immediate instead of implicit) before navigating
+     * back.
+     * @param {Adw.PreferencesWindow} window
+     * @param {object} widget - discovered widget entry (needs .id for
+     *   WidgetSettings.flush()).
+     * @param {Adw.PreferencesPage} prefsPage - built by either
+     *   buildSettingsPage() or a widget's own buildPrefsWidget().
+     */
+    _presentPrefsPage(window, widget, prefsPage) {
+        const actionsGroup = new Adw.PreferencesGroup();
+        const buttonBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 8,
+            halign: Gtk.Align.END,
+        });
+
+        const closeButton = new Gtk.Button({label: 'Close'});
+        closeButton.connect('clicked', () => window.close_subpage());
+
+        const saveButton = new Gtk.Button({
+            label: 'Save & Close',
+            css_classes: ['suggested-action'],
+        });
+        saveButton.connect('clicked', () => {
+            WidgetSettings.flush(widget.id);
+            window.close_subpage();
+        });
+
+        buttonBox.append(closeButton);
+        buttonBox.append(saveButton);
+        actionsGroup.add(buttonBox);
+        prefsPage.add(actionsGroup);
+
         window.present_subpage(prefsPage);
     }
 
@@ -230,7 +277,7 @@ export default class WidgetCenterPreferences extends ExtensionPreferences {
                 const settingsHandle = WidgetSettings.load(widget.id, storage);
                 const prefsInstance = new module.default(settingsHandle);
                 const prefsPage = prefsInstance.buildPrefsWidget();
-                window.present_subpage(prefsPage);
+                this._presentPrefsPage(window, widget, prefsPage);
             })
             .catch(e => {
                 logError(e, `[widget-center] prefs: failed to open settings for "${widget.id}"`);

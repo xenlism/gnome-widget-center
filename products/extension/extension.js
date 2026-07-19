@@ -80,6 +80,13 @@ export default class WidgetCenterExtension extends Extension {
             onSettings: id => this._openWidgetSettings(id),
             onRemove: id => this._removeWidgetViaEditMode(id),
             onUninstall: (id, isUserInstalled) => this._uninstallWidget(id, isUserInstalled),
+            // 2026-07-19 fix: dragging from Edit Mode has to be armed on
+            // the back (visible/reactive) actor, not the front one — see
+            // editModeDragController.js's file header. `this._editDrag`
+            // doesn't exist yet at this point in enable() (created right
+            // below), but this callback only ever actually fires later,
+            // on a widget's first flip, by which point it does.
+            onBackActorReady: (id, backActor) => this._editDrag?.armBackActor(id, backActor),
         });
         this._editDrag = new EditModeDragController(this._layer, this._storage, this._grid, this._editMode);
         this._editDrag.setOthersProvider((monitorIndex, excludeId) => this._othersOnMonitor(monitorIndex, excludeId));

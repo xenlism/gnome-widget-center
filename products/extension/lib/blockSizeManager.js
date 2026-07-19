@@ -1,9 +1,10 @@
 // products/extension/lib/blockSizeManager.js
 //
-// Task 14 — Widget size, block-type system (2026-07-19 full rewrite).
+// Task 14 — Widget size, block-type system (2026-07-19 full rewrite,
+// then simplified same day — see "No more min/max" below).
 //
 // Widgets no longer size themselves in raw pixels at all. Every widget's
-// on-screen footprint is now `cols x rows` GridEngine cells
+// on-screen footprint is `cols x rows` GridEngine cells
 // (`cols * cellSize` x `rows * cellSize` px) — declared per-widget in
 // its own `metadata.json` (same "widget author declares it, host never
 // hard-codes a widget id" principle as the old pixel system, see
@@ -17,9 +18,19 @@
 // the actor's current size in the first place. It is set directly and
 // deterministically from metadata + cellSize, every time, before the
 // actor's own natural layout even gets a chance to run.
+//
+// No more min/max (2026-07-19): widget size is now block-only and fixed
+// — a widget IS its declared `cols x rows`, full stop. There is no
+// "smallest"/"largest" bound to clamp against and no way for a user to
+// resize a widget at all (Edit Mode's drag, task 13, only ever changes
+// POSITION — see widget-edit-mode.md's Non-goals). `size-constraints`
+// (`minCols/minRows/maxCols/maxRows`) from the old v2 design is gone;
+// `metadata['block-size']` is the only thing that decides a widget's
+// footprint now. See size-constraints.md's History section for the full
+// v1 (pixel min/max) -> v2 (block min/max) -> v3 (block, no min/max)
+// story.
 
 const DEFAULT_BLOCK_SIZE = Object.freeze({cols: 10, rows: 6});
-const DEFAULT_CONSTRAINTS = Object.freeze({minCols: 4, minRows: 3, maxCols: 60, maxRows: 60});
 
 export class BlockSizeManager {
     /**
@@ -27,7 +38,7 @@ export class BlockSizeManager {
      * @description Declared block size (in grid cells, not px) for one
      * widget — from `metadata['block-size']` (`{cols, rows}`) if
      * declared, else DEFAULT_BLOCK_SIZE for every widget that hasn't
-     * been migrated to the block-type system yet.
+     * declared its own.
      * @param {object} metadata - entry.metadata of the widget
      * @returns {{cols: number, rows: number}}
      */
@@ -40,46 +51,18 @@ export class BlockSizeManager {
     }
 
     /**
-     * @method getConstraintsFor
-     * @description Min/max block span for one widget, in grid cells —
-     * from `metadata['size-constraints']`
-     * (`{minCols, minRows, maxCols, maxRows}`) if declared, merged
-     * key-by-key against DEFAULT_CONSTRAINTS so a widget can declare
-     * just one bound (e.g. only `maxCols`) without the rest silently
-     * becoming `undefined`.
-     * @param {object} metadata
-     * @returns {{minCols:number, minRows:number, maxCols:number, maxRows:number}}
-     */
-    static getConstraintsFor(metadata) {
-        const declared = metadata?.['size-constraints'];
-        if (!declared || typeof declared !== 'object')
-            return DEFAULT_CONSTRAINTS;
-
-        return {
-            minCols: Number.isFinite(declared.minCols) ? declared.minCols : DEFAULT_CONSTRAINTS.minCols,
-            minRows: Number.isFinite(declared.minRows) ? declared.minRows : DEFAULT_CONSTRAINTS.minRows,
-            maxCols: Number.isFinite(declared.maxCols) ? declared.maxCols : DEFAULT_CONSTRAINTS.maxCols,
-            maxRows: Number.isFinite(declared.maxRows) ? declared.maxRows : DEFAULT_CONSTRAINTS.maxRows,
-        };
-    }
-
-    /**
      * @method applyBlockSize
      * @description Sets `actor`'s pixel size directly from its declared
-     * block span (clamped to its declared min/max span), multiplied by
-     * `cellSize`. Deterministic and allocation-independent — never reads
-     * the actor's current size.
+     * block span, multiplied by `cellSize`. Deterministic and
+     * allocation-independent — never reads the actor's current size, and
+     * never clamps against any min/max (there isn't one — see file
+     * header's "No more min/max").
      * @param {object} metadata - entry.metadata (must include `id` for logging)
      * @param {Clutter.Actor} actor
      * @param {number} cellSize - GridEngine.cellSize (px per grid cell)
      */
     static applyBlockSize(metadata, actor, cellSize) {
-        const size = this.getBlockSizeFor(metadata);
-        const rules = this.getConstraintsFor(metadata);
-
-        const cols = Math.max(rules.minCols, Math.min(size.cols, rules.maxCols));
-        const rows = Math.max(rules.minRows, Math.min(size.rows, rules.maxRows));
-
+        const {cols, rows} = this.getBlockSizeFor(metadata);
         actor.set_size(cols * cellSize, rows * cellSize);
     }
 }

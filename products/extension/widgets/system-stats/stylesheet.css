@@ -1,0 +1,43 @@
+.stats-widget {
+    background-color: rgba(40, 40, 40, 0.6);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.stats-item {
+    margin-bottom: 12px;
+}
+
+.stats-label {
+    font-size: 12px;
+    font-weight: bold;
+    color: #ffffff;
+}
+
+.stats-value {
+    font-size: 18px;
+    color: #ffffff;
+    margin-bottom: 6px;
+}
+
+.bar-background {
+    width: 160px;
+    height: 8px;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+}
+
+.bar-fill-cpu {
+    height: 8px;
+    background-color: #3584e4;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+.bar-fill-ram {
+    height: 8px;
+    background-color: #26a269;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}

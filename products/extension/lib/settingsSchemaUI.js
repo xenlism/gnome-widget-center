@@ -15,6 +15,8 @@
 //   boolean  -> Adw.SwitchRow
 //   dropdown -> Adw.ComboRow (Gtk.StringList of option labels)
 //   color    -> Adw.ActionRow + Gtk.ColorDialogButton suffix
+//   size     -> Adw.SpinRow in pixels, bounded by min/max if given
+//   font     -> Adw.ActionRow + Gtk.FontDialogButton suffix
 //
 // Every row writes straight through to the settings proxy on change —
 // same debounced auto-save WidgetSettings.load() already gives any other
@@ -26,6 +28,7 @@
 import Adw from 'gi://Adw';
 import Gtk from 'gi://Gtk';
 import Gdk from 'gi://Gdk';
+import Pango from 'gi://Pango';
 
 /**
  * @method buildSettingsPage
@@ -72,6 +75,10 @@ function _buildRow(field, settingsProxy) {
         return _dropdownRow(field, settingsProxy, current);
     case 'color':
         return _colorRow(field, settingsProxy, current);
+    case 'size':
+        return _sizeRow(field, settingsProxy, current);
+    case 'font':
+        return _fontRow(field, settingsProxy, current);
     default:
         // Unreachable if validateSettingsSchema() ran first (see this
         // function's caller doc comment) — a plain disabled row instead
@@ -180,6 +187,61 @@ function _colorRow(field, settingsProxy, current) {
     });
     button.connect('notify::rgba', () => {
         settingsProxy[field.id] = button.rgba.to_string();
+    });
+    row.add_suffix(button);
+    row.set_activatable_widget(button);
+    return row;
+}
+
+// pixel-sized value (e.g. an icon size, a border width) — same
+// Adw.SpinRow shape as _rangeRow(), but `min`/`max` are OPTIONAL here
+// (a widget author who just wants "some reasonable pixel size, no hard
+// bound" doesn't have to invent an arbitrary min/max just to satisfy
+// validateSettingsSchema() the way `range` requires — see its comment).
+// Falls back to a generous 0–10000px span when neither is given.
+function _sizeRow(field, settingsProxy, current) {
+    const hasBounds = typeof field.min === 'number' && typeof field.max === 'number';
+    const adjustment = new Gtk.Adjustment({
+        value: current,
+        lower: hasBounds ? field.min : 0,
+        upper: hasBounds ? field.max : 10000,
+        step_increment: field.step ?? 1,
+    });
+    const row = new Adw.SpinRow({
+        title: field.label,
+        subtitle: hasBounds ? `${field.min}\u2013${field.max} px` : 'px',
+        adjustment,
+        digits: Number.isInteger(field.step ?? 1) ? 0 : 2,
+    });
+    if (field.description)
+        row.set_tooltip_text(field.description);
+    row.connect('notify::value', () => {
+        settingsProxy[field.id] = row.value;
+    });
+    return row;
+}
+
+// font picker — GTK4's Gtk.FontDialogButton reads/writes a
+// Pango.FontDescription object via its `font-desc` property, not a plain
+// string, so this converts through Pango explicitly on both ends rather
+// than assuming a bare string getter/setter exists (it doesn't). Stored
+// on disk / read from `field.default` as a plain string either way (e.g.
+// "Sans Bold 12") — same as every other setting value in this file — so
+// a widget's own widget.js never has to import Pango just to read this
+// setting back out of `api.settings`.
+function _fontRow(field, settingsProxy, current) {
+    const row = new Adw.ActionRow({title: field.label});
+    if (field.description)
+        row.set_subtitle(field.description);
+
+    const button = new Gtk.FontDialogButton({
+        dialog: new Gtk.FontDialog(),
+        valign: Gtk.Align.CENTER,
+    });
+    button.set_font_desc(Pango.FontDescription.from_string(
+        typeof current === 'string' ? current : String(field.default)));
+    button.connect('notify::font-desc', () => {
+        settingsProxy[field.id] = button.get_font_desc().to_string();
     });
     row.add_suffix(button);
     row.set_activatable_widget(button);

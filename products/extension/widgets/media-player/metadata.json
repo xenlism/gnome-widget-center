@@ -8,6 +8,5 @@
   "entry": "widget.js",
   "prefs": "prefs.js",
   "block-size": { "cols": 30, "rows": 15 },
-  "default-position": { "x": 400, "y": 160, "monitor": 0 },
-  "size-constraints": { "minCols": 10, "minRows": 7, "maxCols": 50, "maxRows": 37 }
+  "default-position": { "x": 400, "y": 160, "monitor": 0 }
 }

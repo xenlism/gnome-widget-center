@@ -130,3 +130,18 @@ is identical between front and back, per the original "same footprint"
 intent, this time without the overflow. Still not re-verified on real
 hardware after this specific fix.
 
+### 2026-07-19 — Edit Mode drag never actually worked
+
+Re-reading this file's own "Transition" section against
+`13-widget-drag-drop.md`'s implementation turned up a real bug: this
+spec says the front actor becomes `reactive = false` for the entire
+time Edit Mode is active, but `EditModeDragController` was wiring its
+button-press listener onto that same (now non-reactive) front actor —
+so a press could never actually reach it, and dragging from Edit Mode
+silently did nothing. Fixed by adding an `onBackActorReady` callback
+here (fired once, the first time a widget's back actor is built) that
+`EditModeDragController` uses to arm its press listener on the BACK
+actor instead — see that file's own header comment for the rest. No
+change to this file's state machine, transition rules, or the 3 back-
+side actions.
+

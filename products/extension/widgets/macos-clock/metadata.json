@@ -1,0 +1,31 @@
+{
+  "id": "macos-clock",
+  "name": "macOS Clock",
+  "description": "นาฬิกาและวันที่สไตล์ macOS ที่มีความโปร่งใส",
+  "version": "1.0.0",
+  "author": "GNOME Widget Center",
+  "api-version": 1,
+  "entry": "widget.js",
+  "block-size": { "cols": 12, "rows": 6 },
+  "default-position": { "x": 16, "y": 16, "monitor": 0 },
+  "settings": [
+    {
+      "id": "format24h",
+      "type": "boolean",
+      "label": "ใช้รูปแบบ 24 ชั่วโมง",
+      "default": true
+    },
+    {
+      "id": "showSeconds",
+      "type": "boolean",
+      "label": "แสดงวินาที",
+      "default": false
+    },
+    {
+      "id": "accentColor",
+      "type": "color",
+      "label": "สีตัวอักษรเวลา",
+      "default": "#ffffff"
+    }
+  ]
+}

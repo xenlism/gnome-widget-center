@@ -1,0 +1,25 @@
+{
+  "id": "mini-notes",
+  "name": "Mini Notes",
+  "description": "โน้ตหรือ To-do list ขนาดเล็ก",
+  "version": "1.0.0",
+  "author": "GNOME Widget Center",
+  "api-version": 1,
+  "entry": "widget.js",
+  "block-size": { "cols": 14, "rows": 10 },
+  "default-position": { "x": 224, "y": 16, "monitor": 0 },
+  "settings": [
+    {
+      "id": "noteText",
+      "type": "string",
+      "label": "ข้อความโน้ต",
+      "default": "- Buy groceries\n- Call mom\n- Finish project"
+    },
+    {
+      "id": "backgroundColor",
+      "type": "color",
+      "label": "สีพื้นหลัง",
+      "default": "#fff5b1"
+    }
+  ]
+}

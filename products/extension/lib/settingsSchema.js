@@ -17,15 +17,18 @@
 //
 // v1 scope is deliberately smaller than the full field-type list floated
 // during design (file/folder/desktop-file/command/date/time/password/
-// url/icon/font/label/separator/group) — those all need either a
+// url/icon/label/separator/group) - those all need either a
 // filesystem-picker dialog or extra sandboxing (command sanitization)
-// that's its own chunk of work. Six types cover the common case (a
-// widget with a handful of text/number/toggle/choice/color settings)
+// that's its own chunk of work. `font` and `size` were added to v1 (were
+// previously on that "later" list too) since they're both just another
+// GTK4 dialog-button/spin-row like `color`/`range` already are - no new
+// sandboxing needed. Eight types now cover the common case (a widget with
+// a handful of text/number/toggle/choice/color/font/size settings)
 // without blocking on the rest. See development/tasks/05-prefs-control-center.md
 // "Out of scope" for the full list still to add.
 
 export const SETTING_TYPES = Object.freeze([
-    'string', 'number', 'range', 'boolean', 'dropdown', 'color',
+    'string', 'number', 'range', 'boolean', 'dropdown', 'color', 'font', 'size',
 ]);
 
 /**
@@ -86,6 +89,23 @@ export function validateSettingsSchema(schema) {
 
         if (field.type === 'dropdown' && (!Array.isArray(field.options) || field.options.length === 0))
             problems.push(`setting "${field.id}": type "dropdown" requires a non-empty "options" array`);
+
+        if (field.type === 'size') {
+            const hasAnyBound = 'min' in field || 'max' in field;
+            if (hasAnyBound) {
+                if (typeof field.min !== 'number' || typeof field.max !== 'number')
+                    problems.push(`setting "${field.id}": type "size" requires numeric "min" and "max" together if either is given`);
+                else if (field.min >= field.max)
+                    problems.push(`setting "${field.id}": "min" must be less than "max"`);
+                else if (typeof field.default === 'number' && (field.default < field.min || field.default > field.max))
+                    problems.push(`setting "${field.id}": "default" (${field.default}) is outside the min/max range`);
+            } else if (typeof field.default !== 'number') {
+                problems.push(`setting "${field.id}": type "size" requires a numeric "default" (pixels)`);
+            }
+        }
+
+        if (field.type === 'font' && typeof field.default !== 'string')
+            problems.push(`setting "${field.id}": type "font" requires a string "default" (e.g. "Sans 10")`);
     });
 
     return problems;

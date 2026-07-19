@@ -74,3 +74,24 @@ drop flow, persistence hooks
   แก้ด้วยการผูก provider function (`setOthersProvider()`) แทนที่จะส่ง list ตายตัวเข้ามาตอน constructor
 - **ยังไม่ยืนยันบนเครื่องจริง** — `node --check` ผ่านเท่านั้น เหมือน task อื่นๆ ก่อนหน้าที่ไม่มี GNOME
   Shell จริงในสภาพแวดล้อมที่ implement ไฟล์นี้
+
+### 2026-07-19 — press listener ย้ายจาก front actor ไป back actor (bug จริง แก้แล้ว)
+
+- ต้นฉบับ step 1 เขียนว่า "Left-click press บน widget actor" แล้วผูก `button-press-event`
+  เข้ากับ front actor ตรงๆ — พลาดไปว่า task 12's `_flip()` ตั้ง `actor.reactive = false` บน
+  front actor ตลอดเวลาที่ EDIT active (ตาม spec เอง) ผลคือกด press ไม่มีทางไปถึง handler
+  นี้ได้เลย ลากจาก Edit Mode จึงไม่ทำงานจริงตั้งแต่แรก
+- แก้โดยเพิ่ม `WidgetEditMode`'s `onBackActorReady` callback (ยิงครั้งเดียวตอน back actor ถูก
+  สร้างครั้งแรก) แล้วให้ `EditModeDragController.armBackActor()` ผูก press listener เข้ากับ
+  back actor แทน — `attach()` เดิมยังเก็บ front actor ไว้เหมือนเดิม (ใช้ตอน persist/ขยับจริง)
+  แค่ไม่ผูก listener ให้มันเองอีกต่อไป
+- ระหว่างลาก ต้องขยับทั้ง front actor (ผ่าน `WidgetLayer.setWidgetPosition()` เหมือนเดิม —
+  อันนี้แหละที่ persist) และ back actor (`set_position()` ตรงๆ ทุก motion event) พร้อมกัน
+  เพราะ back คือตัวที่ผู้ใช้เห็นจริงๆ ระหว่างที่ front ยังซ่อนอยู่ — ไม่งั้นการ์ดจะนิ่งอยู่กับที่
+  ทั้งที่ placeholder ขยับอยู่
+- ลากจาก "พื้นที่ว่าง" บน widget ได้มาฟรีจากดีไซน์เดิมอยู่แล้ว ไม่ต้องเขียนโค้ดเพิ่ม: ปุ่มไอคอนทั้ง 3
+  เป็น `St.Button` ที่กิน press event ของตัวเองไปแล้ว event จะไปถึง handler นี้ก็ต่อเมื่อกดโดนที่ว่าง
+  (padding/spacing รอบๆ ปุ่ม) เท่านั้น
+- ไม่ต้องกด Super เหมือนเดิม (ตาม spec เดิม) — จุดที่เปลี่ยนคือ "actor ไหน" รับ press ไม่ใช่ "ต้องกด
+  ปุ่มอะไรเพิ่ม"
+- **ยังไม่ยืนยันบนเครื่องจริง** เหมือนเดิม

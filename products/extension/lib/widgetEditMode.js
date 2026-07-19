@@ -19,6 +19,16 @@
 // file only knows about ONE widget's flip/back-side chrome, never about
 // pointer grabs on `global.stage`.
 //
+// Reposition-from-Edit-Mode (2026-07-19 fix): the front actor is
+// `reactive = false` for as long as EDIT is active (see below), so a
+// drag can only ever start from whatever is actually showing at that
+// point — the BACK actor, not the front one. This module hands that
+// actor to EditModeDragController via the onBackActorReady callback the
+// moment it's built (see _buildBackActor()); no button/icon is involved,
+// dragging works by pressing anywhere on the back side that ISN'T one of
+// the 3 action icons (Settings/Reset/Remove), i.e. the empty padding
+// around/between them — no Super key needed, same as before.
+//
 // Widget content is disabled while EDIT (and therefore also DRAGGING) is
 // active, per spec — `actor.reactive = false` on the front content so
 // clicks can't reach whatever the widget itself put there (e.g. the
@@ -79,12 +89,26 @@ export class WidgetEditMode {
      *   widgets (deleting a bundled widget's folder makes no sense) — see
      *   attach()'s `isUserInstalled` option. Optional; if omitted the
      *   Uninstall button is not shown at all.
+     * @param {(widgetId:string, backActor:St.Widget)=>void} [callbacks.onBackActorReady] -
+     *   fired once per widget, the first time its back-side actor is
+     *   built (lazily, on first flip — see `_buildBackActor()`). Exists
+     *   so EditModeDragController (task 13) can wire its drag
+     *   button-press listener onto the BACK actor instead of the front
+     *   one — front content is `reactive = false` for the entire time
+     *   Edit Mode is active (see `_flip()`), so a drag can only ever
+     *   start from whatever is actually visible/reactive at that point,
+     *   which is this back actor, not the (invisible) front actor.
+     *   Dragging from "empty space" on the back side falls out of this
+     *   for free: the 3 action buttons are `St.Button`s that consume
+     *   their own press events, so a press only reaches this actor's own
+     *   handler when it lands on the padding/gaps around them.
      */
     constructor(storageService, callbacks = {}) {
         this._storage = storageService;
         this._onSettings = callbacks.onSettings ?? (() => {});
         this._onRemove = callbacks.onRemove ?? (() => {});
         this._onUninstall = callbacks.onUninstall ?? null;
+        this._onBackActorReady = callbacks.onBackActorReady ?? (() => {});
 
         /** @private {Map<string, object>} widgetId -> per-widget flip state */
         this._widgets = new Map();
@@ -315,13 +339,34 @@ export class WidgetEditMode {
     _buildBackActor(widgetId, entry) {
         const [width, height] = entry.actor.get_size();
 
-        const back = new St.BoxLayout({
+        // 2026-07-19 fix (real-hardware bug report): `back` used to BE the
+        // St.BoxLayout the icons were added to directly, with every button
+        // `x_expand: true` so the row filled the entire card. That left
+        // almost no "empty space" (just the 8px padding / 6px spacing) for
+        // EditModeDragController to grab a drag from, and made the row
+        // reflow (see the tooltip note below) shove buttons around under
+        // the pointer. Now `back` is a plain, non-layout-managed St.Widget
+        // that owns 100% of the card's surface (right-click-to-exit and
+        // drag-from-empty-space both attach to THIS actor), and the icons
+        // live in a separate, content-sized `iconRow` centered inside it —
+        // so everywhere outside the icon row's own small footprint is
+        // free, reliable drag/empty space, exactly matching the "drag from
+        // empty space" spec.
+        const back = new St.Widget({
             style_class: 'widget-edit-mode-back',
-            vertical: false, // single horizontal row of icons, not stacked
+            layout_manager: new Clutter.BinLayout(),
             reactive: false, // flipped to true only while actually showing, see _flip()
             width, height, // exactly the front actor's footprint - never grows
             visible: false,
         });
+
+        const iconRow = new St.BoxLayout({
+            style_class: 'widget-edit-mode-icon-row',
+            vertical: false, // single horizontal row of icons, not stacked
+            x_align: Clutter.ActorAlign.CENTER,
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        back.add_child(iconRow);
 
         // Icon-only (no visible text label) so a row of 4 fits inside
         // even a small widget's width without wrapping/clipping.
@@ -336,7 +381,6 @@ export class WidgetEditMode {
             const button = new St.Button({
                 style_class: `widget-edit-mode-action ${styleClass}`,
                 accessible_name: label,
-                x_expand: true,
                 y_align: Clutter.ActorAlign.CENTER,
                 child: new St.Icon({
                     icon_name: iconName,
@@ -344,8 +388,8 @@ export class WidgetEditMode {
                 }),
             });
             button.connect('clicked', onClicked);
-            back.add_child(button);
-            entry.tooltipCleanups.push(this._attachTooltip(button, back, label));
+            iconRow.add_child(button);
+            entry.tooltipCleanups.push(this._attachTooltip(button, back, iconRow, label));
         };
 
         addButton('preferences-system-symbolic', 'Settings',
@@ -365,6 +409,24 @@ export class WidgetEditMode {
                 () => this._onUninstall(widgetId, entry.isUserInstalled));
         }
 
+        // Real-hardware bug (2026-07-19): right-click only ever flipped
+        // NORMAL/HOVER -> EDIT, never back the other way, because the
+        // *front* actor was the only one that ever listened for it — and
+        // the front actor is `reactive = false` and hidden for as long as
+        // EDIT is active (see _flip()), so once flipped there was nothing
+        // left listening for the right-click that's supposed to flip it
+        // back. `back` needs the exact same handler. St.Button only ever
+        // consumes PRIMARY button presses for its own click handling, so
+        // a right-click still reaches this actor even when the pointer is
+        // over one of the icons.
+        back.connect('button-press-event', (_actor, event) => {
+            if (event.get_button() !== Clutter.BUTTON_SECONDARY)
+                return Clutter.EVENT_PROPAGATE;
+
+            this.toggle(widgetId);
+            return Clutter.EVENT_STOP;
+        });
+
         // Placed as a SIBLING of the front actor (same parent, same
         // position) rather than a child - a child would rotate along
         // with the front actor's own rotation_angle_y and end up
@@ -374,6 +436,11 @@ export class WidgetEditMode {
         parent?.insert_child_above(back, entry.actor);
         back.set_position(entry.actor.get_x(), entry.actor.get_y());
         back.set_pivot_point(0.5, 0.5);
+
+        // Let EditModeDragController (task 13) arm this actor for
+        // dragging — see the constructor's onBackActorReady doc comment
+        // for why it has to be this actor and not `entry.actor`.
+        this._onBackActorReady(widgetId, back);
 
         return back;
     }
@@ -385,13 +452,23 @@ export class WidgetEditMode {
      * for that widget — mirrors the disposal pattern the rest of this
      * class already uses for signal ids.
      * @param {St.Button} button
-     * @param {St.Widget} back - the back-side actor the tooltip label is
-     *   parented into (same actor the button itself lives in), so it
-     *   flips/hides/gets destroyed together with everything else on the
-     *   back side rather than needing separate lifecycle tracking.
+     * @param {St.Widget} back - the plain (non-layout-managed) back-side
+     *   actor the tooltip label is parented into. Real-hardware bug
+     *   (2026-07-19): this used to parent the tooltip into the icon
+     *   St.BoxLayout itself via insert_child_above() — but a BoxLayout
+     *   lays out EVERY child it's given, tooltip label included, so on
+     *   hover the label became a real extra column in the row (with its
+     *   own dark background), pushing every button after it sideways
+     *   instead of floating above them. Parenting into `back` (which
+     *   uses a BinLayout, so children are positioned purely by
+     *   set_position()) makes it a true floating overlay that never
+     *   affects the icon row's layout.
+     * @param {St.BoxLayout} iconRow - the actor `button` is actually a
+     *   child of, needed to translate `button`'s position (relative to
+     *   iconRow) into a position relative to `back`.
      * @param {string} text
      */
-    _attachTooltip(button, back, text) {
+    _attachTooltip(button, back, iconRow, text) {
         let showTimeoutId = null;
         let tooltipLabel = null;
 
@@ -411,17 +488,25 @@ export class WidgetEditMode {
                     style_class: 'widget-edit-mode-tooltip',
                     text,
                 });
-                back.insert_child_above(tooltipLabel, button);
+                // Sibling of iconRow (a child of `back` directly), on top
+                // of everything - a floating overlay, never a participant
+                // in iconRow's box layout.
+                back.insert_child_above(tooltipLabel, iconRow);
 
                 // Position above the button, centered — read after
                 // insertion so the label has a real preferred size to
-                // measure instead of guessing a fixed offset.
+                // measure instead of guessing a fixed offset. Both
+                // `iconRow` and `button` positions are relative to their
+                // own parent, so they have to be summed to get a position
+                // relative to `back` (the actor the tooltip is actually
+                // parented into).
+                const [rowX, rowY] = iconRow.get_position();
                 const [buttonX, buttonY] = button.get_position();
                 const [, labelHeight] = tooltipLabel.get_preferred_height(-1);
                 const [, labelWidth] = tooltipLabel.get_preferred_width(-1);
                 tooltipLabel.set_position(
-                    buttonX + (button.width - labelWidth) / 2,
-                    buttonY - labelHeight - 4
+                    rowX + buttonX + (button.width - labelWidth) / 2,
+                    rowY + buttonY - labelHeight - 4
                 );
 
                 return GLib.SOURCE_REMOVE;

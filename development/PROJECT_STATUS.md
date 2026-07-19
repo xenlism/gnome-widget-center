@@ -107,6 +107,39 @@ that distinction matters.
   reflect on the desktop in real time) — that's the next item on the list, not fixed by this
   change. Not yet verified on real GNOME Shell hardware.
 
+## Resolved decisions (2026-07-19)
+
+- **Task 12/13 — Edit Mode drag was armed on the wrong actor, never
+  actually worked** — `EditModeDragController` wired its button-press
+  listener onto the widget's front actor, but `WidgetEditMode` sets
+  `actor.reactive = false` on that same front actor for the entire time
+  Edit Mode is active (per `widget-edit-mode.md`'s own Transition
+  section), so the press could never reach it. Fixed by adding
+  `WidgetEditMode`'s `onBackActorReady` callback (fired once, when a
+  widget's back actor is first built) and having
+  `EditModeDragController.armBackActor()` wire the listener there
+  instead — the back actor is moved in lockstep with the front one
+  during the drag so the user can actually see it move, while the front
+  actor is still what gets persisted via `StorageService`. Repositioning
+  from Edit Mode by dragging empty space on the widget now works exactly
+  as spec'd, no Super key needed. Reading/tooltip/click behavior for the
+  3 back-side icons (Settings/Reset/Remove) was already correct as of
+  the 2026-07-18 change below and needed no further work. Details in
+  `development/tasks/13-widget-drag-drop.md`'s 2026-07-19 note and both
+  `development/architecture/specs/ui/widget-edit-mode.md` and
+  `drag-drop.md`. Still not verified on real GNOME Shell hardware.
+- **Task 14 — size-constraints (min/max) removed entirely, block-only
+  sizing** — `metadata['size-constraints']` (`minCols/minRows/maxCols/
+  maxRows`) is gone; a widget's `block-size` is now its exact, fixed
+  on-screen footprint with no smallest/largest bound and no way to
+  resize it at all. `blockSizeManager.js` no longer clamps anything, and
+  the long-dead `sizeConstraintManager.js` (the original v1 pixel
+  min/max system, already unused since the 2026-07-19 block-type
+  rewrite earlier that same day) has been deleted outright rather than
+  left as unused code. `clock`/`media-player`'s `metadata.json` had
+  their `size-constraints` field dropped. Full history in
+  `development/architecture/specs/ui/size-constraints.md`.
+
 ## Next Milestone
 
 > อัปเดต 2026-07-18: 3 รายการเดิม (Widget Edit Mode/Drag & Drop/Grid Engine) implement ไปแล้วตั้งแต่

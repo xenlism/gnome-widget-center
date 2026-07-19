@@ -1,0 +1,22 @@
+{
+  "id": "system-stats",
+  "name": "System Stats",
+  "description": "แสดงสถานะการใช้งาน CPU และ RAM",
+  "version": "1.0.0",
+  "author": "GNOME Widget Center",
+  "api-version": 1,
+  "entry": "widget.js",
+  "block-size": { "cols": 12, "rows": 8 },
+  "default-position": { "x": 16, "y": 112, "monitor": 0 },
+  "settings": [
+    {
+      "id": "updateInterval",
+      "type": "range",
+      "label": "อัปเดตทุก (วินาที)",
+      "min": 1,
+      "max": 10,
+      "step": 1,
+      "default": 2
+    }
+  ]
+}

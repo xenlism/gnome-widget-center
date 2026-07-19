@@ -13,7 +13,10 @@
     background-color: rgba(30, 30, 30, 0.92);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 8px;
-    padding: 8px;
+}
+
+.widget-edit-mode-icon-row {
+    padding: 6px 10px;
     spacing: 6px;
 }
 

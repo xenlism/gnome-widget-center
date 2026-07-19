@@ -18,6 +18,14 @@ recorded there.
   DRAGGING — re-entrant presses are ignored, only one drag at a time).
 - No modifier key required (unlike task 04's Super+drag) — the mode
   switch into Edit Mode is itself the explicit gesture.
+- **2026-07-19 fix:** in practice this means pressing on the widget's
+  BACK side (the Settings/Reset/Remove card) — the front side is
+  non-reactive for as long as EDIT is active
+  (`widget-edit-mode.md`'s Transition section), so it can never be what
+  receives the press. A press has to land on empty space on the back
+  side to count as a drag start (not one of the 3 action icons — those
+  are `St.Button`s that consume their own presses), which is what
+  "empty area" means in practice: the padding around/between the icons.
 
 ## During drag
 

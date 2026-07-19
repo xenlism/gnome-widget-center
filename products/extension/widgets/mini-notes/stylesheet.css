@@ -1,0 +1,17 @@
+.notes-widget {
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.notes-header {
+    font-size: 16px;
+    font-weight: 700;
+    color: #333333;
+    margin-bottom: 8px;
+}
+
+.notes-content {
+    font-size: 14px;
+    color: #444444;
+}

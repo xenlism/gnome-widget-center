@@ -3,253 +3,255 @@
 [![Toolkit](https://img.shields.io/badge/Toolkit-GTK%204.0-blue)](https://www.gtk.org/)
 [![License](https://img.shields.io/badge/License-GPL%203.0-blue.svg)](LICENSE)
 
+A modern desktop widget platform for GNOME Shell built with GJS, GTK4 and Libadwaita.
 
-A modern desktop widget platform for GNOME Shell.
-
-GNOME Widget Center brings customizable desktop widgets to GNOME Shell through a modern, extensible architecture. Inspired by KDE Plasma Widgets while following the GNOME design philosophy, it provides a clean and consistent platform for building, managing, and sharing desktop widgets.
+> **Status:** Pre-Alpha
 
 ---
+
+## Overview
+
+GNOME Widget Center is a modern desktop widget platform inspired by KDE Plasma Widgets while following the GNOME Human Interface Guidelines (HIG).
+
+The project is built around three main components:
+
+- GNOME Shell Extension
+- GNOME Widget Center Application
+- Widget SDK
+
+Widgets never interact directly with GNOME Shell internals. Instead, they communicate exclusively through the Widget SDK, providing a stable and maintainable development environment.
+
+---
+
+## Screenshots
+
+### Dashboard
+
 ![Dashboard](assets/screenshots/dashboard.png)
+
+### Desktop
+
 ![Desktop](assets/screenshots/desktop.png)
+
+---
+
+## Current Status
+
+| Component | Status |
+|-----------|--------|
+| Architecture | ✅ Complete |
+| Specifications | ✅ Complete |
+| Widget SDK Design | ✅ Complete |
+| Theme Package Design | ✅ Complete |
+| Widget Loader | 🚧 In Progress |
+| Widget Layer | 🚧 In Progress |
+| Settings Store | 🚧 In Progress |
+| Preferences | ⏳ Planned |
+| Widget Repository | ⏳ Planned |
+
+---
+
+## Vision
+
+GNOME Widget Center aims to provide:
+
+- Desktop Widgets
+- Stable Widget SDK
+- Theme Packages
+- Widget Repository
+- Multi-monitor Support
+- GTK4 Preferences
+- High Performance
+- Developer-friendly APIs
+
 ---
 
 ## Features
 
 ### Desktop Widgets
 
-- Modern dashboard
-- Drag & Drop positioning
-- Resizable widgets
-- Multiple dashboards
-- Multi-monitor support
-- Responsive layouts
+- Desktop Widget Layer
+- Fixed-size Widgets
+- 16px Grid Layout
+- Drag & Drop
+- Desktop Edit Mode
+- Right-click Context Menu
 
 ### Widget SDK
 
-Build widgets using a stable and documented API.
+Widgets communicate through the SDK instead of directly accessing GNOME Shell.
 
-Modules include:
+Planned SDK modules include:
 
 - Configuration
-- Theme
-- Runtime
 - Dashboard
-- UI
-- Notification
+- Theme
 - Media
 - Network
-- Shared Services
+- Notifications
 - Storage
-- Permissions
-- Widget Bus
 - Logger
 - Repository
 - AI
 
-Widgets communicate only through the Widget SDK and never access GNOME Shell internals directly.
+### Theme Packages
 
-### Shared Services
+Theme Packages replace traditional backup and restore.
 
-Reusable services available to every widget.
+A package can include:
 
-- Media Service
-- Weather Service
-- System Service
-- Notification Service
-- Repository Service
-- AI Service
-- Location Service
+- Desktop Layout
+- Installed Widgets
+- Widget Settings
+- Theme Configuration
+- Wallpaper (Optional)
+- Fonts (Optional)
 
-### Themes
+### Widget Repository
 
-Customize your desktop with portable themes.
+Planned features:
 
-Theme packages may include:
-
-- Dashboard appearance
-- Colors
-- Typography
-- Icons
-- Widget styles
-- Border radius
-- Spacing
-
-### Widget Repository *(Planned)*
-
-- Official Repository
-- Community Repository
-- Automatic Updates
-- Version Management
-- One-click Installation
-
-### Backup & Restore *(Planned)*
-
-Backup includes:
-
-- Dashboard layouts
-- Installed widgets
-- Widget configuration
-- Themes
-- User preferences
+- Install Widgets
+- Update Widgets
+- Search
+- Categories
+- Ratings
+- Screenshots
 
 ---
 
-# Architecture
+## Architecture
 
+```text
+GNOME Widget Center Application
+            │
+            ▼
+       Widget SDK
+            │
+            ▼
+      Widget Runtime
+            │
+            ▼
+GNOME Shell Extension
+            │
+            ▼
+      Desktop Widget Layer
 ```
-                    Widgets
-                        │
-                        ▼
-                  Widget SDK
-                        │
-                        ▼
-            GNOME Widget Center
-     ┌────────────────────────────┐
-     │ Dashboard Manager          │
-     │ Widget Manager             │
-     │ Theme Manager              │
-     │ Shared Services            │
-     └────────────────────────────┘
-                        │
-                        ▼
-               GNOME Shell Runtime
-```
-
-Widgets interact only with the Widget SDK.
-
-The SDK provides a stable API while hiding runtime implementation details from widget developers.
 
 ---
 
-# Project Structure
+## Project Structure
 
-Split into two top-level parts: everything needed to *build* the project
-(`development/`), and everything that ships to end users (`products/`).
+```text
+development/
+├── architecture/
+├── roadmap/
+├── specifications/
+├── tasks/
+└── tools/
 
+products/
+├── application/
+├── extension/
+├── sdk/
+├── widgets/
+└── assets/
+
+website/
+
+docs/
 ```
-gnome-widget-center/
-
-├── development/
-│   ├── architecture/
-│   │   System architecture and design documents
-│   │
-│   ├── docs/
-│   │   Documentation (widget API, settings spec, contributing guide, spec drafts)
-│   │
-│   ├── tasks/
-│   │   Development tasks + ROADMAP.md (source of truth for task status)
-│   │
-│   ├── tests/
-│   │   Test checklists / smoke tests
-│   │
-│   └── tools/
-│       Development tools (build/sync scripts)
-│
-├── products/
-│   ├── extension/
-│   │   GNOME Shell Extension (the shippable core)
-│   │
-│   ├── app/
-│   │   GTK4 / Libadwaita application
-│   │
-│   ├── sdk/
-│   │   Widget SDK
-│   │
-│   ├── assets/
-│   │   Screenshots, icons and branding
-│   │
-│   └── CHANGELOG.md
-│       Release history of the shipped product
-│
-├── README.md
-└── LICENSE
-```
-
-*(bundled widgets live at `products/extension/widgets/` — a separate top-level `widgets/`
-was considered and rejected on 2026-07-16: nothing in the codebase ever loaded from it, only
-`products/extension/widgets/` is read by `extension.js`. See
-`development/tasks/ROADMAP.md`'s 2026-07-16 decision note.)*
 
 ---
 
-# Roadmap
+## Roadmap
 
-## Phase 1
+### Phase 0 — Foundation
 
-- Core Runtime
-- Widget SDK
-- Dashboard
+- ✅ Project setup
+- ✅ Repository structure
+- ✅ Architecture
+- ✅ Specifications
+
+### Phase 1 — Core Runtime
+
+- Widget Loader
+- Widget Layer
+- Widget Runtime
+- Settings Store
+- Drag Runtime
+
+**Milestone:** Desktop widgets can be displayed.
+
+### Phase 2 — Desktop Experience
+
 - Preferences
-- Drag & Drop
+- Widget Configuration
+- Desktop Edit Mode
+- Multi-monitor Support
 
-## Phase 2
+**Milestone:** Users can manage widgets visually.
+
+### Phase 3 — Widget SDK
+
+- Widget SDK
+- Example Widgets
+- Hot Reload
+- Developer Documentation
+
+**Milestone:** Third-party widget development.
+
+### Phase 4 — Public Preview
+
+- Testing
+- Packaging
+- Documentation
+- Preview Release
+
+### Phase 5 — Themes
 
 - Theme Manager
-- Widget Repository
-- Backup & Restore
+- Theme Packages
+- Import / Export
+- Theme Sharing
 
-## Phase 3
+### Phase 6 — Widget Repository
 
-- Widget Store
-- AI Services
-- Developer SDK
-- CLI Tools
-- Community Platform
+- Online Repository
+- Widget Installation
+- Widget Updates
+- Ratings
+- Categories
 
----
+### Future
 
-# Design Principles
-
-- Native GNOME Experience
-- Modern User Interface
-- Stable Widget SDK
-- Modular Architecture
-- Shared Services
-- High Performance
-- Easy Customization
-- Developer Friendly
+- AI Widgets
+- Cloud Synchronization
+- Online Theme Store
+- Community Marketplace
 
 ---
 
-# Documentation
+## Technology
 
-Documentation is available in:
-
-```
-development/docs/
-```
-
-Building your own widget? Start with
-[`development/docs/PUBLISHING_A_WIDGET.md`](development/docs/PUBLISHING_A_WIDGET.md) — copy
-`products/extension/widgets/_template/`, edit 3 files, and it's on your desktop.
-
-Architecture specifications:
-
-```
-architecture/
-```
-
-Development tasks:
-
-```
-tasks/
-```
+- GJS
+- GTK4
+- Libadwaita
+- GObject
+- GSettings
+- Meson
+- Flatpak
 
 ---
 
-# Contributing
+## Contributing
 
-Contributions are welcome.
+Development documentation is available in the `development` directory.
 
-Before opening a Pull Request, please read the documentation and development roadmap.
+Contributions, bug reports and feature suggestions are welcome.
 
 ---
 
-# License
+## License
 
-
-GNOME Widget Center is licensed under the **GNU General Public License v3.0 (GPL-3.0)**.
-
-You are free to use, modify and distribute this software under the terms of the GPL-3.0 license.
-
-See the [LICENSE](LICENSE) file for the full license text.
+GNU General Public License v3.0
