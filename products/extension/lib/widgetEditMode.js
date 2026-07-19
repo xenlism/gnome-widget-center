@@ -38,6 +38,26 @@
 // Resize is explicitly NOT supported (see spec's Non-Goals) — nothing
 // here ever changes a widget actor's width/height, only its rotation/
 // opacity and position (the latter is task 13's job, not this file's).
+//
+// Development Mode debug logging (2026-07-19): every state transition,
+// right-click, and back-side button click below now goes through the
+// optional `logger` (lib/logger.js) passed into the constructor — a
+// no-op unless the Control Center's "Development Mode" switch is on.
+// Added specifically so real-hardware Edit Mode reports (right-click
+// not flipping back, icon clicks doing nothing, drag not starting) can
+// be diagnosed from `journalctl` output instead of guessing.
+//
+// Flip-listener reentrancy fix (2026-07-19): `_flip()` used to leave its
+// `notify::rotation-angle-y` listener as a bare local variable. If
+// toggle() was called again (e.g. a fast double right-click) before the
+// in-flight flip's listener had disconnected itself, the OLD listener
+// stayed connected — a second, stale `notify::rotation-angle-y` handler
+// now fought with the new one over `actor.visible` on every subsequent
+// flip, which could leave the front actor (and/or the back actor,
+// whichever handler ran last) stuck invisible — i.e. the widget
+// appearing to just vanish instead of cleanly flipping. `_flip()` now
+// tracks its listener id on `entry` and disconnects any previous one
+// before connecting a new one, so at most one is ever live per widget.
 
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
@@ -103,12 +123,15 @@ export class WidgetEditMode {
      *   their own press events, so a press only reaches this actor's own
      *   handler when it lands on the padding/gaps around them.
      */
-    constructor(storageService, callbacks = {}) {
+    constructor(storageService, callbacks = {}, logger = null) {
         this._storage = storageService;
         this._onSettings = callbacks.onSettings ?? (() => {});
         this._onRemove = callbacks.onRemove ?? (() => {});
         this._onUninstall = callbacks.onUninstall ?? null;
         this._onBackActorReady = callbacks.onBackActorReady ?? (() => {});
+        // Optional (lib/logger.js) — debug() is a no-op if omitted, so
+        // this module works unchanged for any caller that doesn't pass one.
+        this._logger = logger ?? {debug() {}, warn() {}, error() {}};
 
         /** @private {Map<string, object>} widgetId -> per-widget flip state */
         this._widgets = new Map();
@@ -131,8 +154,11 @@ export class WidgetEditMode {
      *   constructor's onUninstall doc) — bundled widgets never get one.
      */
     attach(widgetId, actor, options = {}) {
-        if (this._widgets.has(widgetId))
+        if (this._widgets.has(widgetId)) {
+            this._logger.debug('edit-mode', `attach("${widgetId}") skipped — already attached`);
             return;
+        }
+        this._logger.debug('edit-mode', `attach("${widgetId}")`);
 
         // A flip that visibly rotates needs perspective depth and a
         // pivot at the actor's own center, not its top-left corner (the
@@ -141,6 +167,8 @@ export class WidgetEditMode {
         actor.set_pivot_point(0.5, 0.5);
 
         const rightClickId = actor.connect('button-press-event', (_actor, event) => {
+            this._logger.debug('edit-mode',
+                `front button-press("${widgetId}") button=${event.get_button()} state=${this.getState(widgetId)}`);
             if (event.get_button() !== Clutter.BUTTON_SECONDARY)
                 return Clutter.EVENT_PROPAGATE;
 
@@ -163,6 +191,7 @@ export class WidgetEditMode {
             back: null, // St.Widget, built lazily on first flip - see _buildBackActor()
             isUserInstalled: options.isUserInstalled ?? false,
             escId: null, // connected only while state === EDIT, see _enterEdit()/_exitEdit()
+            flipListenerId: null, // live notify::rotation-angle-y listener, see _flip()
             signalIds: {rightClickId, enterId, leaveId},
         });
     }
@@ -177,9 +206,16 @@ export class WidgetEditMode {
      */
     toggle(widgetId) {
         const entry = this._widgets.get(widgetId);
-        if (!entry || entry.state === EditModeState.DRAGGING)
+        if (!entry) {
+            this._logger.warn('edit-mode', `toggle("${widgetId}") — no such widget attached`);
             return;
+        }
+        if (entry.state === EditModeState.DRAGGING) {
+            this._logger.debug('edit-mode', `toggle("${widgetId}") ignored — currently DRAGGING`);
+            return;
+        }
 
+        this._logger.debug('edit-mode', `toggle("${widgetId}") from state=${entry.state}`);
         if (entry.state === EditModeState.EDIT)
             this._exitEdit(widgetId);
         else
@@ -245,6 +281,7 @@ export class WidgetEditMode {
     _enterEdit(widgetId) {
         const entry = this._widgets.get(widgetId);
         entry.state = EditModeState.EDIT;
+        this._logger.debug('edit-mode', `_enterEdit("${widgetId}") back-actor-exists=${!!entry.back}`);
 
         if (!entry.back)
             entry.back = this._buildBackActor(widgetId, entry);
@@ -267,6 +304,7 @@ export class WidgetEditMode {
     _exitEdit(widgetId) {
         const entry = this._widgets.get(widgetId);
         entry.state = EditModeState.NORMAL;
+        this._logger.debug('edit-mode', `_exitEdit("${widgetId}")`);
 
         if (entry.escId != null) {
             global.stage.disconnect(entry.escId);
@@ -283,6 +321,27 @@ export class WidgetEditMode {
         const fromAngle = toBack ? 0 : 180;
         const toAngle = toBack ? 180 : 0;
 
+        this._logger.debug('edit-mode',
+            `_flip(toBack=${toBack}) currentAngle=${actor.rotation_angle_y} -> ${fromAngle} -> ${toAngle}`);
+
+        // Reentrancy fix (2026-07-19, real-hardware bug): a fast double
+        // right-click (or toggle() called again before the previous
+        // flip's tween/listener finished) used to leave the PREVIOUS
+        // call's `notify::rotation-angle-y` listener still connected
+        // below, fighting the new one over `actor.visible` and
+        // occasionally leaving the widget stuck invisible. Disconnect
+        // any listener from a prior _flip() call on this entry first, so
+        // at most one is ever live.
+        if (entry.flipListenerId != null) {
+            try {
+                actor.disconnect(entry.flipListenerId);
+            } catch (e) {
+                // Actor may already be mid-teardown - same defensive
+                // pattern used throughout this file.
+            }
+            entry.flipListenerId = null;
+        }
+
         actor.reactive = false; // spec: "Widget content is disabled while Edit Mode is active"
         back.reactive = toBack;
         back.visible = true; // hidden again once the tween settles on the NORMAL side, below
@@ -293,6 +352,7 @@ export class WidgetEditMode {
             duration: FLIP_DURATION_MS,
             mode: Clutter.AnimationMode.EASE_IN_OUT_QUAD,
             onComplete: () => {
+                this._logger.debug('edit-mode', `_flip(toBack=${toBack}) ease onComplete`);
                 if (!toBack) {
                     back.visible = false;
                     actor.reactive = true; // content re-enabled once fully back to NORMAL
@@ -306,12 +366,13 @@ export class WidgetEditMode {
         // have no real double-sided rendering, so without this the
         // front content would appear mirrored for the second half of
         // the flip instead of being replaced by `back`).
-        const midpointId = actor.connect('notify::rotation-angle-y', () => {
+        entry.flipListenerId = actor.connect('notify::rotation-angle-y', () => {
             const angle = Math.abs(actor.rotation_angle_y % 360);
             const pastHalfway = angle > FLIP_HALFWAY_DEGREES && angle < 360 - FLIP_HALFWAY_DEGREES;
             actor.visible = toBack ? !pastHalfway : pastHalfway;
             if ((toBack && pastHalfway) || (!toBack && !pastHalfway)) {
-                actor.disconnect(midpointId);
+                actor.disconnect(entry.flipListenerId);
+                entry.flipListenerId = null;
             }
         });
     }
@@ -338,6 +399,13 @@ export class WidgetEditMode {
      * growing the card at all. */
     _buildBackActor(widgetId, entry) {
         const [width, height] = entry.actor.get_size();
+        this._logger.debug('edit-mode', `_buildBackActor("${widgetId}") frontSize=${width}x${height}`);
+        if (width <= 0 || height <= 0) {
+            this._logger.warn('edit-mode',
+                `_buildBackActor("${widgetId}") built with a non-positive size (${width}x${height}) — ` +
+                'the front actor likely has not been allocated yet; the back side may render invisibly. ' +
+                'If icon clicks/right-click seem to do nothing, this is the first thing to check.');
+        }
 
         // 2026-07-19 fix (real-hardware bug report): `back` used to BE the
         // St.BoxLayout the icons were added to directly, with every button
@@ -387,7 +455,10 @@ export class WidgetEditMode {
                     style_class: 'widget-edit-mode-action-icon',
                 }),
             });
-            button.connect('clicked', onClicked);
+            button.connect('clicked', () => {
+                this._logger.debug('edit-mode', `back button clicked ("${widgetId}", label="${label}")`);
+                onClicked();
+            });
             iconRow.add_child(button);
             entry.tooltipCleanups.push(this._attachTooltip(button, back, iconRow, label));
         };
@@ -420,6 +491,8 @@ export class WidgetEditMode {
         // a right-click still reaches this actor even when the pointer is
         // over one of the icons.
         back.connect('button-press-event', (_actor, event) => {
+            this._logger.debug('edit-mode',
+                `back button-press("${widgetId}") button=${event.get_button()} state=${this.getState(widgetId)}`);
             if (event.get_button() !== Clutter.BUTTON_SECONDARY)
                 return Clutter.EVENT_PROPAGATE;
 
@@ -565,6 +638,15 @@ export class WidgetEditMode {
 
         if (entry.escId != null)
             global.stage.disconnect(entry.escId);
+
+        if (entry.flipListenerId != null) {
+            try {
+                entry.actor.disconnect(entry.flipListenerId);
+            } catch (e) {
+                // Actor may already be destroyed - same defensive pattern
+                // as everywhere else in this method.
+            }
+        }
 
         const {rightClickId, enterId, leaveId} = entry.signalIds;
         try {

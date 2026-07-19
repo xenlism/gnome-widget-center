@@ -114,6 +114,54 @@ export default class WidgetCenterPreferences extends ExtensionPreferences {
                 errorGroup.add(row);
             }
         }
+
+        this._buildAdvancedPage(window, settings);
+    }
+
+    /**
+     * @private Added 2026-07-19 alongside the real-hardware Edit Mode
+     * bug-fix session (development/handoff-2026-07-19-editmode-bugs.md) —
+     * "Development Mode" reuses the existing `dev-mode` GSettings key
+     * (previously only wired to task 08's hot-reload file watcher, with
+     * no UI of its own) as a single switch that now ALSO gates debug
+     * logging (lib/logger.js). See that file's header for how to view
+     * the output on real hardware.
+     * @param {Adw.PreferencesWindow} window
+     * @param {SettingsService} settings
+     */
+    _buildAdvancedPage(window, settings) {
+        const page = new Adw.PreferencesPage({
+            title: 'Advanced',
+            icon_name: 'applications-engineering-symbolic',
+        });
+        window.add(page);
+
+        const group = new Adw.PreferencesGroup({
+            title: 'Development',
+            description: 'For debugging the extension itself — safe to leave off otherwise.',
+        });
+        page.add(group);
+
+        const row = new Adw.SwitchRow({
+            title: 'Development Mode',
+            subtitle: 'Hot-reloads widgets on file change, and logs internal debug output ' +
+                '(Edit Mode flips, drag start/stop, etc) to the system journal — ' +
+                'view with: journalctl -f -o cat | grep widget-center',
+            active: settings.isReady ? !!settings.getGlobalValue('dev-mode') : false,
+            sensitive: settings.isReady,
+        });
+        row.connect('notify::active', () => {
+            if (!settings.isReady) {
+                logError(new Error('SettingsService not ready — could not toggle Development Mode'));
+                return;
+            }
+            try {
+                settings.setGlobalValue('dev-mode', row.active);
+            } catch (e) {
+                logError(e, 'could not toggle Development Mode');
+            }
+        });
+        group.add(row);
     }
 
     /** @private builds one Adw.SwitchRow (+ optional Settings button) for a discovered widget. */

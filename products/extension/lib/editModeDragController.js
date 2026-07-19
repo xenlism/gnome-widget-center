@@ -29,6 +29,14 @@
 // side — the 3 action icons are `St.Button`s that stop their own press
 // events, so they never reach this controller's handler. No Super key
 // is needed either, same as before this fix.
+//
+// Development Mode debug logging (2026-07-19): armBackActor()'s press
+// handler now logs every gating check it runs (already dragging?, not a
+// primary-button press?, WidgetEditMode.isEditing() false?) before
+// deciding whether to actually start a drag — added specifically so a
+// "can't drag in Edit Mode" report can be diagnosed from `journalctl`:
+// each of those checks silently `return`s EVENT_PROPAGATE on its own,
+// which looks identical to "nothing happened" from the outside.
 
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
@@ -47,11 +55,13 @@ export class EditModeDragController {
      *   even allowed to start, and is told about DRAGGING<->EDIT
      *   transitions via enterDragging()/exitDragging().
      */
-    constructor(widgetLayer, storageService, gridEngine, editMode) {
+    constructor(widgetLayer, storageService, gridEngine, editMode, logger = null) {
         this._layer = widgetLayer;
         this._storage = storageService;
         this._grid = gridEngine;
         this._editMode = editMode;
+        // Optional (lib/logger.js) — debug() is a no-op if omitted.
+        this._logger = logger ?? {debug() {}, warn() {}, error() {}};
 
         /** @private {Map<string, {actor, pressId, monitorIndex}>} */
         this._tracked = new Map();
@@ -111,10 +121,21 @@ export class EditModeDragController {
      */
     armBackActor(widgetId, backActor) {
         const entry = this._tracked.get(widgetId);
-        if (!entry || entry.backActor)
+        if (!entry) {
+            this._logger.warn('edit-drag', `armBackActor("${widgetId}") — not attach()'d yet, skipping`);
             return;
+        }
+        if (entry.backActor) {
+            this._logger.debug('edit-drag', `armBackActor("${widgetId}") skipped — already armed`);
+            return;
+        }
+        this._logger.debug('edit-drag', `armBackActor("${widgetId}")`);
 
         const pressId = backActor.connect('button-press-event', (_actor, event) => {
+            this._logger.debug('edit-drag',
+                `back button-press("${widgetId}") button=${event.get_button()} ` +
+                `alreadyDragging=${!!this._drag} isEditing=${this._editMode.isEditing(widgetId)}`);
+
             if (this._drag)
                 return Clutter.EVENT_PROPAGATE;
 
@@ -126,6 +147,8 @@ export class EditModeDragController {
             // reactive while EDIT/DRAGGING anyway, see _flip().)
             if (!this._editMode.isEditing(widgetId))
                 return Clutter.EVENT_PROPAGATE;
+
+            this._logger.debug('edit-drag', `drag started ("${widgetId}")`);
 
             const {actor, monitorIndex} = entry;
             const [stageX, stageY] = event.get_coords();
@@ -212,6 +235,7 @@ export class EditModeDragController {
             return Clutter.EVENT_PROPAGATE;
 
         const {widgetId, actor, backActor, monitorIndex, width, height, motionId, releaseId, placeholder} = this._drag;
+        this._logger.debug('edit-drag', `_onRelease("${widgetId}")`);
         global.stage.disconnect(motionId);
         global.stage.disconnect(releaseId);
 
@@ -228,6 +252,8 @@ export class EditModeDragController {
             duration: 120,
             mode: Clutter.AnimationMode.EASE_OUT_QUAD,
             onComplete: () => {
+                this._logger.debug('edit-drag',
+                    `persisting position ("${widgetId}") -> (${target.x}, ${target.y}) monitor=${monitorIndex}`);
                 this._storage.updateWidgetPosition(widgetId, target.x, target.y, monitorIndex);
             },
         });

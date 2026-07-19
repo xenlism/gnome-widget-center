@@ -28,10 +28,14 @@
 
     <key name="dev-mode" type="b">
       <default>false</default>
-      <summary>Enable hot-reload dev mode</summary>
+      <summary>Enable Development Mode</summary>
       <description>
         Used by task 08 (hot-reload-dev-mode) to watch widget folders for
-        changes instead of requiring a full shell restart.
+        changes instead of requiring a full shell restart, AND (added
+        2026-07-19) gates lib/logger.js's debug() calls throughout the
+        extension - turning this on makes internal state (Edit Mode
+        flips, drag start/stop, back-actor construction, etc) visible in
+        `journalctl`, off by default so normal use stays quiet.
       </description>
     </key>
 

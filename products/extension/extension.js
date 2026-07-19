@@ -36,6 +36,7 @@ import {GridEngine} from './lib/gridEngine.js';
 import {WidgetEditMode} from './lib/widgetEditMode.js';
 import {EditModeDragController} from './lib/editModeDragController.js';
 import {BlockSizeManager} from './lib/blockSizeManager.js';
+import {createLogger} from './lib/logger.js';
 
 export default class WidgetCenterExtension extends Extension {
     enable() {
@@ -52,6 +53,14 @@ export default class WidgetCenterExtension extends Extension {
             console.error('[widget-center] SettingsService.init() failed', e);
             this._settings = null;
         }
+
+        // Development Mode debug logging (2026-07-19) — `logger.debug()`
+        // only prints while the Control Center's "Development Mode"
+        // switch (dev-mode GSettings key) is on; see lib/logger.js file
+        // header. Created here, right after SettingsService, so
+        // everything below (Edit Mode, its drag controller, widget
+        // load/place/remove) can use it from the start.
+        this._logger = createLogger(this._settings);
 
         // Multi-monitor support (task 07) — resolved BEFORE WidgetLayer.init()
         // so the layer can create its one-container-per-monitor set up
@@ -77,18 +86,30 @@ export default class WidgetCenterExtension extends Extension {
         // this method's existing top-to-bottom order.
         this._grid = new GridEngine();
         this._editMode = new WidgetEditMode(this._storage, {
-            onSettings: id => this._openWidgetSettings(id),
-            onRemove: id => this._removeWidgetViaEditMode(id),
-            onUninstall: (id, isUserInstalled) => this._uninstallWidget(id, isUserInstalled),
+            onSettings: id => {
+                this._logger.debug('edit-mode', `onSettings("${id}")`);
+                this._openWidgetSettings(id);
+            },
+            onRemove: id => {
+                this._logger.debug('edit-mode', `onRemove("${id}")`);
+                this._removeWidgetViaEditMode(id);
+            },
+            onUninstall: (id, isUserInstalled) => {
+                this._logger.debug('edit-mode', `onUninstall("${id}", isUserInstalled=${isUserInstalled})`);
+                this._uninstallWidget(id, isUserInstalled);
+            },
             // 2026-07-19 fix: dragging from Edit Mode has to be armed on
             // the back (visible/reactive) actor, not the front one — see
             // editModeDragController.js's file header. `this._editDrag`
             // doesn't exist yet at this point in enable() (created right
             // below), but this callback only ever actually fires later,
             // on a widget's first flip, by which point it does.
-            onBackActorReady: (id, backActor) => this._editDrag?.armBackActor(id, backActor),
-        });
-        this._editDrag = new EditModeDragController(this._layer, this._storage, this._grid, this._editMode);
+            onBackActorReady: (id, backActor) => {
+                this._logger.debug('edit-mode', `onBackActorReady("${id}")`);
+                this._editDrag?.armBackActor(id, backActor);
+            },
+        }, this._logger);
+        this._editDrag = new EditModeDragController(this._layer, this._storage, this._grid, this._editMode, this._logger);
         this._editDrag.setOthersProvider((monitorIndex, excludeId) => this._othersOnMonitor(monitorIndex, excludeId));
 
         // Hot-reload dev mode (task 08) — created up front but only
@@ -99,6 +120,11 @@ export default class WidgetCenterExtension extends Extension {
 
         if (this._settings?.isReady) {
             this._devChangedId = this._settings.onChanged('dev-mode', enabled => {
+                // Logged unconditionally (via console.log, not
+                // logger.debug) - it's the ON/OFF transition of debug
+                // logging itself, so it has to be visible even in the
+                // instant right after being turned off.
+                console.log(`[widget-center] Development Mode ${enabled ? 'ON' : 'OFF'}`);
                 if (enabled)
                     this._devWatcher.start(this._loader?.instances.map(e => ({id: e.id, path: e.path})) ?? []);
                 else
