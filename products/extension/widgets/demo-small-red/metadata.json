@@ -1,0 +1,11 @@
+{
+  "id": "demo-small-red",
+  "name": "Demo Small Red",
+  "description": "Demo widget Red 160x160",
+  "version": "1.0.0",
+  "author": "Demo Widget Pack",
+  "api-version": 1,
+  "entry": "widget.js",
+  "block-type": { "cols": 10, "rows": 10 },
+  "default-position": { "x": 16, "y": 16, "monitor": 0 }
+}

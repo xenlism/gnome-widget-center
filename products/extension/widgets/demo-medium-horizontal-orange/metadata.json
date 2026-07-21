@@ -1,0 +1,11 @@
+{
+  "id": "demo-medium-horizontal-orange",
+  "name": "Demo Medium H Orange",
+  "description": "Demo widget Orange 336x160",
+  "version": "1.0.0",
+  "author": "Demo Widget Pack",
+  "api-version": 1,
+  "entry": "widget.js",
+  "block-type": { "cols": 21, "rows": 10 },
+  "default-position": { "x": 368, "y": 192, "monitor": 0 }
+}

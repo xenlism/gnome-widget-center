@@ -29,7 +29,7 @@ my-widget/
   "api-version": 1,
   "entry": "widget.js",
   "prefs": "prefs.js",
-  "block-size": { "cols": 14, "rows": 9 },
+  "block-type": { "cols": 14, "rows": 9 },
   "default-position": { "x": 40, "y": 40, "monitor": 0 }
 }
 ```
@@ -37,12 +37,23 @@ my-widget/
 - `id` ต้องตรงกับชื่อโฟลเดอร์ และห้ามชนกับ widget อื่น (host เช็คและ reject ถ้าซ้ำ)
 - `api-version` ใช้เช็ค compatibility — ถ้า host เปลี่ยน API แบบ breaking จะขยับเลขนี้ และ
   widget เก่าจะถูกปิดใช้งานพร้อมแจ้งเตือนแทนที่จะ crash
-- `block-size` (`{cols, rows}`) — ขนาดจริงบนจอ **เป็นจำนวน grid cell** ไม่ใช่ pixel
+- `block-type` (`{cols, rows}`) — ขนาดจริงบนจอ **เป็นจำนวน grid cell** ไม่ใช่ pixel
   ตรงๆ (ดู `development/architecture/specs/ui/size-constraints.md` — ระบบ block-type)
   host จะคูณด้วย `GridEngine.cellSize` (ปัจจุบัน 16px/cell) ให้เองตอนวาง widget ไม่ต้อง
   ประกาศ `default-size` เป็น pixel อีกต่อไป ถ้าไม่ประกาศ field นี้เลย จะได้ค่า default
   กลาง (`10 x 6` cell) แทน — ขนาดนี้คือขนาดจริงตายตัว **ไม่มี min/max และผู้ใช้ resize
   เองไม่ได้** (ดู size-constraints.md — ไม่มี field `size-constraints` อีกต่อไป)
+- `themeable` (optional boolean, default `false`) — opts a widget's own
+  FRONT actor into the host-wide theme system (see
+  `development/docs/THEME_SYSTEM.md`): its background/drop-shadow is
+  styled from `theme.json`'s global appearance settings (with any
+  per-widget override under that file's `widgets.<id>.config`) via
+  `ThemeService.applyWidgetStyle()`, called once when the widget is
+  placed and again live whenever `theme.json` changes. Leave unset (or
+  `false`) for widgets that already paint their own background in
+  `stylesheet.css`/their own code (e.g. macos-clock) — this field exists
+  so the host theme never silently overrides a widget's own design
+  without the widget author asking for it.
 
 ### 2.1 `settings` (optional) — declarative settings schema (task 05)
 

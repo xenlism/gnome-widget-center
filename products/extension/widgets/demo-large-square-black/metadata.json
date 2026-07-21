@@ -1,0 +1,11 @@
+{
+  "id": "demo-large-square-black",
+  "name": "Demo Large Sq Black",
+  "description": "Demo widget Black 688x688",
+  "version": "1.0.0",
+  "author": "Demo Widget Pack",
+  "api-version": 1,
+  "entry": "widget.js",
+  "block-type": { "cols": 43, "rows": 43 },
+  "default-position": { "x": 720, "y": 64, "monitor": 0 }
+}

@@ -28,11 +28,11 @@ export default class MiniNotesWidget {
     }
 
     enable() {
-        this._logger.log('mini-notes enabled');
+        this._logger.info('mini-notes enabled');
     }
 
     disable() {
-        this._logger.log('mini-notes disabled');
+        this._logger.info('mini-notes disabled');
     }
 
     getDefaultSettings() {
@@ -43,7 +43,7 @@ export default class MiniNotesWidget {
     }
 
     onSettingsChanged(settings) {
-        this._logger.log('Notes updated');
+        this._logger.info('Notes updated');
         this._applyStyles();
         this._updateContent();
     }

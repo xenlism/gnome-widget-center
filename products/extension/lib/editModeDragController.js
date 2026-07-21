@@ -10,27 +10,47 @@
 // (StorageService.updateWidgetPosition()) — no new storage format, no new
 // IPC, same single-process design as everything else in this codebase.
 //
-// 2026-07-19 fix — armed on the BACK actor, not the front one: the
-// original version wired its button-press listener onto the same front
-// actor task 04/12 use. That never actually worked, because
+// 2026-07-19 fix — armed on the BACK actor, not the front one (see
+// 2026-07-21 update below for where the listener actually lives now):
+// the original version wired its button-press listener onto the same
+// front actor task 04/12 use. That never actually worked, because
 // WidgetEditMode sets `actor.reactive = false` on the front actor for
 // as long as Edit Mode is active (`widgetEditMode.js`'s _flip()) — the
 // only actor that's visible/reactive while EDIT is showing is the BACK
 // side (the flip card with the Settings/Reset/Remove icons). This file
-// now waits for `WidgetEditMode`'s `onBackActorReady` callback (wired in
-// extension.js) and arms its press listener there instead — see
-// armBackActor() below. attach() still tracks the front actor, because
-// that's the one WidgetLayer/StorageService know about and the one that
-// actually gets persisted; the back actor is just moved in lockstep
-// alongside it purely for on-screen feedback during the drag, since it's
-// the actor the user can actually see.
+// waits for `WidgetEditMode`'s `onBackActorReady` callback (wired in
+// extension.js) to arm its press listener — see armDragHandle() below.
+// attach() still tracks the front actor, because that's the one
+// WidgetLayer/StorageService know about and the one that actually gets
+// persisted; the back actor is just moved in lockstep alongside it
+// purely for on-screen feedback during the drag, since it's the actor
+// the user can actually see.
 //
-// A drag only starts when the press lands on empty space on the back
-// side — the 3 action icons are `St.Button`s that stop their own press
-// events, so they never reach this controller's handler. No Super key
-// is needed either, same as before this fix.
+// 2026-07-21 refactor — armed on DragHandle, not the whole BackActor:
+// real-hardware reports showed toolbar icon clicks (Settings/Reset/
+// Remove) being reinterpreted as drag starts instead of firing their
+// action. The 2026-07-19 fix above still wired its button-press listener
+// onto the BACK actor as a whole, relying on St.Button consuming its own
+// press event before it could bubble up to this controller's handler —
+// an implicit ordering assumption, not a real boundary. Per the approved
+// design decision ("Bug Fix Proposal: Toolbar Icon Click vs Drag
+// Conflict"), WidgetEditMode now builds a dedicated, full-size
+// `dragHandle` child actor UNDER its toolbar row (see widgetEditMode.js's
+// `_buildBackActor()`), and `armDragHandle()` below is the ONLY place
+// this controller ever attaches a button-press listener — never to the
+// back actor as a whole, never via `event.get_source()` checks or
+// `EVENT_STOP` propagation games. The back actor itself is still tracked
+// (as `entry.backActor`) purely so it can be moved/eased on screen during
+// the drag — `dragHandle` is only the event surface, and moves for free
+// as `backActor`'s own child.
 //
-// Development Mode debug logging (2026-07-19): armBackActor()'s press
+// A drag only starts when the press lands on `dragHandle` — which is
+// exactly the empty space on the back side, since the toolbar's action
+// icons are `St.Button`s stacked on top of it that consume their own
+// press events and never let them fall through. No Super key is needed
+// either, same as before this fix.
+//
+// Development Mode debug logging (2026-07-19): armDragHandle()'s press
 // handler now logs every gating check it runs (already dragging?, not a
 // primary-button press?, WidgetEditMode.isEditing() false?) before
 // deciding whether to actually start a drag — added specifically so a
@@ -98,7 +118,8 @@ export class EditModeDragController {
      * longer wires any press listener directly (see file header): the
      * front actor is only used here as "the thing that ultimately gets
      * moved/persisted", the press listener itself is armed later, lazily,
-     * on the BACK actor via armBackActor() once WidgetEditMode builds it.
+     * on the dedicated DRAG HANDLE via armDragHandle() once
+     * WidgetEditMode builds it.
      * @param {string} widgetId
      * @param {Clutter.Actor} actor
      * @param {number} [monitorIndex=0]
@@ -107,36 +128,50 @@ export class EditModeDragController {
         if (this._tracked.has(widgetId))
             return;
 
-        this._tracked.set(widgetId, {actor, monitorIndex, backActor: null, backPressId: null});
+        this._tracked.set(widgetId, {
+            actor, monitorIndex,
+            backActor: null, // the whole flip-card, moved/eased for on-screen feedback
+            dragHandle: null, // the actor the press/drag listener actually lives on
+            dragPressId: null,
+        });
     }
 
     /**
-     * @method armBackActor
+     * @method armDragHandle
      * @description Wires the actual button-press listener that starts a
-     * drag, onto a widget's BACK actor (the flipped-to side showing the
-     * Settings/Reset/Remove icons) — called via
-     * `WidgetEditMode`'s `onBackActorReady` callback the first time that
-     * actor is built (see widgetEditMode.js). A no-op if the widget was
-     * never attach()'d, or already armed (the back actor is only ever
-     * built once per widget, so this should only fire once too).
+     * drag, onto a widget's dedicated DRAG HANDLE actor — a full-size
+     * child of the back-side card that sits UNDER the toolbar row and is
+     * the only thing this controller ever attaches a drag listener to
+     * (see the file header's 2026-07-21 note). Called via
+     * `WidgetEditMode`'s `onBackActorReady` callback the first time a
+     * widget's back actor is built (see widgetEditMode.js). A no-op if
+     * the widget was never attach()'d, or already armed (the back
+     * actor/drag handle are only ever built once per widget, so this
+     * should only fire once too).
      * @param {string} widgetId
-     * @param {Clutter.Actor} backActor
+     * @param {Clutter.Actor} backActor - the whole flip-card, moved/eased
+     *   on screen during the drag purely for visual feedback.
+     * @param {Clutter.Actor} dragHandle - the actual event surface; the
+     *   ONLY actor this method ever connects a button-press listener to.
      */
-    armBackActor(widgetId, backActor) {
+    armDragHandle(widgetId, backActor, dragHandle) {
         const entry = this._tracked.get(widgetId);
         if (!entry) {
-            this._logger.warn('edit-drag', `armBackActor("${widgetId}") — not attach()'d yet, skipping`);
+            this._logger.warn('edit-drag', `armDragHandle("${widgetId}") — not attach()'d yet, skipping`);
             return;
         }
-        if (entry.backActor) {
-            this._logger.debug('edit-drag', `armBackActor("${widgetId}") skipped — already armed`);
+        if (entry.dragHandle) {
+            this._logger.debug('edit-drag', `armDragHandle("${widgetId}") skipped — already armed`);
             return;
         }
-        this._logger.debug('edit-drag', `armBackActor("${widgetId}")`);
+        this._logger.debug('edit-drag', `armDragHandle("${widgetId}")`);
 
-        const pressId = backActor.connect('button-press-event', (_actor, event) => {
+        entry.backActor = backActor;
+        entry.dragHandle = dragHandle;
+
+        const pressId = dragHandle.connect('button-press-event', (_actor, event) => {
             this._logger.debug('edit-drag',
-                `back button-press("${widgetId}") button=${event.get_button()} ` +
+                `dragHandle button-press("${widgetId}") button=${event.get_button()} ` +
                 `alreadyDragging=${!!this._drag} isEditing=${this._editMode.isEditing(widgetId)}`);
 
             if (this._drag)
@@ -186,8 +221,7 @@ export class EditModeDragController {
             return Clutter.EVENT_STOP;
         });
 
-        entry.backActor = backActor;
-        entry.backPressId = pressId;
+        entry.dragPressId = pressId;
     }
 
     /** @private */
@@ -340,13 +374,14 @@ export class EditModeDragController {
             this._drag = null;
         }
 
-        // The press listener lives on the BACK actor (armed lazily by
-        // armBackActor(), see file header) rather than entry.actor now —
-        // may still be null if this widget's back side was never built
-        // (never right-clicked into Edit Mode this session).
-        if (entry.backActor && entry.backPressId != null) {
+        // The press listener lives on the DRAG HANDLE (armed lazily by
+        // armDragHandle(), see file header) rather than entry.actor or
+        // entry.backActor now — may still be null if this widget's back
+        // side was never built (never right-clicked into Edit Mode this
+        // session).
+        if (entry.dragHandle && entry.dragPressId != null) {
             try {
-                entry.backActor.disconnect(entry.backPressId);
+                entry.dragHandle.disconnect(entry.dragPressId);
             } catch (e) {
                 // Actor may already be destroyed - same defensive pattern
                 // used throughout this codebase (see DragController.detach()).

@@ -1,0 +1,11 @@
+{
+  "id": "demo-small-blue",
+  "name": "Demo Small Blue",
+  "description": "Demo widget Blue 160x160",
+  "version": "1.0.0",
+  "author": "Demo Widget Pack",
+  "api-version": 1,
+  "entry": "widget.js",
+  "block-type": { "cols": 10, "rows": 10 },
+  "default-position": { "x": 192, "y": 16, "monitor": 0 }
+}

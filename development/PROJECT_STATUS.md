@@ -130,7 +130,7 @@ that distinction matters.
   `drag-drop.md`. Still not verified on real GNOME Shell hardware.
 - **Task 14 — size-constraints (min/max) removed entirely, block-only
   sizing** — `metadata['size-constraints']` (`minCols/minRows/maxCols/
-  maxRows`) is gone; a widget's `block-size` is now its exact, fixed
+  maxRows`) is gone; a widget's `block-type` is now its exact, fixed
   on-screen footprint with no smallest/largest bound and no way to
   resize it at all. `blockSizeManager.js` no longer clamps anything, and
   the long-dead `sizeConstraintManager.js` (the original v1 pixel
@@ -140,7 +140,31 @@ that distinction matters.
   their `size-constraints` field dropped. Full history in
   `development/architecture/specs/ui/size-constraints.md`.
 
-## Next Milestone
+## Resolved decisions (2026-07-21)
+
+- **Task 12/13 — Toolbar icon click vs drag conflict** — real-hardware
+  reports showed clicking a back-side toolbar icon (Settings/Reset/
+  Remove) starting a drag instead of firing its action. The 2026-07-19
+  fix above armed `EditModeDragController` on the BACK actor as a whole,
+  relying on `St.Button` consuming its own press event before it could
+  bubble up to that drag-start handler — an implicit ordering
+  assumption, not a real boundary between "click a button" and "start a
+  drag". Per the approved design decision ("Bug Fix Proposal: Toolbar
+  Icon Click vs Drag Conflict"), `WidgetEditMode._buildBackActor()` now
+  splits the back side into a dedicated `toolbar` (buttons only, never
+  reactive itself, never armed for drag) layered on top of a full-size
+  `dragHandle` actor — the ONLY actor `EditModeDragController` is ever
+  allowed to arm a drag listener onto, via the renamed
+  `armDragHandle(widgetId, backActor, dragHandle)` (was
+  `armBackActor(widgetId, backActor)`). No `event.get_source()` checks,
+  propagation hacks, or `EVENT_STOP` workarounds were used — the fix is
+  purely architectural (separate actors for separate responsibilities).
+  Toolbar clicks and dragging are now completely independent by
+  construction. Details in `products/extension/lib/widgetEditMode.js`
+  and `editModeDragController.js`'s file headers. Still not verified on
+  real GNOME Shell hardware.
+
+
 
 > อัปเดต 2026-07-18: 3 รายการเดิม (Widget Edit Mode/Drag & Drop/Grid Engine) implement ไปแล้วตั้งแต่
 > ก่อนหน้านี้ (ดู "Logic-complete" ด้านบน) — รายการนี้แก้เป็น backlog ที่เหลือจริงแทน

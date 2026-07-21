@@ -43,6 +43,7 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Adw from 'gi://Adw';
 import Gtk from 'gi://Gtk';
+import Gdk from 'gi://Gdk';
 
 import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
@@ -51,6 +52,20 @@ import {SettingsService} from './lib/settingsService.js';
 import {StorageService} from './lib/storageService.js';
 import {WidgetSettings} from './lib/widgetSettings.js';
 import {buildSettingsPage} from './lib/settingsSchemaUI.js';
+import {ThemeService} from './lib/themeService.js';
+
+/**
+ * Gdk.RGBA -> `#rrggbb` (alpha deliberately dropped — theme.json's
+ * "transparent" boolean fields control alpha independently, see
+ * themeService.js's hexToRgba(); a stored `rgba(...)` string would bypass
+ * that override entirely since hexToRgba() only recognizes hex input).
+ * @param {Gdk.RGBA} rgba
+ * @returns {string}
+ */
+function _rgbaToHex(rgba) {
+    const toHex = c => Math.round(Math.min(1, Math.max(0, c)) * 255).toString(16).padStart(2, '0');
+    return `#${toHex(rgba.red)}${toHex(rgba.green)}${toHex(rgba.blue)}`;
+}
 
 export default class WidgetCenterPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
@@ -97,6 +112,17 @@ export default class WidgetCenterPreferences extends ExtensionPreferences {
         for (const widget of ok)
             group.add(this._buildWidgetRow(window, settings, storage, widget, disabled.has(widget.id)));
 
+        // 2026-07-20 fix ("click settings opens the extension prefs, not
+        // the widget prefs"): extension.js's Edit Mode "Settings" action
+        // writes the widget id here (requested-widget-id) right before
+        // calling openPreferences() — see extension.js's
+        // _openWidgetSettings() for the other half of this. Read it back
+        // and jump straight to that widget's settings sub-page instead of
+        // leaving the user on the top-level list. Cleared right after
+        // reading so a later manually-opened Control Center window (e.g.
+        // from GNOME's Extensions app) doesn't jump anywhere unexpected.
+        this._openRequestedWidgetPrefs(window, settings, storage, ok);
+
         if (errors.length > 0) {
             const errorGroup = new Adw.PreferencesGroup({
                 title: 'Widgets that failed to load',
@@ -116,6 +142,191 @@ export default class WidgetCenterPreferences extends ExtensionPreferences {
         }
 
         this._buildAdvancedPage(window, settings);
+        this._buildAppearancePage(window);
+    }
+
+    /**
+     * @private Theme system (2026-07-21) — an Appearance page for editing
+     * `theme.json`'s GLOBAL background/drop-shadow settings (see
+     * development/docs/THEME_SYSTEM.md and lib/themeService.js). Per-widget
+     * overrides aren't exposed here yet — see themeService.js's "Not yet
+     * wired" section — this page only ever calls
+     * `ThemeService.setGlobalTheme()`.
+     *
+     * Every row writes straight through on change (same "no separate Save
+     * step" convention settingsSchemaUI.js's rows already use) —
+     * ThemeService.save() is a single small atomic file write, cheap
+     * enough to do on every toggle/color-pick/spin-value change with no
+     * debounce needed (unlike widgetSettings.js's per-keystroke text
+     * fields).
+     * @param {Adw.PreferencesWindow} window
+     */
+    _buildAppearancePage(window) {
+        const theme = new ThemeService();
+        theme.init();
+        const current = theme.getGlobalTheme();
+
+        const page = new Adw.PreferencesPage({
+            title: 'Appearance',
+            icon_name: 'applications-graphics-symbolic',
+        });
+        window.add(page);
+
+        // --- Background -------------------------------------------------
+        const bgGroup = new Adw.PreferencesGroup({
+            title: 'Widget background',
+            description: 'Applies to any widget that opts in via metadata.json\'s ' +
+                '"themeable": true, plus every widget\'s Edit Mode card.',
+        });
+        page.add(bgGroup);
+
+        const bgTransparentRow = new Adw.SwitchRow({
+            title: 'Transparent',
+            subtitle: 'When on, the background color below is fully see-through.',
+            active: !!current.background.transparent,
+        });
+        bgGroup.add(bgTransparentRow);
+
+        const bgColorRow = new Adw.ActionRow({title: 'Background color'});
+        const bgRgba = new Gdk.RGBA();
+        bgRgba.parse(current.background.color ?? '#1e1e2e');
+        const bgColorButton = new Gtk.ColorDialogButton({
+            dialog: new Gtk.ColorDialog(),
+            rgba: bgRgba,
+            valign: Gtk.Align.CENTER,
+        });
+        bgColorRow.add_suffix(bgColorButton);
+        bgColorRow.set_activatable_widget(bgColorButton);
+        bgGroup.add(bgColorRow);
+
+        const bgBlurAdjustment = new Gtk.Adjustment({
+            value: current.background.blur ?? 0,
+            lower: 0,
+            upper: 64,
+            step_increment: 1,
+        });
+        const bgBlurRow = new Adw.SpinRow({
+            title: 'Background blur',
+            subtitle: '0\u201364 px',
+            adjustment: bgBlurAdjustment,
+        });
+        bgGroup.add(bgBlurRow);
+
+        const saveBackground = () => {
+            theme.setGlobalTheme({
+                background: {
+                    transparent: bgTransparentRow.active,
+                    color: _rgbaToHex(bgColorButton.rgba),
+                    blur: bgBlurRow.value,
+                },
+            });
+        };
+        bgTransparentRow.connect('notify::active', saveBackground);
+        bgColorButton.connect('notify::rgba', saveBackground);
+        bgBlurRow.connect('notify::value', saveBackground);
+
+        // --- Drop shadow --------------------------------------------------
+        const shadowGroup = new Adw.PreferencesGroup({
+            title: 'Widget drop shadow',
+            description: 'Same opt-in rule as the background above.',
+        });
+        page.add(shadowGroup);
+
+        const shadowEnabledRow = new Adw.SwitchRow({
+            title: 'Enabled',
+            active: !!current.dropShadow.enabled,
+        });
+        shadowGroup.add(shadowEnabledRow);
+
+        const shadowTransparentRow = new Adw.SwitchRow({
+            title: 'Transparent',
+            subtitle: 'Overrides Enabled above — a fully transparent shadow is drawn as none at all.',
+            active: !!current.dropShadow.transparent,
+        });
+        shadowGroup.add(shadowTransparentRow);
+
+        const shadowColorRow = new Adw.ActionRow({title: 'Shadow color'});
+        const shadowRgba = new Gdk.RGBA();
+        shadowRgba.parse(current.dropShadow.color ?? '#000000');
+        const shadowColorButton = new Gtk.ColorDialogButton({
+            dialog: new Gtk.ColorDialog(),
+            rgba: shadowRgba,
+            valign: Gtk.Align.CENTER,
+        });
+        shadowColorRow.add_suffix(shadowColorButton);
+        shadowColorRow.set_activatable_widget(shadowColorButton);
+        shadowGroup.add(shadowColorRow);
+
+        const shadowOpacityRow = new Adw.SpinRow({
+            title: 'Opacity',
+            subtitle: '0.0\u20131.0',
+            adjustment: new Gtk.Adjustment({
+                value: current.dropShadow.opacity ?? 0.45,
+                lower: 0, upper: 1, step_increment: 0.05,
+            }),
+            digits: 2,
+        });
+        shadowGroup.add(shadowOpacityRow);
+
+        const shadowOffsetXRow = new Adw.SpinRow({
+            title: 'Offset X',
+            subtitle: 'px',
+            adjustment: new Gtk.Adjustment({
+                value: current.dropShadow.offsetX ?? 0,
+                lower: -64, upper: 64, step_increment: 1,
+            }),
+        });
+        shadowGroup.add(shadowOffsetXRow);
+
+        const shadowOffsetYRow = new Adw.SpinRow({
+            title: 'Offset Y',
+            subtitle: 'px',
+            adjustment: new Gtk.Adjustment({
+                value: current.dropShadow.offsetY ?? 4,
+                lower: -64, upper: 64, step_increment: 1,
+            }),
+        });
+        shadowGroup.add(shadowOffsetYRow);
+
+        const shadowBlurRow = new Adw.SpinRow({
+            title: 'Blur radius',
+            subtitle: 'px',
+            adjustment: new Gtk.Adjustment({
+                value: current.dropShadow.blurRadius ?? 12,
+                lower: 0, upper: 128, step_increment: 1,
+            }),
+        });
+        shadowGroup.add(shadowBlurRow);
+
+        const shadowSpreadRow = new Adw.SpinRow({
+            title: 'Spread',
+            subtitle: 'px',
+            adjustment: new Gtk.Adjustment({
+                value: current.dropShadow.spread ?? 0,
+                lower: -64, upper: 64, step_increment: 1,
+            }),
+        });
+        shadowGroup.add(shadowSpreadRow);
+
+        const saveShadow = () => {
+            theme.setGlobalTheme({
+                dropShadow: {
+                    enabled: shadowEnabledRow.active,
+                    transparent: shadowTransparentRow.active,
+                    color: _rgbaToHex(shadowColorButton.rgba),
+                    opacity: shadowOpacityRow.value,
+                    offsetX: shadowOffsetXRow.value,
+                    offsetY: shadowOffsetYRow.value,
+                    blurRadius: shadowBlurRow.value,
+                    spread: shadowSpreadRow.value,
+                },
+            });
+        };
+        for (const row of [shadowEnabledRow, shadowTransparentRow, shadowOpacityRow,
+            shadowOffsetXRow, shadowOffsetYRow, shadowBlurRow, shadowSpreadRow]) {
+            row.connect(row instanceof Adw.SwitchRow ? 'notify::active' : 'notify::value', saveShadow);
+        }
+        shadowColorButton.connect('notify::rgba', saveShadow);
     }
 
     /**
@@ -162,6 +373,69 @@ export default class WidgetCenterPreferences extends ExtensionPreferences {
             }
         });
         group.add(row);
+    }
+
+    /**
+     * @private 2026-07-20 fix — the other half of extension.js's
+     * `_openWidgetSettings()`. Reads `requested-widget-id` back out of the
+     * shared GSettings key, clears it immediately (so it's a one-shot
+     * hint, not a sticky "always jump here"), and — if it names a widget
+     * that was actually discovered — presents that widget's settings
+     * sub-page right away, exactly as if the user had clicked its own
+     * "Settings" suffix button in the list (`_openWidgetPrefs()`, same
+     * method `_buildWidgetRow()`'s button uses).
+     *
+     * Deliberately queued with `GLib.idle_add()` rather than called
+     * inline: `window.present_subpage()` needs the window (and the page
+     * this method is called from inside `fillPreferencesWindow()`) to
+     * actually be mapped/realized first — calling it synchronously while
+     * the window is still being built out is exactly the kind of timing
+     * issue this codebase's other real-hardware fixes keep running into
+     * (see e.g. widgetEditMode.js's `_buildBackActor()` non-positive-size
+     * warning for the general pattern). One idle-loop turn is enough for
+     * GTK to finish mapping the window.
+     * @param {Adw.PreferencesWindow} window
+     * @param {SettingsService} settings
+     * @param {StorageService} storage
+     * @param {Array} discovered - the `ok` list from `PrefsWidgetList.list()`
+     */
+    _openRequestedWidgetPrefs(window, settings, storage, discovered) {
+        if (!settings.isReady)
+            return;
+
+        let requestedId;
+        try {
+            requestedId = settings.getGlobalValue('requested-widget-id');
+        } catch (e) {
+            logError(e, '[widget-center] prefs: could not read requested-widget-id');
+            return;
+        }
+        if (!requestedId)
+            return;
+
+        // One-shot: clear right away so a plain "open the Control Center"
+        // later (no widget id in flight) never jumps anywhere.
+        try {
+            settings.setGlobalValue('requested-widget-id', '');
+        } catch (e) {
+            logError(e, '[widget-center] prefs: could not clear requested-widget-id');
+        }
+
+        const widget = discovered.find(w => w.id === requestedId);
+        if (!widget) {
+            // Widget vanished (uninstalled, disabled-with-error, etc)
+            // between the Settings click and this window opening — fall
+            // back to the top-level list rather than throwing.
+            logError(new Error(`requested-widget-id "${requestedId}" not found among discovered widgets`));
+            return;
+        }
+        if (!widget.hasPrefs && !widget.hasSettingsSchema)
+            return; // no settings page to jump to for this widget
+
+        GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            this._openWidgetPrefs(window, storage, widget);
+            return GLib.SOURCE_REMOVE;
+        });
     }
 
     /** @private builds one Adw.SwitchRow (+ optional Settings button) for a discovered widget. */

@@ -15,6 +15,14 @@
     border-radius: 8px;
 }
 
+.widget-edit-mode-drag-handle {
+    /* Deliberately no background/border of its own - it sits directly
+     * under the back card's own background (.widget-edit-mode-back) and
+     * exists purely as the event surface EditModeDragController arms a
+     * drag listener onto (see editModeDragController.js's
+     * armDragHandle()), not as a distinct visual element. */
+}
+
 .widget-edit-mode-icon-row {
     padding: 6px 10px;
     spacing: 6px;

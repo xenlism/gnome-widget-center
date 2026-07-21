@@ -36,6 +36,7 @@ import {GridEngine} from './lib/gridEngine.js';
 import {WidgetEditMode} from './lib/widgetEditMode.js';
 import {EditModeDragController} from './lib/editModeDragController.js';
 import {BlockSizeManager} from './lib/blockSizeManager.js';
+import {ThemeService} from './lib/themeService.js';
 import {createLogger} from './lib/logger.js';
 
 export default class WidgetCenterExtension extends Extension {
@@ -43,6 +44,21 @@ export default class WidgetCenterExtension extends Extension {
         // --- host-level services -------------------------------------
         this._storage = new StorageService();
         this._storage.init();
+
+        // Theme system (2026-07-21) — global background/drop-shadow +
+        // per-widget theme/config/position, `theme.json` alongside
+        // layout.json/widgets/*.json (see themeService.js's file header
+        // for why it's a separate file). Loaded up front, same timing as
+        // StorageService, since WidgetEditMode (below) needs it ready
+        // the first time any widget is flipped.
+        this._themeService = new ThemeService();
+        this._themeService.init();
+        // Cross-process live reload (2026-07-21): the Control Center's
+        // Appearance page (prefs.js, separate process) writes theme.json
+        // directly via ThemeService.setGlobalTheme()/setWidgetTheme() —
+        // this picks that up in the Shell process without needing a
+        // restart, same pattern as settingsWatcher.js for widgets/<id>.json.
+        this._themeService.watch(() => this._reapplyTheme());
 
         this._settings = new SettingsService(this);
         try {
@@ -94,21 +110,26 @@ export default class WidgetCenterExtension extends Extension {
                 this._logger.debug('edit-mode', `onRemove("${id}")`);
                 this._removeWidgetViaEditMode(id);
             },
+            onReset: id => {
+                this._logger.debug('edit-mode', `onReset("${id}")`);
+                this._resetWidgetViaEditMode(id);
+            },
             onUninstall: (id, isUserInstalled) => {
                 this._logger.debug('edit-mode', `onUninstall("${id}", isUserInstalled=${isUserInstalled})`);
                 this._uninstallWidget(id, isUserInstalled);
             },
-            // 2026-07-19 fix: dragging from Edit Mode has to be armed on
-            // the back (visible/reactive) actor, not the front one — see
+            // 2026-07-19 fix, refined 2026-07-21: dragging from Edit Mode
+            // has to be armed on the dedicated DragHandle actor, not the
+            // front one or the back card as a whole — see
             // editModeDragController.js's file header. `this._editDrag`
             // doesn't exist yet at this point in enable() (created right
             // below), but this callback only ever actually fires later,
             // on a widget's first flip, by which point it does.
-            onBackActorReady: (id, backActor) => {
+            onBackActorReady: (id, backActor, dragHandle) => {
                 this._logger.debug('edit-mode', `onBackActorReady("${id}")`);
-                this._editDrag?.armBackActor(id, backActor);
+                this._editDrag?.armDragHandle(id, backActor, dragHandle);
             },
-        }, this._logger);
+        }, this._logger, this._themeService);
         this._editDrag = new EditModeDragController(this._layer, this._storage, this._grid, this._editMode, this._logger);
         this._editDrag.setOthersProvider((monitorIndex, excludeId) => this._othersOnMonitor(monitorIndex, excludeId));
 
@@ -192,6 +213,12 @@ export default class WidgetCenterExtension extends Extension {
         this._cancelLoad?.();
         this._cancelLoad = null;
 
+        // Stop watching theme.json for external changes before anything
+        // below tears down the actors _reapplyTheme() would otherwise
+        // touch on a stray in-flight debounced callback.
+        this._themeService?.unwatch();
+        this._themeService = null;
+
         if (this._settings && this._disabledChangedId != null)
             this._settings.disconnect(this._disabledChangedId);
         this._disabledChangedId = null;
@@ -244,6 +271,33 @@ export default class WidgetCenterExtension extends Extension {
     }
 
     /**
+     * @private Re-styles every currently-placed widget (that opted in via
+     * `themeable: true`) plus every already-built Edit Mode back card,
+     * from the current (just-reloaded) theme. Called by the
+     * `ThemeService.watch()` callback wired in enable() — see there for
+     * why this exists (cross-process live reload from the Control
+     * Center's Appearance page).
+     */
+    _reapplyTheme() {
+        if (!this._themeService)
+            return; // disable() already tore this down — nothing to reapply to
+
+        if (this._loader) {
+            for (const entry of this._loader.instances) {
+                if (!entry.metadata['themeable'])
+                    continue;
+                try {
+                    this._themeService.applyWidgetStyle(entry.actor, entry.id);
+                } catch (e) {
+                    console.error(`[widget-center] Failed to reapply theme for "${entry.id}"`, e);
+                }
+            }
+        }
+
+        this._editMode?.reapplyTheme();
+    }
+
+    /**
      * @private Places a freshly-loaded widget entry into the layer and
      * wires up its drag handling — the placement half of loadAll()'s
      * `.then()` body, factored out so _applyDisabledWidgets() (re-enabling
@@ -256,7 +310,7 @@ export default class WidgetCenterExtension extends Extension {
 
         // Task 14: block-type size system (2026-07-19) — sets the actor's
         // pixel size directly from its declared `cols x rows` grid-cell
-        // span (metadata['block-size']) times GridEngine.cellSize. Unlike
+        // span (metadata['block-type']) times GridEngine.cellSize. Unlike
         // the old pixel min/max system this never reads the actor's
         // current size, so there's no ordering dependency on
         // addWidgetActor() below anymore — see blockSizeManager.js's doc
@@ -266,6 +320,19 @@ export default class WidgetCenterExtension extends Extension {
             BlockSizeManager.applyBlockSize(entry.metadata, entry.actor, this._grid.cellSize);
         } catch (e) {
             console.error(`[widget-center] Failed to apply block size for "${entry.id}"`, e);
+        }
+
+        // Theme system (2026-07-21): only widgets that explicitly opt in
+        // via metadata.json's `"themeable": true` get styled from
+        // theme.json's global/per-widget appearance settings — see
+        // themeService.js's applyWidgetStyle() doc comment for why this
+        // isn't unconditional for every widget.
+        if (entry.metadata['themeable']) {
+            try {
+                this._themeService.applyWidgetStyle(entry.actor, entry.id);
+            } catch (e) {
+                console.error(`[widget-center] Failed to apply theme for "${entry.id}"`, e);
+            }
         }
 
         try {
@@ -300,23 +367,93 @@ export default class WidgetCenterExtension extends Extension {
 
     /**
      * @private Task 12's "Settings" back-side action. Opens the Control
-     * Center (task 05) via the standard `Extension.openPreferences()`
-     * GNOME Shell provides — that always opens to prefs.js's top-level
-     * widget list (task 05's `Adw.PreferencesGroup` of switch rows), it
-     * has no way to deep-link to one specific widget's row/settings page
-     * from here (`openPreferences()` takes no arguments in the GNOME
-     * Shell 45+ Extension API). Jumping straight to this widget's own
-     * settings sub-page instead of the top-level list would need
-     * prefs.js (task 05) to read some kind of "requested widget" hint at
-     * startup, which doesn't exist yet — left as a follow-up rather than
-     * invented here.
+     * Center (task 05) deep-linked straight to this widget's own settings
+     * sub-page.
+     *
+     * 2026-07-20 fix ("click settings opens the extension prefs, not the
+     * widget prefs"): `Extension.openPreferences()` takes no arguments in
+     * the GNOME Shell 45+ API and prefs.js runs in a completely separate
+     * GTK4 process (see prefs.js's file header) — there's no direct
+     * function call across that boundary. The two processes DO already
+     * share one channel: the extension's own GSettings schema (dconf),
+     * which is exactly how `disabled-widgets`/`dev-mode` stay in sync
+     * live between them. This reuses that same channel: write the
+     * requested widget id to the (new) `requested-widget-id` key just
+     * before calling `openPreferences()`, and prefs.js reads it back out
+     * once its window is built, presenting that widget's settings
+     * sub-page immediately instead of stopping at the top-level list —
+     * see prefs.js's `fillPreferencesWindow()` for the other half of this.
      * @param {string} widgetId
      */
     _openWidgetSettings(widgetId) {
         try {
+            if (this._settings?.isReady)
+                this._settings.setGlobalValue('requested-widget-id', widgetId);
+            else
+                console.warn(`[widget-center] SettingsService unavailable — Settings will open the top-level list, not "${widgetId}"'s page`);
             this.openPreferences();
         } catch (e) {
             console.error(`[widget-center] could not open Control Center for "${widgetId}"`, e);
+        }
+    }
+
+    /**
+     * @private Task 12's "Reset" back-side action, actually applying the
+     * reset (2026-07-20 fix — "click reset doesn't reload the widget").
+     * By the time this runs, `WidgetEditMode` has already deleted the
+     * widget's `widgets/<id>.json` settings file and its `layout.json`
+     * position entry (see widgetEditMode.js's Reset button handler) — this
+     * method's job is to make that visible immediately, rebuilding the
+     * widget's live instance/actor exactly the way task 08's hot-reload
+     * does (`_reloadWidget()`, just below) and re-placing it at its
+     * now-defaulted position instead of wherever it happened to be sitting
+     * before Reset was clicked. Detaching/rebuilding the WidgetEditMode
+     * entry as part of this also naturally exits Edit Mode — a fresh
+     * actor starts back in the NORMAL state, no separate `_exitEdit()`
+     * call needed.
+     * @param {string} widgetId
+     */
+    async _resetWidgetViaEditMode(widgetId) {
+        if (!this._loader || !this._layer)
+            return; // enable()/disable() mid-flight
+
+        const oldEntry = this._loader.instances.find(e => e.id === widgetId);
+        if (!oldEntry) {
+            // Nothing to rebuild, but the back-side card is still showing
+            // (flipped) — at least get out of Edit Mode cleanly.
+            this._editMode?.detach(widgetId);
+            return;
+        }
+
+        this._drag?.detach(widgetId);
+        this._editDrag?.detach(widgetId);
+        this._editMode?.detach(widgetId);
+        this._layer.removeWidgetActor(widgetId);
+
+        const newEntry = await this._loader.reloadWidget(widgetId);
+        if (!newEntry) {
+            console.error(`[widget-center] "${widgetId}" could not be reloaded after Reset`);
+            return;
+        }
+
+        // layout.json's entry was just removed (WidgetEditMode's Reset
+        // handler), so getSavedPosition() falls straight through to the
+        // widget's own metadata.json `default-position` (or the
+        // {x:40,y:40} fallback) — same defaulting `_placeEntry()` uses on
+        // a normal first load, applied here immediately instead of
+        // waiting for the next full reload.
+        const fallback = newEntry.metadata['default-position'] ?? {x: 40, y: 40};
+        const position = this._layer.getSavedPosition(widgetId, fallback);
+
+        try {
+            this._layer.addWidgetActor(widgetId, newEntry.actor, position);
+            this._drag?.attach(widgetId, newEntry.actor, position.monitorIndex);
+            const isUserInstalled = this._userWidgetsPath != null &&
+                newEntry.path.startsWith(this._userWidgetsPath);
+            this._editMode?.attach(widgetId, newEntry.actor, {isUserInstalled});
+            this._editDrag?.attach(widgetId, newEntry.actor, position.monitorIndex);
+        } catch (e) {
+            console.error(`[widget-center] "${widgetId}" could not be re-placed after Reset`, e);
         }
     }
 

@@ -145,3 +145,25 @@ actor instead — see that file's own header comment for the rest. No
 change to this file's state machine, transition rules, or the 3 back-
 side actions.
 
+### 2026-07-21 — toolbar icon clicks were being reinterpreted as drag starts
+
+Real-hardware testing of the 2026-07-19 fix above turned up a second,
+distinct bug: clicking a back-side toolbar icon (Settings/Reset/Remove)
+started a drag instead of firing the icon's own action. The 2026-07-19
+fix armed `EditModeDragController`'s press listener on the BACK actor as
+a whole, and toolbar buttons only worked at all because `St.Button`
+happens to consume its own press event before it can bubble up to that
+handler — an implicit assumption about event ordering, not a real
+boundary between "click a toolbar button" and "start a drag".
+
+**Fixed** at the architecture level rather than with event filtering,
+`event.get_source()` checks, or `EVENT_STOP` workarounds: the back side
+now has a dedicated `toolbar` actor (buttons only, never reactive
+itself, never armed for drag) layered on top of a separate, full-size
+`dragHandle` actor — the ONLY actor `EditModeDragController` is ever
+allowed to attach a drag-start listener to. Toolbar clicks and dragging
+are now independent by construction, not by relying on which handler
+happens to run first. No change to this spec's Back side actions,
+Trigger, Transition, or Exit sections — this only changes which
+internal actor owns which responsibility.
+

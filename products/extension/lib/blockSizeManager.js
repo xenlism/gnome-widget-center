@@ -25,7 +25,7 @@
 // resize a widget at all (Edit Mode's drag, task 13, only ever changes
 // POSITION — see widget-edit-mode.md's Non-goals). `size-constraints`
 // (`minCols/minRows/maxCols/maxRows`) from the old v2 design is gone;
-// `metadata['block-size']` is the only thing that decides a widget's
+// `metadata['block-type']` is the only thing that decides a widget's
 // footprint now. See size-constraints.md's History section for the full
 // v1 (pixel min/max) -> v2 (block min/max) -> v3 (block, no min/max)
 // story.
@@ -36,14 +36,14 @@ export class BlockSizeManager {
     /**
      * @method getBlockSizeFor
      * @description Declared block size (in grid cells, not px) for one
-     * widget — from `metadata['block-size']` (`{cols, rows}`) if
+     * widget — from `metadata['block-type']` (`{cols, rows}`) if
      * declared, else DEFAULT_BLOCK_SIZE for every widget that hasn't
      * declared its own.
      * @param {object} metadata - entry.metadata of the widget
      * @returns {{cols: number, rows: number}}
      */
     static getBlockSizeFor(metadata) {
-        const declared = metadata?.['block-size'];
+        const declared = metadata?.['block-type'];
         if (!declared || !Number.isFinite(declared.cols) || !Number.isFinite(declared.rows))
             return DEFAULT_BLOCK_SIZE;
 

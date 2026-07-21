@@ -95,3 +95,26 @@ drop flow, persistence hooks
 - ไม่ต้องกด Super เหมือนเดิม (ตาม spec เดิม) — จุดที่เปลี่ยนคือ "actor ไหน" รับ press ไม่ใช่ "ต้องกด
   ปุ่มอะไรเพิ่ม"
 - **ยังไม่ยืนยันบนเครื่องจริง** เหมือนเดิม
+
+### 2026-07-21 — press listener ย้ายอีกครั้ง จาก back actor ไป dragHandle actor แยกต่างหาก (bug จริง แก้แล้ว)
+
+- Real hardware report: กดปุ่มไอคอน (Settings/Reset/Remove) แล้วกลายเป็นเริ่มลากแทนที่จะ trigger
+  action ของปุ่ม — bug นี้ต่างจาก 2026-07-19 ข้างบน (อันนั้นคือ "ลากไม่ทำงานเลย", อันนี้คือ
+  "คลิกปุ่มโดนตีความเป็นลาก")
+- Root cause: press listener ของ `EditModeDragController` (2026-07-19 fix) ผูกอยู่กับ `back` actor
+  ทั้งใบ ไม่ใช่แค่พื้นที่ว่าง — ที่ปุ่มไอคอนยังกดติดอยู่ได้ก็เพราะ `St.Button` "กิน" press event ของ
+  ตัวเองไปก่อนที่จะ bubble ขึ้นไปถึง `back`'s handler ได้ ซึ่งเป็นแค่ assumption เรื่อง event ordering
+  ไม่ใช่ boundary จริงระหว่าง toolbar กับ drag
+- แก้ตาม approved design decision ("Bug Fix Proposal: Toolbar Icon Click vs Drag Conflict") —
+  ไม่ใช้ `event.get_source()`, ไม่ filter event, ไม่มี `EVENT_STOP` workaround ใดๆ แต่แยก actor
+  ตาม responsibility แทน: `WidgetEditMode._buildBackActor()` สร้าง `dragHandle` (full-size,
+  อยู่ล่างสุดใน z-order) กับ `toolbar` (แค่ layout ปุ่ม ไม่ reactive เอง ไม่มี press listener เอง)
+  แยกกันเป็น child คนละตัวของ `back`
+- `EditModeDragController.armBackActor(widgetId, backActor)` เปลี่ยนชื่อ/signature เป็น
+  `armDragHandle(widgetId, backActor, dragHandle)` — press listener ผูกกับ `dragHandle` เท่านั้น
+  ไม่ใช่ `back`/`backActor` อีกต่อไป ส่วน `backActor` ยังถูกส่งเข้ามาเหมือนเดิมเพราะยังต้องขยับ/ease
+  มันระหว่างลาก (`dragHandle` เป็นแค่ event surface ที่ขยับตาม `backActor` ไปเองในฐานะ child)
+- ผลคือคลิกปุ่ม toolbar กับลากจาก drag handle เป็นอิสระจากกันโดยสมบูรณ์ ตาม design ใหม่ ไม่ใช่ตาม
+  ลำดับ event ที่บังเอิญทำงานถูก
+- **ยังไม่ยืนยันบนเครื่องจริง** เหมือนเดิม
+

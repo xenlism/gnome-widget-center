@@ -1,0 +1,11 @@
+{
+  "id": "demo-large-horizontal-yellow",
+  "name": "Demo Large H Yellow",
+  "description": "Demo widget Yellow 688x336",
+  "version": "1.0.0",
+  "author": "Demo Widget Pack",
+  "api-version": 1,
+  "entry": "widget.js",
+  "block-type": { "cols": 43, "rows": 21 },
+  "default-position": { "x": 16, "y": 720, "monitor": 0 }
+}

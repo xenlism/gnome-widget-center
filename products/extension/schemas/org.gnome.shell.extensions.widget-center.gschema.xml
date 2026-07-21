@@ -26,6 +26,25 @@
       </description>
     </key>
 
+    <key name="requested-widget-id" type="s">
+      <default>''</default>
+      <summary>Widget id to deep-link the Control Center to on next open</summary>
+      <description>
+        Transient IPC hint (2026-07-20, task 12 real-hardware fix), NOT a
+        widget config value — see the note at the top of this file about
+        this schema never gaining per-widget keys; this one identifies
+        which widget's settings page to jump to, it doesn't configure any
+        widget itself. Written by extension.js's Edit Mode "Settings"
+        action (widgetEditMode.js) right before calling
+        Extension.openPreferences(), since that call takes no arguments
+        and prefs.js runs in a separate process — GSettings is the one
+        channel both processes already share (same trick disabled-widgets/
+        dev-mode use for live sync). prefs.js reads this back out once its
+        window is built and clears it back to '' immediately after, so a
+        later manually-opened Control Center window doesn't jump anywhere.
+      </description>
+    </key>
+
     <key name="dev-mode" type="b">
       <default>false</default>
       <summary>Enable Development Mode</summary>

@@ -7,6 +7,6 @@
   "api-version": 1,
   "entry": "widget.js",
   "prefs": "prefs.js",
-  "block-size": { "cols": 20, "rows": 10 },
+  "block-type": { "cols": 21, "rows": 10 },
   "default-position": { "x": 300, "y": 400, "monitor": 0 }
 }
