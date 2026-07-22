@@ -13,34 +13,29 @@
 // widgets/_template - the host does not (yet) load a widget's own
 // stylesheet.css into the Shell's theme context, so the actual two-tone
 // look here comes from inline St `style` strings, not stylesheet.css.
+//
+// Built on GjsKit (lib/gjskit) rather than raw St - see
+// development/docs/WIDGET_API.md and development/widgetapi-handover.md.
+// This widget used to hardcode its own WIDGET_WIDTH/HEIGHT + clip_to_
+// allocation to fix an overflow bug (2026-07-22, see screenshot in that
+// handover), but that pattern doesn't scale: every widget author would
+// have to remember to do it correctly themselves. WidgetLoader now
+// enforces the metadata.json `block-type` -> pixel size (and clipping)
+// on every widget's root actor centrally, right after buildActor()
+// returns, using the exact same GjsKit size()/clip() methods - so
+// nothing widget-specific needs to happen here anymore.
 
-// 2026-07-22: explicit Clutter import added after a reported
+// 2026-07-22: explicit Clutter import kept after a reported
 // "constructor threw: Clutter is not defined" runtime error when this
 // widget was loaded via widgetLoader.js's dynamic import(). St's own
 // typelib depends on Clutter's; this import forces Clutter's GI
 // repository to be registered before St is touched in this module's own
-// dynamic-import scope, which existing bundled widgets never hit
-// because they were already resolved earlier in the same process.
+// dynamic-import scope (including inside GjsKit's own st/index.js),
+// which existing bundled widgets never hit because they were already
+// resolved earlier in the same process.
 import Clutter from 'gi://Clutter';
-import St from 'gi://St';
 import GLib from 'gi://GLib';
-
-// Must mirror this widget's own metadata.json `block-type` and the host's
-// GridEngine cell size (products/extension/lib/gridEngine.js's GRID_SIZE,
-// currently 16px/cell) - NOT an arbitrary pixel value. See
-// development/widgetapi-handover.md §2/§3: the host's WidgetLoader/GridEngine
-// never calls set_size()/clip_to_allocation on a widget's root actor
-// (GridEngine only handles grid *placement*, i.e. collision/positioning),
-// so nothing stops a St.BoxLayout from growing past its declared block-type
-// footprint if its content is taller/wider than that - which is exactly
-// what happened here (header band + 56px day number pushed the actor past
-// 10x10 = 160x160px). Each widget is responsible for enforcing its own
-// declared size and clipping its own overflow.
-const CELL_SIZE = 16;
-const BLOCK_COLS = 10;
-const BLOCK_ROWS = 10;
-const WIDGET_WIDTH = BLOCK_COLS * CELL_SIZE;   // 160
-const WIDGET_HEIGHT = BLOCK_ROWS * CELL_SIZE;  // 160
+import {$} from '../../lib/gjskit/st/index.js';
 
 export default class CalendarHeaderWidget {
     /**
@@ -53,32 +48,28 @@ export default class CalendarHeaderWidget {
     }
 
     buildActor() {
-        this._actor = new St.BoxLayout({
-            style_class: 'calendar-header-widget-root',
-            vertical: true,
-            width: WIDGET_WIDTH,
-            height: WIDGET_HEIGHT,
-            clip_to_allocation: true,
-        });
+        const root = $.box({style_class: 'calendar-header-widget-root', vertical: true});
 
-        this._header = new St.BoxLayout({
-            style_class: 'calendar-header-widget-header',
-            vertical: true,
-        });
-        this._monthLabel = new St.Label({style_class: 'calendar-header-widget-month'});
-        this._weekdayLabel = new St.Label({style_class: 'calendar-header-widget-weekday'});
-        this._header.add_child(this._monthLabel);
-        this._header.add_child(this._weekdayLabel);
+        const header = $.box({style_class: 'calendar-header-widget-header', vertical: true});
+        const monthLabel = $.label({style_class: 'calendar-header-widget-month'});
+        const weekdayLabel = $.label({style_class: 'calendar-header-widget-weekday'});
+        header.append(monthLabel).append(weekdayLabel);
 
-        this._body = new St.BoxLayout({
-            style_class: 'calendar-header-widget-body',
-            vertical: true,
-        });
-        this._dayLabel = new St.Label({style_class: 'calendar-header-widget-day'});
-        this._body.add_child(this._dayLabel);
+        const body = $.box({style_class: 'calendar-header-widget-body', vertical: true});
+        const dayLabel = $.label({style_class: 'calendar-header-widget-day'});
+        body.append(dayLabel);
 
-        this._actor.add_child(this._header);
-        this._actor.add_child(this._body);
+        root.append(header).append(body);
+
+        // .raw: keep plain St actor refs around for _render()'s inline
+        // set_style()/set_text() calls - GjsKit's fluent wrappers cover
+        // construction/composition, not arbitrary CSS strings.
+        this._actor = root.raw;
+        this._header = header.raw;
+        this._monthLabel = monthLabel.raw;
+        this._weekdayLabel = weekdayLabel.raw;
+        this._body = body.raw;
+        this._dayLabel = dayLabel.raw;
 
         this._render();
         return this._actor;

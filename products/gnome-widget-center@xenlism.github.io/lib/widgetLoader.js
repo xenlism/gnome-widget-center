@@ -17,6 +17,26 @@ import Gio from 'gi://Gio';
 import {WidgetSettings} from './widgetSettings.js';
 import {validateSettingsSchema, getSchemaDefaults} from './settingsSchema.js';
 import {SettingsWatcher} from './settingsWatcher.js';
+import {GRID_SIZE} from './gridEngine.js';
+
+// NOTE: StWidgetWrapper is intentionally NOT statically imported here.
+// widgetLoader.js is shared between extension.js (Shell process, where St
+// exists) and prefs.js's PrefsWidgetList (GTK4 prefs process, where St's
+// typelib is not available at all — see prefs.js's header comment and
+// development/docs/WIDGET_API.md §4). A static `import ... from
+// './gjskit/st/StWidget.js'` at the top of this file is resolved eagerly by
+// GJS the moment ANYTHING imports widgetLoader.js — even though
+// PrefsWidgetList only ever calls discover(), which never touches St — and
+// that eager resolution is exactly what crashes the prefs window with
+// "Requiring St, version none: Typelib file for namespace 'St' (any
+// version) not found". _enforceBlockSize() below is only ever reached from
+// loadOne()/hot-reload, which only run in the Shell process, so it lazily
+// dynamic-imports StWidget.js right where it's used instead.
+
+// Default block-type when a widget's metadata.json omits the field
+// entirely - see development/docs/WIDGET_API.md §2 ("ถ้าไม่ประกาศ field
+// นี้เลย จะได้ค่า default กลาง (10 x 6 cell) แทน").
+const DEFAULT_BLOCK_TYPE = {cols: 10, rows: 6};
 
 const REQUIRED_METADATA_FIELDS = ['id', 'name', 'entry'];
 
@@ -278,6 +298,7 @@ export class WidgetLoader {
             this._recordError(widgetInfo, `buildActor() threw: ${e.message}`);
             return null;
         }
+        await this._enforceBlockSize(widgetInfo, actor);
 
         try {
             instance.enable?.();
@@ -454,6 +475,7 @@ export class WidgetLoader {
             actor = instance.buildActor();
             if (!actor)
                 throw new Error('buildActor() returned null/undefined');
+            await this._enforceBlockSize(widgetInfo, actor);
         } catch (e) {
             this._logger.error?.(`[widget-loader] "${widgetId}" hot-reload build failed: ${e.message} — keeping previous version running`);
             return null;
@@ -502,6 +524,36 @@ export class WidgetLoader {
     // out of task 04's scope on purpose (see development/tasks/04-drag-reposition.md
     // "Out of scope"); revisit if a widget actually needs to react to
     // being dragged.
+    // Locks widgetInfo's actor to the pixel size implied by its own
+    // metadata.json `block-type` (falls back to DEFAULT_BLOCK_TYPE if the
+    // field is omitted) and clips any content that doesn't fit. This is
+    // deliberately enforced here — once, centrally — rather than left to
+    // each widget.js to hand-roll correctly. Relying on every widget
+    // author (bundled or third-party) to independently compute
+    // cols*GRID_SIZE and remember clip_to_allocation is exactly how
+    // calendar-header ended up overflowing its box in the first place;
+    // one widget getting it wrong (or a new widget copy-pasting an old
+    // template that never had it) reintroduces the same bug. Using
+    // GjsKit's StWidgetWrapper here (rather than poking Clutter/St
+    // properties directly) also means bundled AND third-party widgets
+    // built with GjsKit get the exact same size()/clip() semantics the
+    // host uses on them.
+    async _enforceBlockSize(widgetInfo, actor) {
+        const blockType = widgetInfo.metadata['block-type'] ?? DEFAULT_BLOCK_TYPE;
+        const cols = Number(blockType.cols) || DEFAULT_BLOCK_TYPE.cols;
+        const rows = Number(blockType.rows) || DEFAULT_BLOCK_TYPE.rows;
+        try {
+            // Lazy import — see the note above the imports at the top of
+            // this file for why StWidget.js can't be a static import here.
+            const {StWidgetWrapper} = await import('./gjskit/st/StWidget.js');
+            new StWidgetWrapper(actor)
+                .size(cols * GRID_SIZE, rows * GRID_SIZE)
+                .clip(true);
+        } catch (e) {
+            this._recordError(widgetInfo, `failed to enforce block-type size: ${e.message}`);
+        }
+    }
+
     _buildApi(widgetInfo, settings) {
         return {
             settings,
