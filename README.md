@@ -27,11 +27,11 @@ Widgets never interact directly with GNOME Shell internals. Instead, they commun
 
 ### Dashboard
 
-![Dashboard](assets/screenshots/dashboard.png)
+![Dashboard](products/assets/screenshots/dashboard.png)
 
 ### Desktop
 
-![Desktop](assets/screenshots/desktop.png)
+![Desktop](products/assets/screenshots/desktop.png)
 
 ---
 
