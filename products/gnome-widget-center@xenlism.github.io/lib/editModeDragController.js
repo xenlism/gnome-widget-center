@@ -193,8 +193,27 @@ export class EditModeDragController {
             const [startX, startY] = actor.get_position();
             const [width, height] = actor.get_size();
 
+            const parent = actor.get_parent();
+
+            // Bring-to-front (2026-07-22 fix, "dragged widget should stay
+            // on top"): every widget actor/backActor is otherwise just
+            // left in whatever z-order it was first added in and NEVER
+            // reordered again, so a widget lower in that original order
+            // would stay rendered underneath others even while actively
+            // being dragged on top of them. Raise both siblings — the
+            // front `actor` (same parent as backActor, see
+            // widgetEditMode.js's `_buildToolbar()`:
+            // `parent.insert_child_above(toolbar, entry.actor)`) so it's
+            // already on top once Edit Mode flips back and hides
+            // `backActor`, and `backActor` itself since that's what's
+            // actually visible/being moved on screen for the whole drag.
+            // No restore-on-drop: the widget just interacted with staying
+            // topmost afterward is the intended, simpler behavior here.
+            parent?.set_child_above_sibling(actor, null);
+            parent?.set_child_above_sibling(backActor, null);
+
             const placeholder = this._buildPlaceholder(width, height);
-            actor.get_parent()?.insert_child_below(placeholder, actor);
+            parent?.insert_child_below(placeholder, actor);
             placeholder.set_position(startX, startY);
 
             this._editMode.enterDragging(widgetId);

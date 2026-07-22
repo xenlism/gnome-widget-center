@@ -1,51 +1,3 @@
-#!/usr/bin/env bash
-set -e
-
-echo "==> Updating Toolbar layout, CSS, and Move icon..."
-
-mkdir -p widgets lib
-
-# ----------------------------------------------------------------------
-# 1. เขียนทับไฟล์ stylesheet.css
-# ----------------------------------------------------------------------
-cat << 'EOF' > stylesheet.css
-/* Toolbar Background & Main Container */
-.widget-edit-toolbar {
-    background-color: rgba(0, 0, 0, 0.85);
-    border-top-left-radius: 12px;
-    border-top-right-radius: 12px;
-    padding: 8px 16px; /* เว้นระยะจากขอบซ้าย-ขวา 16px */
-    spacing: 12px;
-}
-
-/* Base Toolbar Button */
-.widget-edit-toolbar-button {
-    color: #ffffff;
-    padding: 6px;
-    border-radius: 6px;
-    min-width: 24px;
-    min-height: 24px;
-}
-
-.widget-edit-toolbar-button:hover {
-    background-color: rgba(255, 255, 255, 0.2);
-    color: #ffffff;
-}
-
-/* Force Uniform Icon Size & Color */
-.widget-edit-toolbar-icon {
-    icon-size: 20px;
-    color: #ffffff;
-    width: 20px;
-    height: 20px;
-}
-EOF
-echo "[✓] Updated stylesheet.css"
-
-# ----------------------------------------------------------------------
-# 2. เขียนทับไฟล์ widgets/widgetEditToolbar.js
-# ----------------------------------------------------------------------
-cat << 'EOF' > widgets/widgetEditToolbar.js
 import Clutter from 'gi://Clutter';
 import GObject from 'gi://GObject';
 import St from 'gi://St';
@@ -88,7 +40,7 @@ class WidgetEditToolbar extends St.BoxLayout {
 
         // Move Handle Button (ใช้ 'action-unavailable-symbolic' หรือ 'object-select-symbolic' หากไอคอนเคลื่อนย้ายมาตรฐานไม่มีในธีม)
         // 'view-grid-symbolic' / 'find-location-symbolic' / 'shapes-symbolic' 
-        this._moveBtn = this._createButton('action-unavailable-symbolic', null);
+        this._moveBtn = this._createButton('transform-move-symbolic', null);
         
         // ลองเปลี่ยนเป็นไอคอนลูกศร 4 ทิศของระบบ GNOME
         this._setMoveIcon(this._moveBtn);
@@ -130,7 +82,3 @@ class WidgetEditToolbar extends St.BoxLayout {
         return button;
     }
 });
-EOF
-echo "[✓] Updated widgets/widgetEditToolbar.js"
-
-echo "==> All updates applied successfully!"

@@ -92,11 +92,12 @@ export const EditModeState = Object.freeze({
     DRAGGING: 'dragging',
 });
 
-// Height of the floating toolbar bar overlaid on the widget's top edge.
-// Deliberately small/fixed — it's chrome sitting ON TOP of the widget's
-// existing footprint, not something that grows the widget (see spec's
-// Non-Goals re: resize).
-const TOOLBAR_HEIGHT = 32;
+// Height of just the icon row (settings/reset/remove/grip) at the top of
+// the overlay. The overlay itself now spans the widget's FULL footprint
+// (see _buildToolbar()) so the drag area fills everything below this
+// strip, matching the widget's metadata block-type size — it no longer
+// grows the widget, just fully covers it (see spec's Non-Goals re: resize).
+const ICON_ROW_HEIGHT = 32;
 const TOOLBAR_FADE_MS = 150;
 
 // How long the pointer has to sit still over a toolbar icon button
@@ -411,36 +412,37 @@ export class WidgetEditMode {
         });
     }
 
-    /** @private builds the floating toolbar bar overlaid on the widget's
-     * top edge: up to four action icon buttons on the left, then an
-     * expanding drag area (with a grip glyph at its far end) filling the
-     * rest of the bar's width. Same width as the front actor, fixed
-     * height (TOOLBAR_HEIGHT) — the widget's own footprint never changes
-     * (see spec's Non-Goals re: resize). Built lazily (only once, on
-     * first right-click) rather than in attach() for every widget up
-     * front - most widgets may never be right-clicked in a session.
+    /** @private builds the floating overlay covering the widget's full
+     * footprint (same width/height as the front actor — i.e. its metadata
+     * block-type size in pixels, see 2026-07-22 fix "overlay size should
+     * match metadata"): a fixed-height icon row (up to four action
+     * buttons on the left) on top, then `dragArea` below it expanding to
+     * fill everything down to the overlay's bottom edge, with a grip
+     * glyph layered on top as a visual cue for where to grab. The
+     * widget's own footprint never changes (see spec's Non-Goals re:
+     * resize) — only the overlay chrome sizes itself to match it now.
+     * Built lazily (only once, on first right-click) rather than in
+     * attach() for every widget up front - most widgets may never be
+     * right-clicked in a session.
      *
      * Icon-click-vs-drag design (carried forward from the old flip-card
-     * design's 2026-07-21 fix): the toolbar's row and its `dragArea` are
-     * two separate actors. `dragArea` is added FIRST (bottom of the
-     * z-order, `x_expand: true` so it fills all the space after the icon
-     * buttons) and is the ONLY actor EditModeDragController is ever
-     * allowed to arm a drag listener onto (see armDragHandle() in
-     * editModeDragController.js) — a press on one of the icon buttons is
-     * consumed by that St.Button and never reaches `dragArea` at all, by
-     * construction, and a press that misses every button (including the
-     * grip glyph, which is a plain non-reactive St.Label layered on top
-     * of `dragArea` purely as a visual cue for where to grab) falls
-     * straight through to it.
+     * design's 2026-07-21 fix): `dragArea` is the ONLY actor
+     * EditModeDragController is ever allowed to arm a drag listener onto
+     * (see armDragHandle() in editModeDragController.js). Each button's
+     * own reactive St.Button consumes its own press before it could ever
+     * reach `dragArea`, by construction, and a press that misses every
+     * button falls straight through to it (including over the grip
+     * glyph, which is a plain non-reactive St.Label, purely decorative).
      */
     _buildToolbar(widgetId, entry) {
-        const [width] = entry.actor.get_size();
-        this._logger.debug('edit-mode', `_buildToolbar("${widgetId}") frontWidth=${width}`);
-        if (width <= 0) {
+        const [width, height] = entry.actor.get_size();
+        this._logger.debug('edit-mode',
+            `_buildToolbar("${widgetId}") frontSize=${width}x${height}`);
+        if (width <= 0 || height <= 0) {
             this._logger.warn('edit-mode',
-                `_buildToolbar("${widgetId}") built with a non-positive width (${width}) — ` +
+                `_buildToolbar("${widgetId}") built with a non-positive size (${width}x${height}) — ` +
                 'the front actor likely has not been allocated yet; the toolbar may render ' +
-                'invisibly or zero-width. If icon clicks/right-click seem to do nothing, this ' +
+                'invisibly or zero-size. If icon clicks/right-click seem to do nothing, this ' +
                 'is the first thing to check.');
         }
 
@@ -450,11 +452,17 @@ export class WidgetEditMode {
         // extra column the row's layout manager tries to position (the
         // exact bug the old flip-card design's back/toolbar split fixed
         // in 2026-07-19 — kept the same way here for the same reason).
+        //
+        // Overlay now spans the widget's FULL footprint (width/height
+        // straight off the front actor, i.e. its metadata block-type size
+        // in pixels) rather than just a top strip, so the 60-70% dim +
+        // drag area covers the whole widget, not only a thin band under
+        // the icons.
         const toolbar = new St.Widget({
             style_class: 'widget-edit-mode-toolbar-bar',
-            layout_manager: new Clutter.BinLayout(),
+            layout_manager: new Clutter.FixedLayout(), // respects set_position()/set_size() on children as-is, unlike BinLayout which re-aligns them on every relayout
             reactive: false, // toggled true only while actually showing, see _showToolbar()
-            width, height: TOOLBAR_HEIGHT, // fixed strip, never grows with content
+            width, height, // matches the widget's own metadata size exactly, never grows it
             visible: false,
             opacity: 0,
         });
@@ -462,21 +470,26 @@ export class WidgetEditMode {
         const row = new St.BoxLayout({
             style_class: 'widget-edit-mode-icon-row',
             vertical: false,
-            x_expand: true,
-            y_expand: true,
+            width, height: ICON_ROW_HEIGHT, // pinned to the top strip, see manual position below
+            x_expand: false,
+            y_expand: false,
         });
         toolbar.add_child(row);
+        row.set_position(0, 0);
 
         const dragArea = new St.Widget({
             style_class: 'widget-edit-mode-drag-handle',
             layout_manager: new Clutter.BinLayout(),
             reactive: true, // only ever actually hit-tested while `toolbar` is visible (EDIT/DRAGGING)
-            x_expand: true,
-            y_expand: true,
+            width, height: Math.max(height - ICON_ROW_HEIGHT, 0), // fills everything below the icon row
+            x_expand: false,
+            y_expand: false,
         });
+        toolbar.add_child(dragArea);
+        dragArea.set_position(0, ICON_ROW_HEIGHT);
         const grip = new St.Label({
             style_class: 'widget-edit-mode-grip',
-            text: '\u2637', // ⠿ - purely decorative, non-reactive, sits on top of dragArea
+            text: '\u26F6', // ⠿ - purely decorative, non-reactive, sits on top of dragArea
             x_align: Clutter.ActorAlign.END,
             y_align: Clutter.ActorAlign.CENTER,
         });
@@ -543,14 +556,15 @@ export class WidgetEditMode {
                 () => this._onUninstall(widgetId, entry.isUserInstalled));
         }
 
-        // Drag area added AFTER the buttons in the BoxLayout so it fills
-        // whatever width the row's expansion leaves once the buttons
-        // have taken their own natural width — but added BELOW the
-        // buttons in z-order doesn't matter here since it's a sibling in
-        // the same BoxLayout row, not stacked underneath it; each
-        // button's own reactive St.Button consumes its own press before
-        // it could ever reach dragArea regardless of paint order.
-        row.add_child(dragArea);
+        // Note: `dragArea` is already a direct child of `toolbar` (added
+        // right after `row`, at construction time above), manually
+        // positioned/sized below the icon row rather than via a nested
+        // layout — see _buildToolbar()'s doc comment for why (keeps
+        // `row` a direct child of `toolbar` so _attachTooltip()'s
+        // `insert_child_above(tooltipLabel, row)` still works unchanged).
+        // Each button's own reactive St.Button still consumes its own
+        // press before it could ever reach dragArea, regardless of paint
+        // order.
 
         // Right-click anywhere on the toolbar bar (including over
         // dragArea, or over a button - St.Button only ever consumes

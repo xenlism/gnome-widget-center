@@ -1,0 +1,57 @@
+/* ==========================================================
+ * Widget Edit Toolbar
+ * ========================================================== */
+
+.widget-edit-toolbar,
+.widget-edit-mode-icon-row,
+.widget-edit-mode-toolbar-bar {
+    background-color: rgba(0, 0, 0, 1.0);
+    border-radius: 16px 16px 0 0;
+    padding: 4px;
+}
+
+/* Action row */
+.widget-edit-mode-icon-row {
+    spacing: 8px;
+}
+
+/* Drag area */
+.widget-edit-mode-drag-handle {
+    background-color: rgba(0, 0, 0, 1.0);
+    border-radius: 0 0 16px 16px;
+}
+
+/* Move icon */
+.widget-edit-mode-grip {
+    color: #ffffff;
+    icon-size: 56px;
+    font-size: 56px;
+}
+
+/* Toolbar buttons */
+.widget-edit-mode-action {
+    color: #ffffff;
+    background-color: rgba(0, 0, 0, 1.0);
+    padding: 6px;
+    border-radius: 6px;
+    min-width: 28px;
+    min-height: 28px;
+}
+
+.widget-edit-mode-action:hover {
+    background-color: rgba(255,255,255,0.15);
+}
+
+/* Action icons */
+.widget-edit-mode-action-icon {
+    icon-size: 16px;
+    color: #ffffff;
+}
+
+/* Tooltip */
+.widget-edit-mode-tooltip {
+    background-color: rgba(0,0,0,0.90);
+    color: #ffffff;
+    border-radius: 6px;
+    padding: 4px 8px;
+}
