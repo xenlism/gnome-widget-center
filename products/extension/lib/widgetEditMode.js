@@ -1,11 +1,13 @@
 // products/extension/lib/widgetEditMode.js
 //
-// Task 12 — Widget Edit Mode. Right-click a widget to flip it to a back
-// side showing Settings/Reset/Remove/Uninstall actions; right-click or
-// ESC flips it back. Per development/architecture/specs/ui/widget-edit-mode.md.
+// Task 12 — Widget Edit Mode. Right-click a widget to show a small
+// floating toolbar bar over its top edge with Settings/Reset/Remove/
+// Uninstall actions and a drag grip; right-click the bar again or ESC
+// hides it. Per development/architecture/specs/ui/widget-edit-mode.md.
 //
 // State machine (per widget, independent of every other widget — there is
-// no "one edit mode for the whole desktop", each widget flips on its own):
+// no "one edit mode for the whole desktop", each widget's toolbar shows on
+// its own):
 //
 //   NORMAL --(pointer enter)--> HOVER --(pointer leave)--> NORMAL
 //   NORMAL/HOVER --(right-click)--> EDIT --(right-click / ESC)--> NORMAL
@@ -14,81 +16,70 @@
 // This module owns NORMAL/HOVER/EDIT and the EDIT<->DRAGGING transition
 // points (enterDragging()/exitDragging() below), but does not implement
 // the drag itself — EditModeDragController (task 13) calls those two
-// hooks and does the pointer tracking/grid-snap/persistence. Kept split
-// the same way task 04's DragController is split from WidgetLayer: this
-// file only knows about ONE widget's flip/back-side chrome, never about
-// pointer grabs on `global.stage`.
+// hooks and does the pointer tracking/grid-snap/persistence.
 //
-// Reposition-from-Edit-Mode (2026-07-19 fix, superseded 2026-07-21 — see
-// below): the front actor is `reactive = false` for as long as EDIT is
-// active (see below), so a drag can only ever start from whatever is
-// actually showing at that point — the BACK actor's dedicated
-// `dragHandle` child, not the front actor and, as of the 2026-07-21
-// refactor below, not the back actor's toolbar buttons either. This
-// module hands `back` AND `dragHandle` to EditModeDragController via the
-// onBackActorReady callback the moment they're built (see
-// _buildBackActor()); dragging works by pressing anywhere on the back
-// side that isn't one of the toolbar's action icons, i.e. the empty
-// padding around/between them — no Super key needed, same as before.
+// 2026-07-21, design change (real-hardware feedback: the original
+// "flip the whole widget over to a back card" design was replaced
+// wholesale) — instead of rotating the widget 180° to a same-size back
+// side, Edit Mode now overlays a fixed-height TOOLBAR BAR across the
+// widget's own top edge (same width as the widget, same top-left corner —
+// footprint unchanged, per spec's Non-Goals: resize is still not
+// supported). The widget's own content stays visible underneath the
+// whole time; only the strip the toolbar bar covers is obscured. This
+// removes an entire class of bug that plagued the flip design: there is
+// no second, full-size actor to keep in sync with the front one, no
+// rotation tween to race against, and nothing to "swap which side is
+// showing" — showing/hiding the toolbar is a single opacity fade on one
+// small overlay actor, so a widget can never end up "vanished" (both
+// sides invisible) or "stuck flipped" (front never comes back) the way
+// the old `_flip()` could under bad timing. See `_showToolbar()`/
+// `_hideToolbar()` below for exactly how that fade is driven.
 //
-// Toolbar/DragHandle split (2026-07-21, handover "Bug Fix Proposal: Toolbar
-// Icon Click vs Drag Conflict"): real-hardware reports showed toolbar
-// icon clicks (Settings/Reset/Remove) being swallowed into a drag start
-// instead of firing their action. Root cause: the whole back actor owned
-// the drag button-press listener, and toolbar buttons only worked at all
-// because St.Button happens to consume its own press before it bubbles
-// up — an implicit ordering assumption rather than a real boundary
-// between "click a button" and "start a drag". Fixed by design instead
-// of event filtering/get_source() checks: `_buildBackActor()` now builds
-// a dedicated, full-size `dragHandle` actor UNDER the toolbar row, and
-// that is the ONLY actor EditModeDragController is ever allowed to arm a
-// drag listener onto (see armDragHandle() in editModeDragController.js).
-// `back` itself carries no drag-related listener anymore (only the
-// right-click-to-exit one, an unrelated concern - see #1 below).
+// Prior history, kept for context (this file no longer contains a flip,
+// but the same real-hardware lessons still apply to the toolbar's own
+// show/hide and its buttons):
+//   - 2026-07-19: back-side icon clicks fought a full-card drag listener
+//     for the same press event (implicit St.Button-consumes-first
+//     ordering, not a real boundary) — fixed by giving drag its own
+//     dedicated event-surface actor, never the container the buttons
+//     live in. The toolbar bar below keeps that split: `dragArea` is the
+//     ONLY actor EditModeDragController is ever handed a press listener
+//     for (see onBackActorReady below), never the toolbar bar itself.
+//   - 2026-07-19/07-21: two different rounds of "the widget doesn't come
+//     back" bugs, both from the OLD flip's cleanup running on a clock
+//     unrelated to what was actually on screen (a dropped ease()
+//     onComplete, then a wall-clock GLib.timeout_add racing the real
+//     rotation). Not applicable to the current design (see above), but
+//     the LESSON carried forward: `_hideToolbar()` still guards its own
+//     cleanup with a `finalized` flag and a generation counter (see
+//     below) rather than assuming its ease()'s onComplete is guaranteed
+//     to run — cheap insurance against the same class of bug recurring
+//     in a new shape.
+//   - 2026-07-21: a Reset click landing mid-exit-transition rebuilt the
+//     widget's actor out from under an in-flight animation, orphaning it
+//     permanently. The toolbar's buttons still guard every click with
+//     `isEditing()` (see `addButton` below) for the same reason — cheap,
+//     and still the right call even though the transition it originally
+//     protected against no longer exists in this design.
+//
+// Development Mode debug logging (2026-07-19): every state transition,
+// right-click, and toolbar button click below still goes through the
+// optional `logger` (lib/logger.js) passed into the constructor — a
+// no-op unless the Control Center's "Development Mode" switch is on.
 //
 // Widget content is disabled while EDIT (and therefore also DRAGGING) is
 // active, per spec — `actor.reactive = false` on the front content so
 // clicks can't reach whatever the widget itself put there (e.g. the
-// media-player widget's own play/pause button) while its back side is
-// showing instead.
+// media-player widget's own play/pause button). Unlike the old flip
+// design, the front actor stays VISIBLE the whole time now (only
+// non-reactive) — the toolbar bar is a small overlay, not a full
+// replacement, so there's no reason to hide the widget's own content
+// underneath it.
 //
 // Resize is explicitly NOT supported (see spec's Non-Goals) — nothing
-// here ever changes a widget actor's width/height, only its rotation/
-// opacity and position (the latter is task 13's job, not this file's).
-//
-// Development Mode debug logging (2026-07-19): every state transition,
-// right-click, and back-side button click below now goes through the
-// optional `logger` (lib/logger.js) passed into the constructor — a
-// no-op unless the Control Center's "Development Mode" switch is on.
-// Added specifically so real-hardware Edit Mode reports (right-click
-// not flipping back, icon clicks doing nothing, drag not starting) can
-// be diagnosed from `journalctl` output instead of guessing.
-//
-// Flip-listener reentrancy fix (2026-07-19): `_flip()` used to leave its
-// `notify::rotation-angle-y` listener as a bare local variable. If
-// toggle() was called again (e.g. a fast double right-click) before the
-// in-flight flip's listener had disconnected itself, the OLD listener
-// stayed connected — a second, stale `notify::rotation-angle-y` handler
-// now fought with the new one over `actor.visible` on every subsequent
-// flip, which could leave the front actor (and/or the back actor,
-// whichever handler ran last) stuck invisible — i.e. the widget
-// appearing to just vanish instead of cleanly flipping. `_flip()` now
-// tracks its listener id on `entry` and disconnects any previous one
-// before connecting a new one, so at most one is ever live per widget.
-//
-// Flip finalize-timeout fix (2026-07-21, real-hardware bug reports:
-// "right-click exits Edit Mode but the widget stays hidden" / "clicking
-// the widget's own content does nothing" after that): the SAME class of
-// bug as the reentrancy fix above, but hitting `_flip()`'s `actor.ease()`
-// `onComplete` callback rather than its `notify::rotation-angle-y`
-// listener — a second _flip() call replacing the in-flight
-// `rotation_angle_y` transition silently drops the first call's
-// `onComplete`, so `back.visible = false` / `actor.reactive = true`
-// (the exit case's cleanup) could simply never run, permanently.
-// `_flip()` now finalizes from a plain `GLib.timeout_add` tied to
-// `FLIP_DURATION_MS` instead, guarded by a `flipGeneration` counter so
-// only the most recent toggle's finalize actually takes effect. See
-// `_flip()`'s own inline comment for the mechanics.
+// here ever changes a widget actor's width/height, only the toolbar
+// bar's opacity/visibility and position (the latter is task 13's job,
+// not this file's).
 
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
@@ -101,14 +92,14 @@ export const EditModeState = Object.freeze({
     DRAGGING: 'dragging',
 });
 
-// Half of a full flip (180°) — the point at which the front content
-// becomes edge-on and it's safe to swap in the back actor without an
-// visible pop, matching the classic "card flip" trick of swapping
-// visibility at the 90° mark rather than crossfading.
-const FLIP_HALFWAY_DEGREES = 90;
-const FLIP_DURATION_MS = 250;
+// Height of the floating toolbar bar overlaid on the widget's top edge.
+// Deliberately small/fixed — it's chrome sitting ON TOP of the widget's
+// existing footprint, not something that grows the widget (see spec's
+// Non-Goals re: resize).
+const TOOLBAR_HEIGHT = 32;
+const TOOLBAR_FADE_MS = 150;
 
-// How long the pointer has to sit still over a back-side icon button
+// How long the pointer has to sit still over a toolbar icon button
 // before its tooltip label appears. St has no built-in tooltip widget
 // (unlike Gtk's tooltip-text — see prefs.js for that side), so this file
 // rolls its own: a plain St.Label shown/hidden on enter-event/leave-event,
@@ -122,64 +113,47 @@ export class WidgetEditMode {
      *   (resetWidgetSettings()/removeWidgetLayoutEntry(), added in this
      *   same change) and nothing else here — Settings/Remove/Uninstall
      *   are handed back to the caller via the callbacks below instead of
-     *   this module reaching into SettingsService/WidgetLoader directly,
-     *   since those are extension.js-level concerns (task 05's Control
-     *   Center wiring, WidgetLoader's unload/discover) that this module
-     *   shouldn't need to know how to drive.
+     *   this module reaching into SettingsService/WidgetLoader directly.
      * @param {object} callbacks
      * @param {(widgetId:string)=>void} callbacks.onSettings - "Settings"
-     *   back-side action. Typically opens the Control Center to this
-     *   widget's prefs page (task 05) — left to the caller since
-     *   WidgetEditMode has no access to the (separate-process) prefs UI.
+     *   toolbar action. Typically opens the Control Center to this
+     *   widget's prefs page (task 05).
      * @param {(widgetId:string)=>void} callbacks.onRemove - "Remove"
-     *   back-side action. Typically the same effect as switching the
-     *   widget off in the Control Center (task 05's disabled-widgets
-     *   GSettings key) — left to the caller for the same reason.
+     *   toolbar action.
      * @param {(widgetId:string, isUserInstalled:boolean)=>void} [callbacks.onUninstall] -
-     *   "Uninstall" back-side action. Only meaningful for user-installed
-     *   widgets (deleting a bundled widget's folder makes no sense) — see
-     *   attach()'s `isUserInstalled` option. Optional; if omitted the
-     *   Uninstall button is not shown at all.
+     *   "Uninstall" toolbar action. Only meaningful for user-installed
+     *   widgets — see attach()'s `isUserInstalled` option. Optional; if
+     *   omitted the Uninstall button is not shown at all.
      * @param {(widgetId:string)=>void} [callbacks.onReset] - "Reset"
-     *   back-side action, fired AFTER this module has already cleared the
+     *   toolbar action, fired AFTER this module has already cleared the
      *   widget's settings file/layout entry via `storageService`. Default
-     *   (if omitted) just calls `_exitEdit()`, i.e. the old behavior of
-     *   flipping back to a widget that's still the same live actor/
-     *   instance it was before Reset — which never actually shows the
-     *   widget's defaults, since nothing reloads it (see 2026-07-20 fix:
-     *   "click reset doesn't reload the widget"). The caller (extension.js)
+     *   (if omitted) just calls `_exitEdit()`. The caller (extension.js)
      *   should instead rebuild the widget's instance/actor (mirroring the
      *   hot-reload path, task 08) so the reset takes visible effect
-     *   immediately instead of only "on next load" as this module's own
-     *   storage-layer doc comments describe.
-     * @param {(widgetId:string, backActor:St.Widget, dragHandle:St.Widget)=>void} [callbacks.onBackActorReady] -
-     *   fired once per widget, the first time its back-side actor is
-     *   built (lazily, on first flip — see `_buildBackActor()`). Exists
-     *   so EditModeDragController (task 13) can wire its drag
-     *   button-press listener onto the dedicated `dragHandle` actor
-     *   (2026-07-21 refactor) instead of the front actor or `backActor`
-     *   as a whole — front content is `reactive = false` for the entire
-     *   time Edit Mode is active (see `_flip()`), and `backActor` itself
-     *   is deliberately given no drag-related listener at all anymore,
-     *   so a toolbar button click can never be reinterpreted as a drag
-     *   start. `backActor` is still passed too, since it's what actually
-     *   needs to be moved/eased on screen during the drag — `dragHandle`
-     *   is only the event surface, it moves along as `backActor`'s own
-     *   child for free.
+     *   immediately.
+     * @param {(widgetId:string, toolbarActor:St.Widget, dragArea:St.Widget)=>void} [callbacks.onBackActorReady] -
+     *   fired once per widget, the first time its toolbar bar is built
+     *   (lazily, on first right-click — see `_buildToolbar()`). Exists so
+     *   EditModeDragController (task 13) can wire its drag button-press
+     *   listener onto the dedicated `dragArea` actor instead of the front
+     *   actor as a whole. `toolbarActor` is also passed since it's what
+     *   needs to be moved/eased on screen in lockstep with the widget
+     *   during a drag (it's a sibling actor, not the widget's own child,
+     *   so it doesn't move for free). Kept the same callback name as
+     *   before this design change, since EditModeDragController.
+     *   armDragHandle() only ever treats its two arguments generically
+     *   (an actor to reposition, an actor to arm a press listener onto)
+     *   and needed no changes itself.
      */
     /**
      * @param {ThemeService} [themeService] - optional (lib/themeService.js).
-     *   If supplied, the back-side card's background/drop-shadow is styled
+     *   If supplied, the toolbar bar's background/drop-shadow is styled
      *   from `theme.json`'s global appearance settings via
-     *   `applyGlobalStyle()` (see themeService.js) each time a widget's
-     *   back actor is (lazily) built — a widget-specific `theme.json`
-     *   entry, if any, is not consulted here on purpose: the flip card
-     *   is host chrome, not widget content, so only the GLOBAL appearance
-     *   applies to it, same as every other widget's back card. Omitting
-     *   this parameter (or passing null) keeps the back card exactly as
-     *   styled by `stylesheet.css`'s `.widget-edit-mode-back` class alone
-     *   — i.e. fully optional, no behavior change for a caller that
-     *   doesn't have a ThemeService instance to hand.
+     *   `applyGlobalStyle()` each time a widget's toolbar is (lazily)
+     *   built — a widget-specific `theme.json` entry, if any, is not
+     *   consulted here on purpose: the toolbar is host chrome, not widget
+     *   content. Omitting this parameter (or passing null) keeps the
+     *   toolbar exactly as styled by `stylesheet.css` alone.
      */
     constructor(storageService, callbacks = {}, logger = null, themeService = null) {
         this._storage = storageService;
@@ -187,17 +161,13 @@ export class WidgetEditMode {
         this._onSettings = callbacks.onSettings ?? (() => {});
         this._onRemove = callbacks.onRemove ?? (() => {});
         this._onUninstall = callbacks.onUninstall ?? null;
-        // Defaulting to _exitEdit keeps this module usable standalone
-        // (e.g. in tests) without a caller-supplied onReset — see the
-        // constructor doc comment above for why extension.js supplies a
-        // real one in production.
         this._onReset = callbacks.onReset ?? (widgetId => this._exitEdit(widgetId));
         this._onBackActorReady = callbacks.onBackActorReady ?? (() => {});
         // Optional (lib/logger.js) — debug() is a no-op if omitted, so
         // this module works unchanged for any caller that doesn't pass one.
         this._logger = logger ?? {debug() {}, warn() {}, error() {}};
 
-        /** @private {Map<string, object>} widgetId -> per-widget flip state */
+        /** @private {Map<string, object>} widgetId -> per-widget state */
         this._widgets = new Map();
     }
 
@@ -211,11 +181,11 @@ export class WidgetEditMode {
      * plain right-click.
      * @param {string} widgetId
      * @param {Clutter.Actor} actor - the widget's own front-side actor
-     *   (from buildActor()) — never replaced or reparented, only
-     *   rotated/hidden.
+     *   (from buildActor()) — never replaced or reparented, never hidden;
+     *   only its `reactive` flag changes, and a toolbar bar is overlaid
+     *   above its top edge while EDIT is active.
      * @param {{isUserInstalled?: boolean}} [options] - isUserInstalled
-     *   gates whether the Uninstall button appears at all (see
-     *   constructor's onUninstall doc) — bundled widgets never get one.
+     *   gates whether the Uninstall button appears at all.
      */
     attach(widgetId, actor, options = {}) {
         if (this._widgets.has(widgetId)) {
@@ -224,18 +194,17 @@ export class WidgetEditMode {
         }
         this._logger.debug('edit-mode', `attach("${widgetId}")`);
 
-        // A flip that visibly rotates needs perspective depth and a
-        // pivot at the actor's own center, not its top-left corner (the
-        // Clutter default) — otherwise it looks like it's swinging on a
-        // hinge at the corner instead of spinning in place.
-        actor.set_pivot_point(0.5, 0.5);
-
         const rightClickId = actor.connect('button-press-event', (_actor, event) => {
             this._logger.debug('edit-mode',
                 `front button-press("${widgetId}") button=${event.get_button()} state=${this.getState(widgetId)}`);
             if (event.get_button() !== Clutter.BUTTON_SECONDARY)
                 return Clutter.EVENT_PROPAGATE;
 
+            // Only ever enters EDIT from here — front actor is
+            // `reactive = false` once EDIT starts (see _enterEdit()), so
+            // this handler simply won't fire again until back to NORMAL/
+            // HOVER; exiting is the toolbar bar's own job (see
+            // _buildToolbar()) plus ESC (see _enterEdit()).
             this.toggle(widgetId);
             return Clutter.EVENT_STOP;
         });
@@ -252,20 +221,19 @@ export class WidgetEditMode {
         this._widgets.set(widgetId, {
             actor,
             state: EditModeState.NORMAL,
-            back: null, // St.Widget, built lazily on first flip - see _buildBackActor()
+            toolbar: null, // St.Widget, built lazily on first right-click - see _buildToolbar()
             isUserInstalled: options.isUserInstalled ?? false,
             escId: null, // connected only while state === EDIT, see _enterEdit()/_exitEdit()
-            flipListenerId: null, // live notify::rotation-angle-y listener, see _flip()
+            toolbarGeneration: 0, // guards _showToolbar()/_hideToolbar() finalize, see there
             signalIds: {rightClickId, enterId, leaveId},
         });
     }
 
     /**
      * @method toggle
-     * @description Flips a widget between NORMAL/HOVER and EDIT. No-op if
-     * the widget is currently DRAGGING (task 13 owns exiting that state
-     * via exitDragging(), a bare right-click mid-drag shouldn't also
-     * try to flip the card back).
+     * @description Toggles a widget between NORMAL/HOVER and EDIT. No-op
+     * if the widget is currently DRAGGING (task 13 owns exiting that
+     * state via exitDragging()).
      * @param {string} widgetId
      */
     toggle(widgetId) {
@@ -299,7 +267,10 @@ export class WidgetEditMode {
      * @method isEditing
      * @description Convenience for EditModeDragController (task 13): a
      * drag is only allowed to start while the widget is in EDIT, per
-     * spec ("Drag is available only while Edit Mode is active").
+     * spec ("Drag is available only while Edit Mode is active"). Also
+     * used by the toolbar's own buttons (see addButton()) to reject a
+     * stray click that lands after the toolbar has already started
+     * hiding.
      * @param {string} widgetId
      * @returns {boolean}
      */
@@ -312,8 +283,8 @@ export class WidgetEditMode {
      * @method enterDragging
      * @description Task 13 calls this on drag-start (button-press while
      * isEditing() is true). Marks the widget DRAGGING so a stray
-     * right-click or ESC during the drag itself doesn't also try to flip
-     * the card back mid-motion — task 13's own release handler is what
+     * right-click or ESC during the drag itself doesn't also try to hide
+     * the toolbar mid-motion — task 13's own release handler is what
      * calls exitDragging() to return to EDIT once the drop completes.
      * @param {string} widgetId
      */
@@ -327,11 +298,9 @@ export class WidgetEditMode {
     /**
      * @method exitDragging
      * @description Task 13 calls this once on drop, returning the widget
-     * to EDIT (still flipped, back side still showing — a single drag
-     * doesn't imply the user is done editing, per spec's Non-Goals
-     * ("Multiple preference windows" etc. don't apply here, but the
-     * general MVP principle of "one explicit action per intent" does:
-     * exiting Edit Mode is still only ever right-click or ESC).
+     * to EDIT (toolbar still showing — a single drag doesn't imply the
+     * user is done editing; exiting Edit Mode is still only ever
+     * right-click-the-toolbar or ESC).
      * @param {string} widgetId
      */
     exitDragging(widgetId) {
@@ -345,16 +314,22 @@ export class WidgetEditMode {
     _enterEdit(widgetId) {
         const entry = this._widgets.get(widgetId);
         entry.state = EditModeState.EDIT;
-        this._logger.debug('edit-mode', `_enterEdit("${widgetId}") back-actor-exists=${!!entry.back}`);
+        this._logger.debug('edit-mode', `_enterEdit("${widgetId}") toolbar-exists=${!!entry.toolbar}`);
 
-        if (!entry.back)
-            entry.back = this._buildBackActor(widgetId, entry);
+        if (!entry.toolbar)
+            entry.toolbar = this._buildToolbar(widgetId, entry);
 
-        this._flip(entry, true);
+        // Spec: "Widget content is disabled while Edit Mode is active."
+        // The front actor stays VISIBLE (unlike the old flip design) —
+        // only its own interactivity is switched off; the toolbar bar
+        // overlaid on top is what's actually usable now.
+        entry.actor.reactive = false;
 
-        // ESC only listened for while flipped - a global stage-level key
-        // handler left connected all the time would be one more thing to
-        // remember to disconnect in destroy() for zero benefit.
+        this._showToolbar(entry);
+
+        // ESC only listened for while EDIT/DRAGGING - a global stage-level
+        // key handler left connected all the time would be one more thing
+        // to remember to disconnect in destroy() for zero benefit.
         entry.escId = global.stage.connect('key-press-event', (_stage, event) => {
             if (event.get_key_symbol() === Clutter.KEY_Escape) {
                 this._exitEdit(widgetId);
@@ -375,271 +350,143 @@ export class WidgetEditMode {
             entry.escId = null;
         }
 
-        this._flip(entry, false);
+        entry.actor.reactive = true;
+        this._hideToolbar(entry);
     }
 
-    /** @private drives the actual rotation_angle_y tween and swaps which
-     * side is reactive/visible at the halfway point, per file header. */
-    _flip(entry, toBack) {
-        const {actor, back} = entry;
-        const fromAngle = toBack ? 0 : 180;
-        const toAngle = toBack ? 180 : 0;
+    /** @private fades the toolbar bar in and marks it visible/reactive.
+     * No dual-actor swap, no rotation tween to race against — just one
+     * small overlay actor's opacity, so there's nothing here that can
+     * leave the widget itself stuck either way. */
+    _showToolbar(entry) {
+        const {toolbar} = entry;
+        const generation = ++entry.toolbarGeneration;
 
-        this._logger.debug('edit-mode',
-            `_flip(toBack=${toBack}) currentAngle=${actor.rotation_angle_y} -> ${fromAngle} -> ${toAngle}`);
-
-        // Reentrancy fix (2026-07-19, real-hardware bug): a fast double
-        // right-click (or toggle() called again before the previous
-        // flip's tween/listener finished) used to leave the PREVIOUS
-        // call's `notify::rotation-angle-y` listener still connected
-        // below, fighting the new one over `actor.visible` and
-        // occasionally leaving the widget stuck invisible. Disconnect
-        // any listener from a prior _flip() call on this entry first, so
-        // at most one is ever live.
-        if (entry.flipListenerId != null) {
-            try {
-                actor.disconnect(entry.flipListenerId);
-            } catch (e) {
-                // Actor may already be mid-teardown - same defensive
-                // pattern used throughout this file.
-            }
-            entry.flipListenerId = null;
-        }
-
-        actor.reactive = false; // spec: "Widget content is disabled while Edit Mode is active"
-        back.reactive = toBack;
-        back.visible = true; // hidden again once the tween settles on the NORMAL side, below
-
-        actor.rotation_angle_y = fromAngle;
-        actor.ease({
-            rotation_angle_y: toAngle,
-            duration: FLIP_DURATION_MS,
-            mode: Clutter.AnimationMode.EASE_IN_OUT_QUAD,
+        toolbar.remove_all_transitions();
+        toolbar.reactive = true;
+        toolbar.visible = true;
+        toolbar.ease({
+            opacity: 255,
+            duration: TOOLBAR_FADE_MS,
+            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+            onComplete: () => {
+                // A newer toggle may have already interrupted/superseded
+                // this fade (e.g. a fast right-click-right-click) - if so
+                // its own ease() is the one whose onComplete should apply,
+                // not this stale one.
+                if (entry.toolbarGeneration !== generation)
+                    return;
+                this._logger.debug('edit-mode', `_showToolbar finalize`);
+            },
         });
+    }
 
-        // 2026-07-21 fix (real-hardware bug report: "right-click exits Edit
-        // Mode but the widget never reappears" / "clicking the widget's own
-        // content does nothing afterward"): this used to restore
-        // `back.visible = false` / `actor.reactive = true` from the ease()'s
-        // `onComplete` callback. That callback is silently DROPPED if a
-        // second _flip() call replaces this same transition
-        // (`actor.rotation_angle_y`) before it finishes — e.g. a fast
-        // right-click-right-click, or Reset/Remove racing a still-animating
-        // exit — which permanently left `back` visible (covering the widget)
-        // and `actor.reactive` stuck `false`.
-        //
-        // SUPERSEDED (2026-07-21, later same day — real-hardware report:
-        // "widget disappears entirely, both front and back, transparent"):
-        // the GLib.timeout_add fix above finalized on a plain WALL-CLOCK
-        // delay (`FLIP_DURATION_MS + 16`), completely decoupled from the
-        // notify::rotation-angle-y listener below that actually drives
-        // `actor.visible` off the REAL animated angle. Those are two
-        // independent clocks for what should be one atomic transition: if
-        // the real Clutter transition ever takes longer than the assumed
-        // 266ms (dropped frames, a loaded compositor, many widgets
-        // animating at once — exactly the kind of thing that only shows up
-        // on real hardware, never in a read-through), the timeout fires
-        // `back.visible = false` BEFORE the rotation has actually crossed
-        // 90°, i.e. before the listener has set `actor.visible = true` —
-        // both actors are momentarily invisible at once, and on unlucky
-        // timing this is visible as the widget just vanishing.
-        //
-        // Fixed by removing the separate timer entirely and doing the
-        // `back`/`actor.reactive` cleanup from INSIDE the same
-        // notify::rotation-angle-y callback, at the exact moment it
-        // determines the crossover has happened — one source of truth for
-        // "is the flip actually done" instead of two clocks that can drift
-        // apart. This doesn't reintroduce the original onComplete-drop bug
-        // either: a second, overlapping `_flip()` call still disconnects
-        // this listener up front (see the reentrancy guard above) before
-        // it can ever fire a stale cleanup, so an interrupted transition's
-        // old listener is cleanly discarded rather than racing the new one.
+    /** @private fades the toolbar bar out, then hides/disables it once
+     * fully transparent. Guarded the same defensive way _showToolbar()
+     * is — see its comment — even though, unlike the old flip's
+     * `_flip()`, there's no second actor or rotation angle for this to
+     * race against; it's cheap insurance, not a fix for an active bug. */
+    _hideToolbar(entry) {
+        const {toolbar} = entry;
+        const generation = ++entry.toolbarGeneration;
 
-        // Swap which actor is actually drawn right at the 90° edge-on
-        // point, same trick the file header describes - avoids ever
-        // showing the BACK of the front actor's own content (St actors
-        // have no real double-sided rendering, so without this the
-        // front content would appear mirrored for the second half of
-        // the flip instead of being replaced by `back`).
-        // Bug fix (2026-07-20, "right-click doesn't flip back, widget just
-        // disappears"): `pastHalfway` is a purely geometric fact — the
-        // front actor's face points away from the viewer whenever the
-        // angle is in the (90°, 270°) arc, full stop. The front actor
-        // should be visible exactly when it's NOT in that arc, regardless
-        // of which direction (toBack true or false) the flip is going.
-        // The previous version used `toBack ? !pastHalfway : pastHalfway`,
-        // which for the toBack=false (exit Edit Mode) case set
-        // `actor.visible = pastHalfway` — backwards. That made the front
-        // actor briefly (and wrongly) visible for the FIRST half of the
-        // exit animation (180°→90°, while it's still edge-on/back-facing),
-        // then, once the angle crossed below 90° (the point it should
-        // finally become visible again), computed pastHalfway=false and
-        // set `actor.visible = false` on that exact update — which is
-        // also the update that disconnects this listener (see the
-        // condition below), so the front actor was left permanently
-        // invisible for the rest of the animation and beyond. That's the
-        // "flips back but the widget just disappears" report. Using the
-        // same `!pastHalfway` formula for both directions fixes both: it
-        // already matched the toBack=true (enter) case exactly, and for
-        // toBack=false now correctly stays false through the first half
-        // and flips to true (and stays true) once the angle crosses back
-        // under 90°.
-        let finalized = false;
-        const generation = (entry.flipGeneration = (entry.flipGeneration ?? 0) + 1);
-        const finalize = () => {
-            if (finalized)
-                return;
-            finalized = true;
-            this._logger.debug('edit-mode', `_flip(toBack=${toBack}) finalize`);
-            if (!toBack) {
+        toolbar.remove_all_transitions();
+        toolbar.reactive = false;
+        toolbar.ease({
+            opacity: 0,
+            duration: TOOLBAR_FADE_MS,
+            mode: Clutter.AnimationMode.EASE_IN_QUAD,
+            onComplete: () => {
+                if (entry.toolbarGeneration !== generation)
+                    return;
+                this._logger.debug('edit-mode', `_hideToolbar finalize`);
                 try {
-                    back.visible = false;
-                    actor.reactive = true; // content re-enabled once fully back to NORMAL
+                    toolbar.visible = false;
                 } catch (e) {
-                    // back/actor may have been destroyed out from under this
-                    // in-flight flip (see the safety-net comment below) -
+                    // toolbar may have been destroyed out from under this
+                    // in-flight fade (e.g. detach() during teardown) -
                     // nothing left to finalize onto.
                 }
-            }
-        };
-        entry.flipListenerId = actor.connect('notify::rotation-angle-y', () => {
-            const angle = Math.abs(actor.rotation_angle_y % 360);
-            const pastHalfway = angle > FLIP_HALFWAY_DEGREES && angle < 360 - FLIP_HALFWAY_DEGREES;
-            actor.visible = !pastHalfway;
-            if ((toBack && pastHalfway) || (!toBack && !pastHalfway)) {
-                actor.disconnect(entry.flipListenerId);
-                entry.flipListenerId = null;
-                // Finalize cleanup lives HERE now (see 2026-07-21 comment
-                // above) instead of a separate GLib timeout, so it can
-                // never fire out of sync with the actual crossover.
-                finalize();
-            }
-        });
-
-        // Safety net (2026-07-21, real-hardware report: "Reset mid-exit
-        // permanently freezes the widget"): the crossover above is the
-        // normal path, but it depends on `actor`'s rotation transition
-        // actually running to completion — if something else destroys or
-        // replaces this widget's actor/back mid-flip (e.g. a toolbar button
-        // click that itself triggers a rebuild, before the isEditing() guard
-        // added alongside this fix existed/for any other future reason this
-        // transition gets interrupted), the notify listener above simply
-        // never fires again and the widget is stuck with no working
-        // exit-path (back already non-reactive, ESC already disconnected by
-        // `_exitEdit()`). A generous fallback timeout (3x the nominal
-        // duration, well past any legitimate frame hiccup) forces the same
-        // cleanup so the widget can never be PERMANENTLY stuck, even though
-        // the crossover-based path above is what runs in the normal case.
-        // `finalized`/`generation` make this a no-op if the real crossover
-        // (or a newer, superseding `_flip()` call) already handled it.
-        GLib.timeout_add(GLib.PRIORITY_DEFAULT, FLIP_DURATION_MS * 3, () => {
-            if (entry.flipGeneration === generation)
-                finalize();
-            return GLib.SOURCE_REMOVE;
+            },
         });
     }
 
-    /** @private builds the back-side St.Widget with up to four action
-     * icons laid out in a single horizontal row, sized to match the
-     * front actor EXACTLY (same width AND height — the widget's on-screen
-     * footprint never changes between front/back). Built lazily (only
-     * once, on first flip) rather than in attach() for every widget up
-     * front - most widgets may never be right-clicked in a session, so
-     * this avoids a St.BoxLayout + 4 St.Buttons per widget that never get
-     * used.
+    /** @private builds the floating toolbar bar overlaid on the widget's
+     * top edge: up to four action icon buttons on the left, then an
+     * expanding drag area (with a grip glyph at its far end) filling the
+     * rest of the bar's width. Same width as the front actor, fixed
+     * height (TOOLBAR_HEIGHT) — the widget's own footprint never changes
+     * (see spec's Non-Goals re: resize). Built lazily (only once, on
+     * first right-click) rather than in attach() for every widget up
+     * front - most widgets may never be right-clicked in a session.
      *
-     * Real-hardware bug (2026-07-18): this used to be a VERTICAL stack of
-     * full-width buttons, forced into a box the same height as the front
-     * actor. Three-plus stacked buttons need more height than small
-     * widgets (e.g. clock's ~90px) have to give, and St.BoxLayout doesn't
-     * clip overflowing children by default, so the last button rendered
-     * outside/below the visible card with no background behind it —
-     * looked like a stray icon floating under the widget. A horizontal
-     * row of icon-only buttons needs far less height than a vertical
-     * stack of labeled ones (one icon row vs N stacked rows), so it fits
-     * comfortably inside every bundled widget's front size without
-     * growing the card at all. */
-    _buildBackActor(widgetId, entry) {
-        const [width, height] = entry.actor.get_size();
-        this._logger.debug('edit-mode', `_buildBackActor("${widgetId}") frontSize=${width}x${height}`);
-        if (width <= 0 || height <= 0) {
+     * Icon-click-vs-drag design (carried forward from the old flip-card
+     * design's 2026-07-21 fix): the toolbar's row and its `dragArea` are
+     * two separate actors. `dragArea` is added FIRST (bottom of the
+     * z-order, `x_expand: true` so it fills all the space after the icon
+     * buttons) and is the ONLY actor EditModeDragController is ever
+     * allowed to arm a drag listener onto (see armDragHandle() in
+     * editModeDragController.js) — a press on one of the icon buttons is
+     * consumed by that St.Button and never reaches `dragArea` at all, by
+     * construction, and a press that misses every button (including the
+     * grip glyph, which is a plain non-reactive St.Label layered on top
+     * of `dragArea` purely as a visual cue for where to grab) falls
+     * straight through to it.
+     */
+    _buildToolbar(widgetId, entry) {
+        const [width] = entry.actor.get_size();
+        this._logger.debug('edit-mode', `_buildToolbar("${widgetId}") frontWidth=${width}`);
+        if (width <= 0) {
             this._logger.warn('edit-mode',
-                `_buildBackActor("${widgetId}") built with a non-positive size (${width}x${height}) — ` +
-                'the front actor likely has not been allocated yet; the back side may render invisibly. ' +
-                'If icon clicks/right-click seem to do nothing, this is the first thing to check.');
+                `_buildToolbar("${widgetId}") built with a non-positive width (${width}) — ` +
+                'the front actor likely has not been allocated yet; the toolbar may render ' +
+                'invisibly or zero-width. If icon clicks/right-click seem to do nothing, this ' +
+                'is the first thing to check.');
         }
 
-        // 2026-07-19 fix (real-hardware bug report): `back` used to BE the
-        // St.BoxLayout the icons were added to directly, with every button
-        // `x_expand: true` so the row filled the entire card. That left
-        // almost no "empty space" (just the 8px padding / 6px spacing) for
-        // EditModeDragController to grab a drag from, and made the row
-        // reflow (see the tooltip note below) shove buttons around under
-        // the pointer. Now `back` is a plain, non-layout-managed St.Widget
-        // that owns 100% of the card's surface (right-click-to-exit
-        // attaches to THIS actor), and the icons live in a separate,
-        // content-sized `toolbar` centered inside it, itself layered on
-        // top of a dedicated `dragHandle` actor (2026-07-21 refactor —
-        // see this method's own inline comments below) that owns 100% of
-        // the same surface for drag purposes instead — so everywhere
-        // outside the toolbar's own small footprint is free, reliable
-        // drag/empty space, exactly matching the "drag from empty space"
-        // spec.
-        const back = new St.Widget({
-            style_class: 'widget-edit-mode-back',
+        // Plain, non-layout-managed outer actor - tooltips (see
+        // _attachTooltip()) are parented into THIS, not the BoxLayout row
+        // below, so they float as a true overlay instead of becoming an
+        // extra column the row's layout manager tries to position (the
+        // exact bug the old flip-card design's back/toolbar split fixed
+        // in 2026-07-19 — kept the same way here for the same reason).
+        const toolbar = new St.Widget({
+            style_class: 'widget-edit-mode-toolbar-bar',
             layout_manager: new Clutter.BinLayout(),
-            reactive: false, // flipped to true only while actually showing, see _flip()
-            width, height, // exactly the front actor's footprint - never grows
+            reactive: false, // toggled true only while actually showing, see _showToolbar()
+            width, height: TOOLBAR_HEIGHT, // fixed strip, never grows with content
             visible: false,
+            opacity: 0,
         });
 
-        // Icon-click-vs-drag design decision (2026-07-21 handover): drag
-        // used to be armed on `back` as a whole, relying on St.Button
-        // consuming its OWN button-press-event before it could bubble up
-        // to back's drag-start handler. That's an implicit ordering
-        // assumption, not a real boundary — hence real-hardware reports of
-        // toolbar clicks instead being swallowed into a drag start. Fixed
-        // at the architecture level instead: `dragHandle` is a dedicated,
-        // full-size actor added FIRST (so it sits at the bottom of the
-        // z-order) and is the ONLY actor EditModeDragController ever wires
-        // a button-press listener onto (see armDragHandle() in
-        // editModeDragController.js) — `back` itself no longer has any
-        // drag-related listener at all. `toolbar` (below) is added on top
-        // of it but is itself non-reactive, so a press anywhere in its
-        // padding/gaps falls straight through to `dragHandle` beneath, the
-        // same "drag from empty space" behavior as before — but a press on
-        // one of `toolbar`'s St.Button children is consumed by that
-        // button and never reaches `dragHandle` at all, by construction,
-        // not by hoping propagation stops at the right point.
-        const dragHandle = new St.Widget({
-            style_class: 'widget-edit-mode-drag-handle',
-            reactive: true, // only ever actually hit-tested while `back` is visible (EDIT/DRAGGING)
+        const row = new St.BoxLayout({
+            style_class: 'widget-edit-mode-icon-row',
+            vertical: false,
             x_expand: true,
-            y_expand: true, // fills the entire card - moves as a child whenever `back` is repositioned
+            y_expand: true,
         });
-        back.add_child(dragHandle);
+        toolbar.add_child(row);
 
-        const toolbar = new St.BoxLayout({
-            style_class: 'widget-edit-mode-icon-row widget-edit-mode-toolbar',
-            vertical: false, // single horizontal row of icons, not stacked
-            x_align: Clutter.ActorAlign.CENTER,
+        const dragArea = new St.Widget({
+            style_class: 'widget-edit-mode-drag-handle',
+            layout_manager: new Clutter.BinLayout(),
+            reactive: true, // only ever actually hit-tested while `toolbar` is visible (EDIT/DRAGGING)
+            x_expand: true,
+            y_expand: true,
+        });
+        const grip = new St.Label({
+            style_class: 'widget-edit-mode-grip',
+            text: '\u2637', // ⠿ - purely decorative, non-reactive, sits on top of dragArea
+            x_align: Clutter.ActorAlign.END,
             y_align: Clutter.ActorAlign.CENTER,
-            // Deliberately NOT reactive and NEVER given a button-press
-            // listener of its own - it exists purely to lay out the
-            // buttons, and letting a press fall through to `dragHandle`
-            // when it misses every button is what preserves "drag from
-            // empty space around the icons".
         });
-        back.add_child(toolbar);
+        dragArea.add_child(grip);
 
-        // Icon-only (no visible text label) so a row of 4 fits inside
-        // even a small widget's width without wrapping/clipping.
+        // Icon-only (no visible text label) so a row of buttons fits
+        // inside even a small widget's width without wrapping/clipping.
         // `accessible_name` is set explicitly on every button below so
         // screen readers still get the full label even though nothing
-        // visible spells it out — this is also what closes the
-        // accessibility gap the spec previously flagged ("plain
-        // St.Button with a text label only, no explicit
-        // accessible_name").
+        // visible spells it out.
         entry.tooltipCleanups = [];
         const addButton = (iconName, label, styleClass, onClicked) => {
             const button = new St.Button({
@@ -652,38 +499,24 @@ export class WidgetEditMode {
                 }),
             });
             button.connect('clicked', () => {
-                // Guard (2026-07-21, real-hardware bug report: "Reset mid-
-                // exit permanently freezes the widget in Edit Mode"):
-                // unlike dragHandle's press handler (which already checks
-                // `isEditing()` before starting a drag), these buttons used
-                // to fire unconditionally on 'clicked'. Each St.Button's own
-                // `reactive` is independent of its `back` parent's — so for
-                // the ~250ms the flip-out animation is still running (back
-                // is still `visible`, only `back.reactive`/`entry.state`
-                // have already flipped to NORMAL), a button here could still
-                // be clicked even though Edit Mode is already exiting. If
-                // that click was Reset, `_onReset` rebuilds the widget's
-                // actor/back from scratch mid-animation, destroying the very
-                // actor this in-flight `_flip()` still holds a transition on
-                // — its notify::rotation-angle-y listener then never sees
-                // another update, the 90° crossover (and therefore the
-                // `back.visible = false` / `actor.reactive = true` cleanup
-                // that now lives there, see `_flip()`) never fires, and
-                // nothing is left listening for right-click either (`back`
-                // is already non-reactive) or ESC (already disconnected by
-                // `_exitEdit()` up front) — permanently stuck. Skipping the
-                // action here whenever we're not actually, currently EDIT
-                // closes that window the same way drag-start already did.
+                // Guard (carried forward from the old flip design's
+                // 2026-07-21 fix, "Reset mid-exit permanently freezes the
+                // widget"): reject a click that arrives after the toolbar
+                // has already started hiding, same as dragArea's press
+                // handler already does for drag-start. Cheap insurance —
+                // this design's _hideToolbar() no longer has the dual
+                // actor/rotation race that originally caused that bug,
+                // but there's no reason to remove a guard this inexpensive.
                 if (!this.isEditing(widgetId)) {
                     this._logger.debug('edit-mode',
-                        `back button clicked ("${widgetId}", label="${label}") ignored — not editing`);
+                        `toolbar button clicked ("${widgetId}", label="${label}") ignored — not editing`);
                     return;
                 }
-                this._logger.debug('edit-mode', `back button clicked ("${widgetId}", label="${label}")`);
+                this._logger.debug('edit-mode', `toolbar button clicked ("${widgetId}", label="${label}")`);
                 onClicked();
             });
-            toolbar.add_child(button);
-            entry.tooltipCleanups.push(this._attachTooltip(button, back, toolbar, label));
+            row.add_child(button);
+            entry.tooltipCleanups.push(this._attachTooltip(button, toolbar, row, label));
         };
 
         addButton('preferences-system-symbolic', 'Settings',
@@ -693,18 +526,12 @@ export class WidgetEditMode {
             this._storage?.resetWidgetSettings(widgetId);
             this._storage?.removeWidgetLayoutEntry(widgetId);
             // 2026-07-20 fix ("click reset doesn't reload the widget"):
-            // used to call `this._exitEdit(widgetId)` directly, which only
-            // flips the SAME still-running widget instance back to its
-            // front side — the settings/layout files on disk were reset,
-            // but nothing ever told the live instance to reload them, so
-            // visually nothing changed until the next full extension
-            // reload. `_onReset` (extension.js) rebuilds the widget's
-            // instance/actor from scratch, the same way task 08's
-            // hot-reload does, and re-places it at its now-defaulted
-            // position — so Reset takes effect immediately. That callback
-            // is responsible for exiting Edit Mode itself (it detaches
-            // and rebuilds this widget's WidgetEditMode entry entirely),
-            // so this handler does NOT also call _exitEdit().
+            // `_onReset` (extension.js) rebuilds the widget's instance/
+            // actor from scratch, the same way task 08's hot-reload does,
+            // and re-places it at its now-defaulted position — so Reset
+            // takes effect immediately. That callback is responsible for
+            // exiting Edit Mode itself, so this handler does NOT also
+            // call _exitEdit().
             this._onReset(widgetId);
         });
 
@@ -716,19 +543,26 @@ export class WidgetEditMode {
                 () => this._onUninstall(widgetId, entry.isUserInstalled));
         }
 
-        // Real-hardware bug (2026-07-19): right-click only ever flipped
-        // NORMAL/HOVER -> EDIT, never back the other way, because the
-        // *front* actor was the only one that ever listened for it — and
-        // the front actor is `reactive = false` and hidden for as long as
-        // EDIT is active (see _flip()), so once flipped there was nothing
-        // left listening for the right-click that's supposed to flip it
-        // back. `back` needs the exact same handler. St.Button only ever
-        // consumes PRIMARY button presses for its own click handling, so
-        // a right-click still reaches this actor even when the pointer is
-        // over one of the icons.
-        back.connect('button-press-event', (_actor, event) => {
+        // Drag area added AFTER the buttons in the BoxLayout so it fills
+        // whatever width the row's expansion leaves once the buttons
+        // have taken their own natural width — but added BELOW the
+        // buttons in z-order doesn't matter here since it's a sibling in
+        // the same BoxLayout row, not stacked underneath it; each
+        // button's own reactive St.Button consumes its own press before
+        // it could ever reach dragArea regardless of paint order.
+        row.add_child(dragArea);
+
+        // Right-click anywhere on the toolbar bar (including over
+        // dragArea, or over a button - St.Button only ever consumes
+        // PRIMARY presses for its own click handling) exits Edit Mode.
+        // This is the toolbar's equivalent of the old flip design's
+        // `back` actor having the same listener, for the same reason:
+        // the front actor is `reactive = false` for as long as EDIT is
+        // active, so nothing else is left listening for the right-click
+        // that's supposed to close it.
+        toolbar.connect('button-press-event', (_actor, event) => {
             this._logger.debug('edit-mode',
-                `back button-press("${widgetId}") button=${event.get_button()} state=${this.getState(widgetId)}`);
+                `toolbar button-press("${widgetId}") button=${event.get_button()} state=${this.getState(widgetId)}`);
             if (event.get_button() !== Clutter.BUTTON_SECONDARY)
                 return Clutter.EVENT_PROPAGATE;
 
@@ -736,57 +570,47 @@ export class WidgetEditMode {
             return Clutter.EVENT_STOP;
         });
 
-        // Placed as a SIBLING of the front actor (same parent, same
-        // position) rather than a child - a child would rotate along
-        // with the front actor's own rotation_angle_y and end up
-        // mirrored too, exactly the problem this back actor exists to
-        // avoid.
+        // Placed as a SIBLING of the front actor (same parent), pinned to
+        // its top-left corner so it overlaps the widget's own top edge
+        // rather than sitting above/pushing it down — footprint stays
+        // exactly the widget's own width/height, per spec.
         const parent = entry.actor.get_parent();
-        parent?.insert_child_above(back, entry.actor);
-        back.set_position(entry.actor.get_x(), entry.actor.get_y());
-        back.set_pivot_point(0.5, 0.5);
+        parent?.insert_child_above(toolbar, entry.actor);
+        toolbar.set_position(entry.actor.get_x(), entry.actor.get_y());
 
-        // Theme system (2026-07-21): style the card's background/drop
+        // Theme system (2026-07-21): style the toolbar's background/drop
         // shadow from theme.json's GLOBAL appearance settings, if a
         // ThemeService was supplied — additive with `set_style()`, so
-        // `.widget-edit-mode-back`'s own stylesheet.css rules still apply
-        // for anything the theme config doesn't set (see themeService.js's
-        // applyGlobalStyle() doc comment).
-        this._theme?.applyGlobalStyle(back);
+        // `.widget-edit-mode-toolbar-bar`'s own stylesheet.css rules
+        // still apply for anything the theme config doesn't set.
+        this._theme?.applyGlobalStyle(toolbar);
 
-        // Let EditModeDragController (task 13) arm the DEDICATED drag
-        // handle for dragging — see the constructor's onBackActorReady doc
-        // comment. `dragHandle` (not `back`) is deliberately the only
-        // thing ever handed a button-press listener for drag purposes.
-        this._onBackActorReady(widgetId, back, dragHandle);
+        // Let EditModeDragController (task 13) arm the dedicated drag
+        // area for dragging — see the constructor's onBackActorReady doc
+        // comment. `dragArea` (not `toolbar` as a whole) is deliberately
+        // the only thing ever handed a button-press listener for drag
+        // purposes.
+        this._onBackActorReady(widgetId, toolbar, dragArea);
 
-        return back;
+        return toolbar;
     }
 
     /**
-     * @private builds hover-tooltip behavior for a single back-side
-     * button. Returns `{destroy()}` so the caller (entry.tooltipCleanups,
+     * @private builds hover-tooltip behavior for a single toolbar button.
+     * Returns `{destroy()}` so the caller (entry.tooltipCleanups,
      * consumed by detach()) can tear it down along with everything else
-     * for that widget — mirrors the disposal pattern the rest of this
-     * class already uses for signal ids.
+     * for that widget.
      * @param {St.Button} button
-     * @param {St.Widget} back - the plain (non-layout-managed) back-side
-     *   actor the tooltip label is parented into. Real-hardware bug
-     *   (2026-07-19): this used to parent the tooltip into the icon
-     *   St.BoxLayout itself via insert_child_above() — but a BoxLayout
-     *   lays out EVERY child it's given, tooltip label included, so on
-     *   hover the label became a real extra column in the row (with its
-     *   own dark background), pushing every button after it sideways
-     *   instead of floating above them. Parenting into `back` (which
-     *   uses a BinLayout, so children are positioned purely by
-     *   set_position()) makes it a true floating overlay that never
-     *   affects the icon row's layout.
-     * @param {St.BoxLayout} toolbar - the actor `button` is actually a
-     *   child of, needed to translate `button`'s position (relative to
-     *   toolbar) into a position relative to `back`.
+     * @param {St.Widget} toolbar - the plain (non-layout-managed) outer
+     *   toolbar actor the tooltip label is parented into, so it floats
+     *   above the icon row instead of becoming a real extra column in it
+     *   (see _buildToolbar()'s doc comment).
+     * @param {St.BoxLayout} row - the actor `button` is actually a child
+     *   of, needed to translate `button`'s position (relative to `row`)
+     *   into a position relative to `toolbar`.
      * @param {string} text
      */
-    _attachTooltip(button, back, toolbar, text) {
+    _attachTooltip(button, toolbar, row, text) {
         let showTimeoutId = null;
         let tooltipLabel = null;
 
@@ -806,19 +630,9 @@ export class WidgetEditMode {
                     style_class: 'widget-edit-mode-tooltip',
                     text,
                 });
-                // Sibling of toolbar (a child of `back` directly), on top
-                // of everything - a floating overlay, never a participant
-                // in toolbar's box layout.
-                back.insert_child_above(tooltipLabel, toolbar);
+                toolbar.insert_child_above(tooltipLabel, row);
 
-                // Position above the button, centered — read after
-                // insertion so the label has a real preferred size to
-                // measure instead of guessing a fixed offset. Both
-                // `toolbar` and `button` positions are relative to their
-                // own parent, so they have to be summed to get a position
-                // relative to `back` (the actor the tooltip is actually
-                // parented into).
-                const [rowX, rowY] = toolbar.get_position();
+                const [rowX, rowY] = row.get_position();
                 const [buttonX, buttonY] = button.get_position();
                 const [, labelHeight] = tooltipLabel.get_preferred_height(-1);
                 const [, labelWidth] = tooltipLabel.get_preferred_width(-1);
@@ -835,9 +649,6 @@ export class WidgetEditMode {
             hide();
             return Clutter.EVENT_PROPAGATE;
         });
-        // A click flips the card away immediately (Settings/Remove) or
-        // resets/exits (Reset) — either way the tooltip must not be left
-        // dangling on an actor that's about to be hidden/rebuilt.
         const clickedId = button.connect('clicked', hide);
 
         return {
@@ -848,9 +659,9 @@ export class WidgetEditMode {
                     button.disconnect(leaveId);
                     button.disconnect(clickedId);
                 } catch (e) {
-                    // button may already be destroyed by the caller (back
-                    // actor teardown in detach()) - same defensive pattern
-                    // used elsewhere in this file.
+                    // button may already be destroyed by the caller
+                    // (toolbar teardown in detach()) - same defensive
+                    // pattern used elsewhere in this file.
                 }
             },
         };
@@ -858,28 +669,28 @@ export class WidgetEditMode {
 
     /**
      * @method reapplyTheme
-     * @description Re-styles every widget's already-built back card from
-     * the current global theme — call after `ThemeService.reload()` picks
-     * up an external `theme.json` change (see themeService.js's `watch()`)
-     * so an already-flipped (or previously-flipped-then-back) widget's
-     * card reflects the new appearance without needing another flip.
-     * Widgets whose back card was never built yet (never flipped this
-     * session) need nothing here — `_buildBackActor()` reads the current
-     * theme fresh the first time it runs.
+     * @description Re-styles every widget's already-built toolbar bar
+     * from the current global theme — call after `ThemeService.reload()`
+     * picks up an external `theme.json` change (see themeService.js's
+     * `watch()`) so an already-shown (or previously-shown-then-hidden)
+     * toolbar reflects the new appearance without needing another
+     * right-click. Widgets whose toolbar was never built yet (never
+     * right-clicked this session) need nothing here — `_buildToolbar()`
+     * reads the current theme fresh the first time it runs.
      */
     reapplyTheme() {
         if (!this._theme)
             return;
         for (const entry of this._widgets.values()) {
-            if (entry.back)
-                this._theme.applyGlobalStyle(entry.back);
+            if (entry.toolbar)
+                this._theme.applyGlobalStyle(entry.toolbar);
         }
     }
 
     /** @private only transitions HOVER<->NORMAL, never touches EDIT or
-     * DRAGGING - a pointer leaving the actor while its back side is
-     * showing (e.g. moving to click a back-side button, which is a
-     * different actor) must not silently drop out of Edit Mode. */
+     * DRAGGING - a pointer leaving the actor while its toolbar is showing
+     * (e.g. moving to click a toolbar button, which is a different actor)
+     * must not silently drop out of Edit Mode. */
     _setState(widgetId, next, {ifCurrently}) {
         const entry = this._widgets.get(widgetId);
         if (!entry || entry.state !== ifCurrently)
@@ -889,8 +700,8 @@ export class WidgetEditMode {
 
     /**
      * @method detach
-     * @description Disconnects all signals and destroys the back actor
-     * for a single widget - call right before
+     * @description Disconnects all signals and destroys the toolbar
+     * actor for a single widget - call right before
      * WidgetLayer.removeWidgetActor() when a widget is unloaded (mirrors
      * DragController.detach()'s ordering rule). Safe to call for a
      * widgetId that isn't attached (no-op).
@@ -903,15 +714,6 @@ export class WidgetEditMode {
 
         if (entry.escId != null)
             global.stage.disconnect(entry.escId);
-
-        if (entry.flipListenerId != null) {
-            try {
-                entry.actor.disconnect(entry.flipListenerId);
-            } catch (e) {
-                // Actor may already be destroyed - same defensive pattern
-                // as everywhere else in this method.
-            }
-        }
 
         const {rightClickId, enterId, leaveId} = entry.signalIds;
         try {
@@ -927,7 +729,7 @@ export class WidgetEditMode {
         for (const cleanup of entry.tooltipCleanups ?? [])
             cleanup.destroy();
 
-        entry.back?.destroy();
+        entry.toolbar?.destroy();
         this._widgets.delete(widgetId);
     }
 

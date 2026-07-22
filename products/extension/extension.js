@@ -125,9 +125,9 @@ export default class WidgetCenterExtension extends Extension {
             // doesn't exist yet at this point in enable() (created right
             // below), but this callback only ever actually fires later,
             // on a widget's first flip, by which point it does.
-            onBackActorReady: (id, backActor, dragHandle) => {
+            onBackActorReady: (id, toolbarActor, dragArea) => {
                 this._logger.debug('edit-mode', `onBackActorReady("${id}")`);
-                this._editDrag?.armDragHandle(id, backActor, dragHandle);
+                this._editDrag?.armDragHandle(id, toolbarActor, dragArea);
             },
         }, this._logger, this._themeService);
         this._editDrag = new EditModeDragController(this._layer, this._storage, this._grid, this._editMode, this._logger);

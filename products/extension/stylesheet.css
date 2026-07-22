@@ -1,69 +1,30 @@
-/* products/extension/stylesheet.css
- *
- * Host-level chrome for Widget Edit Mode (task 12) and Widget Drag & Drop
- * (task 13). Loaded automatically by GNOME Shell for any extension with a
- * stylesheet.css at its root — separate from each widget's own
- * auto-namespaced widgets/<id>/stylesheet.css (see
- * development/docs/WIDGET_API.md folder structure), because this styles
- * the HOST's own back-side/placeholder actors, not anything a widget
- * author supplies.
- */
-
-.widget-edit-mode-back {
-    background-color: rgba(30, 30, 30, 0.92);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 8px;
+/* Toolbar Background & Main Container */
+.widget-edit-toolbar {
+    background-color: rgba(0, 0, 0, 0.85);
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    padding: 8px 16px; /* เว้นระยะจากขอบซ้าย-ขวา 16px */
+    spacing: 12px;
 }
 
-.widget-edit-mode-drag-handle {
-    /* Deliberately no background/border of its own - it sits directly
-     * under the back card's own background (.widget-edit-mode-back) and
-     * exists purely as the event surface EditModeDragController arms a
-     * drag listener onto (see editModeDragController.js's
-     * armDragHandle()), not as a distinct visual element. */
-}
-
-.widget-edit-mode-icon-row {
-    padding: 6px 10px;
-    spacing: 6px;
-}
-
-.widget-edit-mode-action {
-    padding: 6px 10px;
-    border-radius: 6px;
+/* Base Toolbar Button */
+.widget-edit-toolbar-button {
     color: #ffffff;
-    background-color: rgba(255, 255, 255, 0.08);
-}
-
-.widget-edit-mode-action:hover {
-    background-color: rgba(255, 255, 255, 0.16);
-}
-
-.widget-edit-mode-action-remove,
-.widget-edit-mode-action-uninstall {
-    color: #ff8a8a;
-}
-
-.widget-edit-mode-action-icon {
-    icon-size: 16px;
-}
-
-.widget-edit-mode-tooltip {
-    background-color: rgba(20, 20, 20, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 4px;
-    padding: 3px 8px;
-    color: #ffffff;
-    font-size: 0.85em;
-}
-
-.widget-edit-mode-placeholder {
-    background-color: rgba(255, 255, 255, 0.08);
-    border: 2px dashed rgba(255, 255, 255, 0.4);
+    padding: 6px;
     border-radius: 6px;
+    min-width: 24px;
+    min-height: 24px;
 }
 
-.widget-edit-mode-placeholder-collision {
-    border-color: rgba(230, 80, 80, 0.8);
-    background-color: rgba(230, 80, 80, 0.12);
+.widget-edit-toolbar-button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+
+/* Force Uniform Icon Size & Color */
+.widget-edit-toolbar-icon {
+    icon-size: 20px;
+    color: #ffffff;
+    width: 20px;
+    height: 20px;
 }

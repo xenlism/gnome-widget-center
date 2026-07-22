@@ -6,7 +6,7 @@
   "author": "GNOME Widget Center",
   "api-version": 1,
   "entry": "widget.js",
-  "block-type": { "cols": 21, "rows":21 },
+  "block-type": { "cols": 12, "rows": 8 },
   "default-position": { "x": 16, "y": 112, "monitor": 0 },
   "settings": [
     {
