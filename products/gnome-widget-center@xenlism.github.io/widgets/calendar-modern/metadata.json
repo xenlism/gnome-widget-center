@@ -1,0 +1,12 @@
+{
+  "id": "calendar-modern",
+  "name": "Calendar (Modern)",
+  "description": "Card-style calendar showing month, weekday and day number.",
+  "version": "1.0.0",
+  "author": "GNOME Widget Center",
+  "api-version": 1,
+  "entry": "widget.js",
+  "prefs": "prefs.js",
+  "block-type": { "cols": 10, "rows": 10 },
+  "default-position": { "x": 40, "y": 40, "monitor": 0 }
+}

@@ -1,0 +1,32 @@
+/* widgets/calendar-modern/stylesheet.css
+ *
+ * Namespaced with the calendar-modern-widget- prefix per
+ * docs/WIDGET_API.md §1.
+ *
+ * NOTE: as with widgets/clock/stylesheet.css and
+ * widgets/_template/stylesheet.css, the host does not yet load a
+ * widget's stylesheet.css into the Shell's theme context automatically.
+ * This file documents the intended styling per the widget author
+ * contract; the actual card look comes from the inline St `style`
+ * strings set in widget.js's _render(), driven by this widget's
+ * cardColor/accentColor/textColor settings.
+ */
+
+.calendar-modern-widget-root {
+    padding: 18px 12px;
+}
+
+.calendar-modern-widget-month {
+    font-weight: bold;
+    font-size: 20px;
+}
+
+.calendar-modern-widget-weekday {
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.calendar-modern-widget-day {
+    font-weight: bold;
+    font-size: 56px;
+}

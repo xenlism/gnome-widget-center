@@ -445,6 +445,20 @@ export default class WidgetCenterExtension extends Extension {
         const fallback = newEntry.metadata['default-position'] ?? {x: 40, y: 40};
         const position = this._layer.getSavedPosition(widgetId, fallback);
 
+        // 2026-07-22 fix — "widget shrinks after Reset": _placeEntry()
+        // applies block-type size on every normal load, but this reset
+        // path built newEntry.actor via reloadWidget() and skipped that
+        // step entirely, so the actor kept whatever natural/unconstrained
+        // size St computed from its own children instead of the
+        // cols x rows x cellSize size declared in metadata.json. Own
+        // try/catch, same as _placeEntry()'s, so a failure here never
+        // blocks the actor from being re-placed below.
+        try {
+            BlockSizeManager.applyBlockSize(newEntry.metadata, newEntry.actor, this._grid.cellSize);
+        } catch (e) {
+            console.error(`[widget-center] Failed to apply block size for "${widgetId}" after Reset`, e);
+        }
+
         try {
             this._layer.addWidgetActor(widgetId, newEntry.actor, position);
             this._drag?.attach(widgetId, newEntry.actor, position.monitorIndex);

@@ -1,0 +1,39 @@
+/* widgets/calendar-header/stylesheet.css
+ *
+ * Namespaced with the calendar-header-widget- prefix per
+ * docs/WIDGET_API.md §1.
+ *
+ * NOTE: as with widgets/clock/stylesheet.css and
+ * widgets/_template/stylesheet.css, the host does not yet load a
+ * widget's stylesheet.css into the Shell's theme context automatically.
+ * This file documents the intended styling per the widget author
+ * contract; the actual two-tone look comes from the inline St `style`
+ * strings set in widget.js's _render(), driven by this widget's
+ * headerColor/headerTextColor/bodyColor/dayColor settings.
+ */
+
+.calendar-header-widget-root {
+}
+
+.calendar-header-widget-header {
+    padding: 14px 12px 10px 12px;
+}
+
+.calendar-header-widget-month {
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.calendar-header-widget-weekday {
+    font-weight: bold;
+    font-size: 18px;
+}
+
+.calendar-header-widget-body {
+    padding: 18px 12px;
+}
+
+.calendar-header-widget-day {
+    font-weight: bold;
+    font-size: 56px;
+}
