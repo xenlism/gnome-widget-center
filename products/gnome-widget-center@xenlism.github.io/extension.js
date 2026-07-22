@@ -484,13 +484,22 @@ export default class WidgetCenterExtension extends Extension {
      * @private Task 12's "Uninstall" back-side action — only ever called
      * for user-installed widgets (bundled widgets never get an Uninstall
      * button at all, see _placeEntry()'s isUserInstalled check feeding
-     * WidgetEditMode.attach()). Removes the widget the same way Remove
-     * does first (so it's unloaded/detached before its files disappear
-     * out from under a running instance), then deletes its folder
-     * recursively from disk. Left deliberately conservative: any failure
-     * to delete is logged, not retried or surfaced destructively — the
-     * widget stays disabled either way, matching "Remove" behavior, so a
-     * failed uninstall never leaves a broken widget still running.
+     * WidgetEditMode.attach()). Three steps, same order every time so a
+     * failure partway through never leaves a broken widget still running:
+     *   1. Disable it — same as "Remove" (adds it to disabled-widgets so
+     *      it's unloaded/detached before its files disappear from under a
+     *      running instance).
+     *   2. Clear its config — same cleanup as "Reset"
+     *      (resetWidgetSettings()/removeWidgetLayoutEntry()), so a future
+     *      reinstall doesn't inherit stale settings/position.
+     *   3. Move (NOT delete) its folder into an "uninstalled" archive dir
+     *      sibling to the user widgets dir — 2026-07-22 change: this used
+     *      to hard-delete the folder via _deleteRecursively(). Moving it
+     *      instead means an accidental Uninstall click is recoverable
+     *      (the folder can just be moved back) rather than a silent,
+     *      permanent loss. _deleteRecursively() is kept below in case
+     *      something else ever needs a real delete, just no longer called
+     *      from here.
      * @param {string} widgetId
      * @param {boolean} isUserInstalled
      */
@@ -505,16 +514,39 @@ export default class WidgetCenterExtension extends Extension {
 
         this._removeWidgetViaEditMode(widgetId);
 
+        try {
+            this._storage?.resetWidgetSettings(widgetId);
+            this._storage?.removeWidgetLayoutEntry(widgetId);
+        } catch (e) {
+            console.error(`[widget-center] failed to clear config for "${widgetId}"`, e);
+        }
+
         if (!widgetPath || !this._userWidgetsPath || !widgetPath.startsWith(this._userWidgetsPath)) {
-            console.warn(`[widget-center] "${widgetId}" has no known user-installed path — skipping file deletion`);
+            console.warn(`[widget-center] "${widgetId}" has no known user-installed path — skipping file move`);
             return;
         }
 
         try {
-            const dir = Gio.File.new_for_path(widgetPath);
-            this._deleteRecursively(dir);
+            const uninstallRoot = GLib.build_filenamev(
+                [GLib.get_user_data_dir(), 'gnome-widget-center', 'uninstalled']);
+            const rootDir = Gio.File.new_for_path(uninstallRoot);
+            if (!rootDir.query_exists(null))
+                rootDir.make_directory_with_parents(null);
+
+            let destPath = GLib.build_filenamev([uninstallRoot, widgetId]);
+            let dest = Gio.File.new_for_path(destPath);
+            // Same widget uninstalled more than once (reinstalled, then
+            // uninstalled again) - don't clobber the earlier archive,
+            // suffix with a timestamp instead of failing the move.
+            if (dest.query_exists(null)) {
+                destPath = GLib.build_filenamev([uninstallRoot, `${widgetId}-${Date.now()}`]);
+                dest = Gio.File.new_for_path(destPath);
+            }
+
+            const source = Gio.File.new_for_path(widgetPath);
+            source.move(dest, Gio.FileCopyFlags.NONE, null, null);
         } catch (e) {
-            console.error(`[widget-center] failed to delete files for "${widgetId}"`, e);
+            console.error(`[widget-center] failed to move files for "${widgetId}" to uninstalled/`, e);
         }
     }
 
