@@ -25,6 +25,23 @@ import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 import GLib from 'gi://GLib';
 
+// Must mirror this widget's own metadata.json `block-type` and the host's
+// GridEngine cell size (products/extension/lib/gridEngine.js's GRID_SIZE,
+// currently 16px/cell) - NOT an arbitrary pixel value. See
+// development/widgetapi-handover.md §2/§3: the host's WidgetLoader/GridEngine
+// never calls set_size()/clip_to_allocation on a widget's root actor
+// (GridEngine only handles grid *placement*, i.e. collision/positioning),
+// so nothing stops a St.BoxLayout from growing past its declared block-type
+// footprint if its content is taller/wider than that - which is exactly
+// what happened here (header band + 56px day number pushed the actor past
+// 10x10 = 160x160px). Each widget is responsible for enforcing its own
+// declared size and clipping its own overflow.
+const CELL_SIZE = 16;
+const BLOCK_COLS = 10;
+const BLOCK_ROWS = 10;
+const WIDGET_WIDTH = BLOCK_COLS * CELL_SIZE;   // 160
+const WIDGET_HEIGHT = BLOCK_ROWS * CELL_SIZE;  // 160
+
 export default class CalendarHeaderWidget {
     /**
      * @param {WidgetAPI} api - see development/docs/WIDGET_API.md §5.
@@ -39,6 +56,9 @@ export default class CalendarHeaderWidget {
         this._actor = new St.BoxLayout({
             style_class: 'calendar-header-widget-root',
             vertical: true,
+            width: WIDGET_WIDTH,
+            height: WIDGET_HEIGHT,
+            clip_to_allocation: true,
         });
 
         this._header = new St.BoxLayout({
@@ -127,7 +147,7 @@ export default class CalendarHeaderWidget {
         this._body.set_style(
             `background-color: ${bodyColor}; ` +
             'border-radius: 0 0 22px 22px; ' +
-            'padding: 18px 12px;'
+            'padding: 14px 12px;'
         );
 
         this._dayLabel.set_text(`${now.get_day_of_month()}`);
