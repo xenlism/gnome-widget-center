@@ -63,6 +63,15 @@
   `password`/`url`/`icon`/`font` ยังไม่ทำ (ต้องมี picker dialog หรือ sanitization เพิ่มเติมที่ไม่ใช่
   งาน UI ธรรมดา) ต้องใช้ `prefs.js` เขียนเองไปก่อนถ้าต้องการ type เหล่านี้ — ดูรายละเอียดใน
   `development/docs/WIDGET_API.md` §2.1
+- **2026-07-23 — v2:** เพิ่ม `password`, `icon`, `file`, `folder`, `list`, `object` เข้า
+  `settingsSchema.js`/`settingsSchemaUI.js` (ยัง flat array เดิม ไม่เปลี่ยนเป็น tabs/groups —
+  ดูรายละเอียด type/ตัวอย่างใน `WIDGET_API.md` §6.1). `list` รองรับแค่ `itemType: "string"`
+  (v1 ของ type นี้เอง); `object` ซ้อนได้แค่ 1 ชั้น (nested field ห้ามเป็น `list`/`object` อีก) —
+  ทั้งสองเขียนทับทั้งค่าเสมอเวลามีการเปลี่ยนแปลง ไม่ patch บางส่วน ตาม convention ของ
+  `widgetSettings.js` ที่มีอยู่แล้วสำหรับ structured value ยังเหลือ `desktop-file`/`command`/
+  `date`/`time`/`url`/structural fields (`label`/`separator`/`group`) ที่ยังไม่ทำ (เหตุผลเดิม:
+  ต้องการ sandboxing หรือไม่มี widget ที่คุ้มเพิ่มเหนือ `string`+`pattern`) — ยังไม่ได้ลองบนเครื่องจริง
+  เหมือนของเดิมทุกอย่างใน task นี้ (`node --check` ผ่านเท่านั้น)
 
 ## Notes from implementation
 

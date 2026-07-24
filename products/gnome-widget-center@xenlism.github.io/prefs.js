@@ -11,16 +11,23 @@
 //      extension.js watches (see extension.js's onChanged() wiring) — so
 //      toggling a row here takes effect on the desktop immediately, no
 //      shell restart, even though this is a different process.
-//   2. A "Settings" button per widget that has EITHER a prefs.js OR a
-//      declarative `settings` schema in metadata.json (task 05):
-//        - prefs.js present -> dynamically imports just that file (safe
-//          here, per widget author contract) and embeds its
-//          buildPrefsWidget() as an Adw.PreferencesWindow subpage.
-//        - no prefs.js but a `settings` schema present -> auto-builds an
-//          Adw page from it instead (settingsSchemaUI.js) — a widget
-//          author can skip writing GTK4 entirely for simple settings.
-//        - prefs.js wins if a widget somehow has both — see
-//          _openWidgetPrefs()'s doc comment for why.
+//   2. A "Settings" button per widget that has a config.json, a hand-
+//      written prefs.js, OR a declarative `settings` schema in
+//      metadata.json:
+//        - config.json present -> auto-builds an Adw page from it via
+//          widgetConfigUI.js (development/docs/WIDGET_API.md §6.4) — the
+//          recommended path for new widgets; tabs/groups/fields cover
+//          every type in §6.4 without writing any GTK4 by hand.
+//        - no config.json but prefs.js present -> dynamically imports
+//          just that file (safe here, per widget author contract) and
+//          embeds its buildPrefsWidget() as an Adw.PreferencesWindow
+//          subpage.
+//        - neither config.json nor prefs.js, but a `settings` schema
+//          present -> auto-builds an Adw page from it instead
+//          (settingsSchemaUI.js) — the older flat-array equivalent of
+//          config.json, kept for widgets that predate it.
+//        - config.json wins if a widget somehow has more than one of
+//          these — see _openWidgetPrefs()'s doc comment for why.
 //   3. A separate error section for any widget whose metadata.json is
 //      broken, so one bad widget can't take down the whole window.
 //
@@ -52,6 +59,8 @@ import {SettingsService} from './lib/settingsService.js';
 import {StorageService} from './lib/storageService.js';
 import {WidgetSettings} from './lib/widgetSettings.js';
 import {buildSettingsPage} from './lib/settingsSchemaUI.js';
+import {readWidgetConfig} from './lib/widgetConfigReader.js';
+import {buildConfigPage} from './lib/widgetConfigUI.js';
 import {ThemeService} from './lib/themeService.js';
 
 /**
@@ -429,7 +438,7 @@ export default class WidgetCenterPreferences extends ExtensionPreferences {
             logError(new Error(`requested-widget-id "${requestedId}" not found among discovered widgets`));
             return;
         }
-        if (!widget.hasPrefs && !widget.hasSettingsSchema)
+        if (!widget.hasConfigJson && !widget.hasPrefs && !widget.hasSettingsSchema)
             return; // no settings page to jump to for this widget
 
         GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
@@ -459,7 +468,7 @@ export default class WidgetCenterPreferences extends ExtensionPreferences {
             }
         });
 
-        if (widget.hasPrefs || widget.hasSettingsSchema) {
+        if (widget.hasConfigJson || widget.hasPrefs || widget.hasSettingsSchema) {
             const settingsButton = new Gtk.Button({
                 icon_name: 'go-next-symbolic',
                 valign: Gtk.Align.CENTER,
@@ -503,21 +512,40 @@ export default class WidgetCenterPreferences extends ExtensionPreferences {
 
     /**
      * @private Opens a widget's settings page as a subpage of the
-     * Control Center window. Two sources, in priority order:
-     *   1. The widget's own prefs.js, dynamically imported (only this
-     *      file, never widget.js — see development/docs/WIDGET_API.md §4) and embedded
-     *      via its buildPrefsWidget() — same as before task 05's schema
-     *      addition, unchanged behavior for every widget that already
-     *      has one.
-     *   2. A declarative `settings` array in metadata.json (task 05),
-     *      auto-built into an Adw page by settingsSchemaUI.js — only
-     *      reached for widgets with NO prefs.js of their own. A widget
-     *      with both gets #1: hand-written code can do anything a
-     *      schema can plus more (custom layout, live preview, whatever),
-     *      so it's treated as the author's deliberate choice to opt out
-     *      of auto-generation rather than something to merge with it.
+     * Control Center window. Three sources, in priority order:
+     *   1. config.json (development/docs/WIDGET_API.md §6.4), read +
+     *      validated by widgetConfigReader.js and auto-built into an Adw
+     *      page by widgetConfigUI.js — the recommended path, and the one
+     *      every bundled widget now ships instead of a hand-written
+     *      prefs.js. Wins over #2/#3 if a widget somehow has more than
+     *      one, since config.json is meant to fully replace prefs.js for
+     *      a given widget, not merge with it.
+     *   2. The widget's own prefs.js, dynamically imported (only this
+     *      file, never widget.js — see development/docs/WIDGET_API.md
+     *      §4) and embedded via its buildPrefsWidget() — kept for
+     *      user-installed widgets that still ship one, or anything a
+     *      declarative schema genuinely can't express (custom layout,
+     *      live preview, etc).
+     *   3. A declarative `settings` array in metadata.json, auto-built
+     *      into an Adw page by settingsSchemaUI.js — only reached for
+     *      widgets with neither config.json nor prefs.js of their own.
      */
     _openWidgetPrefs(window, storage, widget) {
+        if (widget.hasConfigJson) {
+            const {config, errors} = readWidgetConfig(widget.path);
+            if (config) {
+                const settingsHandle = WidgetSettings.load(widget.id, storage);
+                const prefsPage = buildConfigPage(config, settingsHandle, widget.name);
+                this._presentPrefsPage(window, widget, prefsPage);
+                return;
+            }
+            // config.json exists but failed to read/parse/validate —
+            // fall through to prefs.js/schema below rather than showing
+            // nothing, and log why so it's not silent.
+            logError(new Error(
+                `config.json for "${widget.id}" invalid: ${errors.map(e => e.message).join('; ')}`));
+        }
+
         if (widget.hasPrefs) {
             this._openHandWrittenPrefs(window, storage, widget);
             return;

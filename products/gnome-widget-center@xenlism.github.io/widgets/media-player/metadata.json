@@ -6,7 +6,13 @@
   "author": "gnome-widget-center",
   "api-version": 1,
   "entry": "widget.js",
-  "prefs": "prefs.js",
-  "block-type": { "cols": 30, "rows": 15 },
-  "default-position": { "x": 400, "y": 160, "monitor": 0 }
+  "block-type": {
+    "cols": 30,
+    "rows": 15
+  },
+  "default-position": {
+    "x": 400,
+    "y": 160,
+    "monitor": 0
+  }
 }

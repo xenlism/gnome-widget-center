@@ -1,0 +1,56 @@
+{
+  "version": "1.0",
+  "tabs": [
+    {
+      "id": "general",
+      "label": "Calendar (Header)",
+      "description": "Two-tone calendar with a colored header band",
+      "icon": "x-office-calendar-symbolic",
+      "groups": [
+        {
+          "id": "colors",
+          "label": "Colors",
+          "description": "",
+          "fields": [
+            {
+              "id": "headerColor",
+              "label": "Header background",
+              "description": "Band behind month/weekday",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#2563eb"
+            },
+            {
+              "id": "headerTextColor",
+              "label": "Header text",
+              "description": "Month/weekday text color",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#ffffff"
+            },
+            {
+              "id": "bodyColor",
+              "label": "Body background",
+              "description": "Panel behind the day number",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#ffffff"
+            },
+            {
+              "id": "dayColor",
+              "label": "Day number color",
+              "description": "Color of the day number",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#1a1a1a"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

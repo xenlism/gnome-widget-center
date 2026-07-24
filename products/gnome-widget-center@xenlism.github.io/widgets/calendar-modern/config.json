@@ -1,0 +1,47 @@
+{
+  "version": "1.0",
+  "tabs": [
+    {
+      "id": "general",
+      "label": "Calendar (Modern)",
+      "description": "Card-style calendar settings",
+      "icon": "x-office-calendar-symbolic",
+      "groups": [
+        {
+          "id": "colors",
+          "label": "Colors",
+          "description": "",
+          "fields": [
+            {
+              "id": "cardColor",
+              "label": "Card color",
+              "description": "Background of the calendar card",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#ffffff"
+            },
+            {
+              "id": "accentColor",
+              "label": "Weekday color",
+              "description": "Color of the day-of-week text",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#d81f26"
+            },
+            {
+              "id": "textColor",
+              "label": "Text color",
+              "description": "Color of the month and day number",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#1a1a1a"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

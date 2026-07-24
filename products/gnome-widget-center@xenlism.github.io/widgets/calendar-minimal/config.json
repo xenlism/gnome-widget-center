@@ -1,0 +1,46 @@
+{
+  "version": "1.0",
+  "tabs": [
+    {
+      "id": "general",
+      "label": "Calendar (Minimal)",
+      "description": "Chromeless calendar settings",
+      "icon": "x-office-calendar-symbolic",
+      "groups": [
+        {
+          "id": "appearance",
+          "label": "Appearance",
+          "description": "",
+          "fields": [
+            {
+              "id": "textColor",
+              "label": "Day number color",
+              "description": "Color of the big day number",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#1a1a1a"
+            },
+            {
+              "id": "accentColor",
+              "label": "Subtitle color",
+              "description": "Color of the weekday/month line",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#6b6b6b"
+            },
+            {
+              "id": "showMonth",
+              "label": "Show month",
+              "description": "Display the month next to the weekday",
+              "dataType": "boolean",
+              "fieldType": "switch",
+              "default": true
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

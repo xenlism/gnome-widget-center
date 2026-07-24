@@ -1,7 +1,7 @@
 {
-  "id": "calendar-modern",
-  "name": "Calendar (Modern)",
-  "description": "Card-style calendar showing month, weekday and day number.",
+  "id": "clock-modern",
+  "name": "Clock (Modern)",
+  "description": "Vertical stacked-digit clock card - AM/PM, hour, minute and second each on their own line.",
   "version": "1.0.0",
   "author": "GNOME Widget Center",
   "api-version": 1,

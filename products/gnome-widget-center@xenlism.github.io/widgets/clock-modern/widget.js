@@ -1,0 +1,232 @@
+// widgets/clock-modern/widget.js
+//
+// "Modern" vertical clock card, built from widgets/calendar-modern/widget.js
+// (card shell + inline St `style` rendering, since - as documented there and
+// in widgets/clock/stylesheet.css - the host does not yet load a widget's
+// own stylesheet.css into the Shell's theme context) and
+// widgets/clock/widget.js (timer/enable()/disable()/onSettingsChanged()
+// pattern, 24h/12h formatting).
+//
+// Layout is 4 stacked rows, top to bottom:
+//   AM/PM  (only shown in 12-hour mode)
+//   HH
+//   MM
+//   SS
+//
+// HH/MM/SS always share one font face + one font size (fontFamily/fontSize)
+// but each has its own separate color (colorHH/colorMM/colorSS). AM/PM has
+// its own separate font face + size (ampmFontFamily/ampmFontSize) and its
+// own separate color (colorAmPm).
+//
+// Optional "launch on click": if launchOnClick is on and desktopFilePath
+// points at a valid .desktop file, a plain click (no modifier - Super+drag
+// is reserved for repositioning, see lib/dragController.js) launches that
+// app via Gio.DesktopAppInfo, the same way GNOME Shell itself launches
+// .desktop entries (no shelling out to a raw command string).
+
+import Clutter from 'gi://Clutter';
+import St from 'gi://St';
+import GLib from 'gi://GLib';
+import Gio from 'gi://Gio';
+
+export default class ClockModernWidget {
+    /**
+     * @param {WidgetAPI} api - see development/docs/WIDGET_API.md §5.
+     */
+    constructor(api) {
+        this._api = api;
+        this._settings = api.settings;
+        this._timeoutId = null;
+        this._buttonPressId = null;
+    }
+
+    // Must never throw, even with empty settings - getDefaultSettings()
+    // below always backfills every key this widget reads before this runs,
+    // but `??` fallbacks in _render()/_applyClickHandler() cost nothing and
+    // keep this widget robust on its own too.
+    buildActor() {
+        this._actor = new St.BoxLayout({
+            style_class: 'clock-modern-widget-root',
+            vertical: true,
+        });
+
+        this._ampmLabel = new St.Label({style_class: 'clock-modern-widget-ampm'});
+        this._hhLabel = new St.Label({style_class: 'clock-modern-widget-hh'});
+        this._mmLabel = new St.Label({style_class: 'clock-modern-widget-mm'});
+        this._ssLabel = new St.Label({style_class: 'clock-modern-widget-ss'});
+
+        this._actor.add_child(this._ampmLabel);
+        this._actor.add_child(this._hhLabel);
+        this._actor.add_child(this._mmLabel);
+        this._actor.add_child(this._ssLabel);
+
+        this._render();
+        this._applyClickHandler();
+        return this._actor;
+    }
+
+    enable() {
+        // Seconds are always shown, so this always ticks every second -
+        // unlike widgets/clock, there's no "showSeconds off -> tick every
+        // minute" option here.
+        this._timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 1, () => {
+            this._render();
+            return GLib.SOURCE_CONTINUE;
+        });
+    }
+
+    disable() {
+        if (this._timeoutId !== null) {
+            GLib.source_remove(this._timeoutId);
+            this._timeoutId = null;
+        }
+        this._removeClickHandler();
+    }
+
+    getDefaultSettings() {
+        return {
+            format24h: true,
+
+            fontFamily: 'Sans Bold',
+            fontSize: 30,
+            ampmFontFamily: 'Sans Bold',
+            ampmFontSize: 10,
+
+            colorHH: '#1a1a1a',
+            colorMM: '#1a1a1a',
+            colorSS: '#1a1a1a',
+            colorAmPm: '#d81f26',
+            cardColor: '#ffffff',
+
+            launchOnClick: false,
+            desktopFilePath: '',
+        };
+    }
+
+    // Cross-process live update (see widgets/clock/widget.js for the same
+    // hook): re-render immediately so a font/color/format change made in
+    // the Control Center shows up right away, and re-wire the click
+    // handler in case launchOnClick/desktopFilePath just changed (mirrors
+    // how widgets/clock re-wires its timer when showSeconds changes).
+    onSettingsChanged() {
+        this._render();
+        this._applyClickHandler();
+    }
+
+    /** @private */
+    _applyClickHandler() {
+        this._removeClickHandler();
+
+        const launchOnClick = this._settings.launchOnClick ?? false;
+        const desktopFilePath = this._settings.desktopFilePath ?? '';
+        if (!launchOnClick || !desktopFilePath)
+            return;
+
+        // Layer leaves actors non-reactive by default (see
+        // lib/widgetLayer.js init()); opt in here the same way
+        // lib/dragController.js does before connecting its own
+        // button-press-event handler on the same actor. Both handlers can
+        // coexist: dragController only consumes the event when Super is
+        // held (a drag), so a plain click still reaches this handler.
+        this._actor.reactive = true;
+        this._buttonPressId = this._actor.connect('button-press-event', (_actor, event) => {
+            if (event.get_button() !== Clutter.BUTTON_PRIMARY)
+                return Clutter.EVENT_PROPAGATE;
+
+            if (event.get_state() & Clutter.ModifierType.MOD4_MASK)
+                return Clutter.EVENT_PROPAGATE; // Super held - let dragController handle it
+
+            this._launchApp();
+            return Clutter.EVENT_STOP;
+        });
+    }
+
+    /** @private */
+    _removeClickHandler() {
+        if (this._buttonPressId !== null) {
+            this._actor.disconnect(this._buttonPressId);
+            this._buttonPressId = null;
+        }
+    }
+
+    /** @private */
+    _launchApp() {
+        const desktopFilePath = this._settings.desktopFilePath ?? '';
+        if (!desktopFilePath)
+            return;
+
+        try {
+            const appInfo = Gio.DesktopAppInfo.new_from_filename(desktopFilePath);
+            if (!appInfo) {
+                this._api.logger.info(`clock-modern: could not read .desktop file at ${desktopFilePath}`);
+                return;
+            }
+            appInfo.launch([], null);
+        } catch (e) {
+            this._api.logger.info(`clock-modern: failed to launch ${desktopFilePath}: ${e}`);
+        }
+    }
+
+    /** @private */
+    _render() {
+        const now = GLib.DateTime.new_now_local();
+
+        const format24h = this._settings.format24h ?? true;
+        const fontFamily = this._settings.fontFamily ?? 'Sans Bold';
+        const fontSize = this._settings.fontSize ?? 30;
+        const ampmFontFamily = this._settings.ampmFontFamily ?? 'Sans Bold';
+        const ampmFontSize = this._settings.ampmFontSize ?? 10;
+        const colorHH = this._settings.colorHH ?? '#1a1a1a';
+        const colorMM = this._settings.colorMM ?? '#1a1a1a';
+        const colorSS = this._settings.colorSS ?? '#1a1a1a';
+        const colorAmPm = this._settings.colorAmPm ?? '#d81f26';
+        const cardColor = this._settings.cardColor ?? '#ffffff';
+
+        this._actor.set_style(
+            `background-color: ${cardColor}; ` +
+            'border-radius: 20px; ' +
+            'padding: 12px 12px; ' +
+            'spacing: 0px;'
+        );
+
+        if (format24h) {
+            this._ampmLabel.hide();
+        } else {
+            this._ampmLabel.show();
+            const hour = now.get_hour();
+            this._ampmLabel.set_text(hour < 12 ? 'am' : 'pm');
+            this._ampmLabel.set_style(
+                `color: ${colorAmPm}; font-family: ${ampmFontFamily}; ` +
+                `font-size: ${ampmFontSize}px; font-weight: bold; text-align: center;`
+            );
+        }
+
+        let hourText;
+        if (format24h) {
+            hourText = now.format('%H') ?? '';
+        } else {
+            let h12 = now.get_hour() % 12;
+            if (h12 === 0)
+                h12 = 12;
+            hourText = String(h12).padStart(2, '0');
+        }
+
+        this._hhLabel.set_text(hourText);
+        this._hhLabel.set_style(
+            `color: ${colorHH}; font-family: ${fontFamily}; ` +
+            `font-size: ${fontSize}px; font-weight: bold; text-align: center;`
+        );
+
+        this._mmLabel.set_text(now.format('%M') ?? '');
+        this._mmLabel.set_style(
+            `color: ${colorMM}; font-family: ${fontFamily}; ` +
+            `font-size: ${fontSize}px; font-weight: bold; text-align: center;`
+        );
+
+        this._ssLabel.set_text(now.format('%S') ?? '');
+        this._ssLabel.set_style(
+            `color: ${colorSS}; font-family: ${fontFamily}; ` +
+            `font-size: ${fontSize}px; font-weight: bold; text-align: center;`
+        );
+    }
+}

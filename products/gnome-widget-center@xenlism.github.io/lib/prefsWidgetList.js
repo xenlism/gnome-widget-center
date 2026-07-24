@@ -14,6 +14,7 @@
 // exactly as safe to run here as it is in extension.js.
 
 import {WidgetLoader} from './widgetLoader.js';
+import {widgetHasConfigJson} from './widgetConfigReader.js';
 
 export class PrefsWidgetList {
     /**
@@ -29,7 +30,7 @@ export class PrefsWidgetList {
      * @returns {{
      *   ok: Array<{id: string, name: string, description: string,
      *              hasPrefs: boolean, hasSettingsSchema: boolean,
-     *              metadata: object, path: string}>,
+     *              hasConfigJson: boolean, metadata: object, path: string}>,
      *   errors: Array<{id: string, path: string, reason: string}>
      * }}
      *   `ok` only contains widgets whose metadata.json (and, if present,
@@ -51,6 +52,7 @@ export class PrefsWidgetList {
             description: metadata.description ?? '',
             hasPrefs: typeof metadata.prefs === 'string' && metadata.prefs.length > 0,
             hasSettingsSchema: Array.isArray(metadata.settings) && metadata.settings.length > 0,
+            hasConfigJson: widgetHasConfigJson(path),
             metadata,
             path,
         }));
