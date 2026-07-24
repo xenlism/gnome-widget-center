@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-OUTPUT="project_dump.txt"
+OUTPUT="gnome_widget_center_project_dump.txt"
 > "$OUTPUT"
 
 find . -type f ! -name "$OUTPUT" | sort | while read -r file; do
