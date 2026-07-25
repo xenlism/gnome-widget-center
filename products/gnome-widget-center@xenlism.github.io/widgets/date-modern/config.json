@@ -3,95 +3,80 @@
   "tabs": [
     {
       "id": "general",
-      "label": "Clock (Modern)",
-      "description": "Vertical stacked-digit clock card settings",
-      "icon": "preferences-system-time-symbolic",
+      "label": "Date (Modern)",
+      "description": "Vertical stacked date card settings",
+      "icon": "x-office-calendar-symbolic",
       "groups": [
-        {
-          "id": "format",
-          "label": "Format",
-          "description": "",
-          "fields": [
-            {
-              "id": "format24h",
-              "label": "24-hour format",
-              "description": "Off shows 12-hour time with an am/pm line above HH",
-              "dataType": "boolean",
-              "fieldType": "switch",
-              "default": true
-            }
-          ]
-        },
         {
           "id": "font",
           "label": "Font",
-          "description": "HH, MM and SS always share the same face and size below. am/pm has its own separate face and size.",
+          "description": "Month, day-of-week and day-of-month each have their own separate font face and size.",
           "fields": [
             {
-              "id": "font",
-              "label": "HH / MM / SS font",
-              "description": "Font face and size for the hour, minute and second digits",
+              "id": "monthFont",
+              "label": "Month font",
+              "description": "Font face and size for the month (e.g. Jul)",
+              "dataType": "string",
+              "fieldType": "fontpicker",
+              "format": "font",
+              "default": "Sans Bold 14"
+            },
+            {
+              "id": "dowFont",
+              "label": "Day-of-week font",
+              "description": "Font face and size for the day-of-week abbreviation (e.g. TU)",
+              "dataType": "string",
+              "fieldType": "fontpicker",
+              "format": "font",
+              "default": "Sans Bold 16"
+            },
+            {
+              "id": "dayFont",
+              "label": "Day-of-month font",
+              "description": "Font face and size for the day-of-month number (01-31)",
               "dataType": "string",
               "fieldType": "fontpicker",
               "format": "font",
               "default": "Sans Bold 30"
-            },
-            {
-              "id": "ampmFont",
-              "label": "am/pm font",
-              "description": "Font face and size for the am/pm indicator",
-              "dataType": "string",
-              "fieldType": "fontpicker",
-              "format": "font",
-              "default": "Sans Bold 10"
             }
           ]
         },
         {
           "id": "colors",
           "label": "Colors",
-          "description": "HH, MM and SS each have their own separate color.",
+          "description": "Month, day-of-week and day-of-month each have their own separate color.",
           "fields": [
             {
-              "id": "colorHH",
-              "label": "HH color",
-              "description": "Color of the hour digits",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "default": "#1a1a1a"
-            },
-            {
-              "id": "colorMM",
-              "label": "MM color",
-              "description": "Color of the minute digits",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "default": "#1a1a1a"
-            },
-            {
-              "id": "colorSS",
-              "label": "SS color",
-              "description": "Color of the second digits",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "default": "#1a1a1a"
-            },
-            {
-              "id": "colorAmPm",
-              "label": "am/pm color",
-              "description": "Color of the am/pm indicator",
+              "id": "colorMonth",
+              "label": "Month color",
+              "description": "Color of the month text",
               "dataType": "string",
               "fieldType": "colorpicker",
               "format": "color",
               "default": "#d81f26"
             },
             {
+              "id": "colorDow",
+              "label": "Day-of-week color",
+              "description": "Color of the day-of-week text",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#1a1a1a"
+            },
+            {
+              "id": "colorDay",
+              "label": "Day-of-month color",
+              "description": "Color of the day-of-month number",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#1a1a1a"
+            },
+            {
               "id": "cardColor",
               "label": "Card background color",
-              "description": "Background color of the clock card",
+              "description": "Background color of the date card",
               "dataType": "string",
               "fieldType": "colorpicker",
               "format": "color",
@@ -107,7 +92,7 @@
             {
               "id": "cornerRadius",
               "label": "Corner radius",
-              "description": "Roundness of the clock card's corners",
+              "description": "Roundness of the date card's corners",
               "dataType": "number",
               "fieldType": "spinbutton",
               "default": 18,
@@ -120,9 +105,8 @@
         },
         {
           "id": "launch",
-
           "label": "Launch on click",
-          "description": "Clicking the clock (without holding Super) launches the chosen app.",
+          "description": "Clicking the date card (without holding Super) launches the chosen app.",
           "fields": [
             {
               "id": "launchOnClick",

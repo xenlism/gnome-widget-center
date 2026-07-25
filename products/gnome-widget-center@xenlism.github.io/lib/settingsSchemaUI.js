@@ -238,10 +238,25 @@ function _fontRow(field, settingsProxy, current) {
         dialog: new Gtk.FontDialog(),
         valign: Gtk.Align.CENTER,
     });
-    button.set_font_desc(Pango.FontDescription.from_string(
-        typeof current === 'string' ? current : String(field.default)));
+
+    // Guards the two failure modes that previously crashed prefs.js here
+    // (same fix as widgetConfigUI.js's _fontRow): an empty/missing
+    // current-or-default string reaching Pango.FontDescription.from_string(),
+    // and button.get_font_desc() coming back null (e.g. dialog dismissed
+    // without a selection) before .to_string() is called on it.
+    const fallback = typeof field.default === 'string' && field.default.length > 0 ? field.default : 'Sans 10';
+    const initial = typeof current === 'string' && current.length > 0 ? current : fallback;
+    try {
+        button.set_font_desc(Pango.FontDescription.from_string(initial));
+    } catch (e) {
+        button.set_font_desc(Pango.FontDescription.from_string(fallback));
+    }
+
     button.connect('notify::font-desc', () => {
-        settingsProxy[field.id] = button.get_font_desc().to_string();
+        const desc = button.get_font_desc();
+        if (!desc)
+            return;
+        settingsProxy[field.id] = desc.to_string();
     });
     row.add_suffix(button);
     row.set_activatable_widget(button);

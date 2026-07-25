@@ -167,6 +167,15 @@ export class WidgetLoader {
             }
         }
 
+        // Cached separately from this._instances (which only holds
+        // widgets that have actually been loadOne()'d, in load order) so
+        // api.path.id() below can resolve ANY discovered widget's folder
+        // - including ones not yet loaded, or never loaded at all this
+        // session - the same way `me` resolves the calling widget's own
+        // folder without it needing to be "loaded" from another widget's
+        // point of view.
+        this._pathById = new Map(Array.from(found.values(), w => [w.id, w.path]));
+
         return Array.from(found.values());
     }
 
@@ -560,6 +569,28 @@ export class WidgetLoader {
             monitorInfo: null,
             position: {x: 0, y: 0, setPosition() {}},
             bus: {emit() {}, on() {}, off() {}},
+            path: {
+                // Absolute path to this widget's own folder on disk - e.g.
+                // for reading a bundled asset (icons/, a template file)
+                // that lives alongside widget.js. Always a plain string,
+                // never null - a widget only reaches buildActor() (and
+                // therefore ever sees an `api`) after discover() has
+                // already resolved its folder.
+                me: widgetInfo.path,
+                // Absolute path to another widget's folder by id, e.g. for
+                // one widget to read an asset shipped by another - falls
+                // back to a fresh discover() if called before this
+                // WidgetLoader's first discover() (id -> path cache not
+                // populated yet), same lookup either way. Returns null if
+                // no widget with that id exists.
+                id: otherId => {
+                    if (otherId === widgetInfo.id)
+                        return widgetInfo.path;
+                    if (!this._pathById)
+                        this.discover();
+                    return this._pathById.get(otherId) ?? null;
+                },
+            },
             logger: {
                 info: (...args) => console.log(`[${widgetInfo.id}]`, ...args),
                 warn: (...args) => console.warn(`[${widgetInfo.id}]`, ...args),

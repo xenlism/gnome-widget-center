@@ -62,14 +62,19 @@ folder instead, discovered the same way.
   anymore).
 - `themeable` (optional boolean, default `false`) — opts this widget's
   root actor into the host-wide theme system
-  (`development/docs/THEME_SYSTEM.md`): background/drop-shadow are styled
-  from `theme.json`'s global appearance settings (with an optional
-  per-widget override under `widgets.<id>.config`) via
-  `ThemeService.applyWidgetStyle()`. Leave this unset for widgets that
-  already paint their own background in `widget.js` (e.g. any widget
-  using the "card" pattern from `calendar-modern`/`clock-modern` — see
-  §3's stylesheet.css note) so the host theme never silently overrides a
-  widget's own design without the author asking for it.
+  (`development/docs/THEME_SYSTEM.md`): background/corner-radius/
+  drop-shadow are styled from `theme.json`'s global appearance settings
+  (with an optional per-widget override under `widgets.<id>.config`,
+  itself editable from this widget's own Control Center settings page —
+  see `_appendWidgetAppearanceGroup()` in `prefs.js`) via
+  `ThemeService.applyWidgetStyle()`. A global "Force" switch on the
+  Appearance page can pin background and/or corner radius to the global
+  value for every themeable widget, ignoring any per-widget override.
+  Leave this unset for widgets that already paint their own background in
+  `widget.js` (e.g. any widget using the "card" pattern from
+  `calendar-modern`/`clock-modern` — see §3's stylesheet.css note) so the
+  host theme never silently overrides a widget's own design without the
+  author asking for it.
 - `settings` (optional array) — see §6.1. This is the **only** settings
   system with real Control Center UI generation today.
 
@@ -184,6 +189,8 @@ can always do more than a schema (file pickers, custom layout, anything
 | `api.monitorInfo` | Current monitor info (geometry, scale). |
 | `api.position` | Current widget position + `setPosition(x, y, monitorIndex)`. |
 | `api.bus.emit(name, data)` / `api.bus.on(name, cb)` | Central event bus for widgets that opt in to talking to each other. |
+| `api.path.me` | Absolute path (string) to this widget's own folder on disk — for reading a bundled asset (icons/, a template, etc.) that ships alongside `widget.js`. |
+| `api.path.id(widgetId)` | Absolute path (string) to another widget's folder by id, or `null` if no widget with that id is installed. Works for any discovered widget, loaded or not. |
 | `api.logger` | Logging pre-tagged with this widget's id. |
 
 ## 6. Settings — three systems, two of them wired up
@@ -382,6 +389,47 @@ structure instead of one flat array:
 `time`, `password`, `url`, `icon`) plus structural nesting (`list`,
 `object`) that neither §6.1 nor §6.3 has.
 
+**`list` has two "add" flows depending on `item.fieldType`:** for every
+ordinary item kind (`text`, `spinbutton`, `switch`, `dropdown`, etc), an
+inline input control matching that type sits directly before the "+"
+button — clicking "+" appends whatever's currently in it and clears it
+for the next entry, rather than adding a blank item to edit in place. The
+one exception is `item.fieldType: "application"`: each item is an
+installed app's `.desktop` path, rendered with the app's real icon and
+display name (via `Gio.DesktopAppInfo`) and a red trash-icon remove
+button — reference: xenlism's own `URL-Chooser` app's `settings.js`
+"browser_list" panel, a real, working, non-declarative implementation of
+this same picker. "+" opens a `Gtk.FileDialog` scoped to
+`item.scanDirectory` (default `/usr/share/applications`) instead of
+showing an inline field (there's no sensible "type a `.desktop` path by
+hand" input), and a second button next to it
+(`find-location-symbolic`, matching URL-Chooser's own "auto-detect"
+button) bulk-adds every not-yet-present `.desktop` entry in that
+directory, optionally narrowed by `item.scanPattern` (a case-insensitive
+regex matched against the filename) — a generic, config-declared stand-in
+for URL-Chooser's own hardcoded-to-browsers `Core.autoDetectBrowsers()`.
+`application` also works as a **standalone** (non-list) `fieldType` for
+"pick one installed app" fields, using the same `Gtk.FileDialog`-scoped-
+to-`scanDirectory` picker and icon/name resolution.
+
+**`fontpicker` stores one combined string, not a family/size pair:**
+`lib/widgetConfigUI.js` renders it with `Gtk.FontButton`
+(`use_font`/`use_size` both on, `font_set` signal) — the same widget and
+signal xenlism's own `showtime` extension uses in its shipped, real-
+hardware-tested `prefs.js` — rather than the newer GTK 4.10+
+`Gtk.FontDialogButton`/`Gtk.FontDialog` pair. Its value is always one
+Pango font-description string like `"Sans Bold 30"` (face + style +
+point size together), matching `Gtk.FontButton.get_font()`'s native
+return shape. A widget that renders with Pango markup can pass that
+string straight through as a `font_desc=` attribute with no parsing at
+all; one that paints with St's CSS-like `set_style()` instead (separate
+`font-family`/`font-size` properties, per this doc's own inline-styling
+convention) needs to split the string back apart at render time — see
+`widgets/clock-modern/widget.js`'s `_parseFontDescription()` for the
+pattern (`Pango.FontDescription.from_string()`, read `get_size()`, then
+`unset_fields(Pango.FontMask.SIZE)` + `to_string()` for the family+style
+portion without the point size baked in).
+
 **Validation:** `lib/widgetConfigValidator.js`'s `validateConfig()` — a
 malformed `config.json` (duplicate tab/group/field `id`, unknown
 `dataType`/`fieldType`, `dropdown`/`radio` missing `options`, invalid
@@ -420,6 +468,65 @@ schema and a hand-written `prefs.js`.
 source of truth for runtime defaults; `config.json`'s `default` values
 only affect what a settings row shows before the user has ever touched
 it.
+
+**`fieldType: "autocomplete"`** — a generic entry-with-suggestions field.
+It contains no business logic of its own; it only shows an entry, calls a
+search function the widget author supplies, renders whatever comes back,
+and stores the selection. All business logic lives in the widget's own
+`autocomplete.js`, loaded from the widget's own folder (`api.path.me` for
+`widget.js`; the prefs process resolves the same folder via the `path`
+argument to `buildConfigPage()`).
+
+```json
+{
+  "id": "place",
+  "label": "Place",
+  "description": "",
+  "dataType": "string",
+  "fieldType": "autocomplete",
+  "autocomplete": "searchPlace",
+  "fillsField": "location",
+  "default": ""
+}
+```
+
+- `autocomplete` (required, string) — the name of an exported `async
+  function(keyword)` in this widget's `autocomplete.js`. One file may
+  export several such functions; multiple fields can share the file while
+  naming different functions.
+- `fillsField` (optional, string) — see below.
+- `pattern` (optional, like any other field) — e.g. a lat/lon field can
+  set `"pattern": "^-?\\d+(\\.\\d+)?,-?\\d+(\\.\\d+)?$"` for the same
+  regex-on-blur validation §6.4's plain `text` fields already get.
+
+The search function returns an array of result objects. Minimum
+contract:
+
+```json
+[{"label": "White", "value": "#FFFFFF"}]
+```
+
+Optional properties: `subtitle`, `icon`, `image`, `badge`, `data`, and
+`fields` (see below). Only `value` is ever persisted to settings — the
+entry displays `label`, and no hidden `Gtk.Entry` is involved.
+
+**Cross-field fill (`fields`):** a result item may include a `fields` map
+of `{otherFieldId: value}`. Selecting that suggestion writes each entry to
+the named sibling field's setting AND, if that sibling is itself an
+`autocomplete`/`text`-style row in the same config, updates its displayed
+text too — this is how a Location Picker's "Place" and "Location" fields
+stay in sync from either side (see
+`widgets/weather-minimal/autocomplete.js` for a working
+`searchPlace`/`searchLocation` pair built on Open-Meteo's free geocoding
+API). `fillsField` on the field itself is documentation only — a hint for
+readers of `config.json` about which sibling this field is paired with —
+the actual fill happens via each result's `fields` map, not the schema
+field.
+
+**Known limitation:** only `value` persists between sessions, so on first
+load an autocomplete row shows the raw stored value (e.g.
+`13.756331,100.501762`) rather than a resolved `label`, until the user
+searches/selects again.
 
 ## 7. On-disk settings format (applies to §6.1, §6.2, and §6.4)
 

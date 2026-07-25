@@ -13,10 +13,24 @@
 //   MM
 //   SS
 //
-// HH/MM/SS always share one font face + one font size (fontFamily/fontSize)
-// but each has its own separate color (colorHH/colorMM/colorSS). AM/PM has
-// its own separate font face + size (ampmFontFamily/ampmFontSize) and its
-// own separate color (colorAmPm).
+// HH/MM/SS always share one Pango font-description string ("Sans Bold
+// 30" - face + point size together, see `font` in config.json and
+// _parseFontDescription() below) but each has its own separate color
+// (colorHH/colorMM/colorSS). AM/PM has its own separate font-description
+// string (`ampmFont`) and its own separate color (colorAmPm).
+//
+// Storing one combined font string per role (rather than a family field
+// + a size field) matches xenlism's own `showtime` extension's prefs.js,
+// which stores its clock/date fonts as one GSettings string each via
+// Gtk.FontButton and applies them with Pango's `font_desc=` markup
+// attribute directly - no separate parsing needed on that side because
+// it renders through Pango markup, not raw CSS. This widget instead
+// paints with St's CSS-like `set_style()` (font-family/font-size as two
+// separate properties, per WIDGET_API.md's inline-styling convention), so
+// _parseFontDescription() below splits the one stored string back into
+// those two pieces at render time using Pango.FontDescription itself
+// (not string-splitting by hand) so anything Pango's parser accepts -
+// quoted family names, "Bold Italic", etc - round-trips correctly.
 //
 // Optional "launch on click": if launchOnClick is on and desktopFilePath
 // points at a valid .desktop file, a plain click (no modifier - Super+drag
@@ -28,6 +42,37 @@ import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
+import Pango from 'gi://Pango';
+
+/**
+ * Splits a combined Pango font-description string ("Sans Bold 30") into
+ * the two pieces this widget's CSS-style `set_style()` calls need
+ * separately: a `font-family` value that still carries the face/style
+ * words ("Sans Bold", not just "Sans" - matches how this widget's CSS has
+ * always used a single descriptive face name rather than a strict
+ * family+font-weight split) and a `font-size` pixel number.
+ * @param {string} fontStr
+ * @param {string} fallbackFamily
+ * @param {number} fallbackSize
+ * @returns {{family: string, size: number}}
+ */
+function _parseFontDescription(fontStr, fallbackFamily, fallbackSize) {
+    try {
+        const desc = Pango.FontDescription.from_string(fontStr);
+        const rawSize = desc.get_size();
+        const size = rawSize > 0 ? Math.round(rawSize / Pango.SCALE) : fallbackSize;
+
+        // Drop just the point-size field and re-serialize - whatever's
+        // left (family + weight/style words Pango recognized) is exactly
+        // what used to be typed into the old separate "font face" field.
+        desc.unset_fields(Pango.FontMask.SIZE);
+        const family = desc.to_string().trim();
+
+        return {family: family || fallbackFamily, size};
+    } catch (e) {
+        return {family: fallbackFamily, size: fallbackSize};
+    }
+}
 
 export default class ClockModernWidget {
     /**
@@ -87,16 +132,15 @@ export default class ClockModernWidget {
         return {
             format24h: true,
 
-            fontFamily: 'Sans Bold',
-            fontSize: 30,
-            ampmFontFamily: 'Sans Bold',
-            ampmFontSize: 10,
+            font: 'Sans Bold 30',
+            ampmFont: 'Sans Bold 10',
 
             colorHH: '#1a1a1a',
             colorMM: '#1a1a1a',
             colorSS: '#1a1a1a',
             colorAmPm: '#d81f26',
             cardColor: '#ffffff',
+            cornerRadius: 18,
 
             launchOnClick: false,
             desktopFilePath: '',
@@ -172,19 +216,20 @@ export default class ClockModernWidget {
         const now = GLib.DateTime.new_now_local();
 
         const format24h = this._settings.format24h ?? true;
-        const fontFamily = this._settings.fontFamily ?? 'Sans Bold';
-        const fontSize = this._settings.fontSize ?? 30;
-        const ampmFontFamily = this._settings.ampmFontFamily ?? 'Sans Bold';
-        const ampmFontSize = this._settings.ampmFontSize ?? 10;
+        const {family: fontFamily, size: fontSize} =
+            _parseFontDescription(this._settings.font ?? 'Sans Bold 30', 'Sans Bold', 30);
+        const {family: ampmFontFamily, size: ampmFontSize} =
+            _parseFontDescription(this._settings.ampmFont ?? 'Sans Bold 10', 'Sans Bold', 10);
         const colorHH = this._settings.colorHH ?? '#1a1a1a';
         const colorMM = this._settings.colorMM ?? '#1a1a1a';
         const colorSS = this._settings.colorSS ?? '#1a1a1a';
         const colorAmPm = this._settings.colorAmPm ?? '#d81f26';
         const cardColor = this._settings.cardColor ?? '#ffffff';
+        const cornerRadius = this._settings.cornerRadius ?? 18;
 
         this._actor.set_style(
             `background-color: ${cardColor}; ` +
-            'border-radius: 20px; ' +
+            `border-radius: ${cornerRadius}px; ` +
             'padding: 12px 12px; ' +
             'spacing: 0px;'
         );

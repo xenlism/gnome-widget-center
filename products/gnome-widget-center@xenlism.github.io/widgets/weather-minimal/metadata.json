@@ -1,0 +1,18 @@
+{
+  "id": "weather-minimal",
+  "name": "Weather (Minimal)",
+  "description": "Minimal weather card - icon, condition and temperature, powered by Open-Meteo (no API key required).",
+  "version": "1.0.0",
+  "author": "GNOME Widget Center",
+  "api-version": 1,
+  "entry": "widget.js",
+  "block-type": {
+    "cols": 10,
+    "rows": 10
+  },
+  "default-position": {
+    "x": 80,
+    "y": 80,
+    "monitor": 0
+  }
+}

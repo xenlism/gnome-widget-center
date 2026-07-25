@@ -6,6 +6,7 @@
   "author": "gnome-widget-center",
   "api-version": 1,
   "entry": "widget.js",
+  "themeable": true,
   "block-type": {
     "cols": 20,
     "rows": 10

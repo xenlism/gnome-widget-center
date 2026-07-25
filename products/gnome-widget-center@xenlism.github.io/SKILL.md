@@ -88,11 +88,12 @@ Non-negotiable gotchas, all learned the hard way in this project:
 
 Types: `text`, `textarea`, `password`, `switch`, `checkbox`, `dropdown`,
 `radio`, `spinbutton`, `slider`, `colorpicker`, `fontpicker`,
-`iconpicker`, `filepicker`, `folderpicker`, `list`, `object`.
-Auto-generates the Control Center page via `lib/widgetConfigUI.js` — zero
-GTK code, and covers everything 3c's flat array can't (file/folder
-pickers, passwords, nested `list`/`object` fields, `visibleIf`/
-`enabledIf`/`dependsOn` conditional rows). See WIDGET_API.md §6.4 for the
+`iconpicker`, `filepicker`, `folderpicker`, `application`, `list`,
+`object`. Auto-generates the Control Center page via
+`lib/widgetConfigUI.js` — zero GTK code, and covers everything 3c's flat
+array can't (file/folder pickers, an installed-app picker, passwords,
+nested `list`/`object` fields, `visibleIf`/`enabledIf`/`dependsOn`
+conditional rows). See WIDGET_API.md §6.4 for the
 full field grammar. Every bundled widget that used to ship a
 hand-written `prefs.js` (`clock`, `clock-modern`, `calendar-modern`,
 `calendar-header`, `calendar-minimal`, `media-player`) now ships a

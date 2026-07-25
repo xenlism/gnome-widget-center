@@ -6,7 +6,15 @@
   "author": "TODO: your name",
   "api-version": 1,
   "entry": "widget.js",
+  "themeable": true,
   "prefs": "prefs.js",
-  "block-type": { "cols": 10, "rows": 4 },
-  "default-position": { "x": 40, "y": 40, "monitor": 0 }
+  "block-type": {
+    "cols": 10,
+    "rows": 4
+  },
+  "default-position": {
+    "x": 40,
+    "y": 40,
+    "monitor": 0
+  }
 }

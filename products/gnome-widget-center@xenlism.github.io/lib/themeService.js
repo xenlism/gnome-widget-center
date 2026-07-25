@@ -5,9 +5,11 @@
 // global appearance page need to read/write:
 //
 //   - GLOBAL appearance: desktop-wide widget background (transparent
-//     on/off, color, blur radius) and a global drop shadow (color,
-//     transparent on/off, opacity/offset/blur/spread) applied to every
-//     widget's card unless a widget overrides it.
+//     on/off, color, blur radius, plus a `force` flag — see below), a
+//     global widget corner radius (`cornerRadius.value` + its own
+//     `force` flag), and a global drop shadow (color, transparent on/off,
+//     opacity/offset/blur/spread) applied to every widget's card unless a
+//     widget overrides it.
 //   - PER-WIDGET entries, keyed by widget id: which `theme` name a widget
 //     is rendering with (a widget can ship more than one stylesheet
 //     variant, e.g. macos-clock's "light"/"dark"), its own `config`
@@ -19,6 +21,15 @@
 //     own theme page uses to preview/reposition without touching the
 //     host's own drag/layout persistence path at all).
 //
+//     A widget can override its own background (`config.background`,
+//     e.g. `{color, transparent}`) and/or corner radius
+//     (`config.cornerRadius`, e.g. `{value}`) — see
+//     getEffectiveWidgetTheme() below. `global.background.force` /
+//     `global.cornerRadius.force` (2026-07-25) let the user pin EVERY
+//     themeable widget to the global value regardless of what any widget
+//     asked for — when force is on, the per-widget override for that one
+//     property is ignored entirely (not merged, not blended).
+//
 // File format (`theme.json`):
 //
 //   {
@@ -27,7 +38,12 @@
 //       "background": {
 //         "transparent": true,
 //         "color": "#1e1e2e",
-//         "blur": 12
+//         "blur": 12,
+//         "force": false
+//       },
+//       "cornerRadius": {
+//         "value": 12,
+//         "force": false
 //       },
 //       "dropShadow": {
 //         "enabled": true,
@@ -43,7 +59,11 @@
 //     "widgets": {
 //       "clock": {
 //         "theme": "default",
-//         "config": { "accentColor": "#ffffff" },
+//         "config": {
+//           "accentColor": "#ffffff",
+//           "background": { "transparent": false, "color": "#202030" },
+//           "cornerRadius": { "value": 20 }
+//         },
 //         "position": { "x": 300, "y": 400, "monitor": 0 }
 //       }
 //     }
@@ -77,6 +97,19 @@ const DEFAULT_GLOBAL_THEME = Object.freeze({
         transparent: true,
         color: '#1e1e2e',
         blur: 0,
+        // 2026-07-25: when true, every themeable widget uses THIS
+        // background (transparent/color/blur) verbatim — any per-widget
+        // `config.background` override (see getEffectiveWidgetTheme())
+        // is ignored while this is on.
+        force: false,
+    }),
+    // 2026-07-25: widget card corner radius — separate from `background`
+    // (a widget can want a square, opaque card, or a rounded transparent
+    // one; radius and fill are independent choices) but with the same
+    // "force" pattern as background above.
+    cornerRadius: Object.freeze({
+        value: 12,
+        force: false,
     }),
     dropShadow: Object.freeze({
         enabled: true,
@@ -248,6 +281,7 @@ export class ThemeService {
         const g = this._cache.global ?? {};
         return {
             background: {...DEFAULT_GLOBAL_THEME.background, ...(g.background ?? {})},
+            cornerRadius: {...DEFAULT_GLOBAL_THEME.cornerRadius, ...(g.cornerRadius ?? {})},
             dropShadow: {...DEFAULT_GLOBAL_THEME.dropShadow, ...(g.dropShadow ?? {})},
         };
     }
@@ -306,10 +340,27 @@ export class ThemeService {
         this.save({
             global: {
                 background: {...current.background, ...(patch.background ?? {})},
+                cornerRadius: {...current.cornerRadius, ...(patch.cornerRadius ?? {})},
                 dropShadow: {...current.dropShadow, ...(patch.dropShadow ?? {})},
             },
             widgets: this._cache.widgets,
         });
+    }
+
+    /**
+     * @method getGlobalCornerRadiusCss
+     * @description Renders the global `cornerRadius` config to a
+     * `border-radius` St ad hoc CSS declaration, ready for
+     * `actor.set_style()`. A radius of 0 is a deliberate "square corners"
+     * choice, so it's still emitted (unlike background blur, which omits
+     * the declaration entirely at 0 since that's the CSS default anyway).
+     * @returns {string}
+     */
+    getGlobalCornerRadiusCss() {
+        const {cornerRadius} = this.getGlobalTheme();
+        if (!Number.isFinite(cornerRadius.value))
+            return '';
+        return `border-radius: ${Math.round(Math.max(0, cornerRadius.value))}px;`;
     }
 
     /**
@@ -379,21 +430,37 @@ export class ThemeService {
 
     /**
      * @method getEffectiveWidgetTheme
-     * @description Global background/dropShadow, overridden field-by-field
-     * by anything a widget's own `theme.json` entry sets under
-     * `config.background`/`config.dropShadow` — e.g. a widget can opt out
-     * of the global blur just for itself with
+     * @description Global background/cornerRadius/dropShadow, overridden
+     * field-by-field by anything a widget's own `theme.json` entry sets
+     * under `config.background`/`config.cornerRadius`/`config.dropShadow`
+     * — e.g. a widget can opt out of the global blur just for itself with
      * `{"config": {"background": {"blur": 0}}}` without having to restate
      * every other global field. Widgets that set nothing there just get
      * the global theme unchanged.
+     *
+     * `global.background.force` / `global.cornerRadius.force` (2026-07-25)
+     * short-circuit this per-widget merge entirely for that one property —
+     * while force is on, `config.background` / `config.cornerRadius` are
+     * not read at all, so a widget can't even partially override a forced
+     * property (e.g. keep the global color but change its own blur).
      * @param {string} widgetId
-     * @returns {{background: object, dropShadow: object}}
+     * @returns {{background: object, cornerRadius: object, dropShadow: object}}
      */
     getEffectiveWidgetTheme(widgetId) {
         const base = this.getGlobalTheme();
         const {config} = this.getWidgetTheme(widgetId);
+
+        const background = base.background.force
+            ? {...base.background}
+            : {...base.background, ...(config?.background ?? {})};
+
+        const cornerRadius = base.cornerRadius.force
+            ? {...base.cornerRadius}
+            : {...base.cornerRadius, ...(config?.cornerRadius ?? {})};
+
         return {
-            background: {...base.background, ...(config?.background ?? {})},
+            background,
+            cornerRadius,
             dropShadow: {...base.dropShadow, ...(config?.dropShadow ?? {})},
         };
     }
@@ -414,11 +481,13 @@ export class ThemeService {
     applyWidgetStyle(actor, widgetId) {
         if (!actor)
             return;
-        const {background, dropShadow} = this.getEffectiveWidgetTheme(widgetId);
+        const {background, cornerRadius, dropShadow} = this.getEffectiveWidgetTheme(widgetId);
         const alpha = background.transparent ? 0 : 1;
         const parts = [`background-color: ${hexToRgba(background.color, alpha)};`];
         if (Number.isFinite(background.blur) && background.blur > 0)
             parts.push(`-st-background-blur: ${Math.round(background.blur)}px;`);
+        if (Number.isFinite(cornerRadius.value))
+            parts.push(`border-radius: ${Math.round(Math.max(0, cornerRadius.value))}px;`);
 
         if (dropShadow.enabled && !dropShadow.transparent) {
             const shadowAlpha = clampUnit(dropShadow.opacity, DEFAULT_GLOBAL_THEME.dropShadow.opacity);

@@ -155,12 +155,15 @@ export default class WidgetCenterPreferences extends ExtensionPreferences {
     }
 
     /**
-     * @private Theme system (2026-07-21) — an Appearance page for editing
-     * `theme.json`'s GLOBAL background/drop-shadow settings (see
-     * development/docs/THEME_SYSTEM.md and lib/themeService.js). Per-widget
-     * overrides aren't exposed here yet — see themeService.js's "Not yet
-     * wired" section — this page only ever calls
-     * `ThemeService.setGlobalTheme()`.
+     * @private Theme system (2026-07-21, corner radius + force flags
+     * 2026-07-25) — an Appearance page for editing `theme.json`'s GLOBAL
+     * background/corner-radius/drop-shadow settings (see
+     * development/docs/THEME_SYSTEM.md and lib/themeService.js). This
+     * page only ever calls `ThemeService.setGlobalTheme()`; per-widget
+     * overrides are exposed on each themeable widget's own settings
+     * subpage instead (see `_appendWidgetAppearanceGroup()` below), and
+     * the "Force" switches here (`background.force`/`cornerRadius.force`)
+     * make those per-widget overrides get ignored entirely while on.
      *
      * Every row writes straight through on change (same "no separate Save
      * step" convention settingsSchemaUI.js's rows already use) —
@@ -221,18 +224,64 @@ export default class WidgetCenterPreferences extends ExtensionPreferences {
         });
         bgGroup.add(bgBlurRow);
 
+        const bgForceRow = new Adw.SwitchRow({
+            title: 'Force this background on every widget',
+            subtitle: 'Overrides any background color/transparency a widget sets for itself ' +
+                'in its own Appearance settings.',
+            active: !!current.background.force,
+        });
+        bgGroup.add(bgForceRow);
+
         const saveBackground = () => {
             theme.setGlobalTheme({
                 background: {
                     transparent: bgTransparentRow.active,
                     color: _rgbaToHex(bgColorButton.rgba),
                     blur: bgBlurRow.value,
+                    force: bgForceRow.active,
                 },
             });
         };
         bgTransparentRow.connect('notify::active', saveBackground);
         bgColorButton.connect('notify::rgba', saveBackground);
         bgBlurRow.connect('notify::value', saveBackground);
+        bgForceRow.connect('notify::active', saveBackground);
+
+        // --- Corner radius --------------------------------------------
+        const radiusGroup = new Adw.PreferencesGroup({
+            title: 'Widget corner radius',
+            description: 'Same opt-in rule as the background above.',
+        });
+        page.add(radiusGroup);
+
+        const radiusRow = new Adw.SpinRow({
+            title: 'Corner radius',
+            subtitle: '0\u201364 px',
+            adjustment: new Gtk.Adjustment({
+                value: current.cornerRadius.value ?? 12,
+                lower: 0, upper: 64, step_increment: 1,
+            }),
+        });
+        radiusGroup.add(radiusRow);
+
+        const radiusForceRow = new Adw.SwitchRow({
+            title: 'Force this corner radius on every widget',
+            subtitle: 'Overrides any corner radius a widget sets for itself ' +
+                'in its own Appearance settings.',
+            active: !!current.cornerRadius.force,
+        });
+        radiusGroup.add(radiusForceRow);
+
+        const saveCornerRadius = () => {
+            theme.setGlobalTheme({
+                cornerRadius: {
+                    value: radiusRow.value,
+                    force: radiusForceRow.active,
+                },
+            });
+        };
+        radiusRow.connect('notify::value', saveCornerRadius);
+        radiusForceRow.connect('notify::active', saveCornerRadius);
 
         // --- Drop shadow --------------------------------------------------
         const shadowGroup = new Adw.PreferencesGroup({
@@ -438,7 +487,7 @@ export default class WidgetCenterPreferences extends ExtensionPreferences {
             logError(new Error(`requested-widget-id "${requestedId}" not found among discovered widgets`));
             return;
         }
-        if (!widget.hasConfigJson && !widget.hasPrefs && !widget.hasSettingsSchema)
+        if (!widget.hasConfigJson && !widget.hasPrefs && !widget.hasSettingsSchema && !widget.metadata?.['themeable'])
             return; // no settings page to jump to for this widget
 
         GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
@@ -468,7 +517,7 @@ export default class WidgetCenterPreferences extends ExtensionPreferences {
             }
         });
 
-        if (widget.hasConfigJson || widget.hasPrefs || widget.hasSettingsSchema) {
+        if (widget.hasConfigJson || widget.hasPrefs || widget.hasSettingsSchema || widget.metadata?.['themeable']) {
             const settingsButton = new Gtk.Button({
                 icon_name: 'go-next-symbolic',
                 valign: Gtk.Align.CENTER,
@@ -535,7 +584,8 @@ export default class WidgetCenterPreferences extends ExtensionPreferences {
             const {config, errors} = readWidgetConfig(widget.path);
             if (config) {
                 const settingsHandle = WidgetSettings.load(widget.id, storage);
-                const prefsPage = buildConfigPage(config, settingsHandle, widget.name);
+                const prefsPage = buildConfigPage(config, settingsHandle, widget.name, widget.path);
+                this._appendWidgetAppearanceGroup(prefsPage, widget);
                 this._presentPrefsPage(window, widget, prefsPage);
                 return;
             }
@@ -555,8 +605,110 @@ export default class WidgetCenterPreferences extends ExtensionPreferences {
         // extension.js's WidgetLoader uses — the auto-generated rows
         // read/write it exactly like a hand-written prefs.js would.
         const settingsHandle = WidgetSettings.load(widget.id, storage);
-        const prefsPage = buildSettingsPage(widget.metadata.settings, settingsHandle, widget.name);
+        const prefsPage = buildSettingsPage(widget.metadata.settings ?? [], settingsHandle, widget.name);
+        this._appendWidgetAppearanceGroup(prefsPage, widget);
         this._presentPrefsPage(window, widget, prefsPage);
+    }
+
+    /**
+     * @private Theme system (2026-07-25) — appends a per-widget
+     * "Appearance" group (background color/transparent + corner radius)
+     * to any settings page for a widget that opts in via metadata.json's
+     * `"themeable": true`. Reads/writes `theme.json`'s per-widget
+     * `config.background` / `config.cornerRadius` via
+     * `ThemeService.getWidgetTheme()`/`setWidgetTheme()` — deliberately
+     * NOT `WidgetSettings`/`widgets/<id>.json`, since this is an
+     * APPEARANCE concern, not a behavior one (see themeService.js's file
+     * header and development/docs/SETTINGS_SPEC.md's "one file, one
+     * responsibility" principle).
+     *
+     * When the Appearance page's global "Force this ... on every widget"
+     * switch is on for a property, that property's row here is shown but
+     * disabled (greyed out, displaying the global value) — matches what
+     * `ThemeService.getEffectiveWidgetTheme()` actually does at render
+     * time: a per-widget value stored while forced would just be silently
+     * ignored, so letting the user edit it here would be misleading.
+     * @param {Adw.PreferencesPage} prefsPage
+     * @param {object} widget - discovered widget entry (needs .id,
+     *   .metadata.themeable).
+     */
+    _appendWidgetAppearanceGroup(prefsPage, widget) {
+        if (!widget.metadata?.['themeable'])
+            return;
+
+        const theme = new ThemeService();
+        theme.init();
+        const global = theme.getGlobalTheme();
+        const {config} = theme.getWidgetTheme(widget.id);
+        const widgetBackground = config.background ?? {};
+        const widgetCornerRadius = config.cornerRadius ?? {};
+
+        const group = new Adw.PreferencesGroup({
+            title: 'Appearance',
+            description: 'This widget\'s own background and corner radius. Set in the ' +
+                'Control Center\'s Appearance page, "Force" can override these for every widget.',
+        });
+        prefsPage.add(group);
+
+        const bgForced = !!global.background.force;
+        const transparentRow = new Adw.SwitchRow({
+            title: 'Transparent',
+            active: bgForced ? !!global.background.transparent : !!widgetBackground.transparent,
+            sensitive: !bgForced,
+            subtitle: bgForced ? 'Forced by the global Appearance settings.' : null,
+        });
+        group.add(transparentRow);
+
+        const colorRow = new Adw.ActionRow({
+            title: 'Background color',
+            sensitive: !bgForced,
+        });
+        const rgba = new Gdk.RGBA();
+        rgba.parse((bgForced ? global.background.color : widgetBackground.color) ?? '#1e1e2e');
+        const colorButton = new Gtk.ColorDialogButton({
+            dialog: new Gtk.ColorDialog(),
+            rgba,
+            valign: Gtk.Align.CENTER,
+            sensitive: !bgForced,
+        });
+        colorRow.add_suffix(colorButton);
+        colorRow.set_activatable_widget(colorButton);
+        group.add(colorRow);
+
+        if (!bgForced) {
+            const saveBackground = () => {
+                theme.setWidgetTheme(widget.id, {
+                    config: {
+                        background: {
+                            transparent: transparentRow.active,
+                            color: _rgbaToHex(colorButton.rgba),
+                        },
+                    },
+                });
+            };
+            transparentRow.connect('notify::active', saveBackground);
+            colorButton.connect('notify::rgba', saveBackground);
+        }
+
+        const radiusForced = !!global.cornerRadius.force;
+        const radiusRow = new Adw.SpinRow({
+            title: 'Corner radius',
+            subtitle: radiusForced ? 'Forced by the global Appearance settings.' : '0\u201364 px',
+            adjustment: new Gtk.Adjustment({
+                value: (radiusForced ? global.cornerRadius.value : widgetCornerRadius.value) ?? 12,
+                lower: 0, upper: 64, step_increment: 1,
+            }),
+            sensitive: !radiusForced,
+        });
+        group.add(radiusRow);
+
+        if (!radiusForced) {
+            radiusRow.connect('notify::value', () => {
+                theme.setWidgetTheme(widget.id, {
+                    config: {cornerRadius: {value: radiusRow.value}},
+                });
+            });
+        }
     }
 
     /**
@@ -627,6 +779,7 @@ export default class WidgetCenterPreferences extends ExtensionPreferences {
                 const settingsHandle = WidgetSettings.load(widget.id, storage);
                 const prefsInstance = new module.default(settingsHandle);
                 const prefsPage = prefsInstance.buildPrefsWidget();
+                this._appendWidgetAppearanceGroup(prefsPage, widget);
                 this._presentPrefsPage(window, widget, prefsPage);
             })
             .catch(e => {

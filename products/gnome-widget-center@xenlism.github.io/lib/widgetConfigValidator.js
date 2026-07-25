@@ -17,12 +17,20 @@ const FIELD_TYPES = new Set([
     'switch', 'checkbox', 'dropdown', 'radio',
     'spinbutton', 'slider',
     'colorpicker', 'fontpicker', 'iconpicker', 'filepicker', 'folderpicker',
-    'list', 'object',
+    'list', 'object', 'autocomplete',
 ]);
 
 const FORMATS = new Set([
     'email', 'url', 'hostname', 'ip', 'ipv4', 'ipv6', 'mac', 'uuid',
     'color', 'font', 'icon', 'file', 'folder', 'date', 'time', 'datetime',
+    // 'app' is an ITEM-level format only (field.item.format inside a
+    // fieldType:"list" field — see widgetConfigUI.js's _listRow()), never
+    // field.format on the field itself. Marks a string list whose items
+    // are installed .desktop application entries (e.g. a browser-chooser
+    // list), so the "+" control browses/scans a directory instead of a
+    // plain text entry. Deliberately NOT a separate field type — it's a
+    // format hint on an ordinary `dataType: "string"` list item.
+    'app',
 ]);
 
 /**
@@ -142,6 +150,17 @@ function validateField(field, fieldPath, siblingIds, errors) {
             errors.push({message: `${fieldPath}: "${field.fieldType}" requires a non-empty "options" array`});
     }
 
+    // "autocomplete" - see development/docs/WIDGET_API.md §6.4's Autocomplete
+    // Field section (Handover.md's design): the field only names WHICH
+    // exported function in the widget's own autocomplete.js to call, all
+    // business logic (the actual search) lives in that function, not here.
+    if (field.fieldType === 'autocomplete') {
+        if (typeof field.autocomplete !== 'string' || !field.autocomplete)
+            errors.push({message: `${fieldPath}: "autocomplete" requires a non-empty "autocomplete" (function name) string`});
+        if (field.fillsField !== undefined && (typeof field.fillsField !== 'string' || !field.fillsField))
+            errors.push({message: `${fieldPath}: "fillsField" must be a non-empty string when present`});
+    }
+
     if ((field.fieldType === 'spinbutton' || field.fieldType === 'slider')) {
         if (field.min !== undefined && typeof field.min !== 'number')
             errors.push({message: `${fieldPath}: "min" must be a number`});
@@ -152,11 +171,22 @@ function validateField(field, fieldPath, siblingIds, errors) {
     }
 
     if (field.fieldType === 'list') {
-        if (!field.item || typeof field.item !== 'object')
+        if (!field.item || typeof field.item !== 'object') {
             errors.push({message: `${fieldPath}: "list" requires an "item" schema`});
-        else if (field.item.dataType === 'object') {
-            if (!field.item.properties || typeof field.item.properties !== 'object')
-                errors.push({message: `${fieldPath}.item: object item requires "properties"`});
+        } else {
+            if (field.item.dataType !== undefined && !DATA_TYPES.has(field.item.dataType))
+                errors.push({message: `${fieldPath}.item: invalid "dataType" "${field.item.dataType}"`});
+            if (field.item.fieldType !== undefined && !FIELD_TYPES.has(field.item.fieldType))
+                errors.push({message: `${fieldPath}.item: invalid "fieldType" "${field.item.fieldType}"`});
+            if (field.item.dataType === 'object') {
+                if (!field.item.properties || typeof field.item.properties !== 'object')
+                    errors.push({message: `${fieldPath}.item: object item requires "properties"`});
+            }
+            if ((field.item.fieldType === 'dropdown' || field.item.fieldType === 'radio') &&
+                (!Array.isArray(field.item.options) || field.item.options.length === 0))
+                errors.push({message: `${fieldPath}.item: "${field.item.fieldType}" requires a non-empty "options" array`});
+            if (field.item.format === 'app' && field.item.dataType !== 'string')
+                errors.push({message: `${fieldPath}.item: format "app" requires dataType "string" (stores a .desktop path)`});
         }
         if (field.minItems !== undefined && field.maxItems !== undefined && field.minItems > field.maxItems)
             errors.push({message: `${fieldPath}: "minItems" must be <= "maxItems"`});
