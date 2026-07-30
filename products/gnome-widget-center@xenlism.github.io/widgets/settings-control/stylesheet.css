@@ -1,0 +1,31 @@
+/* Not loaded by the host - see SKILL.md §2. Kept for documentation/
+ * class-name reference only; the real styling is applied inline in
+ * widget.js via actor.set_style(). */
+
+.settings-control-widget-root {
+    /* background is rgba(color, opacity) and border-radius come from
+     * settings in widget.js (defaults: #ffffff @ 0.85 opacity, 18px) */
+}
+
+.settings-control-widget-button {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-radius: 50%; /* circular - actual value set inline as BUTTON_SIZE/2 */
+}
+
+.settings-control-widget-button:hover {
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+.settings-control-widget-button St.Icon {
+    /* color is set from settings in widget.js - iconOnColor (default
+     * #3584e4) when that toggle is on, iconOffColor (default #9a9996)
+     * when it's off */
+}
+
+.settings-control-widget-tooltip {
+    background-color: rgba(20, 20, 20, 0.95);
+    color: #ffffff;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 6px;
+}

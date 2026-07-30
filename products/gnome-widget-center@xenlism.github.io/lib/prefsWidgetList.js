@@ -13,8 +13,25 @@
 // discover() itself only ever touches metadata.json via Gio.File, so it's
 // exactly as safe to run here as it is in extension.js.
 
+import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
+
 import {WidgetLoader} from './widgetLoader.js';
 import {widgetHasConfigJson} from './widgetConfigReader.js';
+
+/**
+ * @param {string} widgetPath - absolute path to the widget's folder.
+ * @returns {boolean} whether `settings.js` exists on disk for this
+ *   widget, without importing it — cheap existence check, same pattern
+ *   as widgetHasConfigJson() above. Used to decide `hasSettingsJs` for
+ *   the widget list and _openWidgetPrefs()'s fallback chain (see
+ *   WIDGET_API.md §6.3 — the `gwc.settings` fluent-builder path,
+ *   wired up 2026-07-28).
+ */
+function widgetHasSettingsJs(widgetPath) {
+    const settingsJsPath = GLib.build_filenamev([widgetPath, 'settings.js']);
+    return Gio.File.new_for_path(settingsJsPath).query_exists(null);
+}
 
 export class PrefsWidgetList {
     /**
@@ -30,7 +47,8 @@ export class PrefsWidgetList {
      * @returns {{
      *   ok: Array<{id: string, name: string, description: string,
      *              hasPrefs: boolean, hasSettingsSchema: boolean,
-     *              hasConfigJson: boolean, metadata: object, path: string}>,
+     *              hasConfigJson: boolean, hasSettingsJs: boolean,
+     *              metadata: object, path: string}>,
      *   errors: Array<{id: string, path: string, reason: string}>
      * }}
      *   `ok` only contains widgets whose metadata.json (and, if present,
@@ -53,6 +71,7 @@ export class PrefsWidgetList {
             hasPrefs: typeof metadata.prefs === 'string' && metadata.prefs.length > 0,
             hasSettingsSchema: Array.isArray(metadata.settings) && metadata.settings.length > 0,
             hasConfigJson: widgetHasConfigJson(path),
+            hasSettingsJs: widgetHasSettingsJs(path),
             metadata,
             path,
         }));

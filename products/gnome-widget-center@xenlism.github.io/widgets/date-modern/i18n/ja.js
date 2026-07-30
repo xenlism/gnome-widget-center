@@ -1,0 +1,38 @@
+// i18n/ja.js — widgets/date-modern (ja)
+// Auto-generated translation table; keys mirror this widget's
+// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
+// canonical English source every other locale file mirrors).
+
+export default {
+    "meta.name": "日付（モダン）",
+    "meta.description": "縦積み日付カード — 月・曜日・日をそれぞれ別の行に表示。",
+    "tab.general.label": "日付（モダン）",
+    "tab.general.description": "縦積み日付カードの設定",
+    "group.font.label": "フォント",
+    "group.font.description": "月・曜日・日はそれぞれ個別のフォントとサイズを持ちます。",
+    "field.monthFont.label": "月のフォント",
+    "field.monthFont.description": "月（例：Jul）のフォントとサイズ",
+    "field.dowFont.label": "曜日のフォント",
+    "field.dowFont.description": "曜日略称（例：TU）のフォントとサイズ",
+    "field.dayFont.label": "日のフォント",
+    "field.dayFont.description": "日付数字（01～31）のフォントとサイズ",
+    "group.colors.label": "色",
+    "group.colors.description": "月・曜日・日はそれぞれ個別の色を持ちます。",
+    "field.colorMonth.label": "月の色",
+    "field.colorMonth.description": "月テキストの色",
+    "field.colorDow.label": "曜日の色",
+    "field.colorDow.description": "曜日テキストの色",
+    "field.colorDay.label": "日の色",
+    "field.colorDay.description": "日（日付）の色",
+    "field.cardColor.label": "カードの背景色",
+    "field.cardColor.description": "日付カードの背景色",
+    "group.card.label": "カードの形状",
+    "field.cornerRadius.label": "角丸の半径",
+    "field.cornerRadius.description": "日付カードの角の丸み",
+    "group.launch.label": "クリックで起動",
+    "group.launch.description": "日付カードをクリックすると（Superキーを押さずに）選択したアプリが起動します。",
+    "field.launchOnClick.label": "クリック時にアプリを起動",
+    "field.launchOnClick.description": "下でアプリを選択する必要があります",
+    "field.desktopFilePath.label": "起動するアプリ",
+    "field.desktopFilePath.description": "クリック時に起動するアプリケーション（.desktopファイル）",
+};

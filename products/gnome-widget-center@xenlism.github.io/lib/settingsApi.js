@@ -38,11 +38,14 @@
  *
  * This file has NO GTK/Adw imports on purpose — it's pure data, so it can be
  * safely imported both from prefs.js (GTK4 process) and from unit tests.
+ *
+ * 2026-07-28: converted from the legacy `imports.gi`/`imports.lib.*` global
+ * style to plain ESM (`import`/`export`) so this can actually be imported
+ * by prefs.js — see WIDGET_API.md §6.3, this was previously "documented
+ * but dormant" for exactly this reason.
  */
 
-'use strict';
-
-const VALID_TYPES = [
+export const VALID_TYPES = [
     'font', 'color', 'date', 'boolean', 'option',
     'number', 'range', 'text', 'action', 'icon', 'multiOption',
 ];
@@ -68,7 +71,7 @@ const VALID_TYPES = [
  * @property {string} [hint] - optional secondary/subtitle text in the UI
  */
 
-class WidgetSettingsSchema {
+export class WidgetSettingsSchema {
     /**
      * @param {string} widgetId - unique widget identifier, e.g. 'clock-widget'
      */
@@ -351,7 +354,7 @@ class WidgetSettingsSchema {
  * @param {string} widgetId
  * @returns {{settings: WidgetSettingsSchema}}
  */
-function createGwcContext(widgetId) {
+export function createGwcContext(widgetId) {
     return { settings: new WidgetSettingsSchema(widgetId) };
 }
 
@@ -360,7 +363,7 @@ function createGwcContext(widgetId) {
  * or when loading third-party widgets).
  * @param {*} schema
  */
-function validateSchema(schema) {
+export function validateSchema(schema) {
     if (!schema || !Array.isArray(schema.fields)) {
         throw new Error('Invalid settings schema: missing fields[]');
     }
@@ -374,10 +377,3 @@ function validateSchema(schema) {
     }
     return true;
 }
-
-var GwcSettingsApi = {
-    WidgetSettingsSchema,
-    createGwcContext,
-    validateSchema,
-    VALID_TYPES,
-};

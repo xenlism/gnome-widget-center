@@ -1,14 +1,20 @@
 // products/extension/lib/editModeDragController.js
 //
 // Task 13 — Widget Drag & Drop. Distinct from task 04's DragController
-// (Super+drag in Normal mode, no grid) — see
+// (Super+drag in Normal mode, no collision/margin handling at all) — see
 // development/tasks/13-widget-drag-drop.md "ต่างจาก 04-drag-reposition.md
 // อย่างไร" for the full reasoning already recorded there. Summary: this
 // controller only starts a drag while WidgetEditMode.isEditing(widgetId)
-// is true (task 12), snaps to the grid via GridEngine (task 14) on drop,
-// and shares task 04's own persistence call
+// is true (task 12), and shares task 04's own persistence call
 // (StorageService.updateWidgetPosition()) — no new storage format, no new
 // IPC, same single-process design as everything else in this codebase.
+//
+// 2026-07-28 — grid removed ("เอา grid ออก"): dropped the old snap-to-16px
+// grid entirely. LayoutEngine (renamed from GridEngine, task 14) now only
+// keeps a widget `edgeMargin` px from the monitor edge and, while its
+// user-configurable `preventOverlap` is on, `spacing` px from every other
+// widget — searched for in continuous pixel space, not grid cells. See
+// layoutEngine.js's file header for the full behavior + defaults.
 //
 // 2026-07-19 fix — armed on the BACK actor, not the front one (see
 // 2026-07-21 update below for where the listener actually lives now):
@@ -60,7 +66,6 @@
 
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
-import {MonitorLockManager} from './monitorLockManager.js';
 
 export class EditModeDragController {
     /**
@@ -68,17 +73,18 @@ export class EditModeDragController {
      *   during the drag exactly like task 04's controller does.
      * @param {StorageService} storageService - task 03's file layer; same
      *   single write-on-drop discipline as task 04.
-     * @param {GridEngine} gridEngine - task 14; used for the drop snap +
-     *   collision-avoidance search, and for live placeholder feedback
-     *   during the drag.
+     * @param {LayoutEngine} layoutEngine - task 14; used for the
+     *   edge-margin clamp, collision-avoidance search, and live
+     *   placeholder feedback during the drag. No grid snapping (removed
+     *   2026-07-28) — see layoutEngine.js's file header.
      * @param {WidgetEditMode} editMode - task 12; gates whether a drag is
      *   even allowed to start, and is told about DRAGGING<->EDIT
      *   transitions via enterDragging()/exitDragging().
      */
-    constructor(widgetLayer, storageService, gridEngine, editMode, logger = null) {
+    constructor(widgetLayer, storageService, layoutEngine, editMode, logger = null) {
         this._layer = widgetLayer;
         this._storage = storageService;
-        this._grid = gridEngine;
+        this._layout = layoutEngine;
         this._editMode = editMode;
         // Optional (lib/logger.js) — debug() is a no-op if omitted.
         this._logger = logger ?? {debug() {}, warn() {}, error() {}};
@@ -101,8 +107,8 @@ export class EditModeDragController {
     /**
      * @method setOthersProvider
      * @description Wires the collision-detection data source. Must be
-     * called once before any drag can complete a grid-aware drop; without
-     * it, drops still work but skip collision avoidance entirely (treated
+     * called once before any drag can honor `preventOverlap`; without it,
+     * drops still work but skip collision avoidance entirely (treated
      * as "no other widgets" - degrades gracefully rather than throwing).
      * @param {(monitorIndex:number, excludeId:string) => Array<{id:string,x:number,y:number,width:number,height:number}>} provider
      */
@@ -259,12 +265,16 @@ export class EditModeDragController {
             const newX = this._drag.startX + (stageX - this._drag.grabX);
             const newY = this._drag.startY + (stageY - this._drag.grabY);
 
-            // Task 13: Monitor Lock - clamp position to current monitor so the
-            // widget can never be dragged off-screen or across the monitor edge.
-            const locked = MonitorLockManager.clamp(this._drag.monitorIndex, newX, newY, this._drag.width, this._drag.height);
+            // Task 13 + LayoutEngine's edgeMargin - clamp position to stay
+            // inside the current monitor, `edgeMargin` px from every edge,
+            // so the widget can never be dragged into the forbidden strip
+            // along the screen edge (see layoutEngine.js file header).
+            const bounds = this._monitorBoundsFor(this._drag.monitorIndex);
+            const locked = this._layout.clampToBounds(newX, newY, this._drag.width, this._drag.height, bounds);
 
-            // Preview: unsnapped, follows the pointer exactly (in-memory
-            // only, same as task 04 - never touches disk per motion event).
+            // Preview: follows the pointer exactly (minus the edge-margin
+            // clamp above) - in-memory only, same as task 04 - never
+            // touches disk per motion event, and no grid snap (removed).
             this._layer.setWidgetPosition(this._drag.widgetId, locked.x, locked.y);
 
             // The front actor moved above is what WidgetLayer/StorageService
@@ -273,13 +283,13 @@ export class EditModeDragController {
             // frame so the user actually sees the widget follow the pointer.
             this._drag.backActor.set_position(locked.x, locked.y);
 
-            // Placeholder: shows the grid cell it would actually land in if
-            // released right now, including collision avoidance, so the user
-            // sees the real drop target rather than just a raw grid snap
-            // that might overlap another widget.
+            // Placeholder: shows exactly where it would land if released
+            // right now, including collision avoidance (when preventOverlap
+            // is on), so the user sees the real drop target rather than
+            // just the raw pointer position that might overlap another
+            // widget or sit closer than `spacing` px to one.
             const others = this._othersFor(this._drag);
-            const bounds = this._monitorBoundsFor(this._drag.monitorIndex);
-            const target = this._grid.findNearestFreeCell(
+            const target = this._layout.findFreePosition(
                 locked.x, locked.y, this._drag.width, this._drag.height,
                 bounds, others, this._drag.widgetId);
 
@@ -308,7 +318,7 @@ export class EditModeDragController {
         const [currentX, currentY] = actor.get_position();
         const others = this._othersFor(this._drag);
         const bounds = this._monitorBoundsFor(monitorIndex);
-        const target = this._grid.findNearestFreeCell(
+        const target = this._layout.findFreePosition(
             currentX, currentY, width, height, bounds, others, widgetId);
 
         // Single write for the whole drag, exactly like task 04's own
@@ -345,7 +355,7 @@ export class EditModeDragController {
         return this._getOthersOnMonitor?.(drag.monitorIndex, drag.widgetId) ?? [];
     }
 
-    /** @private monitor size for GridEngine's bounds argument — reads
+    /** @private monitor size for LayoutEngine's bounds argument — reads
      * straight off the layer's own container rather than duplicating
      * MonitorWatcher's monitor list here. Falls back to a generous
      * default if the container can't be found (shouldn't happen in

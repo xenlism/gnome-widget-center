@@ -1,0 +1,15 @@
+{
+  "id": "circles-year",
+  "name": "Circles Year",
+  "description": "1x1 ring gauge showing the current year floating in the center, with a progress ring for how far through the year today's date is (day-of-year / days-in-year).",
+  "version": "1.0.0",
+  "author": "GNOME Widget Center",
+  "api-version": 1,
+  "entry": "widget.js",
+  "block-type": "1x1",
+  "default-position": {
+    "x": 40,
+    "y": 40,
+    "monitor": 0
+  }
+}

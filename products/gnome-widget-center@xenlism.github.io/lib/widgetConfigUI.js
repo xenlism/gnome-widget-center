@@ -41,9 +41,25 @@ import GLib from 'gi://GLib';
  *   it's where that field's `autocomplete.js` is dynamically imported
  *   from (Handover.md's Autocomplete Field design). Safe to omit for a
  *   config with no autocomplete fields.
+ * @param {Object} [translations] - this widget's i18n table for the
+ *   currently-selected locale (from i18n/index.js's loadTranslations() —
+ *   see prefs.js's caller for where this gets resolved before
+ *   buildConfigPage() is invoked, since the dynamic import() that loads
+ *   it is async and everything in here is built synchronously). Keys are
+ *   "tab.<id>.label", "group.<id>.label", "field.<id>.label",
+ *   "field.<id>.description", "field.<id>.option.<value>", etc., 1:1
+ *   with config.json's own ids — see gen/generate_i18n.py's
+ *   collect_widget_keys(). Missing keys (locale file doesn't cover a
+ *   string yet, or no i18n/ folder at all) silently fall back to
+ *   config.json's own English text — this param is entirely optional.
  * @returns {Adw.PreferencesPage}
  */
-export function buildConfigPage(config, settingsProxy, title, widgetPath) {
+export function buildConfigPage(config, settingsProxy, title, widgetPath, translations = {}) {
+    const tr = (key, fallback) => {
+        const value = translations[key];
+        return typeof value === 'string' && value.length > 0 ? value : fallback;
+    };
+
     const page = new Adw.PreferencesPage({title});
     const multiTab = config.tabs.length > 1;
 
@@ -94,15 +110,30 @@ export function buildConfigPage(config, settingsProxy, title, widgetPath) {
     };
 
     for (const tab of config.tabs) {
+        const tabLabel = tr(`tab.${tab.id}.label`, tab.label);
+
         for (const group of tab.groups) {
+            const groupLabel = tr(`group.${group.id}.label`, group.label);
+            const groupDescription = tr(`group.${group.id}.description`, group.description || '');
+
             const adwGroup = new Adw.PreferencesGroup({
-                title: multiTab ? `${tab.label} — ${group.label}` : group.label,
-                description: group.description || '',
+                title: multiTab ? `${tabLabel} — ${groupLabel}` : groupLabel,
+                description: groupDescription,
             });
             page.add(adwGroup);
 
             for (const field of group.fields) {
-                const row = _buildRow(field, settingsProxy, notifyChange, autocompleteCtx);
+                const translatedField = {
+                    ...field,
+                    label: tr(`field.${field.id}.label`, field.label),
+                    description: tr(`field.${field.id}.description`, field.description || ''),
+                    options: field.options?.map(opt => ({
+                        ...opt,
+                        label: tr(`field.${field.id}.option.${opt.value}`, opt.label),
+                    })),
+                };
+
+                const row = _buildRow(translatedField, settingsProxy, notifyChange, autocompleteCtx);
                 adwGroup.add(row);
 
                 if (field.visibleIf || field.enabledIf || field.dependsOn) {
@@ -405,7 +436,23 @@ function _autocompleteRow(field, current, set, ctx) {
         });
     });
 
-    row.connect('apply', () => validate());
+    // Bug fix (2026-07-28): previously only validate() ran here, so the
+    // ONLY way to actually persist a value was clicking a suggestion out
+    // of the popover (see runSearch()'s `itemRow.connect('activated', ...)`
+    // above) — pressing Enter, tabbing away, or pasting a value that
+    // never turned into a click-through selection left `settingsProxy`
+    // untouched, so the field silently reverted to its old/default value
+    // the next time this page was opened, even though the entry visibly
+    // showed what the user typed. Now Enter also commits the raw typed
+    // text (same rule `_textRow()` above already uses: only if it passes
+    // `field.pattern` validation, so a lat/lon-style field like "Location"
+    // can be saved by pasting coordinates directly and pressing Enter,
+    // without requiring a round trip through the search/select flow at
+    // all).
+    row.connect('apply', () => {
+        if (validate())
+            set(row.text);
+    });
 
     // So a SIBLING autocomplete field's selection can update our own
     // displayed text (see this function's header comment).
@@ -423,8 +470,34 @@ function _autocompleteRow(field, current, set, ctx) {
 // Adw.ActionRow's title/subtitle with a Gtk.TextView in a bordered
 // Gtk.ScrolledWindow suffix — the same "row title + custom widget"
 // pattern the color/font pickers below already use.
+// Bug fix (2026-07-26): was an Adw.ActionRow with the Gtk.TextView added
+// via `row.add_suffix(scroller)` - add_suffix() places its widget INLINE
+// next to the title/subtitle on the same horizontal line, which is wrong
+// for a multi-line text area (it should sit on its own line below the
+// label, with room to actually show multiple lines). Rebuilt on the same
+// "Adw.PreferencesRow wrapping a vertical Gtk.Box" pattern _listRow()
+// uses: label + description stacked on top, then the control below,
+// full width.
 function _textareaRow(field, current, set) {
-    const row = new Adw.ActionRow({title: field.label, subtitle: field.description || ''});
+    const outerRow = new Adw.PreferencesRow({activatable: false});
+    const container = new Gtk.Box({
+        orientation: Gtk.Orientation.VERTICAL, spacing: 8,
+        margin_top: 12, margin_bottom: 12, margin_start: 12, margin_end: 12,
+    });
+    outerRow.set_child(container);
+
+    if (field.label || field.description) {
+        const header = new Gtk.Box({orientation: Gtk.Orientation.VERTICAL, spacing: 2});
+        if (field.label)
+            header.append(new Gtk.Label({label: field.label, css_classes: ['heading'], halign: Gtk.Align.START, xalign: 0}));
+        if (field.description) {
+            header.append(new Gtk.Label({
+                label: field.description, css_classes: ['caption', 'dim-label'],
+                halign: Gtk.Align.START, xalign: 0, wrap: true,
+            }));
+        }
+        container.append(header);
+    }
 
     const buffer = new Gtk.TextBuffer({text: String(current ?? '')});
     const textView = new Gtk.TextView({
@@ -435,18 +508,16 @@ function _textareaRow(field, current, set) {
     const scroller = new Gtk.ScrolledWindow({
         child: textView,
         min_content_height: 80,
-        min_content_width: 240,
         hscrollbar_policy: Gtk.PolicyType.NEVER,
         css_classes: ['card'],
-        valign: Gtk.Align.CENTER,
+        hexpand: true,
     });
     buffer.connect('changed', () => {
         set(buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), false));
     });
 
-    row.add_suffix(scroller);
-    row.set_activatable(false);
-    return row;
+    container.append(scroller);
+    return outerRow;
 }
 
 function _passwordRow(field, current, set) {
@@ -505,11 +576,11 @@ function _spinRow(field, current, set) {
     const hasBounds = typeof field.min === 'number' && typeof field.max === 'number';
     const step = field.step ?? 1;
     const adjustment = new Gtk.Adjustment({
-        value: current,
         lower: hasBounds ? field.min : -Number.MAX_SAFE_INTEGER,
         upper: hasBounds ? field.max : Number.MAX_SAFE_INTEGER,
         step_increment: step,
         page_increment: step * 4,
+        value: current,
     });
     const row = new Adw.SpinRow({
         title: field.label,
@@ -529,10 +600,10 @@ function _sliderRow(field, current, set) {
     const scale = new Gtk.Scale({
         orientation: Gtk.Orientation.HORIZONTAL,
         adjustment: new Gtk.Adjustment({
-            value: current ?? min,
             lower: min,
             upper: max,
             step_increment: field.step ?? 1,
+            value: current ?? min,
         }),
         draw_value: Boolean(field.showValue ?? true),
         hexpand: true,
@@ -557,11 +628,35 @@ function _colorRow(field, current, set) {
         rgba,
         valign: Gtk.Align.CENTER,
     });
-    button.connect('notify::rgba', () => set(button.rgba.to_string()));
+    // Bug fix (2026-07-26): Gdk.RGBA.to_string() returns a CSS
+    // "rgb(r,g,b)"/"rgba(r,g,b,a)" string, NOT "#rrggbb" — every widget
+    // declaring a colorpicker field was actually saving that format.
+    // Fields consumed as raw CSS (e.g. weather-minimal's
+    // `background-color: ${cardColor};`) rendered fine anyway since
+    // rgb()/rgba() is valid CSS too, which is exactly why this went
+    // unnoticed. But weather-minimal's iconColor is consumed by
+    // _getColoredIconFile()'s plain string-replace of an SVG's literal
+    // `fill="#000000"`, which needs an actual "#rrggbb" — stripping the
+    // non-hex characters out of "rgb(26,26,26)" left a hex-digit string
+    // with no leading "#" (e.g. "262626" with nothing to anchor it),
+    // producing an invalid fill value the icon silently ignored. Saving
+    // real hex here fixes every colorpicker field's on-disk value, not
+    // just this one call site.
+    button.connect('notify::rgba', () => set(_rgbaToHex(button.rgba)));
 
     row.add_suffix(button);
     row.set_activatable_widget(button);
     return row;
+}
+
+/** @private Gdk.RGBA -> "#rrggbb" (or "#rrggbbaa" if alpha < 1). See
+ * _colorRow()'s bug-fix note above for why this exists instead of just
+ * calling rgba.to_string(). */
+function _rgbaToHex(rgba) {
+    const channel = value => Math.round(Math.min(1, Math.max(0, value)) * 255)
+        .toString(16).padStart(2, '0');
+    const hex = `#${channel(rgba.red)}${channel(rgba.green)}${channel(rgba.blue)}`;
+    return rgba.alpha < 1 ? `${hex}${channel(rgba.alpha)}` : hex;
 }
 
 // `fontpicker` — Gtk.FontDialogButton (GTK 4.10+'s replacement for the
@@ -744,7 +839,33 @@ function _objectRow(field, current, set) {
 // there's no single input that could represent a whole object's worth of
 // fields at once.
 function _listRow(field, current, set) {
-    const row = new Adw.ExpanderRow({title: field.label, subtitle: field.description || ''});
+    // Bug fix / redesign (2026-07-26): rebuilt on a real Gtk.ListBox
+    // instead of Adw.ExpanderRow. Each item row now carries its own
+    // delete button directly (including object items, via
+    // Adw.ExpanderRow.add_action() - no more separate "Remove this item"
+    // row nested underneath), and the "+" / add control lives BELOW the
+    // ListBox as its own widget, not mixed in as just another row inside
+    // it the way the previous version rendered it.
+    const outerRow = new Adw.PreferencesRow({activatable: false});
+    const container = new Gtk.Box({
+        orientation: Gtk.Orientation.VERTICAL, spacing: 8,
+        margin_top: 12, margin_bottom: 12, margin_start: 12, margin_end: 12,
+    });
+    outerRow.set_child(container);
+
+    if (field.label || field.description) {
+        const header = new Gtk.Box({orientation: Gtk.Orientation.VERTICAL, spacing: 2});
+        if (field.label)
+            header.append(new Gtk.Label({label: field.label, css_classes: ['heading'], halign: Gtk.Align.START, xalign: 0}));
+        if (field.description) {
+            header.append(new Gtk.Label({
+                label: field.description, css_classes: ['caption', 'dim-label'],
+                halign: Gtk.Align.START, xalign: 0, wrap: true,
+            }));
+        }
+        container.append(header);
+    }
+
     let items = Array.isArray(current) ? [...current] : [];
     const isApplicationList = field.item?.dataType !== 'object' && field.item?.format === 'app';
 
@@ -757,12 +878,49 @@ function _listRow(field, current, set) {
         return true;
     });
 
-    const rerender = () => {
-        row.remove_all?.();
-        items.forEach((item, index) => row.add_row(_buildItemRow(item, index)));
-        if (field.addable !== false)
-            row.add_row(isApplicationList ? _applicationAddRow() : _staticAddRow());
+    const listBox = new Gtk.ListBox({selection_mode: Gtk.SelectionMode.NONE});
+    listBox.add_css_class('boxed-list');
+    container.append(listBox);
+
+    // The add control sits in its own box AFTER (below) the ListBox -
+    // never appended into listBox itself.
+    const addContainer = new Gtk.Box({orientation: Gtk.Orientation.HORIZONTAL, halign: Gtk.Align.END, margin_top: 4});
+    container.append(addContainer);
+
+    const _clearBox = box => {
+        let child;
+        while ((child = box.get_first_child()))
+            box.remove(child);
     };
+
+    const rerender = () => {
+        _clearBox(listBox);
+        items.forEach((item, index) => {
+            listBox.append(_buildItemRow(item, index));
+        });
+
+        _clearBox(addContainer);
+        if (field.addable !== false)
+            addContainer.append(isApplicationList ? _applicationAddWidget() : _staticAddWidget());
+    };
+
+    /** @private one delete button, wired the same way for every item
+     * kind - kept in one place so "each row gets its own delete button"
+     * (rather than a separate row/dialog) can't drift between kinds. */
+    function _makeRemoveButton(index, extraCssClass) {
+        const removeButton = new Gtk.Button({
+            icon_name: 'user-trash-symbolic', valign: Gtk.Align.CENTER, css_classes: ['flat'],
+        });
+        if (extraCssClass)
+            removeButton.add_css_class(extraCssClass);
+        removeButton.set_sensitive(withinBounds(-1));
+        removeButton.connect('clicked', () => {
+            items = items.filter((_, i) => i !== index);
+            set([...items]);
+            rerender();
+        });
+        return removeButton;
+    }
 
     function _buildItemRow(item, index) {
         const itemSchema = field.item;
@@ -777,7 +935,7 @@ function _listRow(field, current, set) {
                 set([...items]);
             });
             if (field.removable !== false)
-                expander.add_row(_removeRow(index));
+                expander.add_action(_makeRemoveButton(index));
             return expander;
         }
 
@@ -796,16 +954,8 @@ function _listRow(field, current, set) {
             },
         });
         const itemRow = _buildRow(primField, liveItem, () => {});
-        if (field.removable !== false && itemRow.add_suffix) {
-            const removeButton = new Gtk.Button({icon_name: 'list-remove-symbolic', valign: Gtk.Align.CENTER, css_classes: ['flat']});
-            removeButton.set_sensitive(withinBounds(-1));
-            removeButton.connect('clicked', () => {
-                items = items.filter((_, i) => i !== index);
-                set([...items]);
-                rerender();
-            });
-            itemRow.add_suffix(removeButton);
-        }
+        if (field.removable !== false && itemRow.add_suffix)
+            itemRow.add_suffix(_makeRemoveButton(index));
         return itemRow;
     }
 
@@ -838,28 +988,30 @@ function _listRow(field, current, set) {
             icon.set_from_icon_name('application-x-executable-symbolic');
         itemRow.add_prefix(icon);
 
-        if (field.removable !== false) {
-            const removeButton = new Gtk.Button({icon_name: 'user-trash-symbolic', valign: Gtk.Align.CENTER, css_classes: ['flat']});
-            removeButton.add_css_class('error');
-            removeButton.set_sensitive(withinBounds(-1));
-            removeButton.connect('clicked', () => {
-                items = items.filter((_, i) => i !== index);
-                set([...items]);
-                rerender();
-            });
-            itemRow.add_suffix(removeButton);
-        }
+        if (field.removable !== false)
+            itemRow.add_suffix(_makeRemoveButton(index, 'error'));
 
         return itemRow;
     }
 
-    // "+" (browse one `.desktop` file) and a scan/auto-detect button
-    // (bulk-add every not-yet-present `.desktop` entry in
-    // item.scanDirectory, optionally narrowed by item.scanPattern).
-    function _applicationAddRow() {
+    // "+" (browse one `.desktop` file) - a plain Gtk.Box, appended
+    // directly below the ListBox.
+    //
+    // 2026-07-29 removed the scan/auto-detect button that used to sit
+    // next to this ("we don't need auto scan button"): it bulk-added
+    // EVERY not-yet-present `.desktop` entry under item.scanDirectory in
+    // one click with no regard for field.maxItems (e.g. a folder widget
+    // capped at 4 apps could end up with 100+), and once a list was over
+    // its max, withinBounds(-1) evaluated false for every remaining
+    // item's remove button (removing one still leaves you over the
+    // limit) - so every row's trash icon went permanently insensitive,
+    // the "can't remove due to overflow" bug. Removing the scan button
+    // removes the only path into that state; _scanApplications() below
+    // is now unused but left in place in case a future bounded version
+    // of this wants it back.
+    function _applicationAddWidget() {
         const scanDirectory = field.item.scanDirectory ?? '/usr/share/applications';
-        const addRow = new Adw.ActionRow({title: 'Add application', subtitle: scanDirectory});
-        const buttonBox = new Gtk.Box({orientation: Gtk.Orientation.HORIZONTAL, spacing: 6, valign: Gtk.Align.CENTER});
+        const box = new Gtk.Box({orientation: Gtk.Orientation.HORIZONTAL, spacing: 6, valign: Gtk.Align.CENTER});
 
         const addButton = new Gtk.Button({
             icon_name: 'list-add-symbolic', valign: Gtk.Align.CENTER, css_classes: ['flat'],
@@ -893,30 +1045,15 @@ function _listRow(field, current, set) {
             });
         });
 
-        const scanButton = new Gtk.Button({
-            icon_name: 'find-location-symbolic', valign: Gtk.Align.CENTER, css_classes: ['flat'],
-            tooltip_text: `Scan ${scanDirectory} for matching apps`,
-        });
-        scanButton.connect('clicked', () => {
-            const found = _scanApplications(scanDirectory, field.item.scanPattern);
-            const additions = found.filter(path => !items.includes(path));
-            if (additions.length === 0)
-                return;
-            items = [...items, ...additions];
-            set([...items]);
-            rerender();
-        });
-
-        buttonBox.append(addButton);
-        buttonBox.append(scanButton);
-        addRow.add_suffix(buttonBox);
-        return addRow;
+        box.append(addButton);
+        return box;
     }
 
     // Every other item kind: an inline input control for the value to
-    // add, sitting directly to the left of "+".
-    function _staticAddRow() {
-        const addRow = new Adw.ActionRow({title: 'Add item'});
+    // add, sitting directly to the left of "+" - a plain Gtk.Box,
+    // appended directly below the ListBox.
+    function _staticAddWidget() {
+        const box = new Gtk.Box({orientation: Gtk.Orientation.HORIZONTAL, spacing: 6, valign: Gtk.Align.CENTER});
         const staging = _buildStagingControl(field.item);
 
         const addButton = new Gtk.Button({
@@ -932,26 +1069,13 @@ function _listRow(field, current, set) {
             rerender();
         });
 
-        addRow.add_suffix(staging.widget);
-        addRow.add_suffix(addButton);
-        return addRow;
-    }
-
-    function _removeRow(index) {
-        const removeRow = new Adw.ActionRow({title: 'Remove this item'});
-        const removeButton = new Gtk.Button({icon_name: 'list-remove-symbolic', valign: Gtk.Align.CENTER, css_classes: ['flat']});
-        removeButton.connect('clicked', () => {
-            items = items.filter((_, i) => i !== index);
-            set([...items]);
-            rerender();
-        });
-        removeRow.add_suffix(removeButton);
-        removeRow.set_activatable_widget(removeButton);
-        return removeRow;
+        box.append(staging.widget);
+        box.append(addButton);
+        return box;
     }
 
     rerender();
-    return row;
+    return outerRow;
 }
 
 // The inline "value to add" control that sits before "+" for every list
@@ -994,10 +1118,10 @@ function _buildStagingControl(itemSchema) {
     if (fieldType === 'spinbutton' || fieldType === 'slider') {
         const step = itemSchema.step ?? 1;
         const adjustment = new Gtk.Adjustment({
-            value: itemSchema.default ?? 0,
             lower: itemSchema.min ?? -Number.MAX_SAFE_INTEGER,
             upper: itemSchema.max ?? Number.MAX_SAFE_INTEGER,
             step_increment: step,
+            value: itemSchema.default ?? 0,
         });
         // digits: explicit item.decimals wins; otherwise dataType:"integer"
         // always forces 0 (whole numbers only), and dataType:"number" falls

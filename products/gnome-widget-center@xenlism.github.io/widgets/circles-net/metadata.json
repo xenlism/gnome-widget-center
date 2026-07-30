@@ -1,0 +1,15 @@
+{
+  "id": "circles-net",
+  "name": "Circles NET",
+  "description": "1x1 dual-ring gauge: outer ring = download, inner ring = upload, each scaled against a configurable max speed, with live throughput numbers centered inside.",
+  "version": "1.0.0",
+  "author": "GNOME Widget Center",
+  "api-version": 1,
+  "entry": "widget.js",
+  "block-type": "1x1",
+  "default-position": {
+    "x": 40,
+    "y": 40,
+    "monitor": 0
+  }
+}

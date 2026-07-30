@@ -1,0 +1,41 @@
+// i18n/ja.js — widgets/clock-modern (ja)
+// Auto-generated translation table; keys mirror this widget's
+// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
+// canonical English source every other locale file mirrors).
+
+export default {
+    "meta.name": "時計（モダン）",
+    "meta.description": "縦積み数字時計カード — 午前/午後・時・分・秒をそれぞれ別の行に表示。",
+    "tab.general.label": "時計（モダン）",
+    "tab.general.description": "縦積み数字時計カードの設定",
+    "group.format.label": "形式",
+    "field.format24h.label": "24時間表示",
+    "field.format24h.description": "オフにすると12時間表示になり、HHの上にam/pm行が表示されます",
+    "group.font.label": "フォント",
+    "group.font.description": "下記のHH・MM・SSは常に同じフォントとサイズを共有します。午前/午後は独自のフォントとサイズを持ちます。",
+    "field.font.label": "時/分/秒のフォント",
+    "field.font.description": "時・分・秒の数字のフォントとサイズ",
+    "field.ampmFont.label": "午前/午後のフォント",
+    "field.ampmFont.description": "午前/午後表示のフォントとサイズ",
+    "group.colors.label": "色",
+    "group.colors.description": "HH・MM・SSはそれぞれ個別の色を持ちます。",
+    "field.colorHH.label": "時（HH）の色",
+    "field.colorHH.description": "時の数字の色",
+    "field.colorMM.label": "分（MM）の色",
+    "field.colorMM.description": "分の数字の色",
+    "field.colorSS.label": "秒（SS）の色",
+    "field.colorSS.description": "秒の数字の色",
+    "field.colorAmPm.label": "午前/午後の色",
+    "field.colorAmPm.description": "午前/午後表示の色",
+    "field.cardColor.label": "カードの背景色",
+    "field.cardColor.description": "時計カードの背景色",
+    "group.card.label": "カードの形状",
+    "field.cornerRadius.label": "角丸の半径",
+    "field.cornerRadius.description": "時計カードの角の丸み",
+    "group.launch.label": "クリックで起動",
+    "group.launch.description": "時計をクリックすると（Superキーを押さずに）選択したアプリが起動します。",
+    "field.launchOnClick.label": "クリック時にアプリを起動",
+    "field.launchOnClick.description": "下でアプリを選択する必要があります",
+    "field.desktopFilePath.label": "起動するアプリ",
+    "field.desktopFilePath.description": "クリック時に起動するアプリケーション（.desktopファイル）",
+};

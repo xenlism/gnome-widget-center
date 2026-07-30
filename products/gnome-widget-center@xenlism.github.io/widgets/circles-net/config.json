@@ -1,0 +1,176 @@
+{
+  "version": "1.0",
+  "tabs": [
+    {
+      "id": "general",
+      "label": "Circles NET",
+      "description": "Network dual-ring gauge settings",
+      "icon": "network-wireless-symbolic",
+      "groups": [
+        {
+          "id": "card",
+          "label": "Card",
+          "description": "",
+          "fields": [
+            {
+              "id": "backgroundColor",
+              "label": "Background color",
+              "description": "Card background. Defaults to black at 85% transparency.",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#00000026"
+            },
+            {
+              "id": "cornerRadius",
+              "label": "Corner radius",
+              "description": "Roundness of the card corners",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 18,
+              "min": 0,
+              "max": 64,
+              "step": 1,
+              "suffix": "px"
+            }
+          ]
+        },
+        {
+          "id": "text",
+          "label": "Text",
+          "description": "",
+          "fields": [
+            {
+              "id": "labelFont",
+              "label": "Label font",
+              "description": "Face and size used for the \"NET\" caption",
+              "dataType": "string",
+              "fieldType": "fontpicker",
+              "default": "Sans 12"
+            },
+            {
+              "id": "labelColor",
+              "label": "Label color",
+              "description": "Color of the \"NET\" caption text",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#FFFFFFB3"
+            },
+            {
+              "id": "percentFont",
+              "label": "Speed number font",
+              "description": "Face and size used for the download/upload speed numbers",
+              "dataType": "string",
+              "fieldType": "fontpicker",
+              "default": "Sans Bold 14"
+            }
+          ]
+        },
+        {
+          "id": "rings",
+          "label": "Rings",
+          "description": "",
+          "fields": [
+            {
+              "id": "circleBaseColor",
+              "label": "Circle base color",
+              "description": "Base/track color drawn behind both rings",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#FFFFFF26"
+            },
+            {
+              "id": "downloadColor",
+              "label": "Outer ring color (Download)",
+              "description": "Download ring color and download number color",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#5AC8FAFF"
+            },
+            {
+              "id": "uploadColor",
+              "label": "Inner ring color (Upload)",
+              "description": "Upload ring color and upload number color",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#FF9F0AFF"
+            },
+            {
+              "id": "ringThickness",
+              "label": "Ring thickness",
+              "description": "Stroke width of the base track and both rings",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 9,
+              "min": 4,
+              "max": 24,
+              "step": 1,
+              "suffix": "px"
+            }
+          ]
+        },
+        {
+          "id": "behavior",
+          "label": "Behavior",
+          "description": "",
+          "fields": [
+            {
+              "id": "maxDownloadMbps",
+              "label": "Max download (Mbps)",
+              "description": "Download speed that fills the outer ring completely",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 100,
+              "min": 1,
+              "max": 10000,
+              "step": 1,
+              "suffix": "Mbps"
+            },
+            {
+              "id": "maxUploadMbps",
+              "label": "Max upload (Mbps)",
+              "description": "Upload speed that fills the inner ring completely",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 20,
+              "min": 1,
+              "max": 10000,
+              "step": 1,
+              "suffix": "Mbps"
+            },
+            {
+              "id": "refreshRateSeconds",
+              "label": "Refresh rate",
+              "description": "How often the network reading updates",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 2,
+              "min": 1,
+              "max": 60,
+              "step": 1,
+              "suffix": "s"
+            },
+            {
+              "id": "launchAppPath",
+              "label": "Click to launch",
+              "description": "Pick a .desktop file to launch when this card is clicked. Leave empty to disable.",
+              "dataType": "string",
+              "fieldType": "filepicker",
+              "filters": ["*.desktop"],
+              "default": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

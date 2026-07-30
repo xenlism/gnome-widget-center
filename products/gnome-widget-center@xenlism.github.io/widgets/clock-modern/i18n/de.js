@@ -1,0 +1,41 @@
+// i18n/de.js — widgets/clock-modern (de)
+// Auto-generated translation table; keys mirror this widget's
+// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
+// canonical English source every other locale file mirrors).
+
+export default {
+    "meta.name": "Uhr (Modern)",
+    "meta.description": "Vertikal gestapelte Ziffern-Uhrenkarte – AM/PM, Stunde, Minute und Sekunde jeweils in einer eigenen Zeile.",
+    "tab.general.label": "Uhr (Modern)",
+    "tab.general.description": "Einstellungen der vertikal gestapelten Ziffern-Uhrenkarte",
+    "group.format.label": "Format",
+    "field.format24h.label": "24-Stunden-Format",
+    "field.format24h.description": "Deaktiviert zeigt die 12-Stunden-Zeit mit einer AM/PM-Zeile über HH",
+    "group.font.label": "Schriftart",
+    "group.font.description": "HH, MM und SS teilen sich unten immer dieselbe Schrift und Größe. AM/PM hat eine eigene, separate Schrift und Größe.",
+    "field.font.label": "Schrift für HH/MM/SS",
+    "field.font.description": "Schriftart und -größe der Stunden-, Minuten- und Sekundenziffern",
+    "field.ampmFont.label": "AM/PM-Schrift",
+    "field.ampmFont.description": "Schriftart und -größe der AM/PM-Anzeige",
+    "group.colors.label": "Farben",
+    "group.colors.description": "HH, MM und SS haben jeweils eine eigene, separate Farbe.",
+    "field.colorHH.label": "HH-Farbe",
+    "field.colorHH.description": "Farbe der Stundenziffern",
+    "field.colorMM.label": "MM-Farbe",
+    "field.colorMM.description": "Farbe der Minutenziffern",
+    "field.colorSS.label": "SS-Farbe",
+    "field.colorSS.description": "Farbe der Sekundenziffern",
+    "field.colorAmPm.label": "AM/PM-Farbe",
+    "field.colorAmPm.description": "Farbe der AM/PM-Anzeige",
+    "field.cardColor.label": "Kartenhintergrundfarbe",
+    "field.cardColor.description": "Hintergrundfarbe der Uhrenkarte",
+    "group.card.label": "Kartenform",
+    "field.cornerRadius.label": "Eckenradius",
+    "field.cornerRadius.description": "Rundung der Ecken der Uhrenkarte",
+    "group.launch.label": "Beim Klicken starten",
+    "group.launch.description": "Ein Klick auf die Uhr (ohne die Super-Taste zu halten) startet die gewählte App.",
+    "field.launchOnClick.label": "App beim Klicken starten",
+    "field.launchOnClick.description": "Erfordert die Auswahl einer App unten",
+    "field.desktopFilePath.label": "Zu startende App",
+    "field.desktopFilePath.description": "Anwendung (.desktop-Datei), die beim Klicken gestartet wird",
+};

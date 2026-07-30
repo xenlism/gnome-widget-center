@@ -58,5 +58,38 @@
       </description>
     </key>
 
+    <key name="prevent-widget-overlap" type="b">
+      <default>true</default>
+      <summary>Prevent widgets from overlapping each other</summary>
+      <description>
+        2026-07-28, replaces the old fixed 16px snap-to-grid (removed —
+        see lib/layoutEngine.js). When on (the default), Edit Mode
+        dragging (task 13) never lets a widget be dropped on top of
+        another - it's pushed to the nearest free spot in continuous
+        pixel space instead. When off, collision detection is skipped
+        entirely and widgets can freely overlap.
+      </description>
+    </key>
+
+    <key name="edge-margin" type="i">
+      <default>32</default>
+      <summary>Minimum distance (px) widgets must keep from the screen edge</summary>
+      <description>
+        No widget's rect may be dragged closer than this to any edge of
+        its monitor. Applies unconditionally, independent of
+        prevent-widget-overlap - see lib/layoutEngine.js.
+      </description>
+    </key>
+
+    <key name="widget-spacing" type="i">
+      <default>16</default>
+      <summary>Minimum distance (px) kept between widgets</summary>
+      <description>
+        Only enforced while prevent-widget-overlap is on - the minimum
+        gap the collision-avoidance search in lib/layoutEngine.js keeps
+        between any two widgets' rects.
+      </description>
+    </key>
+
   </schema>
 </schemalist>

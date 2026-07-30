@@ -1,0 +1,27 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=GNOME Widget Center Settings
+Comment=Configure GNOME Widget Center's widgets
+Icon=preferences-desktop-applications-symbolic
+Terminal=false
+NoDisplay=false
+Categories=Settings;GTK;GNOME;
+StartupWMClass=io.github.xenlism.WidgetCenterPrefs
+
+; 2026-07-30: the Exec= path below MUST be an absolute path to this
+; extension's installed widget-center-prefs-app.js — .desktop Exec= lines
+; can't reference "the directory this .desktop file itself lives in", so
+; there's no portable relative form. Whatever installs this extension
+; (a packaging script, or a manual `gnome-extensions install` +
+; `cp`/`envsubst` step) needs to substitute the real path in for
+; @EXTENSION_INSTALL_PATH@ below, e.g.:
+;   sed "s|@EXTENSION_INSTALL_PATH@|$HOME/.local/share/gnome-shell/extensions/gnome-widget-center@xenlism.github.io|" \
+;     io.github.xenlism.WidgetCenterPrefs.desktop.in > ~/.local/share/applications/io.github.xenlism.WidgetCenterPrefs.desktop
+; extension.js itself never reads this file at all — it launches
+; widget-center-prefs-app.js directly via Gio.Subprocess using its own
+; `this.path`, which already knows its real install location at runtime;
+; this .desktop file only matters for launching the Settings window
+; independently of the extension (app grid, search, a taskbar shortcut,
+; etc), which is the scenario that has no "this.path" to fall back on.
+Exec=gjs -m @EXTENSION_INSTALL_PATH@/widget-center-prefs-app.js

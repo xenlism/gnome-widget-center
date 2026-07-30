@@ -1,0 +1,41 @@
+// i18n/es.js — widgets/clock-modern (es)
+// Auto-generated translation table; keys mirror this widget's
+// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
+// canonical English source every other locale file mirrors).
+
+export default {
+    "meta.name": "Reloj (Moderno)",
+    "meta.description": "Tarjeta de reloj de dígitos apilados verticalmente: AM/PM, hora, minuto y segundo, cada uno en su propia línea.",
+    "tab.general.label": "Reloj (Moderno)",
+    "tab.general.description": "Ajustes de la tarjeta de reloj de dígitos apilados verticalmente",
+    "group.format.label": "Formato",
+    "field.format24h.label": "Formato de 24 horas",
+    "field.format24h.description": "Desactivado muestra la hora en formato de 12 horas con una línea am/pm encima de HH",
+    "group.font.label": "Fuente",
+    "group.font.description": "HH, MM y SS siempre comparten la misma fuente y tamaño a continuación. Am/pm tiene su propia fuente y tamaño independientes.",
+    "field.font.label": "Fuente de HH / MM / SS",
+    "field.font.description": "Tipo y tamaño de fuente de los dígitos de hora, minuto y segundo",
+    "field.ampmFont.label": "Fuente de am/pm",
+    "field.ampmFont.description": "Tipo y tamaño de fuente del indicador am/pm",
+    "group.colors.label": "Colores",
+    "group.colors.description": "HH, MM y SS tienen cada uno su propio color independiente.",
+    "field.colorHH.label": "Color de HH",
+    "field.colorHH.description": "Color de los dígitos de la hora",
+    "field.colorMM.label": "Color de MM",
+    "field.colorMM.description": "Color de los dígitos de los minutos",
+    "field.colorSS.label": "Color de SS",
+    "field.colorSS.description": "Color de los dígitos de los segundos",
+    "field.colorAmPm.label": "Color de am/pm",
+    "field.colorAmPm.description": "Color del indicador am/pm",
+    "field.cardColor.label": "Color de fondo de la tarjeta",
+    "field.cardColor.description": "Color de fondo de la tarjeta del reloj",
+    "group.card.label": "Forma de la tarjeta",
+    "field.cornerRadius.label": "Radio de esquina",
+    "field.cornerRadius.description": "Redondez de las esquinas de la tarjeta del reloj",
+    "group.launch.label": "Iniciar al hacer clic",
+    "group.launch.description": "Al hacer clic en el reloj (sin mantener presionada la tecla Super) se inicia la aplicación elegida.",
+    "field.launchOnClick.label": "Iniciar aplicación al hacer clic",
+    "field.launchOnClick.description": "Requiere elegir una aplicación a continuación",
+    "field.desktopFilePath.label": "Aplicación a iniciar",
+    "field.desktopFilePath.description": "Aplicación (archivo .desktop) que se inicia al hacer clic",
+};

@@ -105,10 +105,10 @@ function _stringRow(field, settingsProxy, current) {
 
 function _numberRow(field, settingsProxy, current) {
     const adjustment = new Gtk.Adjustment({
-        value: current,
         lower: -Number.MAX_SAFE_INTEGER,
         upper: Number.MAX_SAFE_INTEGER,
         step_increment: 1,
+        value: current,
     });
     const row = new Adw.SpinRow({title: field.label, adjustment});
     if (field.description)
@@ -122,10 +122,10 @@ function _numberRow(field, settingsProxy, current) {
 function _rangeRow(field, settingsProxy, current) {
     const step = field.step ?? 1;
     const adjustment = new Gtk.Adjustment({
-        value: current,
         lower: field.min,
         upper: field.max,
         step_increment: step,
+        value: current,
     });
     const row = new Adw.SpinRow({
         title: field.label,
@@ -202,10 +202,10 @@ function _colorRow(field, settingsProxy, current) {
 function _sizeRow(field, settingsProxy, current) {
     const hasBounds = typeof field.min === 'number' && typeof field.max === 'number';
     const adjustment = new Gtk.Adjustment({
-        value: current,
         lower: hasBounds ? field.min : 0,
         upper: hasBounds ? field.max : 10000,
         step_increment: field.step ?? 1,
+        value: current,
     });
     const row = new Adw.SpinRow({
         title: field.label,

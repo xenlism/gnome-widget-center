@@ -1,0 +1,41 @@
+// i18n/en.js — widgets/clock-modern (en)
+// Auto-generated translation table; keys mirror this widget's
+// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
+// canonical English source every other locale file mirrors).
+
+export default {
+    "meta.name": "Clock (Modern)",
+    "meta.description": "Vertical stacked-digit clock card - AM/PM, hour, minute and second each on their own line.",
+    "tab.general.label": "Clock (Modern)",
+    "tab.general.description": "Vertical stacked-digit clock card settings",
+    "group.format.label": "Format",
+    "field.format24h.label": "24-hour format",
+    "field.format24h.description": "Off shows 12-hour time with an am/pm line above HH",
+    "group.font.label": "Font",
+    "group.font.description": "HH, MM and SS always share the same face and size below. am/pm has its own separate face and size.",
+    "field.font.label": "HH / MM / SS font",
+    "field.font.description": "Font face and size for the hour, minute and second digits",
+    "field.ampmFont.label": "am/pm font",
+    "field.ampmFont.description": "Font face and size for the am/pm indicator",
+    "group.colors.label": "Colors",
+    "group.colors.description": "HH, MM and SS each have their own separate color.",
+    "field.colorHH.label": "HH color",
+    "field.colorHH.description": "Color of the hour digits",
+    "field.colorMM.label": "MM color",
+    "field.colorMM.description": "Color of the minute digits",
+    "field.colorSS.label": "SS color",
+    "field.colorSS.description": "Color of the second digits",
+    "field.colorAmPm.label": "am/pm color",
+    "field.colorAmPm.description": "Color of the am/pm indicator",
+    "field.cardColor.label": "Card background color",
+    "field.cardColor.description": "Background color of the clock card",
+    "group.card.label": "Card shape",
+    "field.cornerRadius.label": "Corner radius",
+    "field.cornerRadius.description": "Roundness of the clock card's corners",
+    "group.launch.label": "Launch on click",
+    "group.launch.description": "Clicking the clock (without holding Super) launches the chosen app.",
+    "field.launchOnClick.label": "Launch app on click",
+    "field.launchOnClick.description": "Requires an app to be chosen below",
+    "field.desktopFilePath.label": "App to launch",
+    "field.desktopFilePath.description": "Application (.desktop file) launched on click",
+};

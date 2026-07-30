@@ -320,6 +320,22 @@ export class WidgetEditMode {
         if (!entry.toolbar)
             entry.toolbar = this._buildToolbar(widgetId, entry);
 
+        // Bring this widget (and its toolbar) to the very front of the
+        // stacking order every time Edit Mode is entered — not just once
+        // at toolbar build time. `_buildToolbar()`'s one-time
+        // `insert_child_above(toolbar, entry.actor)` only ever guarantees
+        // the toolbar sits above ITS OWN widget's actor; it says nothing
+        // about widgets on either side of it in `parent`'s child list.
+        // Any sibling widget added to `parent` after this one (which is
+        // the common case — most widgets load in sequence) still paints
+        // on top regardless, so entering Edit Mode on an earlier-loaded
+        // widget could show its toolbar partially hidden behind a later
+        // one (same failure mode this fixes for dragging — see
+        // editModeDragController.js's identical raise at drag-start).
+        const parent = entry.actor.get_parent();
+        parent?.set_child_above_sibling(entry.actor, null);
+        parent?.set_child_above_sibling(entry.toolbar, null);
+
         // Spec: "Widget content is disabled while Edit Mode is active."
         // The front actor stays VISIBLE (unlike the old flip design) —
         // only its own interactivity is switched off; the toolbar bar

@@ -22,13 +22,26 @@ import GLib from 'gi://GLib';
  */
 export class SettingsService {
     /**
-     * @param {Extension} extensionObject - the `this` from
-     *   WidgetCenterExtension.enable() (extends the GNOME Shell Extension
-     *   base class) — needed because getSettings() must know the
-     *   extension's own install directory to find its local schema.
+     * @param {Extension|string} extensionObjectOrSchemasDir - either the
+     *   `this` from WidgetCenterExtension.enable()/prefs.js's
+     *   ExtensionPreferences subclass (anything with a `getSettings()`
+     *   method — needed so getSettings() can resolve the extension's own
+     *   install directory to find its local schema), OR a plain string
+     *   path to the directory containing the compiled
+     *   `gschemas.compiled` (2026-07-30 addition — for
+     *   widget-center-prefs-app.js, the standalone GTK4 Preferences app,
+     *   which runs completely outside GNOME Shell's extension machinery
+     *   and therefore has no Extension instance to call getSettings() on;
+     *   see that file's header for why it exists at all).
      */
-    constructor(extensionObject) {
-        this._extensionObject = extensionObject;
+    constructor(extensionObjectOrSchemasDir) {
+        if (typeof extensionObjectOrSchemasDir === 'string') {
+            this._extensionObject = null;
+            this._schemasDir = extensionObjectOrSchemasDir;
+        } else {
+            this._extensionObject = extensionObjectOrSchemasDir;
+            this._schemasDir = null;
+        }
         /** @private {Gio.Settings} GNOME GSettings engine wrapper link */
         this._globalSettings = null;
         /** @private {boolean} Internal initialization state indicator */
@@ -39,24 +52,49 @@ export class SettingsService {
 
     /**
      * @method init
-     * @description Resolves the locally-compiled schema via the Extension
-     * base class and initializes the GSettings link. Throws only if the
-     * extension's own `schemas/gschemas.compiled` is missing/corrupt (a
-     * packaging bug), never because of anything outside the extension.
+     * @description Resolves the locally-compiled schema — via the
+     * Extension base class's getSettings() when constructed with an
+     * Extension instance, or directly from a schemas directory path when
+     * constructed with one (see constructor doc) — and initializes the
+     * GSettings link. Throws only if the extension's own
+     * `schemas/gschemas.compiled` is missing/corrupt (a packaging bug),
+     * never because of anything outside the extension.
      */
     init() {
         if (this._isInitialized) return;
 
-        if (!this._extensionObject?.getSettings) {
+        if (this._extensionObject?.getSettings) {
+            // getSettings() looks up products/extension/schemas/gschemas.compiled
+            // inside this extension's own install dir - no system-wide
+            // compile needed.
+            this._globalSettings = this._extensionObject.getSettings(this._schemaId);
+        } else if (this._schemasDir) {
+            // Standalone-app path (no Extension instance available) - do
+            // by hand exactly what Extension.getSettings() does under the
+            // hood: point a SettingsSchemaSource at our own compiled
+            // schemas/ directory (falling back to the system default
+            // source as its parent, same as getSettings() does, purely so
+            // schema *inheritance* keeps working if we ever add one) and
+            // look our schema up in it directly, rather than the
+            // system-wide schema source alone (which, per this class's
+            // 2026-07-13 fix above, never has our schema installed in it).
+            const source = Gio.SettingsSchemaSource.new_from_directory(
+                this._schemasDir, Gio.SettingsSchemaSource.get_default(), false);
+            const schema = source.lookup(this._schemaId, false);
+            if (!schema) {
+                throw new Error(
+                    `schema '${this._schemaId}' not found under ${this._schemasDir} — ` +
+                    'is schemas/gschemas.compiled present and up to date?');
+            }
+            this._globalSettings = new Gio.Settings({settings_schema: schema});
+        } else {
             throw new Error(
-                'SettingsService requires the Extension instance (with getSettings()) — ' +
-                'pass `this` from enable(), not a bare object.'
+                'SettingsService requires either an Extension instance (with getSettings()) ' +
+                'or a schemas directory path — pass `this` from enable()/fillPreferencesWindow(), ' +
+                'or the extension\'s install directory\'s `schemas/` path.'
             );
         }
 
-        // getSettings() looks up products/extension/schemas/gschemas.compiled inside
-        // this extension's own install dir - no system-wide compile needed.
-        this._globalSettings = this._extensionObject.getSettings(this._schemaId);
         this._isInitialized = true;
     }
 

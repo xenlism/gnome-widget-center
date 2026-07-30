@@ -1,0 +1,128 @@
+{
+  "version": "1.0",
+  "tabs": [
+    {
+      "id": "general",
+      "label": "System Monitor",
+      "description": "CPU/Memory/Disk ring gauges and network throughput",
+      "icon": "utilities-system-monitor-symbolic",
+      "groups": [
+        {
+          "id": "rings",
+          "label": "Ring colors",
+          "description": "One shared color pair used for all three gauges (CPU/Memory/Disk)",
+          "fields": [
+            {
+              "id": "activeColor",
+              "label": "Circle active color",
+              "description": "Color of the filled portion of each ring",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#33C7F5"
+            },
+            {
+              "id": "baseColor",
+              "label": "Circle base color",
+              "description": "Color of the ring's empty track",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#33383D"
+            }
+          ]
+        },
+        {
+          "id": "typography",
+          "label": "Font",
+          "description": "",
+          "fields": [
+            {
+              "id": "font",
+              "label": "Font face + size",
+              "description": "Face and size for the big percentage number inside each ring; the CPU/Memory/Disk caption and the network line scale down from this",
+              "dataType": "string",
+              "fieldType": "fontpicker",
+              "format": "font",
+              "default": "Sans Bold 18"
+            }
+          ]
+        },
+        {
+          "id": "appearance",
+          "label": "Appearance",
+          "description": "",
+          "fields": [
+            {
+              "id": "backgroundColor",
+              "label": "Background color",
+              "description": "Card background. Use the alpha slider for transparency.",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#1C1C1EE6"
+            },
+            {
+              "id": "cornerRadius",
+              "label": "Corner radius",
+              "description": "Roundness of the card background",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 18,
+              "min": 0,
+              "max": 64,
+              "step": 1,
+              "suffix": "px"
+            }
+          ]
+        },
+        {
+          "id": "behavior",
+          "label": "Behavior",
+          "description": "",
+          "fields": [
+            {
+              "id": "refreshRateSec",
+              "label": "Refresh rate",
+              "description": "How often CPU/Memory/Disk/Network are re-read",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 3,
+              "min": 1,
+              "max": 30,
+              "step": 1,
+              "suffix": "s"
+            }
+          ]
+        },
+        {
+          "id": "click",
+          "label": "Click to launch",
+          "description": "",
+          "fields": [
+            {
+              "id": "launchOnClick",
+              "label": "Launch app on click",
+              "description": "Requires an app to be chosen below",
+              "dataType": "boolean",
+              "fieldType": "switch",
+              "default": false
+            },
+            {
+              "id": "desktopFilePath",
+              "label": "App to launch",
+              "description": "Application (.desktop file) launched when the card is clicked, e.g. a system monitor or task manager",
+              "dataType": "string",
+              "fieldType": "filepicker",
+              "format": "file",
+              "default": "",
+              "filters": ["*.desktop"],
+              "enabledIf": "launchOnClick"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

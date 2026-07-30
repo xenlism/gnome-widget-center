@@ -10,27 +10,15 @@
         {
           "id": "location",
           "label": "Location",
-          "description": "Resolved via Open-Meteo's free geocoding API (api.open-meteo.com) - no API key required.",
+          "description": "",
           "fields": [
-            {
-              "id": "place",
-              "label": "Place",
-              "description": "Type a city name and pick a suggestion - resolved via Open-Meteo's free geocoding API, no API key required",
-              "dataType": "string",
-              "fieldType": "autocomplete",
-              "autocomplete": "searchPlace",
-              "fillsField": "location",
-              "default": "Bangkok, Thailand"
-            },
             {
               "id": "location",
               "label": "Location",
-              "description": "latitude,longitude - type a city name here too, or paste coordinates directly",
+              "description": "Coordinates as latitude,longitude - e.g. 15.1111,85.2555",
               "dataType": "string",
-              "fieldType": "autocomplete",
-              "autocomplete": "searchLocation",
-              "fillsField": "place",
-              "pattern": "^-?\\d{1,2}(\\.\\d+)?,-?\\d{1,3}(\\.\\d+)?$",
+              "fieldType": "text",
+              "pattern": "^-?\\d{1,2}(\\.\\d+)?\\s*,\\s*-?\\d{1,3}(\\.\\d+)?$",
               "default": "13.756331,100.501762"
             }
           ]

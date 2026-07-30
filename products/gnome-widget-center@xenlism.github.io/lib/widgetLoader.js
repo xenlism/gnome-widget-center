@@ -17,7 +17,7 @@ import Gio from 'gi://Gio';
 import {WidgetSettings} from './widgetSettings.js';
 import {validateSettingsSchema, getSchemaDefaults} from './settingsSchema.js';
 import {SettingsWatcher} from './settingsWatcher.js';
-import {GRID_SIZE} from './gridEngine.js';
+import {BlockSizeManager, BLOCK_CELL_SIZE} from './blockSizeManager.js';
 
 // NOTE: StWidgetWrapper is intentionally NOT statically imported here.
 // widgetLoader.js is shared between extension.js (Shell process, where St
@@ -35,8 +35,10 @@ import {GRID_SIZE} from './gridEngine.js';
 
 // Default block-type when a widget's metadata.json omits the field
 // entirely - see development/docs/WIDGET_API.md §2 ("ถ้าไม่ประกาศ field
-// นี้เลย จะได้ค่า default กลาง (10 x 6 cell) แทน").
-const DEFAULT_BLOCK_TYPE = {cols: 10, rows: 6};
+// นี้เลย จะได้ค่า default กลาง (10 x 6 cell) แทน"). The actual default
+// values now live solely in blockSizeManager.js's DEFAULT_BLOCK_SIZE
+// (see the 2026-07-26 bug-fix note on _enforceBlockSize() below for why
+// this file no longer keeps its own separate copy).
 
 const REQUIRED_METADATA_FIELDS = ['id', 'name', 'entry'];
 
@@ -526,20 +528,13 @@ export class WidgetLoader {
         this._logger.warn?.(`[widget-loader] "${widgetInfo.id}": ${reason}`);
     }
 
-    // TODO(task 04/07): api.position is still a no-op stub — the drag
-    // controller (task 04) currently writes positions straight through
-    // WidgetLayer/StorageService rather than this API surface, so a widget
-    // reading its own `api.position` won't see drag updates live. Left
-    // out of task 04's scope on purpose (see development/tasks/04-drag-reposition.md
-    // "Out of scope"); revisit if a widget actually needs to react to
-    // being dragged.
     // Locks widgetInfo's actor to the pixel size implied by its own
     // metadata.json `block-type` (falls back to DEFAULT_BLOCK_TYPE if the
     // field is omitted) and clips any content that doesn't fit. This is
     // deliberately enforced here — once, centrally — rather than left to
     // each widget.js to hand-roll correctly. Relying on every widget
     // author (bundled or third-party) to independently compute
-    // cols*GRID_SIZE and remember clip_to_allocation is exactly how
+    // cols*BLOCK_CELL_SIZE and remember clip_to_allocation is exactly how
     // calendar-header ended up overflowing its box in the first place;
     // one widget getting it wrong (or a new widget copy-pasting an old
     // template that never had it) reintroduces the same bug. Using
@@ -547,27 +542,76 @@ export class WidgetLoader {
     // properties directly) also means bundled AND third-party widgets
     // built with GjsKit get the exact same size()/clip() semantics the
     // host uses on them.
+    //
+    // Bug fix (2026-07-26): this used to compute cols/rows itself via
+    // `Number(blockType.cols) || DEFAULT_BLOCK_TYPE.cols` - which let a
+    // NEGATIVE value straight through (`Number(-5)` is truthy, so `-5 ||
+    // 10` evaluates to `-5`, not the fallback), had no upper bound at
+    // all, and didn't round non-integers. That was a second, slightly
+    // different copy of the same validation blockSizeManager.js already
+    // does properly - now calls BlockSizeManager.getBlockSizeFor()
+    // instead so there's exactly one place block-type gets sanitized,
+    // and this actor gets the same clamped, validated size
+    // extension.js's own BlockSizeManager.applyBlockSize() call already
+    // guarantees for the Shell-side actor.
     async _enforceBlockSize(widgetInfo, actor) {
-        const blockType = widgetInfo.metadata['block-type'] ?? DEFAULT_BLOCK_TYPE;
-        const cols = Number(blockType.cols) || DEFAULT_BLOCK_TYPE.cols;
-        const rows = Number(blockType.rows) || DEFAULT_BLOCK_TYPE.rows;
+        const {cols, rows} = BlockSizeManager.getBlockSizeFor(widgetInfo.metadata);
         try {
             // Lazy import — see the note above the imports at the top of
             // this file for why StWidget.js can't be a static import here.
             const {StWidgetWrapper} = await import('./gjskit/st/StWidget.js');
             new StWidgetWrapper(actor)
-                .size(cols * GRID_SIZE, rows * GRID_SIZE)
+                .size(cols * BLOCK_CELL_SIZE, rows * BLOCK_CELL_SIZE)
                 .clip(true);
         } catch (e) {
             this._recordError(widgetInfo, `failed to enforce block-type size: ${e.message}`);
         }
     }
 
+    // 2026-07-28 (closes the task 04/07 TODO that used to live here):
+    // WidgetLayer/DragController only ever call
+    // StorageService.updateWidgetPosition() on DROP, never per-frame
+    // during the drag itself (see dragController.js/widgetLayer.js's own
+    // comments to that effect) - so a widget's `api.position` doesn't
+    // need any new event/signal plumbing to be "live". Reading straight
+    // through to the SAME StorageService instance WidgetLayer just wrote
+    // to (both live in this one Shell process) is enough: the very next
+    // access after a drop already sees the new x/y, with no caching layer
+    // of our own to go stale. Returns the {x:0,y:0,setPosition(){}} shape
+    // this always had when no StorageService is available (e.g. a future
+    // caller that builds a WidgetLoader without one), so this is a
+    // behavior-preserving change for that case.
+    _buildPositionApi(widgetInfo) {
+        const storageService = this._storageService;
+        if (!storageService)
+            return {x: 0, y: 0, monitorIndex: 0, setPosition() {}};
+
+        return {
+            get x() {
+                return storageService.getWidgetPosition(widgetInfo.id)?.x ?? 0;
+            },
+            get y() {
+                return storageService.getWidgetPosition(widgetInfo.id)?.y ?? 0;
+            },
+            get monitorIndex() {
+                return storageService.getWidgetPosition(widgetInfo.id)?.monitorIndex ?? 0;
+            },
+            /**
+             * @param {number} x
+             * @param {number} y
+             * @param {number} [monitorIndex=0]
+             */
+            setPosition(x, y, monitorIndex = 0) {
+                storageService.updateWidgetPosition(widgetInfo.id, x, y, monitorIndex);
+            },
+        };
+    }
+
     _buildApi(widgetInfo, settings) {
         return {
             settings,
             monitorInfo: null,
-            position: {x: 0, y: 0, setPosition() {}},
+            position: this._buildPositionApi(widgetInfo),
             bus: {emit() {}, on() {}, off() {}},
             path: {
                 // Absolute path to this widget's own folder on disk - e.g.

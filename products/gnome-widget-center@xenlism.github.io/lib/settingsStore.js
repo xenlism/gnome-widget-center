@@ -17,11 +17,14 @@
  * a SettingsStore instance pointed at the same directory. Only the
  * writer needs write access; the shell-side reader only needs the
  * FileMonitor + read.
+ *
+ * 2026-07-28: converted from the legacy `imports.gi` global style to
+ * plain ESM (`import`/`export`) so this can actually be imported by
+ * prefs.js — see WIDGET_API.md §6.3.
  */
 
-'use strict';
-
-const { GLib, Gio } = imports.gi;
+import GLib from 'gi://GLib';
+import Gio from 'gi://Gio';
 
 const SETTINGS_SUBDIR = 'gnome-widget-center/settings';
 
@@ -35,7 +38,7 @@ function _getSettingsDir() {
     return dir;
 }
 
-class SettingsStore {
+export class SettingsStore {
     /**
      * @param {string} widgetId
      * @param {SettingField[]} fields - schema fields, used to fill in
@@ -110,8 +113,9 @@ class SettingsStore {
     _save() {
         try {
             const json = JSON.stringify(this._values, null, 2);
+            const bytes = new TextEncoder().encode(json);
             this._file.replace_contents(
-                json,
+                bytes,
                 null,
                 false,
                 Gio.FileCreateFlags.REPLACE_DESTINATION,
@@ -194,5 +198,3 @@ class SettingsStore {
         this._localListeners.clear();
     }
 }
-
-var GwcSettingsStore = { SettingsStore };

@@ -1,0 +1,15 @@
+{
+  "id": "network-monitor",
+  "name": "Network Monitor",
+  "description": "1x1 card showing live download/upload throughput with a two-line sparkline history graph.",
+  "version": "1.0.0",
+  "author": "GNOME Widget Center",
+  "api-version": 1,
+  "entry": "widget.js",
+  "block-type": "1x1",
+  "default-position": {
+    "x": 400,
+    "y": 40,
+    "monitor": 0
+  }
+}

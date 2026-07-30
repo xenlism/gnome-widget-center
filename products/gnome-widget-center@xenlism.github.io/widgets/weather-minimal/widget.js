@@ -40,6 +40,8 @@ import Gio from 'gi://Gio';
 import Pango from 'gi://Pango';
 import Soup from 'gi://Soup?version=3.0';
 
+import {loadTranslations} from './i18n/index.js';
+
 const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
 
 // How often to re-fetch current weather from the network.
@@ -154,6 +156,30 @@ export default class WeatherMinimalWidget {
             : null;
         this._cacheDir = Gio.File.new_for_path(
             GLib.build_filenamev([GLib.get_user_cache_dir(), 'gnome-widget-center', 'weather-minimal']));
+
+        // i18n (2026-07-26): translates the condition text this widget
+        // itself generates at runtime (_describeWeather()'s "Clear",
+        // "Rain", etc - config.json's own labels/descriptions are
+        // translated separately, by widgetConfigUI.js, using this same
+        // i18n/ folder). Starts empty and fills in once the dynamic
+        // import() resolves - see buildActor()'s call to _loadI18n().
+        this._translations = {};
+    }
+
+    /** @private kicks off the (async) load of this widget's own i18n/ table, then re-renders once it resolves. */
+    _loadI18n() {
+        if (!this._api.path?.me)
+            return;
+        loadTranslations(GLib.build_filenamev([this._api.path.me, 'i18n'])).then(translations => {
+            this._translations = translations;
+            this._render();
+        }).catch(() => {});
+    }
+
+    /** @private this._translations["condition.<english>"] if present, else `english` unchanged. */
+    _trCondition(english) {
+        const value = this._translations[`condition.${english}`];
+        return typeof value === 'string' && value.length > 0 ? value : english;
     }
 
     // Must never throw, even with empty settings - getDefaultSettings()
@@ -176,6 +202,8 @@ export default class WeatherMinimalWidget {
 
         this._render();
         this._refresh();
+        this._loadI18n();
+        this._maybeAutoDetectLocation().catch(() => {});
         return this._actor;
     }
 
@@ -196,8 +224,8 @@ export default class WeatherMinimalWidget {
 
     getDefaultSettings() {
         return {
-            place: 'Bangkok, Thailand',
             location: '13.756331,100.501762',
+            locationAutoDetected: false,
 
             cardColor: '#ffffff',
             cornerRadius: 18,
@@ -261,7 +289,7 @@ export default class WeatherMinimalWidget {
      * @returns {{latitude: number, longitude: number}|null}
      */
     _parseLocation(value) {
-        const match = /^(-?\d{1,2}(?:\.\d+)?),(-?\d{1,3}(?:\.\d+)?)$/.exec(value.trim());
+        const match = /^(-?\d{1,2}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)$/.exec(value.trim());
         if (!match)
             return null;
 
@@ -271,6 +299,65 @@ export default class WeatherMinimalWidget {
             return null;
 
         return {latitude, longitude};
+    }
+
+    /**
+     * @private One-time-only (gated by settings.locationAutoDetected):
+     * if the user has never touched "location" (still whatever
+     * getDefaultSettings() shipped), try to fill in a real default from
+     * the user's approximate IP-based location instead of the hardcoded
+     * Bangkok fallback. Tries each endpoint below in order and stops at
+     * the first one that returns usable coordinates; failure of all
+     * three just leaves the hardcoded default in place. Marks
+     * locationAutoDetected = true regardless of outcome so this never
+     * retries on every widget reload - see this._settings write below.
+     *
+     * Identical to weather-dark/widget.js's method of the same name -
+     * see that file for the full rationale.
+     */
+    async _maybeAutoDetectLocation() {
+        if (this._settings.locationAutoDetected)
+            return;
+        this._settings.locationAutoDetected = true;
+
+        const location = this._settings.location ?? '';
+        if (location && location !== '13.756331,100.501762')
+            return; // user (or a prior session) already set a real value
+
+        const coords = await this._fetchIpLocation();
+        if (!coords)
+            return;
+
+        this._settings.location = `${coords.latitude},${coords.longitude}`;
+        this._resolvedLocation = ''; // force _refresh() to treat this as a change
+        this._refresh();
+    }
+
+    /**
+     * @private Tries, in order: ip-api.com, freeipapi.com, ipwhois.io.
+     * Each is a free, no-API-key IP-geolocation lookup that resolves the
+     * caller's own public IP server-side - no argument needed.
+     * @returns {Promise<{latitude: number, longitude: number}|null>}
+     */
+    async _fetchIpLocation() {
+        const endpoints = [
+            {url: 'http://ip-api.com/json/', parse: d => ({latitude: d.lat, longitude: d.lon})},
+            {url: 'https://freeipapi.com/api/json', parse: d => ({latitude: d.latitude, longitude: d.longitude})},
+            {url: 'https://ipwhois.io/json/', parse: d => ({latitude: d.latitude, longitude: d.longitude})},
+        ];
+
+        for (const {url, parse} of endpoints) {
+            try {
+                const data = await this._fetchJson(url);
+                const {latitude, longitude} = parse(data) ?? {};
+                if (typeof latitude === 'number' && typeof longitude === 'number' &&
+                    Number.isFinite(latitude) && Number.isFinite(longitude))
+                    return {latitude, longitude};
+            } catch (e) {
+                this._api.logger.info(`weather-minimal: ip geolocation via ${url} failed: ${e}`);
+            }
+        }
+        return null;
     }
 
     /** @private */
@@ -310,6 +397,34 @@ export default class WeatherMinimalWidget {
         this._render();
     }
 
+    /**
+     * @private Accepts "#rrggbb"/"#rgb" as-is; also tolerates
+     * "rgb(r,g,b)"/"rgba(r,g,b,a)" (the format widgetConfigUI.js's
+     * colorpicker saved before its 2026-07-26 bug fix — see that file's
+     * _colorRow() comment) so a settings.json written by the old buggy
+     * version still recolors correctly here without the user having to
+     * reopen the color picker just to "re-save" it.
+     * @param {string} value
+     * @returns {string} "#rrggbb", or the 2026-07-25 default if unparseable
+     */
+    _normalizeHexColor(value) {
+        const fallback = '#1a1a1a';
+        if (typeof value !== 'string')
+            return fallback;
+
+        const trimmed = value.trim();
+        if (/^#[0-9a-fA-F]{3}$|^#[0-9a-fA-F]{6}$|^#[0-9a-fA-F]{8}$/.test(trimmed))
+            return trimmed;
+
+        const match = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/.exec(trimmed);
+        if (match) {
+            const toHex = n => Math.max(0, Math.min(255, parseInt(n, 10))).toString(16).padStart(2, '0');
+            return `#${toHex(match[1])}${toHex(match[2])}${toHex(match[3])}`;
+        }
+
+        return fallback;
+    }
+
     /** @private */
     _getColoredIconFile(iconKey, colorHex) {
         if (!this._iconDir)
@@ -320,7 +435,7 @@ export default class WeatherMinimalWidget {
             return null;
 
         try {
-            const safeColor = colorHex.replace(/[^#0-9a-fA-F]/g, '');
+            const safeColor = this._normalizeHexColor(colorHex);
             const cacheFile = this._cacheDir.get_child(`${iconKey}-${safeColor.replace('#', '')}.svg`);
             if (cacheFile.query_exists(null))
                 return cacheFile;
@@ -369,7 +484,7 @@ export default class WeatherMinimalWidget {
             this._iconBin.set_child(null);
         }
 
-        this._conditionLabel.set_text(this._weather?.condition ?? '--');
+        this._conditionLabel.set_text(this._weather ? this._trCondition(this._weather.condition) : '--');
         this._conditionLabel.set_style(
             `color: ${conditionColor}; font-family: ${conditionFontFamily}; ` +
             `font-size: ${conditionFontSize}px; font-weight: bold; text-align: center;`

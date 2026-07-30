@@ -7,10 +7,7 @@
   "api-version": 1,
   "entry": "widget.js",
   "themeable": true,
-  "block-type": {
-    "cols": 20,
-    "rows": 10
-  },
+  "block-type": "2x1",
   "default-position": {
     "x": 300,
     "y": 400,

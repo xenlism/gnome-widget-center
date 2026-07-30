@@ -1,0 +1,15 @@
+{
+  "id": "weather-dark",
+  "name": "Weather (Dark)",
+  "description": "Wide dark weather card - temperature, condition and day, with the weather-minimal icon set. Powered by Open-Meteo (no API key required).",
+  "version": "1.0.0",
+  "author": "GNOME Widget Center",
+  "api-version": 1,
+  "entry": "widget.js",
+  "block-type": "2x1",
+  "default-position": {
+    "x": 80,
+    "y": 80,
+    "monitor": 0
+  }
+}

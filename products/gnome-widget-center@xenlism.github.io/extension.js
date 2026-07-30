@@ -32,7 +32,7 @@ import {SettingsService} from './lib/settingsService.js';
 import {DragController} from './lib/dragController.js';
 import {MonitorWatcher} from './lib/monitorWatcher.js';
 import {DevWatcher} from './lib/devWatcher.js';
-import {GridEngine} from './lib/gridEngine.js';
+import {LayoutEngine} from './lib/layoutEngine.js';
 import {WidgetEditMode} from './lib/widgetEditMode.js';
 import {EditModeDragController} from './lib/editModeDragController.js';
 import {BlockSizeManager} from './lib/blockSizeManager.js';
@@ -94,13 +94,20 @@ export default class WidgetCenterExtension extends Extension {
         this._drag = new DragController(this._layer, this._storage);
 
         // Widget Edit Mode (task 12) / Edit Mode Drag & Drop (task 13) /
-        // Grid Engine (task 14). GridEngine is pure geometry (no signals,
-        // no disk) - see its file header. WidgetEditMode's Settings/Remove
+        // Layout Engine (task 14, renamed from GridEngine 2026-07-28 when
+        // grid-snapping was removed — see lib/layoutEngine.js). Pure
+        // geometry (no signals, no disk) - see its file header. Seeded
+        // from GSettings up front so a value the user changed in a
+        // previous session (or the schema's own defaults) takes effect
+        // immediately, then kept live via onChanged() below so the
+        // Control Center's "Desktop" category (prefs.js) takes effect on
+        // the desktop without a shell restart, same pattern as
+        // dev-mode/disabled-widgets. WidgetEditMode's Settings/Remove
         // callbacks are wired below, once `loader`/`this._settings` exist
         // (they're defined further down in this method), so they're
         // filled in via a small indirection here rather than restructuring
         // this method's existing top-to-bottom order.
-        this._grid = new GridEngine();
+        this._layout = new LayoutEngine(this._readLayoutSettings());
         this._editMode = new WidgetEditMode(this._storage, {
             onSettings: id => {
                 this._logger.debug('edit-mode', `onSettings("${id}")`);
@@ -130,7 +137,7 @@ export default class WidgetCenterExtension extends Extension {
                 this._editDrag?.armDragHandle(id, toolbarActor, dragArea);
             },
         }, this._logger, this._themeService);
-        this._editDrag = new EditModeDragController(this._layer, this._storage, this._grid, this._editMode, this._logger);
+        this._editDrag = new EditModeDragController(this._layer, this._storage, this._layout, this._editMode, this._logger);
         this._editDrag.setOthersProvider((monitorIndex, excludeId) => this._othersOnMonitor(monitorIndex, excludeId));
 
         // Hot-reload dev mode (task 08) — created up front but only
@@ -151,6 +158,18 @@ export default class WidgetCenterExtension extends Extension {
                 else
                     this._devWatcher.stop();
             });
+
+            // Layout Engine (task 14) live sync — prefs.js's "Desktop"
+            // category writes these three keys directly; both processes
+            // watch the same dconf-backed keys, same pattern as
+            // dev-mode/disabled-widgets above, so a change there takes
+            // effect on the desktop immediately, no shell restart needed.
+            this._preventOverlapChangedId = this._settings.onChanged('prevent-widget-overlap',
+                value => { this._layout.preventOverlap = value; });
+            this._edgeMarginChangedId = this._settings.onChanged('edge-margin',
+                value => { this._layout.edgeMargin = value; });
+            this._widgetSpacingChangedId = this._settings.onChanged('widget-spacing',
+                value => { this._layout.spacing = value; });
         }
 
         // --- widget discovery/loading ----------------------------------
@@ -227,6 +246,16 @@ export default class WidgetCenterExtension extends Extension {
             this._settings.disconnect(this._devChangedId);
         this._devChangedId = null;
 
+        if (this._settings && this._preventOverlapChangedId != null)
+            this._settings.disconnect(this._preventOverlapChangedId);
+        this._preventOverlapChangedId = null;
+        if (this._settings && this._edgeMarginChangedId != null)
+            this._settings.disconnect(this._edgeMarginChangedId);
+        this._edgeMarginChangedId = null;
+        if (this._settings && this._widgetSpacingChangedId != null)
+            this._settings.disconnect(this._widgetSpacingChangedId);
+        this._widgetSpacingChangedId = null;
+
         // Stop all file monitors/pending debounced reloads (task 08)
         // before anything below starts destroying the actors/instances a
         // stray reload could otherwise race against.
@@ -245,7 +274,7 @@ export default class WidgetCenterExtension extends Extension {
         this._editDrag = null;
         this._editMode?.destroy();
         this._editMode = null;
-        this._grid = null;
+        this._layout = null;
 
         // Stop watching for monitor hotplug/resolution changes before the
         // layer that reacts to them is torn down below.
@@ -268,6 +297,31 @@ export default class WidgetCenterExtension extends Extension {
         this._storage = null;
         this._settings = null;
         this._userWidgetsPath = null;
+    }
+
+    /**
+     * @private Reads the three LayoutEngine (task 14) GSettings keys up
+     * front for the constructor call in enable() — falls back to
+     * LayoutEngine's own built-in defaults (matching the schema's
+     * `<default>` values) when SettingsService isn't ready, same
+     * degrade-gracefully approach `initialDisabled`/`devModeOn` below
+     * already use for their own GSettings reads.
+     * @returns {{preventOverlap: boolean, edgeMargin: number, spacing: number}|{}}
+     */
+    _readLayoutSettings() {
+        if (!this._settings?.isReady)
+            return {};
+
+        try {
+            return {
+                preventOverlap: this._settings.getGlobalValue('prevent-widget-overlap'),
+                edgeMargin: this._settings.getGlobalValue('edge-margin'),
+                spacing: this._settings.getGlobalValue('widget-spacing'),
+            };
+        } catch (e) {
+            console.error('[widget-center] could not read layout settings, using defaults', e);
+            return {};
+        }
     }
 
     /**
@@ -310,14 +364,14 @@ export default class WidgetCenterExtension extends Extension {
 
         // Task 14: block-type size system (2026-07-19) — sets the actor's
         // pixel size directly from its declared `cols x rows` grid-cell
-        // span (metadata['block-type']) times GridEngine.cellSize. Unlike
+        // span (metadata['block-type']) times BlockSizeManager.BLOCK_CELL_SIZE. Unlike
         // the old pixel min/max system this never reads the actor's
         // current size, so there's no ordering dependency on
         // addWidgetActor() below anymore — see blockSizeManager.js's doc
         // comment for why the old system needed that ordering and this
         // one doesn't.
         try {
-            BlockSizeManager.applyBlockSize(entry.metadata, entry.actor, this._grid.cellSize);
+            BlockSizeManager.applyBlockSize(entry.metadata, entry.actor);
         } catch (e) {
             console.error(`[widget-center] Failed to apply block size for "${entry.id}"`, e);
         }
@@ -366,34 +420,49 @@ export default class WidgetCenterExtension extends Extension {
     }
 
     /**
-     * @private Task 12's "Settings" back-side action. Opens the Control
-     * Center (task 05) deep-linked straight to this widget's own settings
+     * @private Task 12's "Settings" back-side action. Opens the widget
+     * Settings window deep-linked straight to this widget's own settings
      * sub-page.
      *
-     * 2026-07-20 fix ("click settings opens the extension prefs, not the
-     * widget prefs"): `Extension.openPreferences()` takes no arguments in
-     * the GNOME Shell 45+ API and prefs.js runs in a completely separate
-     * GTK4 process (see prefs.js's file header) — there's no direct
-     * function call across that boundary. The two processes DO already
-     * share one channel: the extension's own GSettings schema (dconf),
-     * which is exactly how `disabled-widgets`/`dev-mode` stay in sync
-     * live between them. This reuses that same channel: write the
-     * requested widget id to the (new) `requested-widget-id` key just
-     * before calling `openPreferences()`, and prefs.js reads it back out
-     * once its window is built, presenting that widget's settings
-     * sub-page immediately instead of stopping at the top-level list —
-     * see prefs.js's `fillPreferencesWindow()` for the other half of this.
+     * History (2026-07-20 through 2026-07-30, in order): first, writing
+     * `requested-widget-id` to GSettings and calling
+     * `Extension.openPreferences()`; then a `.catch()` on
+     * `Main.extensionManager.openExtensionPrefs()`'s own promise once
+     * `openPreferences()`'s fire-and-forget call turned out to be
+     * uncatchable; then a debounce to stop rapid repeat clicks from
+     * spamming that rejection; then a live GSettings subscription in
+     * prefs.js so an *already-open* Preferences window would actually
+     * jump to the newly-requested widget instead of just failing quietly.
+     * Every one of those was a workaround for the same underlying fact:
+     * GNOME Shell, not this extension, decides whether
+     * `openExtensionPrefs()` spawns a new process or does something else
+     * when one's already running — see prefs.js's matching history for
+     * the fixes that took there.
+     *
+     * 2026-07-30 ("แยกหน้าต่าง widget preference ออกมาอิสระจาก extension
+     * preference เลย" — split the widget Settings window out to be fully
+     * independent, not routed through extension-prefs at all): instead
+     * launch widget-center-prefs-app.js directly — a plain standalone
+     * `Adw.Application` with its own application-id (see that file's
+     * header) — as a subprocess, passing the widget id as a
+     * `--widget-id=` argument. No GSettings round-trip, no debounce, no
+     * `Main.extensionManager` involved. If that app is already running,
+     * GLib/GIO's own single-instance activation hands this new argv
+     * straight to the existing process over D-Bus and this subprocess
+     * just exits — the "Preferences already open" failure mode every
+     * fix above was chasing can't happen anymore, because there's no
+     * separate "open a NEW prefs window" step left to fail.
      * @param {string} widgetId
      */
     _openWidgetSettings(widgetId) {
+        const scriptPath = GLib.build_filenamev([this.path, 'widget-center-prefs-app.js']);
         try {
-            if (this._settings?.isReady)
-                this._settings.setGlobalValue('requested-widget-id', widgetId);
-            else
-                console.warn(`[widget-center] SettingsService unavailable — Settings will open the top-level list, not "${widgetId}"'s page`);
-            this.openPreferences();
+            Gio.Subprocess.new(
+                ['gjs', '-m', scriptPath, `--widget-id=${widgetId}`],
+                Gio.SubprocessFlags.NONE
+            );
         } catch (e) {
-            console.error(`[widget-center] could not open Control Center for "${widgetId}"`, e);
+            console.error(`[widget-center] could not launch the widget Settings app for "${widgetId}"`, e);
         }
     }
 
@@ -454,7 +523,7 @@ export default class WidgetCenterExtension extends Extension {
         // try/catch, same as _placeEntry()'s, so a failure here never
         // blocks the actor from being re-placed below.
         try {
-            BlockSizeManager.applyBlockSize(newEntry.metadata, newEntry.actor, this._grid.cellSize);
+            BlockSizeManager.applyBlockSize(newEntry.metadata, newEntry.actor);
         } catch (e) {
             console.error(`[widget-center] Failed to apply block size for "${widgetId}" after Reset`, e);
         }

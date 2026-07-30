@@ -1,0 +1,41 @@
+// i18n/th.js — widgets/clock-modern (th)
+// Auto-generated translation table; keys mirror this widget's
+// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
+// canonical English source every other locale file mirrors).
+
+export default {
+    "meta.name": "นาฬิกา (โมเดิร์น)",
+    "meta.description": "การ์ดนาฬิกาแบบเรียงซ้อนตัวเลขแนวตั้ง — am/pm ชั่วโมง นาที และวินาที อยู่คนละบรรทัด",
+    "tab.general.label": "นาฬิกา (โมเดิร์น)",
+    "tab.general.description": "การตั้งค่าการ์ดนาฬิกาแบบเรียงซ้อนตัวเลขแนวตั้ง",
+    "group.format.label": "รูปแบบ",
+    "field.format24h.label": "รูปแบบ 24 ชั่วโมง",
+    "field.format24h.description": "ปิดจะแสดงเวลาแบบ 12 ชั่วโมง พร้อมบรรทัด am/pm เหนือ HH",
+    "group.font.label": "ฟอนต์",
+    "group.font.description": "HH, MM และ SS ด้านล่างจะใช้ฟอนต์และขนาดเดียวกันเสมอ ส่วน am/pm มีฟอนต์และขนาดแยกต่างหาก",
+    "field.font.label": "ฟอนต์ HH / MM / SS",
+    "field.font.description": "ชนิดและขนาดฟอนต์ของตัวเลขชั่วโมง นาที และวินาที",
+    "field.ampmFont.label": "ฟอนต์ am/pm",
+    "field.ampmFont.description": "ชนิดและขนาดฟอนต์ของตัวบ่งชี้ am/pm",
+    "group.colors.label": "สี",
+    "group.colors.description": "HH, MM และ SS แต่ละตัวมีสีของตัวเองแยกกัน",
+    "field.colorHH.label": "สี HH",
+    "field.colorHH.description": "สีของตัวเลขชั่วโมง",
+    "field.colorMM.label": "สี MM",
+    "field.colorMM.description": "สีของตัวเลขนาที",
+    "field.colorSS.label": "สี SS",
+    "field.colorSS.description": "สีของตัวเลขวินาที",
+    "field.colorAmPm.label": "สี am/pm",
+    "field.colorAmPm.description": "สีของตัวบ่งชี้ am/pm",
+    "field.cardColor.label": "สีพื้นหลังการ์ด",
+    "field.cardColor.description": "สีพื้นหลังของการ์ดนาฬิกา",
+    "group.card.label": "รูปทรงการ์ด",
+    "field.cornerRadius.label": "รัศมีขอบมน",
+    "field.cornerRadius.description": "ความมนของขอบการ์ดนาฬิกา",
+    "group.launch.label": "เปิดเมื่อคลิก",
+    "group.launch.description": "การคลิกที่นาฬิกา (โดยไม่กดปุ่ม Super ค้าง) จะเปิดแอปที่เลือกไว้",
+    "field.launchOnClick.label": "เปิดแอปเมื่อคลิก",
+    "field.launchOnClick.description": "ต้องเลือกแอปด้านล่างก่อน",
+    "field.desktopFilePath.label": "แอปที่จะเปิด",
+    "field.desktopFilePath.description": "แอปพลิเคชัน (ไฟล์ .desktop) ที่จะเปิดเมื่อคลิก",
+};

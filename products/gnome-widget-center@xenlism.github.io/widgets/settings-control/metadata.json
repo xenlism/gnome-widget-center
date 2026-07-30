@@ -1,0 +1,10 @@
+{
+  "id": "settings-control",
+  "name": "Settings Control",
+  "description": "One-tap Wi-Fi/Ethernet, Bluetooth, Do Not Disturb, and Dark/Light mode toggles.",
+  "version": "1.0.0",
+  "author": "user",
+  "api-version": 1,
+  "entry": "widget.js",
+  "block-type": "1x1"
+}

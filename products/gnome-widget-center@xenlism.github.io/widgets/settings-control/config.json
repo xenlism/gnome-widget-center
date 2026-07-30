@@ -1,0 +1,67 @@
+{
+  "version": "1.0",
+  "tabs": [
+    {
+      "id": "general",
+      "label": "Settings Control",
+      "description": "Appearance settings",
+      "icon": "preferences-system-symbolic",
+      "groups": [
+        {
+          "id": "colors",
+          "label": "Colors",
+          "description": "",
+          "fields": [
+            {
+              "id": "backgroundColor",
+              "label": "Background color",
+              "description": "Background of the widget card - drag the alpha slider in the picker for transparency (stored as an 8-digit hex, e.g. #FFFFFFAA)",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#ffffffd9"
+            },
+            {
+              "id": "iconOnColor",
+              "label": "Icon color (on)",
+              "description": "Icon color when that toggle is turned on",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#3584e4"
+            },
+            {
+              "id": "iconOffColor",
+              "label": "Icon color (off)",
+              "description": "Icon color when that toggle is turned off",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#9a9996"
+            }
+          ]
+        },
+        {
+          "id": "shape",
+          "label": "Shape",
+          "description": "",
+          "fields": [
+            {
+              "id": "cornerRadius",
+              "label": "Card corner radius",
+              "description": "Roundness of the widget card's corners",
+              "dataType": "number",
+              "fieldType": "spinbutton",
+              "default": 18,
+              "min": 0,
+              "max": 60,
+              "step": 1,
+              "suffix": "px"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

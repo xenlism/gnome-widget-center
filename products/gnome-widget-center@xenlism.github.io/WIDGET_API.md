@@ -42,7 +42,7 @@ folder instead, discovered the same way.
   "api-version": 1,
   "entry": "widget.js",
   "prefs": "prefs.js",
-  "block-type": { "cols": 14, "rows": 9 },
+  "block-type": "1x1",
   "default-position": { "x": 40, "y": 40, "monitor": 0 }
 }
 ```
@@ -52,14 +52,39 @@ folder instead, discovered the same way.
 - `api-version` is a compatibility check. A breaking host API change
   bumps this; widgets built against an older number are disabled with a
   notice instead of crashing.
-- `block-type` (`{cols, rows}`) is the on-screen size **in grid cells**,
-  not pixels (see `development/architecture/specs/ui/size-constraints.md`
-  — the block-type system). The host multiplies by
-  `GridEngine.cellSize` (currently 16px/cell) when placing the widget —
-  don't declare pixel sizes. Omit the field entirely and you get a
-  `10 x 6` cell default. This size is fixed: **no min/max, and the user
-  cannot resize it themselves** (there is no `size-constraints` field
-  anymore).
+- `block-type` (a **name**, not `{cols, rows}` — changed 2026-07-26,
+  redefined to this exact list 2026-07-27) is the on-screen size **in
+  grid cells**, not pixels (see
+  `development/architecture/specs/ui/size-constraints.md` — the
+  block-type system) and `lib/blockSizeManager.js`'s `BLOCK_TYPES` table
+  for the authoritative list. The host multiplies the resolved cols/rows
+  by `BlockSizeManager.BLOCK_CELL_SIZE` (currently 16px/cell) when placing
+  the widget. Names read as `<colsTier>x<rowsTier>`, where tier 1/2/3/4 map to
+  10/21/34/43 cells (NOT literal cols×rows — check the table for the
+  real cell counts):
+
+  | name  | cols × rows |
+  |-------|-------------|
+  | `1x1` | 10 × 10     |
+  | `2x1` | 21 × 10     |
+  | `2x2` | 21 × 21     |
+  | `3x1` | 34 × 10     |
+  | `3x2` | 34 × 21     |
+  | `3x3` | 34 × 34     |
+  | `4x1` | 43 × 10     |
+  | `4x2` | 43 × 21     |
+  | `4x3` | 43 × 34     |
+  | `4x4` | 43 × 43     |
+
+  This is a **closed** list — these 10 sizes only, nothing else. Omit
+  the field entirely (or use an unrecognized name) and you get `1x1`
+  (10 × 10 cells). This size is fixed: **no min/max, and the user cannot
+  resize it themselves** (there is no `size-constraints` field anymore).
+  The old `{cols, rows}` object shape (and the earlier 2026-07-26
+  named-preset set — `xs`/`sm`/`md`/`lg`/`square`/`wide`/`banner`/`xl`)
+  still works if a widget hasn't migrated yet, sanitized/remapped rather
+  than trusted as-is, but new widgets should pick directly from the
+  table above.
 - `themeable` (optional boolean, default `false`) — opts this widget's
   root actor into the host-wide theme system
   (`development/docs/THEME_SYSTEM.md`): background/corner-radius/
@@ -77,6 +102,32 @@ folder instead, discovered the same way.
   author asking for it.
 - `settings` (optional array) — see §6.1. This is the **only** settings
   system with real Control Center UI generation today.
+- `dependencies` (optional object) — system binaries this widget needs
+  that aren't guaranteed to exist on every distro (most widgets need
+  none of this — pure GJS/DBus code needs nothing declared here at all).
+  Checked via `lib/dependencyChecker.js` (`GLib.find_program_in_path()`,
+  no subprocess spawn) both by a `.gwct` theme import
+  (`lib/exportService.js`) and, in future, a widget-install flow — never
+  enforced automatically at load time, just surfaced as a warning so a
+  missing binary fails with a clear message instead of an obscure crash
+  the first time the widget tries to use it.
+
+  ```json
+  "dependencies": {
+    "system": [
+      {
+        "bin": "playerctl",
+        "reason": "Needed to control playback for non-MPRIS players.",
+        "package": { "apt": "playerctl", "dnf": "playerctl", "pacman": "playerctl" }
+      }
+    ]
+  }
+  ```
+
+  Only `bin` is required. `package` is an optional hint map (keyed by
+  package manager name) used purely to suggest an install command for
+  whichever package manager is actually present — it's never run
+  automatically.
 
 ## 3. `widget.js` — must export a default class with these methods
 
@@ -273,7 +324,7 @@ conditional rows beyond `showIf` (§6.3), or anything with a "Browse…"
 button. See §4 for the contract, and `widgets/clock-modern/prefs.js` for a
 full example including a `Gtk.FileDialog` filtered to `.desktop` entries.
 
-### 6.3 `lib/settingsApi.js`'s fluent builder — implemented, but NOT wired up
+### 6.3 `lib/settingsApi.js`'s fluent builder — wired up (2026-07-28)
 
 `lib/settingsApi.js` (plus `lib/settingsRenderer.js` and
 `lib/settingsStore.js`) implement a **third**, more expressive way to
@@ -282,7 +333,7 @@ declare settings: a per-widget `settings.js` file exporting
 
 ```js
 // widgets/my-widget/settings.js
-function defineSettings(gwc) {
+export function defineSettings(gwc) {
     gwc.settings
         .group('Appearance')
         .setFont('fontFamily', { label: 'Font', default: 'Cantarell 11' })
@@ -309,27 +360,32 @@ Types available here: `font`, `color`, `date`, `boolean`, `option`,
 `showIf`-based conditional visibility). `setIcon`/`option` pair nicely
 with reverse-DNS icon names, e.g. from the wildfire symlink script.
 
-**Why this isn't in §6.1's recommendation:** `lib/settingsApi.js`,
-`lib/settingsRenderer.js`, and `lib/settingsStore.js` are pure/GTK logic
-with **no wiring into the real, ESM-based `extension.js`/`prefs.js`** this
-project actually ships. The only place that calls
-`GwcSettingsRenderer`/`GwcSettingsStore`/`GwcSettingsApi` is
-`prefs/integration-example.js`, which says outright in its own header
-comment that it is *"not a real file the engine loads — just a reference
-snippet"* — and it (along with `settingsStore.js`/`settingsRenderer.js`)
-uses the legacy global `imports.gi` / `imports.lib.*` syntax from
-pre-GNOME-45 extensions, not the `import ... from 'gi://...'` ES-module
-syntax `extension.js`/`prefs.js`/every bundled widget actually uses.
+**Status:** `lib/settingsApi.js`, `lib/settingsRenderer.js`, and
+`lib/settingsStore.js` were converted to plain ESM (`import`/`export`,
+`gi://...` imports) and wired into `prefs.js` on 2026-07-28.
+`prefsWidgetList.js` now reports `hasSettingsJs` for any widget shipping
+a `settings.js`, and `_openWidgetPrefs()` dynamically imports it
+(`_openWidgetSettingsJsPrefs()`) exactly the way it already does for a
+hand-written `prefs.js` (§6.2) — see that file for the details.
+`prefs/integration-example.js` still exists as a short, standalone
+version of the same wiring for anyone who wants it without prefs.js's
+window-management code around it.
 
-**Practical takeaway:** if you write a `widgets/my-widget/settings.js`
-today, nothing in the shipped extension will ever call it. Use §6.1 or
-§6.2. Treat §6.3 as a documented-but-dormant API — worth knowing about
-(the type list is richer, and `showIf` is genuinely nice), but don't build
-a real widget's only settings path on it until something in `extension.js`
-or `prefs.js` actually imports `settingsRegistry`/`GwcSettingsRenderer` via
-`gi://`-style ESM. If you're the one wiring it up, that's an intentional
-API addition (touches `widgetLoader.js`'s widget discovery and this file
-together), not something to do as a side effect of an unrelated change.
+**Precedence:** config.json (§6.4) > hand-written prefs.js (§6.2) >
+settings.js (this section) > the legacy `metadata.json` `settings` array
+(§6.1) — config.json wins outright if a widget somehow ships more than
+one, since it's meant to fully replace the others rather than merge with
+them; the legacy array is checked last since it's the oldest and least
+expressive of the four. In practice a widget should only ever have ONE
+of these.
+
+**Storage note:** `SettingsStore` (this path only) persists to its own
+location, `~/.local/share/gnome-widget-center/settings/<id>.json` —
+deliberately separate from `widgets/<id>.json`/`WidgetSettings`, which
+§6.1/§6.2/§6.4 all share. A widget using `settings.js` should use ONLY
+`gwc.settings`/its `SettingsStore` for its settings, not also read/write
+`api.settings` from `widget.js` expecting the same values — they are two
+different files on disk.
 
 ### 6.4 New recommended default: `config.json` (tabs/groups/fields)
 

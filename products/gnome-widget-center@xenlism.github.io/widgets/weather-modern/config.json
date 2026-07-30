@@ -1,0 +1,179 @@
+{
+  "version": "1.0",
+  "tabs": [
+    {
+      "id": "general",
+      "label": "Weather (Panel)",
+      "description": "Weather card settings",
+      "icon": "weather-clear-symbolic",
+      "groups": [
+        {
+          "id": "location",
+          "label": "Location",
+          "description": "Type coordinates directly, or turn on \"Detect automatically\" to look them up from your IP.",
+          "fields": [
+            {
+              "id": "location",
+              "label": "Location",
+              "description": "Coordinates as latitude,longitude - e.g. 15.1111,85.2555",
+              "dataType": "string",
+              "fieldType": "text",
+              "pattern": "^-?\\d{1,2}(\\.\\d+)?\\s*,\\s*-?\\d{1,3}(\\.\\d+)?$",
+              "default": "13.756331,100.501762"
+            },
+            {
+              "id": "detectNow",
+              "label": "Detect automatically",
+              "description": "Look up Location from your IP address right now (turns itself back off once done)",
+              "dataType": "boolean",
+              "fieldType": "switch",
+              "default": false
+            }
+          ]
+        },
+        {
+          "id": "refresh",
+          "label": "Refresh",
+          "description": "",
+          "fields": [
+            {
+              "id": "refreshMinutes",
+              "label": "Refresh rate",
+              "description": "How often to re-fetch the forecast",
+              "dataType": "integer",
+              "fieldType": "dropdown",
+              "default": 15,
+              "options": [
+                {"value": 5, "label": "Every 5 minutes"},
+                {"value": 10, "label": "Every 10 minutes"},
+                {"value": 15, "label": "Every 15 minutes"},
+                {"value": 30, "label": "Every 30 minutes"},
+                {"value": 45, "label": "Every 45 minutes"},
+                {"value": 60, "label": "Every 60 minutes"}
+              ]
+            }
+          ]
+        },
+        {
+          "id": "card",
+          "label": "Card",
+          "description": "",
+          "fields": [
+            {
+              "id": "cardColor",
+              "label": "Background color",
+              "description": "Background color of the weather card - drag the dialog's alpha slider for a transparent/translucent card",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#000000ff"
+            },
+            {
+              "id": "cornerRadius",
+              "label": "Corner radius",
+              "description": "Roundness of the card's corners",
+              "dataType": "number",
+              "fieldType": "spinbutton",
+              "default": 18,
+              "min": 0,
+              "max": 60,
+              "step": 1,
+              "suffix": "px"
+            }
+          ]
+        },
+        {
+          "id": "icon",
+          "label": "Weather Icon",
+          "description": "Icon set based on weather-iconic (https://github.com/konradmichalik/weather-iconic) / weather-icons (https://github.com/erikflowers/weather-icons) naming conventions.",
+          "fields": [
+            {
+              "id": "iconColor",
+              "label": "Icon color",
+              "description": "Color the weather icon is tinted",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#ffffff"
+            },
+            {
+              "id": "iconSize",
+              "label": "Icon size",
+              "description": "Size of the weather icon",
+              "dataType": "number",
+              "fieldType": "spinbutton",
+              "default": 48,
+              "min": 16,
+              "max": 160,
+              "step": 1,
+              "suffix": "px"
+            }
+          ]
+        },
+        {
+          "id": "condition",
+          "label": "Weather Condition",
+          "description": "The text line below the temperature (e.g. \"Cloudy\", \"Rain\", \"Clear\")",
+          "fields": [
+            {
+              "id": "conditionFont",
+              "label": "Condition font",
+              "description": "Font face and size for the condition text",
+              "dataType": "string",
+              "fieldType": "fontpicker",
+              "format": "font",
+              "default": "Sans 14"
+            },
+            {
+              "id": "conditionColor",
+              "label": "Condition color",
+              "description": "Color of the condition text",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#e6e6e6"
+            }
+          ]
+        },
+        {
+          "id": "temp",
+          "label": "Temperature",
+          "description": "",
+          "fields": [
+            {
+              "id": "tempFont",
+              "label": "Temperature font",
+              "description": "Font face and size for the temperature",
+              "dataType": "string",
+              "fieldType": "fontpicker",
+              "format": "font",
+              "default": "Sans Bold 32"
+            },
+            {
+              "id": "tempColor",
+              "label": "Temperature color",
+              "description": "Color of the temperature text",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#ffffff"
+            },
+            {
+              "id": "tempUnit",
+              "label": "Unit",
+              "description": "Celsius or Fahrenheit",
+              "dataType": "string",
+              "fieldType": "dropdown",
+              "default": "celsius",
+              "options": [
+                {"value": "celsius", "label": "Celsius (\u00b0C)"},
+                {"value": "fahrenheit", "label": "Fahrenheit (\u00b0F)"}
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

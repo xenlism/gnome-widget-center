@@ -9,7 +9,7 @@ export class StWidgetWrapper extends WidgetWrapper {
 
     // Sets a fixed pixel size on the underlying St actor. Widgets in
     // gnome-widget-center are grid-placed by block-type (cols x rows,
-    // see WidgetLoader/GridEngine), so their root container's size should
+    // see WidgetLoader/BlockSizeManager), so their root container's size should
     // always come from that contract rather than being left to grow with
     // whatever content ends up inside it.
     size(width, height) {

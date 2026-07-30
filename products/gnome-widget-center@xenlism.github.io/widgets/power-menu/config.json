@@ -1,0 +1,58 @@
+{
+  "version": "1.0",
+  "tabs": [
+    {
+      "id": "general",
+      "label": "Power Menu",
+      "description": "Appearance settings",
+      "icon": "system-shutdown-symbolic",
+      "groups": [
+        {
+          "id": "colors",
+          "label": "Colors",
+          "description": "",
+          "fields": [
+            {
+              "id": "backgroundColor",
+              "label": "Background color",
+              "description": "Background of the widget card - drag the alpha slider in the picker for transparency (stored as an 8-digit hex, e.g. #FFFFFFAA)",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#ffffffd9"
+            },
+            {
+              "id": "iconColor",
+              "label": "Icon color",
+              "description": "Color of the four power icons",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#2e2e2e"
+            }
+          ]
+        },
+        {
+          "id": "shape",
+          "label": "Shape",
+          "description": "",
+          "fields": [
+            {
+              "id": "cornerRadius",
+              "label": "Card corner radius",
+              "description": "Roundness of the widget card's corners",
+              "dataType": "number",
+              "fieldType": "spinbutton",
+              "default": 18,
+              "min": 0,
+              "max": 60,
+              "step": 1,
+              "suffix": "px"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -14,12 +14,6 @@ vertically, e.g.:
 [Open-Meteo](https://open-meteo.com) - free, no API key or signup
 required:
 
-- **Geocoding API** (`geocoding-api.open-meteo.com`) backs the settings
-  page's **Place** and **Location** fields (see "Location Picker" below)
-  - resolving a typed city name into a human-readable place string and
-    its `lat,lon` coordinates. This runs entirely in the Control
-    Center/prefs process, when you're picking a location - `widget.js`
-    itself never calls it.
 - **Forecast API** (`api.open-meteo.com`) returns current temperature, a
   [WMO weather code](https://open-meteo.com/en/docs), and day/night
   (`is_day`) for the coordinates stored in the `location` setting.
@@ -29,21 +23,29 @@ Weather is refreshed every 15 minutes, and immediately whenever
 reading on screen instead of blanking the card; the very first load shows
 `--` until the first successful fetch.
 
-## Location Picker
+## Location
 
-`place` and `location` are both `fieldType: "autocomplete"` fields (see
-`WIDGET_API.md` §6.4 and `autocomplete.js` in this folder) sharing one
-Open-Meteo geocoding lookup:
+`location` is a plain `fieldType: "text"` field: type coordinates as
+`latitude,longitude` (e.g. `15.1111,85.2555`; spaces around the comma are
+fine too). It's validated against that shape and saved as you type, and
+is the only value that drives the weather fetch.
 
-- **Place** - type a city name, pick a suggestion (e.g. "Bangkok,
-  Thailand"). Selecting one also fills **Location** with its resolved
-  coordinates.
-- **Location** - type a city name here too (or paste a `lat,lon` pair
-  directly - it's validated against that shape either way). Selecting a
-  suggestion also fills **Place** with its name.
+An earlier version resolved city names via Open-Meteo's geocoding API
+through an autocomplete "Place" field, but the autocomplete row didn't
+reliably persist what you typed unless you clicked a suggestion, so it
+was replaced with this simpler, directly-validated field.
 
-Only `location` (the `lat,lon` pair) actually drives the weather fetch;
-`place` is a human-readable display value.
+### First-run auto-detect
+
+If you've never set `location` (it's still the hardcoded
+`13.756331,100.501762` default), `widget.js` tries once, on first load, to
+replace it with your approximate location from a free IP-geolocation
+lookup - in order: `ip-api.com`, `freeipapi.com`, then `ipwhois.io`,
+stopping at the first one that answers. This runs from the Shell process
+(same as the weather fetch itself), not the prefs page, and is gated by
+an internal `locationAutoDetected` flag so it only ever runs once per
+widget instance - after that (or if all three lookups fail), `location`
+is yours to edit freely and is never overwritten automatically again.
 
 ## Block type
 
@@ -53,8 +55,7 @@ Only `location` (the `lat,lon` pair) actually drives the weather fetch;
 
 | Setting          | Type    | Default        | Description                                    |
 |-------------------|---------|----------------|--------------------------------------------------|
-| `place`           | autocomplete | `Bangkok, Thailand` | Human-readable place name |
-| `location`         | autocomplete | `13.756331,100.501762` | `lat,lon` pair actually used for the weather fetch |
+| `location`         | text | `13.756331,100.501762` | `lat,lon` pair actually used for the weather fetch |
 | `cardColor`        | color   | `#ffffff`      | Card background color                              |
 | `cornerRadius`     | number  | `18`           | Card corner radius, px                              |
 | `iconColor`        | color   | `#1a1a1a`      | Weather icon tint                                   |
@@ -108,7 +109,6 @@ Icons are recolored at render time: each SVG ships with a literal
 metadata.json
 config.json
 widget.js
-autocomplete.js
 stylesheet.css
 icons/*.svg
 README.md

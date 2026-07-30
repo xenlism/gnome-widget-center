@@ -101,6 +101,26 @@ export class WidgetLayer {
         // still landing in the right physical spot on the stage.
         container.set_position(monitor.x, monitor.y);
 
+        // Bug fix (2026-07-28, "can't move widget down" in Edit Mode):
+        // this container has no LayoutManager and its children are all
+        // manually positioned (set_position(), never a BoxLayout row/
+        // column) — with no explicit size of its own, Clutter falls back
+        // to the container's NATURAL size, which for a plain Clutter.Actor
+        // full of freely-positioned children is only just big enough to
+        // enclose whatever widgets happen to be placed so far (e.g. two
+        // widgets sitting near the top-left = a ~300px-tall container),
+        // NOT the monitor's real size. editModeDragController.js's
+        // _monitorBoundsFor() reads this same get_size() to compute the
+        // edge-margin drag clamp (layoutEngine.js's clampToBounds()) — so
+        // every drag was being clamped to "however tall the existing
+        // widget stack is" instead of the actual screen height, which is
+        // indistinguishable from "can't drag past here" once a widget's
+        // already near that height. Setting an explicit size here (kept in
+        // sync on monitor changes — see reconcileMonitors() below) makes
+        // get_size() report the real monitor dimensions regardless of how
+        // many widgets are currently placed or where.
+        container.set_size(monitor.width, monitor.height);
+
         this._monitorContainers.set(monitor.index, container);
     }
 
@@ -230,10 +250,17 @@ export class WidgetLayer {
         // Create containers for any newly-appeared monitor index first, so
         // widgets can be reparented into them below without a gap.
         for (const monitor of monitors) {
-            if (!this._monitorContainers.has(monitor.index))
+            if (!this._monitorContainers.has(monitor.index)) {
                 this._createContainer(monitor);
-            else
-                this._monitorContainers.get(monitor.index).set_position(monitor.x, monitor.y);
+            } else {
+                const container = this._monitorContainers.get(monitor.index);
+                container.set_position(monitor.x, monitor.y);
+                // Keep in sync with _createContainer()'s explicit sizing
+                // (see its 2026-07-28 fix note) — a resolution/scale change
+                // is exactly the case this needs to catch, not just a
+                // fresh container.
+                container.set_size(monitor.width, monitor.height);
+            }
         }
 
         // Move any widget that was living on a monitor index that no

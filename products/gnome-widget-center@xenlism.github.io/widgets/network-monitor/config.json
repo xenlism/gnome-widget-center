@@ -1,0 +1,132 @@
+{
+  "version": "1.0",
+  "tabs": [
+    {
+      "id": "general",
+      "label": "Network Monitor",
+      "description": "Network throughput card settings",
+      "icon": "network-wired-symbolic",
+      "groups": [
+        {
+          "id": "text",
+          "label": "Text",
+          "description": "",
+          "fields": [
+            {
+              "id": "fontDesc",
+              "label": "Font",
+              "description": "Face and size used for the download/upload numbers and the NET label",
+              "dataType": "string",
+              "fieldType": "fontpicker",
+              "default": "Sans Bold 20"
+            },
+            {
+              "id": "fontColor",
+              "label": "Font color",
+              "description": "Color of the NET label text (download/upload numbers use their own line colors below)",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#FFFFFFFF"
+            }
+          ]
+        },
+        {
+          "id": "graph",
+          "label": "Graph",
+          "description": "",
+          "fields": [
+            {
+              "id": "downloadLineColor",
+              "label": "Download line color",
+              "description": "Color of the download (↓) number and its sparkline",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#5AC8FAFF"
+            },
+            {
+              "id": "uploadLineColor",
+              "label": "Upload line color",
+              "description": "Color of the upload (↑) number and its sparkline",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#FF9F0AFF"
+            },
+            {
+              "id": "graphBaseColor",
+              "label": "Graph base color",
+              "description": "Background color of the strip the graph is drawn on",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#FFFFFF12"
+            }
+          ]
+        },
+        {
+          "id": "appearance",
+          "label": "Appearance",
+          "description": "",
+          "fields": [
+            {
+              "id": "backgroundColor",
+              "label": "Background color",
+              "description": "Card background. Use the alpha slider for transparency.",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#000000FF"
+            },
+            {
+              "id": "cornerRadius",
+              "label": "Corner radius",
+              "description": "Roundness of the card corners",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 18,
+              "min": 0,
+              "max": 64,
+              "step": 1,
+              "suffix": "px"
+            }
+          ]
+        },
+        {
+          "id": "behavior",
+          "label": "Behavior",
+          "description": "",
+          "fields": [
+            {
+              "id": "refreshRateSeconds",
+              "label": "Refresh rate",
+              "description": "How often the network reading and graph update",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 3,
+              "min": 1,
+              "max": 60,
+              "step": 1,
+              "suffix": "s"
+            },
+            {
+              "id": "launchAppPath",
+              "label": "Click to launch",
+              "description": "Pick a .desktop file to launch when this card is clicked. Leave empty to disable.",
+              "dataType": "string",
+              "fieldType": "filepicker",
+              "filters": ["*.desktop"],
+              "default": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

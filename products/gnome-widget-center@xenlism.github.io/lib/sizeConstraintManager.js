@@ -1,7 +1,7 @@
 // products/extension/lib/sizeConstraintManager.js
 //
 // Task 14 — Widget size constraints. บังคับขนาด Min/Max ของ Widget เพื่อกัน UI พัง
-// (เช่น GridEngine snap ตำแหน่งแล้วเจอ widget ที่ถูกลาก/resize จนเล็ก/ใหญ่เกินไป)
+// (เช่น LayoutEngine หา free position แล้วเจอ widget ที่ถูกลาก/resize จนเล็ก/ใหญ่เกินไป)
 //
 // Design notes (แก้จาก draft แรกที่ hard-code widget id ในไฟล์นี้ตรงๆ):
 //

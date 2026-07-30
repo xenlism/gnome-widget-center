@@ -5,7 +5,7 @@
 
 A modern desktop widget platform for GNOME Shell built with GJS, GTK4 and Libadwaita.
 
-> **Status:** Pre-Alpha
+> **Status:** Alpha (Development)
 
 ---
 

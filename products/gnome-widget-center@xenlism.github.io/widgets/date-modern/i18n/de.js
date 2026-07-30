@@ -1,0 +1,38 @@
+// i18n/de.js — widgets/date-modern (de)
+// Auto-generated translation table; keys mirror this widget's
+// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
+// canonical English source every other locale file mirrors).
+
+export default {
+    "meta.name": "Datum (Modern)",
+    "meta.description": "Vertikal gestapelte Datumskarte – Monat, Wochentag und Tag jeweils in einer eigenen Zeile.",
+    "tab.general.label": "Datum (Modern)",
+    "tab.general.description": "Einstellungen der vertikal gestapelten Datumskarte",
+    "group.font.label": "Schriftart",
+    "group.font.description": "Monat, Wochentag und Tagesnummer haben jeweils eine eigene, separate Schrift und Größe.",
+    "field.monthFont.label": "Monatsschrift",
+    "field.monthFont.description": "Schriftart und -größe des Monats (z. B. Jul)",
+    "field.dowFont.label": "Schrift des Wochentags",
+    "field.dowFont.description": "Schriftart und -größe der Wochentagsabkürzung (z. B. TU)",
+    "field.dayFont.label": "Schrift der Tagesnummer",
+    "field.dayFont.description": "Schriftart und -größe der Tageszahl (01-31)",
+    "group.colors.label": "Farben",
+    "group.colors.description": "Monat, Wochentag und Tagesnummer haben jeweils eine eigene, separate Farbe.",
+    "field.colorMonth.label": "Monatsfarbe",
+    "field.colorMonth.description": "Farbe des Monatstexts",
+    "field.colorDow.label": "Farbe des Wochentags",
+    "field.colorDow.description": "Farbe des Wochentagstexts",
+    "field.colorDay.label": "Farbe der Tagesnummer",
+    "field.colorDay.description": "Farbe der Tagesnummer",
+    "field.cardColor.label": "Kartenhintergrundfarbe",
+    "field.cardColor.description": "Hintergrundfarbe der Datumskarte",
+    "group.card.label": "Kartenform",
+    "field.cornerRadius.label": "Eckenradius",
+    "field.cornerRadius.description": "Rundung der Ecken der Datumskarte",
+    "group.launch.label": "Beim Klicken starten",
+    "group.launch.description": "Ein Klick auf die Datumskarte (ohne die Super-Taste zu halten) startet die gewählte App.",
+    "field.launchOnClick.label": "App beim Klicken starten",
+    "field.launchOnClick.description": "Erfordert die Auswahl einer App unten",
+    "field.desktopFilePath.label": "Zu startende App",
+    "field.desktopFilePath.description": "Anwendung (.desktop-Datei), die beim Klicken gestartet wird",
+};

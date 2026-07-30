@@ -1,0 +1,15 @@
+{
+  "id": "circles-clock",
+  "name": "Circles Clock",
+  "description": "1x1 concentric-ring clock: HH (outer) / MM (middle) / SS (inner) sweep rings with HH:MM:SS floating on top.",
+  "version": "1.0.0",
+  "author": "GNOME Widget Center",
+  "api-version": 1,
+  "entry": "widget.js",
+  "block-type": "1x1",
+  "default-position": {
+    "x": 40,
+    "y": 40,
+    "monitor": 0
+  }
+}

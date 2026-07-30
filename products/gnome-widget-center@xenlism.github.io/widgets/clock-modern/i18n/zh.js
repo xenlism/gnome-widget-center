@@ -1,0 +1,41 @@
+// i18n/zh.js — widgets/clock-modern (zh)
+// Auto-generated translation table; keys mirror this widget's
+// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
+// canonical English source every other locale file mirrors).
+
+export default {
+    "meta.name": "时钟（现代）",
+    "meta.description": "垂直堆叠数字时钟卡片——上午/下午、时、分、秒各占一行。",
+    "tab.general.label": "时钟（现代）",
+    "tab.general.description": "垂直堆叠数字时钟卡片设置",
+    "group.format.label": "格式",
+    "field.format24h.label": "24小时制",
+    "field.format24h.description": "关闭时显示 12 小时制时间，并在 HH 上方显示上午/下午行",
+    "group.font.label": "字体",
+    "group.font.description": "下方的时、分、秒始终共用同一字体和大小；上午/下午拥有独立的字体和大小。",
+    "field.font.label": "时/分/秒 字体",
+    "field.font.description": "时、分、秒数字的字体和大小",
+    "field.ampmFont.label": "上午/下午字体",
+    "field.ampmFont.description": "上午/下午指示符的字体和大小",
+    "group.colors.label": "颜色",
+    "group.colors.description": "时、分、秒各自拥有独立的颜色。",
+    "field.colorHH.label": "时（HH）颜色",
+    "field.colorHH.description": "小时数字的颜色",
+    "field.colorMM.label": "分（MM）颜色",
+    "field.colorMM.description": "分钟数字的颜色",
+    "field.colorSS.label": "秒（SS）颜色",
+    "field.colorSS.description": "秒数字的颜色",
+    "field.colorAmPm.label": "上午/下午颜色",
+    "field.colorAmPm.description": "上午/下午指示符的颜色",
+    "field.cardColor.label": "卡片背景颜色",
+    "field.cardColor.description": "时钟卡片的背景颜色",
+    "group.card.label": "卡片形状",
+    "field.cornerRadius.label": "圆角半径",
+    "field.cornerRadius.description": "时钟卡片圆角的圆润程度",
+    "group.launch.label": "点击启动",
+    "group.launch.description": "点击时钟（不按住 Super 键）将启动所选应用。",
+    "field.launchOnClick.label": "点击时启动应用",
+    "field.launchOnClick.description": "需要在下方选择一个应用",
+    "field.desktopFilePath.label": "要启动的应用",
+    "field.desktopFilePath.description": "点击后启动的应用程序（.desktop 文件）",
+};

@@ -7,24 +7,28 @@
  *
  * Usage from prefs.js:
  *
- *   const { GwcSettingsRenderer } = imports.prefs.settingsRenderer;
- *   const { SettingsStore } = imports.lib.settingsStore;
+ *   import {buildGroup} from './lib/settingsRenderer.js';
+ *   import {SettingsStore} from './lib/settingsStore.js';
  *
  *   const store = new SettingsStore(widgetId, schema.fields);
- *   const group = GwcSettingsRenderer.buildGroup(schema, store, {
- *       title: 'Clock Widget',
- *   });
- *   preferencesPage.add(group);
+ *   for (const group of buildGroup(schema, store, { title: 'Clock Widget' }))
+ *       preferencesPage.add(group);
  *
  * Requires GTK 4.10+ / libadwaita 1.4+ for Gtk.ColorDialogButton,
  * Gtk.FontDialogButton and Adw.SwitchRow. Falls back to legacy
  * Gtk.ColorButton / Gtk.FontButton where noted if you're targeting
  * older GNOME.
+ *
+ * 2026-07-28: converted from the legacy `imports.gi` global style to
+ * plain ESM (`import`/`export`) so this can actually be imported by
+ * prefs.js — see WIDGET_API.md §6.3.
  */
 
-'use strict';
-
-const { Gtk, Gdk, Adw, GLib, Pango } = imports.gi;
+import Gtk from 'gi://Gtk';
+import Gdk from 'gi://Gdk';
+import Adw from 'gi://Adw';
+import GLib from 'gi://GLib';
+import Pango from 'gi://Pango';
 
 function _makeActionRow(field) {
     const row = new Adw.ActionRow({
@@ -366,7 +370,7 @@ const BUILDERS = {
  * @param {{title?: string, description?: string}} [opts]
  * @returns {Adw.PreferencesGroup[]}
  */
-function buildGroup(schema, store, opts = {}) {
+export function buildGroup(schema, store, opts = {}) {
     const fallbackTitle = opts.title || schema.widgetId;
     const groupsByTitle = new Map();
     const groupsInOrder = [];
@@ -410,5 +414,3 @@ function buildGroup(schema, store, opts = {}) {
 
     return groupsInOrder;
 }
-
-var GwcSettingsRenderer = { buildGroup };
