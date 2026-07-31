@@ -1,0 +1,162 @@
+{
+  "version": "1.0",
+  "tabs": [
+    {
+      "id": "general",
+      "label": "Circles Year",
+      "description": "Year progress ring settings",
+      "icon": "x-office-calendar-symbolic",
+      "groups": [
+        {
+          "id": "card",
+          "label": "Card",
+          "description": "",
+          "fields": [
+            {
+              "id": "backgroundColor",
+              "label": "Background color",
+              "description": "Card background. Defaults to fully transparent.",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#000000a9"
+            },
+            {
+              "id": "cornerRadius",
+              "label": "Corner radius",
+              "description": "Roundness of the card corners",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 18,
+              "min": 0,
+              "max": 64,
+              "step": 1,
+              "suffix": "px"
+            }
+          ]
+        },
+        {
+          "id": "text",
+          "label": "Text",
+          "description": "The year text floating on top of the ring",
+          "fields": [
+            {
+              "id": "yearFont",
+              "label": "Year font",
+              "description": "Face and size used for the big year number (e.g. 2026)",
+              "dataType": "string",
+              "fieldType": "fontpicker",
+              "default": "Sans Bold 26"
+            },
+            {
+              "id": "yearColor",
+              "label": "Year color",
+              "description": "Color of the big year number",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#FFFFFFFF"
+            },
+            {
+              "id": "showDayCount",
+              "label": "Show day count",
+              "description": "Show \"day X / Y\" below the year number",
+              "dataType": "boolean",
+              "fieldType": "switch",
+              "default": true
+            },
+            {
+              "id": "dayFont",
+              "label": "Day count font",
+              "description": "Face and size used for the \"day X / Y\" line",
+              "dataType": "string",
+              "fieldType": "fontpicker",
+              "default": "Sans 11"
+            },
+            {
+              "id": "dayColor",
+              "label": "Day count color",
+              "description": "Color of the \"day X / Y\" line",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#FFFFFFB3"
+            }
+          ]
+        },
+        {
+          "id": "ring",
+          "label": "Ring",
+          "description": "",
+          "fields": [
+            {
+              "id": "circleBaseColor",
+              "label": "Circle base color",
+              "description": "Base/track color drawn behind the progress ring",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#FFFFFF26"
+            },
+            {
+              "id": "ringColor",
+              "label": "Ring color",
+              "description": "Color of the year-progress ring (day-of-year / days-in-year)",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#33D17AFF"
+            },
+            {
+              "id": "ringThickness",
+              "label": "Ring thickness",
+              "description": "Stroke width of both the base track and the progress ring",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 10,
+              "min": 4,
+              "max": 24,
+              "step": 1,
+              "suffix": "px"
+            }
+          ]
+        },
+        {
+          "id": "behavior",
+          "label": "Behavior",
+          "description": "",
+          "fields": [
+            {
+              "id": "refreshRateSeconds",
+              "label": "Refresh rate",
+              "description": "How often the date/ring is re-checked. The date only changes once a day, so this can be large.",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 300,
+              "min": 5,
+              "max": 86400,
+              "step": 5,
+              "suffix": "s"
+            },
+            {
+              "id": "launchAppPath",
+              "label": "Click to launch",
+              "description": "Pick a .desktop file to launch when this card is clicked. Leave empty to disable.",
+              "dataType": "string",
+              "fieldType": "filepicker",
+              "filters": [
+                "*.desktop"
+              ],
+              "default": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

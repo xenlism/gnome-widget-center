@@ -1,0 +1,152 @@
+{
+  "version": "1.0",
+  "tabs": [
+    {
+      "id": "general",
+      "label": "Clock (Modern)",
+      "description": "Vertical stacked-digit clock card settings",
+      "icon": "preferences-system-time-symbolic",
+      "groups": [
+        {
+          "id": "format",
+          "label": "Format",
+          "description": "",
+          "fields": [
+            {
+              "id": "format24h",
+              "label": "24-hour format",
+              "description": "Off shows 12-hour time with an am/pm line above HH",
+              "dataType": "boolean",
+              "fieldType": "switch",
+              "default": true
+            }
+          ]
+        },
+        {
+          "id": "font",
+          "label": "Font",
+          "description": "HH, MM and SS always share the same face and size below. am/pm has its own separate face and size.",
+          "fields": [
+            {
+              "id": "font",
+              "label": "HH / MM / SS font",
+              "description": "Font face and size for the hour, minute and second digits",
+              "dataType": "string",
+              "fieldType": "fontpicker",
+              "format": "font",
+              "default": "Sans Bold 30"
+            },
+            {
+              "id": "ampmFont",
+              "label": "am/pm font",
+              "description": "Font face and size for the am/pm indicator",
+              "dataType": "string",
+              "fieldType": "fontpicker",
+              "format": "font",
+              "default": "Sans Bold 10"
+            }
+          ]
+        },
+        {
+          "id": "colors",
+          "label": "Colors",
+          "description": "HH, MM and SS each have their own separate color.",
+          "fields": [
+            {
+              "id": "colorHH",
+              "label": "HH color",
+              "description": "Color of the hour digits",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#1a1a1a"
+            },
+            {
+              "id": "colorMM",
+              "label": "MM color",
+              "description": "Color of the minute digits",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#1a1a1a"
+            },
+            {
+              "id": "colorSS",
+              "label": "SS color",
+              "description": "Color of the second digits",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "rgb(165,29,45)"
+            },
+            {
+              "id": "colorAmPm",
+              "label": "am/pm color",
+              "description": "Color of the am/pm indicator",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#d81f26"
+            },
+            {
+              "id": "cardColor",
+              "label": "Card background color",
+              "description": "Background color of the clock card",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#ffffff"
+            }
+          ]
+        },
+        {
+          "id": "card",
+          "label": "Card shape",
+          "description": "",
+          "fields": [
+            {
+              "id": "cornerRadius",
+              "label": "Corner radius",
+              "description": "Roundness of the clock card's corners",
+              "dataType": "number",
+              "fieldType": "spinbutton",
+              "default": 18,
+              "min": 0,
+              "max": 60,
+              "step": 1,
+              "suffix": "px"
+            }
+          ]
+        },
+        {
+          "id": "launch",
+          "label": "Launch on click",
+          "description": "Clicking the clock (without holding Super) launches the chosen app.",
+          "fields": [
+            {
+              "id": "launchOnClick",
+              "label": "Launch app on click",
+              "description": "Requires an app to be chosen below",
+              "dataType": "boolean",
+              "fieldType": "switch",
+              "default": true
+            },
+            {
+              "id": "desktopFilePath",
+              "label": "App to launch",
+              "description": "Application (.desktop file) launched on click",
+              "dataType": "string",
+              "fieldType": "filepicker",
+              "format": "file",
+              "default": "/usr/share/applications/firefox.desktop",
+              "filters": [
+                "*.desktop"
+              ],
+              "enabledIf": "launchOnClick"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

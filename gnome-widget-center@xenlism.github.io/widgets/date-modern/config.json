@@ -1,0 +1,137 @@
+{
+  "version": "1.0",
+  "tabs": [
+    {
+      "id": "general",
+      "label": "Date (Modern)",
+      "description": "Vertical stacked date card settings",
+      "icon": "x-office-calendar-symbolic",
+      "groups": [
+        {
+          "id": "font",
+          "label": "Font",
+          "description": "Month, day-of-week and day-of-month each have their own separate font face and size.",
+          "fields": [
+            {
+              "id": "monthFont",
+              "label": "Month font",
+              "description": "Font face and size for the month (e.g. Jul)",
+              "dataType": "string",
+              "fieldType": "fontpicker",
+              "format": "font",
+              "default": "Noto Sans Thai Bold 30"
+            },
+            {
+              "id": "dowFont",
+              "label": "Day-of-week font",
+              "description": "Font face and size for the day-of-week abbreviation (e.g. TU)",
+              "dataType": "string",
+              "fieldType": "fontpicker",
+              "format": "font",
+              "default": "Noto Sans Thai Bold 30"
+            },
+            {
+              "id": "dayFont",
+              "label": "Day-of-month font",
+              "description": "Font face and size for the day-of-month number (01-31)",
+              "dataType": "string",
+              "fieldType": "fontpicker",
+              "format": "font",
+              "default": "Noto Sans Thai Bold 30"
+            }
+          ]
+        },
+        {
+          "id": "colors",
+          "label": "Colors",
+          "description": "Month, day-of-week and day-of-month each have their own separate color.",
+          "fields": [
+            {
+              "id": "colorMonth",
+              "label": "Month color",
+              "description": "Color of the month text",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#d81f26"
+            },
+            {
+              "id": "colorDow",
+              "label": "Day-of-week color",
+              "description": "Color of the day-of-week text",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#1a1a1a"
+            },
+            {
+              "id": "colorDay",
+              "label": "Day-of-month color",
+              "description": "Color of the day-of-month number",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#1a1a1a"
+            },
+            {
+              "id": "cardColor",
+              "label": "Card background color",
+              "description": "Background color of the date card",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#ffffff"
+            }
+          ]
+        },
+        {
+          "id": "card",
+          "label": "Card shape",
+          "description": "",
+          "fields": [
+            {
+              "id": "cornerRadius",
+              "label": "Corner radius",
+              "description": "Roundness of the date card's corners",
+              "dataType": "number",
+              "fieldType": "spinbutton",
+              "default": 18,
+              "min": 0,
+              "max": 60,
+              "step": 1,
+              "suffix": "px"
+            }
+          ]
+        },
+        {
+          "id": "launch",
+          "label": "Launch on click",
+          "description": "Clicking the date card (without holding Super) launches the chosen app.",
+          "fields": [
+            {
+              "id": "launchOnClick",
+              "label": "Launch app on click",
+              "description": "Requires an app to be chosen below",
+              "dataType": "boolean",
+              "fieldType": "switch",
+              "default": false
+            },
+            {
+              "id": "desktopFilePath",
+              "label": "App to launch",
+              "description": "Application (.desktop file) launched on click",
+              "dataType": "string",
+              "fieldType": "filepicker",
+              "format": "file",
+              "default": "",
+              "filters": [
+                "*.desktop"
+              ],
+              "enabledIf": "launchOnClick"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

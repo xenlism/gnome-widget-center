@@ -1,155 +1,128 @@
 # GNOME Widget Center
+
 [![Language](https://img.shields.io/badge/Language-GJS%20%2F%20JavaScript-yellow)](https://gjs.guide/)
 [![Toolkit](https://img.shields.io/badge/Toolkit-GTK%204.0-blue)](https://www.gtk.org/)
 [![License](https://img.shields.io/badge/License-GPL%203.0-blue.svg)](LICENSE)
 
-A modern desktop widget platform for GNOME Shell built with GJS, GTK4 and Libadwaita.
+A desktop widget platform for GNOME Shell, built with GJS, GTK4, and Libadwaita.
 
-> **Status:** Alpha (Development)
+> **Status:** Alpha — feature-complete for a first preview, pending a full
+> real-hardware sign-off (see [Current Status](#current-status)).
 
 ---
 
 ## Overview
 
-GNOME Widget Center is a modern desktop widget platform inspired by KDE Plasma Widgets while following the GNOME Human Interface Guidelines (HIG).
+GNOME Widget Center brings desktop widgets to GNOME Shell in the spirit of
+KDE Plasma Widgets, while following the GNOME Human Interface Guidelines
+(HIG). Today the whole project is a single GNOME Shell extension —
+`products/gnome-widget-center@xenlism.github.io/` — that:
 
-The project is built around three main components:
+- discovers and loads widgets from a folder (bundled, or user-installed
+  under `~/.local/share/gnome-widget-center/widgets/`);
+- renders them on the desktop with free, pixel-precise placement and
+  collision-aware Edit Mode drag-and-drop;
+- gives every widget its own settings page, generated automatically from a
+  declarative `config.json` (or a hand-written GTK4/libadwaita `prefs.js`
+  for anything more custom);
+- ships a Control Center (Overview / Store / Preferences) for managing,
+  theming, and configuring widgets, plus theme export/import as portable
+  `.gwct` files.
 
-- GNOME Shell Extension
-- GNOME Widget Center Application
-- Widget SDK
-
-Widgets never interact directly with GNOME Shell internals. Instead, they communicate exclusively through the Widget SDK, providing a stable and maintainable development environment.
+A widget never touches GNOME Shell internals directly — it talks only to
+the `WidgetAPI` object the host passes into it. See
+[`products/gnome-widget-center@xenlism.github.io/WIDGET_API.md`](products/gnome-widget-center@xenlism.github.io/WIDGET_API.md)
+for the full widget-author contract, or
+[`SKILL.md`](products/gnome-widget-center@xenlism.github.io/SKILL.md) in
+the same folder for the condensed, build-one-now version.
 
 ---
 
 ## Screenshots
 
-### Dashboard
+### Edit Mode ( Settings Reset Move By Right Click Toggle)
 
-![Dashboard](products/assets/screenshots/dashboard.png)
+![editmode](screenshots/editmode.png)
 
 ### Desktop
 
-![Desktop](products/assets/screenshots/desktop.png)
+![Desktop](/screenshots/desktop.png)
 
 ---
 
 ## Current Status
 
-> **หมายเหตุ:** ตอนนี้โปรเจกต์เป็น **GNOME Shell Extension เดียว** (`products/gnome-widget-center@xenlism.github.io/`)
-> ยังไม่มี GTK4 Application/SDK แยกต่างหากตามที่ร่างไว้ในหัวข้อ Architecture ด้านล่าง — ทุกอย่างรันอยู่ใน
-> process ของ Shell เอง สถานะละเอียดต่อ task ดูที่ `development/tasks/ROADMAP.md`
+The project is currently a **single GNOME Shell extension** — there is no
+separate standalone GTK4 application or installable Widget SDK package yet
+(see [Vision](#vision) below for where that's headed).
 
-| Component | Status |
-|-----------|--------|
-| Architecture / Specifications | ✅ Complete |
-| Widget Loader (discover/load, hot-reload dev mode) | ✅ Logic complete |
-| Widget Layer (desktop rendering, multi-monitor) | ✅ Logic complete |
-| Settings Store (JSON per widget, live cross-process reload) | ✅ Logic complete |
-| Preferences (Control Center, declarative settings schema) | ✅ Logic complete |
-| Widget Edit Mode (right-click overlay: Settings/Reset/Remove/Uninstall) | ✅ Logic complete |
-| Edit Mode Drag & Drop (grid snap, collision avoidance, monitor lock, z-order-to-front) | ✅ Logic complete |
-| Grid Engine (16px grid, 5 fixed size presets: Small/Wide/Medium/Large/XLarge) | ✅ Logic complete |
-| Appearance Theme (toolbar look via `theme.json`, live reload) | ✅ Logic complete |
-| Debug Logging / Dev Mode (Advanced prefs tab) | ✅ Logic complete |
-| Widget SDK example pack (clock, media-player via MPRIS) | ✅ Logic complete |
-| Packaging & third-party widget docs (`_template/`, `PUBLISHING_A_WIDGET.md`) | ✅ Complete |
-| Theme Backup & Restore (`.gwctheme` export/import) | ⏳ Planned — not started |
-| GTK4 standalone Application / Widget SDK package / Widget Repository | ⏳ Planned — not started |
-| Real GNOME Shell hardware sign-off (release checklist) | 🚧 Partial — spot-tested, no full 1hr clean-run confirmed |
+| Area | Status |
+|---|---|
+| Widget Loader (discover/load, hot-reload dev mode) | ✅ Working |
+| Widget Layer (desktop rendering, multi-monitor) | ✅ Working |
+| Settings (per-widget JSON, `config.json` schema UI, live cross-process reload) | ✅ Working |
+| Control Center (Overview / Store / Preferences, sidebar navigation) | ✅ Working |
+| Edit Mode (floating toolbar overlay, free pixel placement, collision avoidance) | ✅ Working |
+| Appearance / Theme system (`theme.json`, live `Gio.FileMonitor` reload, per-widget override + global Force) | ✅ Working |
+| Theme export/import (`.gwct`, with secret-field redaction and a dependency report) | ✅ Working |
+| System dependency checker (`GLib.find_program_in_path()`) | ✅ Working |
+| i18n — 6 locales (en, zh, es, th, de, ja) | ✅ Working |
+| Bundled widgets (~30, including clock, calendar, weather, system monitors, media player) | ✅ Working |
+| Debug logging / dev mode (Advanced prefs tab) | ✅ Working |
+| Full real-GNOME-Shell hardware sign-off | 🚧 Spot-tested; no full clean-run confirmation yet |
+| Standalone GTK4 application / installable Widget SDK / online widget repository | ⏳ Not started |
 
-*"Logic complete" = code written and read/tested against acceptance criteria, but not yet formally
-signed off end-to-end on a real GNOME Shell session per `development/tasks/10-testing-release.md`.*
+"Working" means the code is written, `node --check`-verified, and
+exercised in development — not the same as a formal, end-to-end sign-off
+on a clean real GNOME Shell session. See
+[`products/gnome-widget-center@xenlism.github.io/PROJECT_STATUS.md`](products/gnome-widget-center@xenlism.github.io/PROJECT_STATUS.md)
+for a running log of recent changes.
 
 ---
 
 ## Vision
 
-GNOME Widget Center aims to provide:
+Longer-term, GNOME Widget Center aims to grow beyond a single extension
+into:
 
-- Desktop Widgets
-- Stable Widget SDK
-- Theme Packages
-- Widget Repository
-- Multi-monitor Support
-- GTK4 Preferences
-- High Performance
-- Developer-friendly APIs
+- A stable, documented Widget SDK third-party developers can build against
+- A standalone GTK4 companion application
+- A theme/widget repository with install, update, search, and ratings
+- Broader SDK surface area (network, notifications, storage, AI) beyond
+  what a widget can already do today via `WidgetAPI`
 
 ---
 
 ## Features
 
-### Desktop Widgets
+### Desktop widgets
 
-- Desktop Widget Layer
-- Fixed-size Widgets
-- 16px Grid Layout
-- Drag & Drop
-- Desktop Edit Mode
-- Right-click Context Menu
+- Fixed-size widgets on a 16px grid, from a closed set of 10 block sizes
+  (`1x1` up to `4x4`)
+- Free, pixel-precise placement with collision avoidance in Edit Mode
+- Drag & drop (Super+drag in normal mode; a floating toolbar overlay in
+  Edit Mode)
+- Right-click context menu (Settings / Reset / Remove / Uninstall)
+- Multi-monitor aware
 
-### Widget SDK
+### Widget authoring
 
-Widgets communicate through the SDK instead of directly accessing GNOME Shell.
+- Drop a folder in and go — no compiled schema, no install step
+- Settings UI generated for free from a declarative `config.json`
+  (text, location with IP auto-detect, color/font/icon pickers, file/folder
+  pickers, installed-app pickers, lists, conditional visibility, and more)
+- A hand-written `prefs.js` escape hatch for anything more bespoke
+- A reusable MPRIS2 media-player client (`lib/mediaApi.js`) and
+  CPU/RAM/network sampler (`lib/systemMetricsApi.js`) for bundled widgets
+- A cross-widget event bus, and per-widget/global appearance theming
+- Full i18n support across all widgets
 
-Planned SDK modules include:
+### Themes
 
-- Configuration
-- Dashboard
-- Theme
-- Media
-- Network
-- Notifications
-- Storage
-- Logger
-- Repository
-- AI
-
-### Theme Packages
-
-Theme Packages replace traditional backup and restore.
-
-A package can include:
-
-- Desktop Layout
-- Installed Widgets
-- Widget Settings
-- Theme Configuration
-- Wallpaper (Optional)
-- Fonts (Optional)
-
-### Widget Repository
-
-Planned features:
-
-- Install Widgets
-- Update Widgets
-- Search
-- Categories
-- Ratings
-- Screenshots
-
----
-
-## Architecture
-
-```text
-GNOME Widget Center Application
-            │
-            ▼
-       Widget SDK
-            │
-            ▼
-      Widget Runtime
-            │
-            ▼
-GNOME Shell Extension
-            │
-            ▼
-      Desktop Widget Layer
-```
+`.gwct` files export/import a full snapshot — desktop layout, installed
+widget settings, and appearance/theme configuration — as a single JSON
+file, with sensitive fields (API keys, tokens) automatically redacted on
+export.
 
 ---
 
@@ -157,112 +130,38 @@ GNOME Shell Extension
 
 ```text
 development/
-├── architecture/
-├── roadmap/
-├── specifications/
-├── tasks/
-└── tools/
+├── architecture/     # specs, contracts, architecture docs
+├── docs/              # WIDGET_API, SETTINGS_SPEC, THEME_SYSTEM, etc.
+├── tasks/             # task briefs + ROADMAP.md
+└── tests/             # e2e checklist
 
 products/
-├── application/
-├── extension/
-├── sdk/
-├── widgets/
-└── assets/
-
-website/
-
-docs/
+├── assets/                                  # screenshots, etc.
+└── gnome-widget-center@xenlism.github.io/   # the extension itself
+    ├── lib/           # host services (loader, theme, settings, drag, ...)
+    ├── widgets/       # bundled widgets
+    ├── i18n/          # locale files
+    ├── WIDGET_API.md  # widget author contract (full spec)
+    └── SKILL.md       # condensed widget-building guide
 ```
-
----
-
-## Roadmap
-
-### Phase 0 — Foundation
-
-- ✅ Project setup
-- ✅ Repository structure
-- ✅ Architecture
-- ✅ Specifications
-
-### Phase 1 — Core Runtime
-
-- ✅ Widget Loader
-- ✅ Widget Layer
-- ✅ Widget Runtime
-- ✅ Settings Store
-- ✅ Drag Runtime (Super+drag, Normal mode)
-
-**Milestone:** Desktop widgets can be displayed. ✅ *(reached — pending real-hardware sign-off)*
-
-### Phase 2 — Desktop Experience
-
-- ✅ Preferences (Control Center, declarative settings schema)
-- ✅ Widget Configuration
-- ✅ Desktop Edit Mode (right-click overlay + drag-and-drop + grid engine)
-- ✅ Multi-monitor Support
-
-**Milestone:** Users can manage widgets visually. ✅ *(reached — pending real-hardware sign-off)*
-
-### Phase 3 — Widget SDK
-
-- ✅ Widget SDK (declarative `metadata.json` contract, `WidgetAPI`)
-- ✅ Example Widgets (clock, media-player via MPRIS)
-- ✅ Hot Reload
-- ✅ Developer Documentation
-
-**Milestone:** Third-party widget development. ✅ *(reached — pending real-hardware sign-off)*
-
-### Phase 4 — Public Preview
-
-- 🚧 Testing (spot-tested on real hardware; full 1hr clean-run not yet confirmed)
-- ✅ Packaging (`_template/`, publishing docs)
-- ✅ Documentation
-- ⏳ Preview Release
-
-### Phase 5 — Themes
-
-- 🚧 Theme Manager *(built so far: visual/appearance theming for the Edit Mode toolbar via
-  `theme.json` + live reload — NOT the settings-backup theme described below yet)*
-- ⏳ Theme Packages (`.gwctheme` export/import of layout + widget settings)
-- ⏳ Import / Export
-- ⏳ Theme Sharing
-
-### Phase 6 — Widget Repository
-
-- Online Repository
-- Widget Installation
-- Widget Updates
-- Ratings
-- Categories
-
-### Future
-
-- AI Widgets
-- Cloud Synchronization
-- Online Theme Store
-- Community Marketplace
 
 ---
 
 ## Technology
 
-- GJS
-- GTK4
-- Libadwaita
-- GObject
-- GSettings
-- Meson
-- Flatpak
+- GJS (GNOME JavaScript)
+- GTK4 + Libadwaita
+- GObject / GSettings
+- Meson (packaging)
 
 ---
 
 ## Contributing
 
-Development documentation is available in the `development` directory.
-
-Contributions, bug reports and feature suggestions are welcome.
+Development documentation lives under `development/`. Widget authors
+should start with
+[`WIDGET_API.md`](products/gnome-widget-center@xenlism.github.io/WIDGET_API.md).
+Contributions, bug reports, and feature suggestions are welcome.
 
 ---
 

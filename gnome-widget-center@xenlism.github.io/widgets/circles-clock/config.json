@@ -1,0 +1,164 @@
+{
+  "version": "1.0",
+  "tabs": [
+    {
+      "id": "general",
+      "label": "Circles Clock",
+      "description": "Concentric-ring clock settings",
+      "icon": "preferences-system-time-symbolic",
+      "groups": [
+        {
+          "id": "card",
+          "label": "Card",
+          "description": "",
+          "fields": [
+            {
+              "id": "backgroundColor",
+              "label": "Background color",
+              "description": "Card background. Defaults to fully transparent.",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#000000a9"
+            },
+            {
+              "id": "cornerRadius",
+              "label": "Corner radius",
+              "description": "Roundness of the card corners",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 18,
+              "min": 0,
+              "max": 64,
+              "step": 1,
+              "suffix": "px"
+            }
+          ]
+        },
+        {
+          "id": "time",
+          "label": "Time text",
+          "description": "The HH:MM:SS text floating on top of the rings",
+          "fields": [
+            {
+              "id": "format24h",
+              "label": "24-hour format",
+              "description": "Show 14:30:05 instead of 02:30:05 PM-style hours",
+              "dataType": "boolean",
+              "fieldType": "switch",
+              "default": true
+            },
+            {
+              "id": "timeFont",
+              "label": "Time font",
+              "description": "Face and size used for the HH:MM:SS text",
+              "dataType": "string",
+              "fieldType": "fontpicker",
+              "default": "Sans Bold 20"
+            },
+            {
+              "id": "timeColor",
+              "label": "Time color",
+              "description": "Color of the HH:MM:SS text",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#FFFFFFFF"
+            }
+          ]
+        },
+        {
+          "id": "rings",
+          "label": "Rings",
+          "description": "",
+          "fields": [
+            {
+              "id": "circleBaseColor",
+              "label": "Circle base color",
+              "description": "Base/track color drawn behind every ring",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#FFFFFF26"
+            },
+            {
+              "id": "colorHH",
+              "label": "Outer ring color (HH)",
+              "description": "Hour ring - outermost",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#e5a50a"
+            },
+            {
+              "id": "colorMM",
+              "label": "Middle ring color (MM)",
+              "description": "Minute ring - middle",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#2ec27e"
+            },
+            {
+              "id": "colorSS",
+              "label": "Inner ring color (SS)",
+              "description": "Second ring - innermost",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#3584e4"
+            },
+            {
+              "id": "ringThickness",
+              "label": "Ring thickness",
+              "description": "Stroke width of each ring",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 10,
+              "min": 4,
+              "max": 24,
+              "step": 1,
+              "suffix": "px"
+            }
+          ]
+        },
+        {
+          "id": "behavior",
+          "label": "Behavior",
+          "description": "",
+          "fields": [
+            {
+              "id": "refreshRateSeconds",
+              "label": "Refresh rate",
+              "description": "How often the clock re-reads the system time and repaints. Lower = smoother second-hand sweep, slightly more CPU.",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 1,
+              "min": 1,
+              "max": 60,
+              "step": 1,
+              "suffix": "s"
+            },
+            {
+              "id": "launchAppPath",
+              "label": "Click to launch",
+              "description": "Pick a .desktop file to launch when this card is clicked. Leave empty to disable.",
+              "dataType": "string",
+              "fieldType": "filepicker",
+              "filters": [
+                "*.desktop"
+              ],
+              "default": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,154 @@
+{
+  "version": "1.0",
+  "tabs": [
+    {
+      "id": "general",
+      "label": "Circles CPU",
+      "description": "CPU ring gauge settings",
+      "icon": "utilities-system-monitor-symbolic",
+      "groups": [
+        {
+          "id": "card",
+          "label": "Card",
+          "description": "",
+          "fields": [
+            {
+              "id": "backgroundColor",
+              "label": "Background color",
+              "description": "Card background. Defaults to black at 85% transparency.",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#000000a9"
+            },
+            {
+              "id": "cornerRadius",
+              "label": "Corner radius",
+              "description": "Roundness of the card corners",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 18,
+              "min": 0,
+              "max": 64,
+              "step": 1,
+              "suffix": "px"
+            }
+          ]
+        },
+        {
+          "id": "text",
+          "label": "Text",
+          "description": "",
+          "fields": [
+            {
+              "id": "labelFont",
+              "label": "Label font",
+              "description": "Face and size used for the \"CPU\" caption",
+              "dataType": "string",
+              "fieldType": "fontpicker",
+              "default": "Sans 12"
+            },
+            {
+              "id": "labelColor",
+              "label": "Label color",
+              "description": "Color of the \"CPU\" caption text",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#FFFFFFB3"
+            },
+            {
+              "id": "percentFont",
+              "label": "Percent font",
+              "description": "Face and size used for the percentage number",
+              "dataType": "string",
+              "fieldType": "fontpicker",
+              "default": "Sans Bold 22"
+            },
+            {
+              "id": "percentColor",
+              "label": "Percent color",
+              "description": "Color of the percentage number",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#FFFFFFFF"
+            }
+          ]
+        },
+        {
+          "id": "ring",
+          "label": "Ring",
+          "description": "",
+          "fields": [
+            {
+              "id": "circleBaseColor",
+              "label": "Circle base color",
+              "description": "Base/track color drawn behind the progress ring",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#FFFFFF26"
+            },
+            {
+              "id": "ringColor",
+              "label": "Outer ring color (CPU)",
+              "description": "Color of the CPU usage progress ring",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#33D17AFF"
+            },
+            {
+              "id": "ringThickness",
+              "label": "Ring thickness",
+              "description": "Stroke width of both the base track and the progress ring",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 10,
+              "min": 4,
+              "max": 24,
+              "step": 1,
+              "suffix": "px"
+            }
+          ]
+        },
+        {
+          "id": "behavior",
+          "label": "Behavior",
+          "description": "",
+          "fields": [
+            {
+              "id": "refreshRateSeconds",
+              "label": "Refresh rate",
+              "description": "How often the CPU reading updates",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 2,
+              "min": 1,
+              "max": 60,
+              "step": 1,
+              "suffix": "s"
+            },
+            {
+              "id": "launchAppPath",
+              "label": "Click to launch",
+              "description": "Pick a .desktop file to launch when this card is clicked. Leave empty to disable.",
+              "dataType": "string",
+              "fieldType": "filepicker",
+              "filters": [
+                "*.desktop"
+              ],
+              "default": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
