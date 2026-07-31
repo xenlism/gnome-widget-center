@@ -135,14 +135,14 @@ development/
 ├── tasks/             # task briefs + ROADMAP.md
 └── tests/             # e2e checklist
 
-products/
-├── assets/                                  # screenshots, etc.
-└── gnome-widget-center@xenlism.github.io/   # the extension itself
-    ├── lib/           # host services (loader, theme, settings, drag, ...)
-    ├── widgets/       # bundled widgets
-    ├── i18n/          # locale files
-    ├── WIDGET_API.md  # widget author contract (full spec)
-    └── SKILL.md       # condensed widget-building guide
+
+screenshots/                                  # screenshots, etc.
+gnome-widget-center@xenlism.github.io/   # the extension itself
+  ├── lib/           # host services (loader, theme, settings, drag, ...)
+  ├── widgets/       # bundled widgets
+  ├── i18n/          # locale files
+  ├── WIDGET_API.md  # widget author contract (full spec)
+  └── SKILL.md       # condensed widget-building guide
 ```
 
 ---
