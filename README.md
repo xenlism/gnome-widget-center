@@ -57,7 +57,10 @@ Every contribution helps support development, maintenance, bug fixes, and new fe
 
 ### Edit Mode ( Settings Reset Move By Right Click Toggle)
 
-![editmode](assets/editmode.mp4)
+![editmode](assets/editmode.png)
+![](assets/editmode.mp4)
+<video src="assets/editmode.mp4" controls preload></video>
+
 
 ### Desktop
 
