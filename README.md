@@ -58,8 +58,7 @@ Every contribution helps support development, maintenance, bug fixes, and new fe
 ### Edit Mode ( Settings Reset Move By Right Click Toggle)
 
 ![editmode](assets/editmode.png)
-![](assets/editmode.mp4)
-<video src="assets/editmode.mp4" controls preload></video>
+https://github.com/xenlism/gnome-widget-center/blob/main/assets/editmode.mp4
 
 
 ### Desktop
