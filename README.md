@@ -57,7 +57,7 @@ Every contribution helps support development, maintenance, bug fixes, and new fe
 
 ### Edit Mode ( Settings Reset Move By Right Click Toggle)
 
-![editmode](assets/editmode.png)
+![editmode](assets/editmode.gif)
 
 ### Desktop
 
