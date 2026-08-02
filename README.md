@@ -16,7 +16,7 @@ A desktop widget platform for GNOME Shell, built with GJS, GTK4, and Libadwaita.
 GNOME Widget Center brings desktop widgets to GNOME Shell in the spirit of
 KDE Plasma Widgets, while following the GNOME Human Interface Guidelines
 (HIG). Today the whole project is a single GNOME Shell extension —
-`products/gnome-widget-center@xenlism.github.io/` — that:
+`gnome-widget-center@xenlism.github.io/` — that:
 
 - discovers and loads widgets from a folder (bundled, or user-installed
   under `~/.local/share/gnome-widget-center/widgets/`);
@@ -31,22 +31,37 @@ KDE Plasma Widgets, while following the GNOME Human Interface Guidelines
 
 A widget never touches GNOME Shell internals directly — it talks only to
 the `WidgetAPI` object the host passes into it. See
-[`products/gnome-widget-center@xenlism.github.io/WIDGET_API.md`](products/gnome-widget-center@xenlism.github.io/WIDGET_API.md)
+[`gnome-widget-center@xenlism.github.io/WIDGET_API.md`](gnome-widget-center@xenlism.github.io/WIDGET_API.md)
 for the full widget-author contract, or
-[`SKILL.md`](products/gnome-widget-center@xenlism.github.io/SKILL.md) in
+[`SKILL.md`](gnome-widget-center@xenlism.github.io/SKILL.md) in
 the same folder for the condensed, build-one-now version.
 
 ---
 
+## ❤️ Support Development
+
+If you find **GNOME Widget Center** useful, please consider supporting its development.
+
+### PayPal
+
+[![PayPal QR Code](assets/paypal.jpg)](assets/paypal.jpg)
+
+### USDT (TRC20 Network)
+
+[![USDT TRC20 QR Code](assets/usdt.jpg)](assets/usdt.jpg)
+
+Every contribution helps support development, maintenance, bug fixes, and new features.
+
+---
 ## Screenshots
 
 ### Edit Mode ( Settings Reset Move By Right Click Toggle)
 
-![editmode](screenshots/editmode.png)
+![editmode](assets/editmode.png)
 
 ### Desktop
 
-![Desktop](/screenshots/desktop.png)
+![Desktop](assets/desktop.png)
 
 ---
 
@@ -75,7 +90,7 @@ separate standalone GTK4 application or installable Widget SDK package yet
 "Working" means the code is written, `node --check`-verified, and
 exercised in development — not the same as a formal, end-to-end sign-off
 on a clean real GNOME Shell session. See
-[`products/gnome-widget-center@xenlism.github.io/PROJECT_STATUS.md`](products/gnome-widget-center@xenlism.github.io/PROJECT_STATUS.md)
+[`gnome-widget-center@xenlism.github.io/PROJECT_STATUS.md`](gnome-widget-center@xenlism.github.io/PROJECT_STATUS.md)
 for a running log of recent changes.
 
 ---
@@ -136,7 +151,7 @@ development/
 └── tests/             # e2e checklist
 
 
-screenshots/                                  # screenshots, etc.
+assets/                                  # screenshots, etc.
 gnome-widget-center@xenlism.github.io/   # the extension itself
   ├── lib/           # host services (loader, theme, settings, drag, ...)
   ├── widgets/       # bundled widgets
@@ -160,7 +175,7 @@ gnome-widget-center@xenlism.github.io/   # the extension itself
 
 Development documentation lives under `development/`. Widget authors
 should start with
-[`WIDGET_API.md`](products/gnome-widget-center@xenlism.github.io/WIDGET_API.md).
+[`WIDGET_API.md`](gnome-widget-center@xenlism.github.io/WIDGET_API.md).
 Contributions, bug reports, and feature suggestions are welcome.
 
 ---
