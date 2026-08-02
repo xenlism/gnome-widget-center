@@ -1,220 +1,81 @@
 // products/extension/lib/editModeDragController.js
 //
-// Task 13 — Widget Drag & Drop. Distinct from task 04's DragController
-// (Super+drag in Normal mode, no collision/margin handling at all) — see
-// development/tasks/13-widget-drag-drop.md "ต่างจาก 04-drag-reposition.md
-// อย่างไร" for the full reasoning already recorded there. Summary: this
-// controller only starts a drag while WidgetEditMode.isEditing(widgetId)
-// is true (task 12), and shares task 04's own persistence call
-// (StorageService.updateWidgetPosition()) — no new storage format, no new
-// IPC, same single-process design as everything else in this codebase.
-//
-// 2026-07-28 — grid removed ("เอา grid ออก"): dropped the old snap-to-16px
-// grid entirely. LayoutEngine (renamed from GridEngine, task 14) now only
-// keeps a widget `edgeMargin` px from the monitor edge and, while its
-// user-configurable `preventOverlap` is on, `spacing` px from every other
-// widget — searched for in continuous pixel space, not grid cells. See
-// layoutEngine.js's file header for the full behavior + defaults.
-//
-// 2026-07-19 fix — armed on the BACK actor, not the front one (see
-// 2026-07-21 update below for where the listener actually lives now):
-// the original version wired its button-press listener onto the same
-// front actor task 04/12 use. That never actually worked, because
-// WidgetEditMode sets `actor.reactive = false` on the front actor for
-// as long as Edit Mode is active (`widgetEditMode.js`'s _flip()) — the
-// only actor that's visible/reactive while EDIT is showing is the BACK
-// side (the flip card with the Settings/Reset/Remove icons). This file
-// waits for `WidgetEditMode`'s `onBackActorReady` callback (wired in
-// extension.js) to arm its press listener — see armDragHandle() below.
-// attach() still tracks the front actor, because that's the one
-// WidgetLayer/StorageService know about and the one that actually gets
-// persisted; the back actor is just moved in lockstep alongside it
-// purely for on-screen feedback during the drag, since it's the actor
-// the user can actually see.
-//
-// 2026-07-21 refactor — armed on DragHandle, not the whole BackActor:
-// real-hardware reports showed toolbar icon clicks (Settings/Reset/
-// Remove) being reinterpreted as drag starts instead of firing their
-// action. The 2026-07-19 fix above still wired its button-press listener
-// onto the BACK actor as a whole, relying on St.Button consuming its own
-// press event before it could bubble up to this controller's handler —
-// an implicit ordering assumption, not a real boundary. Per the approved
-// design decision ("Bug Fix Proposal: Toolbar Icon Click vs Drag
-// Conflict"), WidgetEditMode now builds a dedicated, full-size
-// `dragHandle` child actor UNDER its toolbar row (see widgetEditMode.js's
-// `_buildBackActor()`), and `armDragHandle()` below is the ONLY place
-// this controller ever attaches a button-press listener — never to the
-// back actor as a whole, never via `event.get_source()` checks or
-// `EVENT_STOP` propagation games. The back actor itself is still tracked
-// (as `entry.backActor`) purely so it can be moved/eased on screen during
-// the drag — `dragHandle` is only the event surface, and moves for free
-// as `backActor`'s own child.
-//
-// A drag only starts when the press lands on `dragHandle` — which is
-// exactly the empty space on the back side, since the toolbar's action
-// icons are `St.Button`s stacked on top of it that consume their own
-// press events and never let them fall through. No Super key is needed
-// either, same as before this fix.
-//
-// Development Mode debug logging (2026-07-19): armDragHandle()'s press
-// handler now logs every gating check it runs (already dragging?, not a
-// primary-button press?, WidgetEditMode.isEditing() false?) before
-// deciding whether to actually start a drag — added specifically so a
-// "can't drag in Edit Mode" report can be diagnosed from `journalctl`:
-// each of those checks silently `return`s EVENT_PROPAGATE on its own,
-// which looks identical to "nothing happened" from the outside.
+// Task 13 — Widget Drag & Drop. 
+// 2026-08-02 — Final Production Pass.
+// Added disposed flag for safe teardown and moved storage save before animation.
 
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
+import GLib from 'gi://GLib';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import { SnapManager } from './snapManager.js';
+import { GuideRenderer } from './guideRenderer.js';
+
+const DRAG_OPACITY = 160;
+const NORMAL_OPACITY = 255;
+const DROP_ANIMATION_MS = 120;
 
 export class EditModeDragController {
-    /**
-     * @param {WidgetLayer} widgetLayer - task 02's layer; moved in memory
-     *   during the drag exactly like task 04's controller does.
-     * @param {StorageService} storageService - task 03's file layer; same
-     *   single write-on-drop discipline as task 04.
-     * @param {LayoutEngine} layoutEngine - task 14; used for the
-     *   edge-margin clamp, collision-avoidance search, and live
-     *   placeholder feedback during the drag. No grid snapping (removed
-     *   2026-07-28) — see layoutEngine.js's file header.
-     * @param {WidgetEditMode} editMode - task 12; gates whether a drag is
-     *   even allowed to start, and is told about DRAGGING<->EDIT
-     *   transitions via enterDragging()/exitDragging().
-     */
     constructor(widgetLayer, storageService, layoutEngine, editMode, logger = null) {
         this._layer = widgetLayer;
         this._storage = storageService;
         this._layout = layoutEngine;
         this._editMode = editMode;
-        // Optional (lib/logger.js) — debug() is a no-op if omitted.
         this._logger = logger ?? {debug() {}, warn() {}, error() {}};
 
-        /** @private {Map<string, {actor, pressId, monitorIndex}>} */
-        this._tracked = new Map();
-        /** @private active drag state, at most one at a time, like task 04 */
-        this._drag = null;
-        /** @private () => Array<{id,x,y,width,height}> supplied by
-         * extension.js — every OTHER widget currently on the same
-         * monitor, for collision detection. A function rather than a
-         * static list because it must reflect live positions, not a
-         * snapshot taken at attach() time. */
-        this._getOthersOnMonitor = null;
+        this._snapManager = new SnapManager(layoutEngine);
+        this._guideRenderer = new GuideRenderer();
 
-        /** @private Guard flag to prevent cyclical _onMotion execution loop */
-        this._isProcessingMotion = false;
+        this._tracked = new Map();
+        this._drag = null;
+        this._getOthersOnMonitor = null;
+        this._disposed = false; // Lifecycle flag
+        
+        // Coalescing state
+        this._latestX = 0;
+        this._latestY = 0;
+        this._frameScheduled = false;
+        this._motionGeneration = 0; // Fix 3: Cancel pending frame
     }
 
-    /**
-     * @method setOthersProvider
-     * @description Wires the collision-detection data source. Must be
-     * called once before any drag can honor `preventOverlap`; without it,
-     * drops still work but skip collision avoidance entirely (treated
-     * as "no other widgets" - degrades gracefully rather than throwing).
-     * @param {(monitorIndex:number, excludeId:string) => Array<{id:string,x:number,y:number,width:number,height:number}>} provider
-     */
     setOthersProvider(provider) {
         this._getOthersOnMonitor = provider;
     }
 
-    /**
-     * @method attach
-     * @description Registers a widget's front actor for edit-mode
-     * dragging. Call once per widget, same timing as
-     * DragController.attach()/WidgetEditMode.attach() — but note this no
-     * longer wires any press listener directly (see file header): the
-     * front actor is only used here as "the thing that ultimately gets
-     * moved/persisted", the press listener itself is armed later, lazily,
-     * on the dedicated DRAG HANDLE via armDragHandle() once
-     * WidgetEditMode builds it.
-     * @param {string} widgetId
-     * @param {Clutter.Actor} actor
-     * @param {number} [monitorIndex=0]
-     */
     attach(widgetId, actor, monitorIndex = 0) {
+        // Fix 4: attach leak
         if (this._tracked.has(widgetId))
-            return;
+            this.detach(widgetId);
 
         this._tracked.set(widgetId, {
             actor, monitorIndex,
-            backActor: null, // the whole flip-card, moved/eased for on-screen feedback
-            dragHandle: null, // the actor the press/drag listener actually lives on
+            backActor: null,
+            dragHandle: null,
             dragPressId: null,
         });
     }
 
-    /**
-     * @method armDragHandle
-     * @description Wires the actual button-press listener that starts a
-     * drag, onto a widget's dedicated DRAG HANDLE actor — a full-size
-     * child of the back-side card that sits UNDER the toolbar row and is
-     * the only thing this controller ever attaches a drag listener to
-     * (see the file header's 2026-07-21 note). Called via
-     * `WidgetEditMode`'s `onBackActorReady` callback the first time a
-     * widget's back actor is built (see widgetEditMode.js). A no-op if
-     * the widget was never attach()'d, or already armed (the back
-     * actor/drag handle are only ever built once per widget, so this
-     * should only fire once too).
-     * @param {string} widgetId
-     * @param {Clutter.Actor} backActor - the whole flip-card, moved/eased
-     *   on screen during the drag purely for visual feedback.
-     * @param {Clutter.Actor} dragHandle - the actual event surface; the
-     *   ONLY actor this method ever connects a button-press listener to.
-     */
     armDragHandle(widgetId, backActor, dragHandle) {
         const entry = this._tracked.get(widgetId);
-        if (!entry) {
-            this._logger.warn('edit-drag', `armDragHandle("${widgetId}") — not attach()'d yet, skipping`);
-            return;
-        }
-        if (entry.dragHandle) {
-            this._logger.debug('edit-drag', `armDragHandle("${widgetId}") skipped — already armed`);
-            return;
-        }
-        this._logger.debug('edit-drag', `armDragHandle("${widgetId}")`);
+        if (!entry || entry.dragHandle) return;
 
         entry.backActor = backActor;
         entry.dragHandle = dragHandle;
 
         const pressId = dragHandle.connect('button-press-event', (_actor, event) => {
-            this._logger.debug('edit-drag',
-                `dragHandle button-press("${widgetId}") button=${event.get_button()} ` +
-                `alreadyDragging=${!!this._drag} isEditing=${this._editMode.isEditing(widgetId)}`);
-
-            if (this._drag)
-                return Clutter.EVENT_PROPAGATE;
-
-            if (event.get_button() !== Clutter.BUTTON_PRIMARY)
-                return Clutter.EVENT_PROPAGATE;
-
-            // Spec: "Drag is available only while Edit Mode is active."
-            // (Defensive here — in practice the back actor is only ever
-            // reactive while EDIT/DRAGGING anyway, see _flip().)
-            if (!this._editMode.isEditing(widgetId))
-                return Clutter.EVENT_PROPAGATE;
-
-            this._logger.debug('edit-drag', `drag started ("${widgetId}")`);
+            if (this._drag || this._disposed) return Clutter.EVENT_PROPAGATE;
+            if (event.get_button() !== Clutter.BUTTON_PRIMARY) return Clutter.EVENT_PROPAGATE;
+            if (!this._editMode.isEditing(widgetId)) return Clutter.EVENT_PROPAGATE;
 
             const {actor, monitorIndex} = entry;
             const [stageX, stageY] = global.get_pointer();
             const [startX, startY] = actor.get_position();
             const [width, height] = actor.get_size();
 
-            const parent = actor.get_parent();
+            const grabOffsetX = stageX - startX;
+            const grabOffsetY = stageY - startY;
 
-            // Bring-to-front (2026-07-22 fix, "dragged widget should stay
-            // on top"): every widget actor/backActor is otherwise just
-            // left in whatever z-order it was first added in and NEVER
-            // reordered again, so a widget lower in that original order
-            // would stay rendered underneath others even while actively
-            // being dragged on top of them. Raise both siblings — the
-            // front `actor` (same parent as backActor, see
-            // widgetEditMode.js's `_buildToolbar()`:
-            // `parent.insert_child_above(toolbar, entry.actor)`) so it's
-            // already on top once Edit Mode flips back and hides
-            // `backActor`, and `backActor` itself since that's what's
-            // actually visible/being moved on screen for the whole drag.
-            // No restore-on-drop: the widget just interacted with staying
-            // topmost afterward is the intended, simpler behavior here.
+            const parent = actor.get_parent();
             parent?.set_child_above_sibling(actor, null);
             parent?.set_child_above_sibling(backActor, null);
 
@@ -226,22 +87,15 @@ export class EditModeDragController {
 
             this._drag = {
                 widgetId, actor, backActor, monitorIndex, width, height,
-                grabX: stageX, grabY: stageY,
-                startX, startY,
+                grabOffsetX, grabOffsetY,
                 placeholder,
+                placeholderInvalid: false,
                 motionId: global.stage.connect('motion-event', ev => this._onMotion(ev)),
                 releaseId: global.stage.connect('button-release-event', ev => this._onRelease(ev)),
             };
 
-            // Preview follows the pointer 1:1 (no grid snap while
-            // dragging - only the PLACEHOLDER shows where it would land,
-            // per spec's "Drag Preview" + "Placeholder" being two
-            // separate features). Applied to the BACK actor since that's
-            // what's actually visible right now — the front actor stays
-            // hidden/non-reactive the whole time Edit Mode is active, it
-            // just moves in lockstep underneath so its persisted position
-            // is correct once the flip back to NORMAL happens later.
-            backActor.set_opacity(220);
+            backActor.set_opacity(DRAG_OPACITY);
+            this._logger.debug('edit-drag', `drag started ("${widgetId}")`);
 
             return Clutter.EVENT_STOP;
         });
@@ -249,184 +103,266 @@ export class EditModeDragController {
         entry.dragPressId = pressId;
     }
 
-    /** @private */
     _onMotion(event) {
-        if (!this._drag)
-            return Clutter.EVENT_PROPAGATE;
+        if (!this._drag || this._disposed) return Clutter.EVENT_PROPAGATE;
 
-        if (this._isProcessingMotion)
-            return Clutter.EVENT_PROPAGATE;
+        // 1. Always cache the latest pointer coordinates (Fix: Use global.get_pointer())
+        [this._latestX, this._latestY] = global.get_pointer();
 
-        this._isProcessingMotion = true;
+        // 2. If a frame is already scheduled, do nothing (coalesce)
+        if (this._frameScheduled) return Clutter.EVENT_STOP;
 
+        // 3. Schedule a single process before the next redraw
+        this._frameScheduled = true;
+        
+        // Fix 3: Cancel pending frame
+        const generation = ++this._motionGeneration;
+    GLib.idle_add(
+    GLib.PRIORITY_DEFAULT_IDLE,
+    () => {
+        if (generation !== this._motionGeneration) {
+            this._frameScheduled = false;
+            return GLib.SOURCE_REMOVE;
+        }
+
+        this._frameScheduled = false;
+
+        if (this._disposed || !this._drag)
+            return GLib.SOURCE_REMOVE;
+
+        this._processMotion(
+            this._latestX,
+            this._latestY
+        );
+
+        return GLib.SOURCE_REMOVE;
+    }
+);
+
+        return Clutter.EVENT_STOP;
+    }
+
+    _othersFor(drag) {
+        // Fix 8: Monitor stale
+    const monitorIndex = drag.monitorIndex ?? 0;
+return this._getOthersOnMonitor?.(monitorIndex, drag.widgetId) ?? [];
+    }
+
+    _processMotion(stageX, stageY) {
         try {
-            // FIX: ใช้ global.get_pointer() ตามคำแนะนำเพื่อดึงพิกัดปัจจุบันระดับ Stage โดยไม่ต้องพึ่งเมธอดของ MotionEvent
-            const [stageX, stageY] = global.get_pointer();
-            const newX = this._drag.startX + (stageX - this._drag.grabX);
-            const newY = this._drag.startY + (stageY - this._drag.grabY);
+            const rawX = stageX - this._drag.grabOffsetX;
+            const rawY = stageY - this._drag.grabOffsetY;
 
-            // Task 13 + LayoutEngine's edgeMargin - clamp position to stay
-            // inside the current monitor, `edgeMargin` px from every edge,
-            // so the widget can never be dragged into the forbidden strip
-            // along the screen edge (see layoutEngine.js file header).
-            const bounds = this._monitorBoundsFor(this._drag.monitorIndex);
-            const locked = this._layout.clampToBounds(newX, newY, this._drag.width, this._drag.height, bounds);
+            // Fix 8: Monitor stale
+            const monitorIndex = this._drag.monitorIndex ?? 0;
+            const bounds = this._monitorBoundsFor(monitorIndex);
+            const others = this._othersFor(this._drag);
 
-            // Preview: follows the pointer exactly (minus the edge-margin
-            // clamp above) - in-memory only, same as task 04 - never
-            // touches disk per motion event, and no grid snap (removed).
+            // 1. Compute magnetic snap
+            const snapResult = this._snapManager.computeSnap(
+                { x: rawX, y: rawY, width: this._drag.width, height: this._drag.height },
+                others,
+                bounds
+            );
+
+            // 2. Clamp to bounds after snapping
+            const locked = this._layout.clampToBounds(
+                snapResult.x, snapResult.y, this._drag.width, this._drag.height, bounds
+            );
+
+            // 3. Move actors to snapped position
             this._layer.setWidgetPosition(this._drag.widgetId, locked.x, locked.y);
-
-            // The front actor moved above is what WidgetLayer/StorageService
-            // know about, but it's invisible for the whole drag (Edit Mode
-            // still active) — move the BACK actor to the same spot every
-            // frame so the user actually sees the widget follow the pointer.
             this._drag.backActor.set_position(locked.x, locked.y);
 
-            // Placeholder: shows exactly where it would land if released
-            // right now, including collision avoidance (when preventOverlap
-            // is on), so the user sees the real drop target rather than
-            // just the raw pointer position that might overlap another
-            // widget or sit closer than `spacing` px to one.
-            const others = this._othersFor(this._drag);
+            // 4. Render guide lines (uses pool internally)
+            // Fix 9: Parent destroyed
+            const container = this._layer.getContainer(monitorIndex);
+            if (container && container.get_stage())
+                this._guideRenderer.render(snapResult.guides, container);
+
+            // 5. Calculate drop placeholder (collision avoidance)
             const target = this._layout.findFreePosition(
                 locked.x, locked.y, this._drag.width, this._drag.height,
                 bounds, others, this._drag.widgetId);
 
             this._drag.placeholder.set_position(target.x, target.y);
-            this._drag.placeholder.set_style_class_name(
-                target.collided
-                    ? 'widget-edit-mode-placeholder widget-edit-mode-placeholder-collision'
-                    : 'widget-edit-mode-placeholder');
-        } finally {
-            this._isProcessingMotion = false;
+            
+            // 6. Optimize CSS state switching (add/remove instead of set)
+            if (this._drag.placeholderInvalid !== target.collided) {
+                this._drag.placeholderInvalid = target.collided;
+                if (target.collided) {
+                    this._drag.placeholder.add_style_class_name('widget-edit-mode-placeholder-invalid');
+                    this._drag.placeholder.remove_style_class_name('widget-edit-mode-placeholder-valid');
+                } else {
+                    this._drag.placeholder.add_style_class_name('widget-edit-mode-placeholder-valid');
+                    this._drag.placeholder.remove_style_class_name('widget-edit-mode-placeholder-invalid');
+                }
+            }
+        } catch (e) {
+            this._logger.error('edit-drag', 'Motion processing failed', e);
         }
-
-        return Clutter.EVENT_STOP;
     }
 
-    /** @private */
     _onRelease(event) {
-        if (!this._drag)
-            return Clutter.EVENT_PROPAGATE;
+        if (!this._drag || this._disposed) return Clutter.EVENT_PROPAGATE;
 
-        const {widgetId, actor, backActor, monitorIndex, width, height, motionId, releaseId, placeholder} = this._drag;
-        this._logger.debug('edit-drag', `_onRelease("${widgetId}")`);
-        global.stage.disconnect(motionId);
-        global.stage.disconnect(releaseId);
+        this._guideRenderer.clear();
 
-        const [currentX, currentY] = actor.get_position();
-        const others = this._othersFor(this._drag);
-        const bounds = this._monitorBoundsFor(monitorIndex);
-        const target = this._layout.findFreePosition(
-            currentX, currentY, width, height, bounds, others, widgetId);
+        const {widgetId, actor, backActor, monitorIndex, motionId, releaseId, placeholder} = this._drag;
+        
+        // Fix 3: Cancel pending frame
+        this._motionGeneration++;
+        this._frameScheduled = false;
 
-        // Single write for the whole drag, exactly like task 04's own
-        // release handler and for the same reason (see its doc comment).
+        // Safe disconnect
+        try { global.stage.disconnect(motionId); } catch (e) {}
+        try { global.stage.disconnect(releaseId); } catch (e) {}
+
+        // Read directly from the placeholder position to guarantee landing exactly on the green box
+        const [targetX, targetY] = placeholder.get_position();
+
+        // Fix 5: Animation cleanup
+        actor.remove_all_transitions();
+        backActor.remove_all_transitions();
+
+        // OPTIMIZATION: Save to disk BEFORE animation starts.
+        // Fix 6: Save failure
+        let saved = true;
+        try {
+            this._storage.updateWidgetPosition(widgetId, targetX, targetY, monitorIndex);
+        } catch (e) {
+            saved = false;
+            this._logger.error('edit-drag', `Failed to save position for ${widgetId}`, e);
+        }
+
+        if (!saved) {
+            backActor.set_opacity(NORMAL_OPACITY);
+
+            if (placeholder) {
+                const p = placeholder.get_parent();
+                if (p) p.remove_child(placeholder);
+                
+                // Fix 7: Placeholder destroy
+                try {
+                    placeholder.destroy();
+                } catch (_) {}
+            }
+
+            this._editMode.exitDragging(widgetId);
+            this._drag = null;
+
+            return Clutter.EVENT_STOP;
+        }
+
         actor.ease({
-            x: target.x, y: target.y,
-            duration: 120,
+            x: targetX, y: targetY,
+            duration: DROP_ANIMATION_MS,
             mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-            onComplete: () => {
-                this._logger.debug('edit-drag',
-                    `persisting position ("${widgetId}") -> (${target.x}, ${target.y}) monitor=${monitorIndex}`);
-                this._storage.updateWidgetPosition(widgetId, target.x, target.y, monitorIndex);
-            },
         });
-        // Back actor eases to the same spot purely for visual feedback —
-        // it isn't what gets persisted (the front actor/StorageService
-        // call above is), but it's what the user is actually looking at.
+        
         backActor.ease({
-            x: target.x, y: target.y,
-            duration: 120,
+            x: targetX, y: targetY,
+            duration: DROP_ANIMATION_MS,
             mode: Clutter.AnimationMode.EASE_OUT_QUAD,
         });
-        backActor.set_opacity(255);
+        backActor.set_opacity(NORMAL_OPACITY);
 
-        placeholder.destroy();
+        // Clean up placeholder safely
+        // Fix 7: Placeholder destroy
+        if (placeholder) {
+            const parent = placeholder.get_parent();
+            if (parent) parent.remove_child(placeholder);
+            try {
+                placeholder.destroy();
+            } catch (_) {}
+        }
+        
         this._editMode.exitDragging(widgetId);
         this._drag = null;
+        this._logger.debug('edit-drag', `drag released ("${widgetId}")`);
 
         return Clutter.EVENT_STOP;
     }
 
-    /** @private */
-    _othersFor(drag) {
-        return this._getOthersOnMonitor?.(drag.monitorIndex, drag.widgetId) ?? [];
-    }
-
-    /** @private monitor size for LayoutEngine's bounds argument — reads
-     * straight off the layer's own container rather than duplicating
-     * MonitorWatcher's monitor list here. Falls back to a generous
-     * default if the container can't be found (shouldn't happen in
-     * practice, matches the defensive style of WidgetLayer's own
-     * fallbacks elsewhere in this codebase). */
     _monitorBoundsFor(monitorIndex) {
         const container = this._layer.getContainer(monitorIndex);
-        if (container) {
+        if (container && container.get_parent()) {
             const [width, height] = container.get_size();
-            if (width > 0 && height > 0)
-                return {width, height};
+            if (width > 0 && height > 0) return {width, height};
         }
-        return {width: 1920, height: 1080};
+        
+        const monitor = Main.layoutManager.monitors[monitorIndex];
+        if (monitor) {
+            return {width: monitor.width, height: monitor.height};
+        }
+        
+        return {width: global.stage.width, height: global.stage.height};
     }
 
-    /** @private a dashed-border ghost rect showing the live drop target,
-     * per spec's "Placeholder" feature. Styling (dashed border, tint) is
-     * a stylesheet concern - this only sets the style class, not inline
-     * colors. */
     _buildPlaceholder(width, height) {
         return new St.Widget({
-            style_class: 'widget-edit-mode-placeholder',
+            style_class: 'widget-edit-mode-placeholder-valid',
             width, height,
             reactive: false,
         });
     }
 
-    /**
-     * @method detach
-     * @description Mirrors DragController.detach() - aborts an in-flight
-     * drag cleanly (destroying its placeholder and returning the widget's
-     * edit-mode state to EDIT) before disconnecting the press handler.
-     * @param {string} widgetId
-     */
     detach(widgetId) {
         const entry = this._tracked.get(widgetId);
-        if (!entry)
-            return;
+        if (!entry) return;
 
         if (this._drag?.widgetId === widgetId) {
-            global.stage.disconnect(this._drag.motionId);
-            global.stage.disconnect(this._drag.releaseId);
-            this._drag.placeholder.destroy();
+            // Fix 10: remove transitions in destroy
+            this._drag.actor?.remove_all_transitions();
+            this._drag.backActor?.remove_all_transitions();
+
+            try { global.stage.disconnect(this._drag.motionId); } catch (e) {}
+            try { global.stage.disconnect(this._drag.releaseId); } catch (e) {}
+            
+            if (this._drag.placeholder) {
+                const parent = this._drag.placeholder.get_parent();
+                if (parent) parent.remove_child(this._drag.placeholder);
+                try {
+                    this._drag.placeholder.destroy();
+                } catch (_) {}
+            }
+            
+            this._guideRenderer.clear();
             this._editMode.exitDragging(widgetId);
             this._drag = null;
         }
 
-        // The press listener lives on the DRAG HANDLE (armed lazily by
-        // armDragHandle(), see file header) rather than entry.actor or
-        // entry.backActor now — may still be null if this widget's back
-        // side was never built (never right-clicked into Edit Mode this
-        // session).
         if (entry.dragHandle && entry.dragPressId != null) {
             try {
                 entry.dragHandle.disconnect(entry.dragPressId);
             } catch (e) {
-                // Actor may already be destroyed - same defensive pattern
-                // used throughout this codebase (see DragController.detach()).
+                // Actor may already be destroyed
             }
         }
         this._tracked.delete(widgetId);
     }
 
-    /**
-     * @method destroy
-     * @description Detaches every tracked widget. Call from
-     * extension.js disable() BEFORE the loader destroys the actors, same
-     * ordering rule as task 04's DragController.destroy().
-     */
     destroy() {
+        // Fix 2: destroy() must be idempotent
+        if (this._disposed)
+            return;
+
+        this._disposed = true;
+        
+        // Fix 3: Cancel pending frame
+        this._motionGeneration++;
+        this._frameScheduled = false;
+
+        // Fix 10: remove transitions in destroy
+        if (this._drag) {
+            this._drag.actor?.remove_all_transitions();
+            this._drag.backActor?.remove_all_transitions();
+        }
+        
         for (const widgetId of Array.from(this._tracked.keys()))
             this.detach(widgetId);
+            
+        this._guideRenderer.destroy();
+        this._snapManager.destroy?.();
     }
 }
