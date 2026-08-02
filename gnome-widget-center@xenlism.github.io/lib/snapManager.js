@@ -43,7 +43,7 @@ export class SnapManager {
             if (delta < bestDeltaX) {
                 bestDeltaX = delta;
                 snappedX = edge.val;
-                guides.push({ orientation: 'vertical', x: edge.line, y: 0, height: monitorBounds.height });
+                guides.push({ orientation: 'vertical', x: edge.val, y: 0, height: monitorBounds.height });
             }
         }
 

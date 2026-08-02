@@ -177,8 +177,14 @@ return this._getOthersOnMonitor?.(monitorIndex, drag.widgetId) ?? [];
             // 4. Render guide lines (uses pool internally)
             // Fix 9: Parent destroyed
             const container = this._layer.getContainer(monitorIndex);
-            if (container && container.get_stage())
-                this._guideRenderer.render(snapResult.guides, container);
+
+if (container && snapResult.guides?.length > 0) {
+    this._guideRenderer.render(
+        snapResult.guides,
+        container
+    );
+}
+
 
             // 5. Calculate drop placeholder (collision avoidance)
             const target = this._layout.findFreePosition(
