@@ -39,10 +39,10 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
-import Pango from 'gi://Pango';
 import Soup from 'gi://Soup?version=3.0';
 
 import {loadTranslations} from './i18n/index.js';
+import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, parseFontDescription as _parseFontDescription} from '../../lib/widgetVisualKit.js';
 
 const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
 
@@ -106,30 +106,6 @@ function _describeWeather(code, isDay) {
         return {icon: 'weather-cloud-lightning-hail', condition: 'Storm (Hail)'};
     default:
         return {icon: 'weather-wind', condition: 'Unknown'};
-    }
-}
-
-/**
- * Splits a combined Pango font-description string into the family+size
- * pieces St's `set_style()` needs separately. Identical helper to
- * weather-minimal/widget.js - see there for the full rationale.
- * @param {string} fontStr
- * @param {string} fallbackFamily
- * @param {number} fallbackSize
- * @returns {{family: string, size: number}}
- */
-function _parseFontDescription(fontStr, fallbackFamily, fallbackSize) {
-    try {
-        const desc = Pango.FontDescription.from_string(fontStr);
-        const rawSize = desc.get_size();
-        const size = rawSize > 0 ? Math.round(rawSize / Pango.SCALE) : fallbackSize;
-
-        desc.unset_fields(Pango.FontMask.SIZE);
-        const family = desc.to_string().trim();
-
-        return {family: family || fallbackFamily, size};
-    } catch (e) {
-        return {family: fallbackFamily, size: fallbackSize};
     }
 }
 
@@ -228,6 +204,7 @@ export default class WeatherDarkWidget {
 
     getDefaultSettings() {
         return {
+            ...SHADOW_DEFAULTS,
             location: '13.756331,100.501762',
             locationAutoDetected: false,
 
@@ -466,7 +443,8 @@ export default class WeatherDarkWidget {
         this._actor.set_style(
             `background-color: ${cardColor}; ` +
             `border-radius: ${cornerRadius}px; ` +
-            'padding: 20px 26px;'
+            'padding: 20px 26px;' +
+            _shadowBoxShadowCss(this._settings)
         );
         this._content.set_style('spacing: 20px;');
         this._textBox.set_style('spacing: 4px;');

@@ -1,0 +1,302 @@
+{
+  "version": "1.0",
+  "tabs": [
+    {
+      "id": "general",
+      "label": "System Fetch",
+      "description": "neofetch-style system info card",
+      "icon": "utilities-terminal-symbolic",
+      "groups": [
+        {
+          "id": "distro",
+          "label": "Distro",
+          "description": "Auto-detected from /etc/os-release on first run (falls back to the generic Linux logo if detection fails). Picks which ASCII logo file is loaded (only the selected logo is ever loaded) and which package manager is queried for the Packages row.",
+          "fields": [
+            {
+              "id": "distro",
+              "label": "Distro",
+              "description": "",
+              "dataType": "string",
+              "fieldType": "dropdown",
+              "default": "linux",
+              "options": [
+                {
+                  "value": "generic",
+                  "label": "Generic / Auto-detect"
+                },
+                {
+                  "value": "alpine",
+                  "label": "Alpine Linux"
+                },
+                {
+                  "value": "android",
+                  "label": "Android"
+                },
+                {
+                  "value": "arch",
+                  "label": "Arch Linux"
+                },
+                {
+                  "value": "armbian",
+                  "label": "Armbian"
+                },
+                {
+                  "value": "buildroot",
+                  "label": "Buildroot"
+                },
+                {
+                  "value": "bunsenlabs",
+                  "label": "BunsenLabs"
+                },
+                {
+                  "value": "centos",
+                  "label": "CentOS"
+                },
+                {
+                  "value": "crunchbang",
+                  "label": "CrunchBang"
+                },
+                {
+                  "value": "debian",
+                  "label": "Debian"
+                },
+                {
+                  "value": "devuan",
+                  "label": "Devuan"
+                },
+                {
+                  "value": "elementary",
+                  "label": "elementary OS"
+                },
+                {
+                  "value": "endeavouros",
+                  "label": "EndeavourOS"
+                },
+                {
+                  "value": "enso",
+                  "label": "Enso"
+                },
+                {
+                  "value": "fedora",
+                  "label": "Fedora"
+                },
+                {
+                  "value": "freebsd",
+                  "label": "FreeBSD"
+                },
+                {
+                  "value": "gentoo",
+                  "label": "Gentoo"
+                },
+                {
+                  "value": "guix",
+                  "label": "Guix System"
+                },
+                {
+                  "value": "kali",
+                  "label": "Kali Linux"
+                },
+                {
+                  "value": "linux",
+                  "label": "Linux (generic)"
+                },
+                {
+                  "value": "linuxmint",
+                  "label": "Linux Mint"
+                },
+                {
+                  "value": "darwin",
+                  "label": "macOS (Darwin)"
+                },
+                {
+                  "value": "manjaro",
+                  "label": "Manjaro"
+                },
+                {
+                  "value": "moevalent",
+                  "label": "Moevalent"
+                },
+                {
+                  "value": "netbsd",
+                  "label": "NetBSD"
+                },
+                {
+                  "value": "nixos",
+                  "label": "NixOS"
+                },
+                {
+                  "value": "nobara",
+                  "label": "Nobara"
+                },
+                {
+                  "value": "openbsd",
+                  "label": "OpenBSD"
+                },
+                {
+                  "value": "opensuse",
+                  "label": "openSUSE"
+                },
+                {
+                  "value": "parabola",
+                  "label": "Parabola GNU/Linux-libre"
+                },
+                {
+                  "value": "pop",
+                  "label": "Pop!_OS"
+                },
+                {
+                  "value": "quirinux",
+                  "label": "Quirinux"
+                },
+                {
+                  "value": "raspbian",
+                  "label": "Raspbian"
+                },
+                {
+                  "value": "rhel",
+                  "label": "Red Hat Enterprise Linux"
+                },
+                {
+                  "value": "rocky",
+                  "label": "Rocky Linux"
+                },
+                {
+                  "value": "siduction",
+                  "label": "siduction"
+                },
+                {
+                  "value": "slackware",
+                  "label": "Slackware"
+                },
+                {
+                  "value": "ubuntu",
+                  "label": "Ubuntu"
+                },
+                {
+                  "value": "univalent",
+                  "label": "Univalent"
+                },
+                {
+                  "value": "windows",
+                  "label": "Windows"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "appearance",
+          "label": "Appearance",
+          "description": "",
+          "fields": [
+            {
+              "id": "backgroundColor",
+              "label": "Background color",
+              "description": "Card background. Use the alpha slider for transparency, e.g. #00000026 for black at ~85% transparent.",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#00000026"
+            },
+            {
+              "id": "cornerRadius",
+              "label": "Corner radius",
+              "description": "Roundness of the card's corners",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 18,
+              "min": 0,
+              "max": 64,
+              "step": 1,
+              "suffix": "px"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "shadow",
+      "label": "Shadow",
+      "description": "Drop shadow behind this widget.",
+      "groups": [
+        {
+          "id": "shadow",
+          "label": "Shadow effect",
+          "description": "Off by default. Default color is black at 30% transparency.",
+          "fields": [
+            {
+              "id": "shadowEnabled",
+              "label": "Enable shadow",
+              "description": "Add a drop shadow behind this widget",
+              "dataType": "boolean",
+              "fieldType": "switch",
+              "default": false
+            },
+            {
+              "id": "shadowColor",
+              "label": "Shadow color",
+              "description": "",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "default": "#000000",
+              "visibleIf": "shadowEnabled"
+            },
+            {
+              "id": "shadowOpacity",
+              "label": "Shadow transparency",
+              "description": "Shadow opacity, 0-100%",
+              "dataType": "integer",
+              "fieldType": "slider",
+              "default": 30,
+              "min": 0,
+              "max": 100,
+              "step": 1,
+              "suffix": "%",
+              "visibleIf": "shadowEnabled"
+            },
+            {
+              "id": "shadowAngle",
+              "label": "Shadow angle",
+              "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
+              "dataType": "integer",
+              "fieldType": "slider",
+              "default": 90,
+              "min": 0,
+              "max": 360,
+              "step": 1,
+              "suffix": "°",
+              "visibleIf": "shadowEnabled"
+            },
+            {
+              "id": "shadowDistance",
+              "label": "Shadow distance",
+              "description": "How far the shadow is offset, in pixels",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 6,
+              "min": 0,
+              "max": 60,
+              "step": 1,
+              "suffix": "px",
+              "visibleIf": "shadowEnabled"
+            },
+            {
+              "id": "shadowBlur",
+              "label": "Shadow blur",
+              "description": "Blur radius, in pixels",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 16,
+              "min": 0,
+              "max": 100,
+              "step": 1,
+              "suffix": "px",
+              "visibleIf": "shadowEnabled"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

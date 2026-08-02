@@ -9,6 +9,7 @@
 
 import St from 'gi://St';
 import GLib from 'gi://GLib';
+import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss} from '../../lib/widgetVisualKit.js';
 
 export default class ClockWidget {
     /**
@@ -61,6 +62,7 @@ export default class ClockWidget {
             showSeconds: false,
             showDate: true,
             fontSize: 32,
+            ...SHADOW_DEFAULTS,
         };
     }
 
@@ -85,6 +87,8 @@ export default class ClockWidget {
         const now = GLib.DateTime.new_now_local();
         const format24h = this._settings.format24h ?? true;
         const showSeconds = this._settings.showSeconds ?? false;
+
+        this._actor.set_style(_shadowBoxShadowCss(this._settings));
 
         let timeFormat;
         if (format24h)

@@ -89,6 +89,7 @@
 
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import {ensureDirectory, readTextFile, writeTextFile} from './fsUtils.js';
 
 const THEME_FILE_NAME = 'theme.json';
 
@@ -177,9 +178,7 @@ export class ThemeService {
 
         const configPath = GLib.get_user_config_dir();
         const baseDirPath = GLib.build_filenamev([configPath, 'gnome-widget-center']);
-        const baseDir = Gio.File.new_for_path(baseDirPath);
-        if (!baseDir.query_exists(null))
-            baseDir.make_directory_with_parents(null);
+        ensureDirectory(baseDirPath);
 
         const themePath = GLib.build_filenamev([baseDirPath, THEME_FILE_NAME]);
         this._themeFile = Gio.File.new_for_path(themePath);
@@ -212,18 +211,12 @@ export class ThemeService {
     reload() {
         if (!this._isInitialized) this.init();
 
-        if (!this._themeFile.query_exists(null)) {
-            this._cache = {version: 1, global: {}, widgets: {}};
-            return;
-        }
-
         try {
-            const [success, contents] = this._themeFile.load_contents(null);
-            if (!success) {
+            const jsonString = readTextFile(this._themeFile.get_path());
+            if (jsonString === null) {
                 this._cache = {version: 1, global: {}, widgets: {}};
                 return;
             }
-            const jsonString = new TextDecoder('utf-8').decode(contents);
             const parsed = JSON.parse(jsonString);
             this._cache = {
                 version: parsed.version ?? 1,
@@ -255,12 +248,7 @@ export class ThemeService {
                 global: themeConfig?.global ?? {},
                 widgets: themeConfig?.widgets ?? {},
             };
-            const jsonString = JSON.stringify(payload, null, 2);
-            const bytes = new TextEncoder().encode(jsonString);
-
-            this._themeFile.replace_contents(
-                bytes, null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
-
+            writeTextFile(this._themeFile.get_path(), JSON.stringify(payload, null, 2));
             this._cache = payload;
         } catch (error) {
             logError(error, 'Failed to save theme.json');

@@ -46,9 +46,9 @@ import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
-import Pango from 'gi://Pango';
 import Cairo from 'cairo';
 import {SystemMetricsService} from '../../lib/systemMetricsApi.js';
+import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor, parseFontDescription as _parseFontDescription} from '../../lib/widgetVisualKit.js';
 
 const RING_SIZE = 84;
 const RING_THICKNESS = 8;
@@ -57,57 +57,6 @@ const RING_THICKNESS = 8;
 // look this widget was built from.
 const RING_SPACING = 16;
 const CARD_PADDING = 12;
-
-/** @private see widgets/clock-modern/widget.js - same helper, same
- * reasoning (split one stored Pango font-description string into a
- * family and a pixel size for St's inline `set_style()`). */
-function _parseFontDescription(fontStr, fallbackFamily, fallbackSize) {
-    try {
-        const desc = Pango.FontDescription.from_string(fontStr);
-        const rawSize = desc.get_size();
-        const size = rawSize > 0 ? Math.round(rawSize / Pango.SCALE) : fallbackSize;
-        desc.unset_fields(Pango.FontMask.SIZE);
-        const family = desc.to_string().trim();
-        return {family: family || fallbackFamily, size};
-    } catch (e) {
-        return {family: fallbackFamily, size: fallbackSize};
-    }
-}
-
-/** @private "#rrggbb" or "#rrggbbaa" -> {r,g,b,a} each 0..1, for Cairo's
- * setSourceRGBA(). Falls back to opaque white on anything unparseable. */
-function _hexToRgba(hex) {
-    const m = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.exec(hex ?? '');
-    if (!m)
-        return {r: 1, g: 1, b: 1, a: 1};
-    const h = m[1];
-    const r = parseInt(h.slice(0, 2), 16) / 255;
-    const g = parseInt(h.slice(2, 4), 16) / 255;
-    const b = parseInt(h.slice(4, 6), 16) / 255;
-    const a = h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1;
-    return {r, g, b, a};
-}
-
-/** @private St's CSS engine (unlike Cairo's setSourceRGBA() above) only
- * understands 6-digit "#rrggbb" hex (plus rgb()/rgba()) - an 8-digit
- * "#rrggbbaa" hex, which is exactly what this widget's backgroundColor
- * default/field saves, is not valid St CSS, so the card background
- * declaration was silently dropped. Converts to "rgba(r, g, b, a)" for
- * set_style() call sites; anything else passes through unchanged. Same
- * fix lib/themeService.js's hexToRgba() already applies for the global
- * theme system - duplicated here per this widget's self-contained
- * convention (see file header). */
-function _toCssColor(hex, fallback) {
-    const value = typeof hex === 'string' ? hex : fallback;
-    const m = /^#([0-9a-fA-F]{6})([0-9a-fA-F]{2})$/.exec(value);
-    if (!m)
-        return value;
-    const r = parseInt(m[1].slice(0, 2), 16);
-    const g = parseInt(m[1].slice(2, 4), 16);
-    const b = parseInt(m[1].slice(4, 6), 16);
-    const a = Math.round((parseInt(m[2], 16) / 255) * 1000) / 1000;
-    return `rgba(${r}, ${g}, ${b}, ${a})`;
-}
 
 export default class SystemMonitorMiniWidget {
     /**
@@ -232,6 +181,7 @@ export default class SystemMonitorMiniWidget {
 
     getDefaultSettings() {
         return {
+            ...SHADOW_DEFAULTS,
             activeColor: '#33C7F5',
             baseColor: '#33383D',
             font: 'Sans Bold 18',
@@ -343,7 +293,8 @@ export default class SystemMonitorMiniWidget {
         this._actor.set_style(
             `background-color: ${backgroundColor}; ` +
             `border-radius: ${cornerRadius}px; ` +
-            `padding: ${CARD_PADDING}px;`
+            `padding: ${CARD_PADDING}px;` +
+            _shadowBoxShadowCss(this._settings)
         );
 
         const {family, size} = _parseFontDescription(this._settings.font ?? 'Sans Bold 18', 'Sans Bold', 18);

@@ -1,0 +1,15 @@
+{
+  "id": "media-player-square",
+  "name": "Media Player (Square)",
+  "description": "1x1 square Now Playing card: full-bleed album cover with a visible frame, track info overlaid on the cover, and Play/Previous/Next controls that appear on hover.",
+  "version": "1.0.0",
+  "author": "gnome-widget-center",
+  "api-version": 1,
+  "entry": "widget.js",
+  "block-type": "1x1",
+  "default-position": {
+    "x": 40,
+    "y": 40,
+    "monitor": 0
+  }
+}

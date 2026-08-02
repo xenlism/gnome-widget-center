@@ -24,6 +24,54 @@
       "type": "color",
       "label": "สีพื้นหลัง",
       "default": "#fff5b1"
+    },
+    {
+      "id": "shadowEnabled",
+      "type": "boolean",
+      "label": "Enable shadow",
+      "default": false
+    },
+    {
+      "id": "shadowColor",
+      "type": "color",
+      "label": "Shadow color",
+      "default": "#000000"
+    },
+    {
+      "id": "shadowOpacity",
+      "type": "range",
+      "label": "Shadow transparency (%)",
+      "default": 30,
+      "min": 0,
+      "max": 100,
+      "step": 1
+    },
+    {
+      "id": "shadowAngle",
+      "type": "range",
+      "label": "Shadow angle (degrees)",
+      "default": 90,
+      "min": 0,
+      "max": 360,
+      "step": 1
+    },
+    {
+      "id": "shadowDistance",
+      "type": "range",
+      "label": "Shadow distance (px)",
+      "default": 6,
+      "min": 0,
+      "max": 60,
+      "step": 1
+    },
+    {
+      "id": "shadowBlur",
+      "type": "range",
+      "label": "Shadow blur (px)",
+      "default": 16,
+      "min": 0,
+      "max": 100,
+      "step": 1
     }
   ]
 }

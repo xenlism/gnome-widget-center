@@ -25,17 +25,14 @@
 
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
+import {ensureDirectory, readTextFile, writeTextFile} from './fsUtils.js';
 
 const SETTINGS_SUBDIR = 'gnome-widget-center/settings';
 
 function _getSettingsDir() {
     const dataDir = GLib.get_user_data_dir();
     const path = GLib.build_filenamev([dataDir, SETTINGS_SUBDIR]);
-    const dir = Gio.File.new_for_path(path);
-    if (!dir.query_exists(null)) {
-        dir.make_directory_with_parents(null);
-    }
-    return dir;
+    return ensureDirectory(path);
 }
 
 export class SettingsStore {
@@ -69,14 +66,10 @@ export class SettingsStore {
     _loadFromDisk() {
         const defaults = this._defaultsMap();
         try {
-            if (this._file.query_exists(null)) {
-                const [ok, contents] = this._file.load_contents(null);
-                if (ok) {
-                    const decoder = new TextDecoder('utf-8');
-                    const parsed = JSON.parse(decoder.decode(contents));
-                    this._values = { ...defaults, ...parsed };
-                    return;
-                }
+            const contents = readTextFile(this._file.get_path());
+            if (contents !== null) {
+                this._values = { ...defaults, ...JSON.parse(contents) };
+                return;
             }
         } catch (e) {
             logError(e, `[gwc.settingsStore] Failed to load settings for "${this.widgetId}", falling back to defaults`);
@@ -112,15 +105,7 @@ export class SettingsStore {
 
     _save() {
         try {
-            const json = JSON.stringify(this._values, null, 2);
-            const bytes = new TextEncoder().encode(json);
-            this._file.replace_contents(
-                bytes,
-                null,
-                false,
-                Gio.FileCreateFlags.REPLACE_DESTINATION,
-                null
-            );
+            writeTextFile(this._file.get_path(), JSON.stringify(this._values, null, 2));
         } catch (e) {
             logError(e, `[gwc.settingsStore] Failed to save settings for "${this.widgetId}"`);
         }

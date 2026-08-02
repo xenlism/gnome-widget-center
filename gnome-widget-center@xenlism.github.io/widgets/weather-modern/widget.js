@@ -49,10 +49,10 @@
 import St from 'gi://St';
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
-import Pango from 'gi://Pango';
 import Soup from 'gi://Soup?version=3.0';
 
 import {loadTranslations} from './i18n/index.js';
+import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, parseFontDescription as _parseFontDescription} from '../../lib/widgetVisualKit.js';
 
 const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
 
@@ -118,31 +118,6 @@ function _describeWeather(code, isDay) {
         return {icon: 'weather-cloud-lightning-hail', condition: 'Storm (Hail)'};
     default:
         return {icon: 'weather-wind', condition: 'Unknown'};
-    }
-}
-
-/**
- * Splits a combined Pango font-description string into the family+size
- * pieces St's `set_style()` needs separately. Identical helper to
- * clock-modern/widget.js and date-modern/widget.js - see either for the
- * full rationale.
- * @param {string} fontStr
- * @param {string} fallbackFamily
- * @param {number} fallbackSize
- * @returns {{family: string, size: number}}
- */
-function _parseFontDescription(fontStr, fallbackFamily, fallbackSize) {
-    try {
-        const desc = Pango.FontDescription.from_string(fontStr);
-        const rawSize = desc.get_size();
-        const size = rawSize > 0 ? Math.round(rawSize / Pango.SCALE) : fallbackSize;
-
-        desc.unset_fields(Pango.FontMask.SIZE);
-        const family = desc.to_string().trim();
-
-        return {family: family || fallbackFamily, size};
-    } catch (e) {
-        return {family: fallbackFamily, size: fallbackSize};
     }
 }
 
@@ -255,6 +230,7 @@ export default class WeatherPanelWidget {
 
     getDefaultSettings() {
         return {
+            ...SHADOW_DEFAULTS,
             location: '13.756331,100.501762',
             locationAutoDetected: false,
 
@@ -509,7 +485,8 @@ export default class WeatherPanelWidget {
             `background-color: ${cardColor}; ` +
             `border-radius: ${cornerRadius}px; ` +
             'padding: 10px 14px; ' +
-            'spacing: 4px;'
+            'spacing: 4px;' +
+            _shadowBoxShadowCss(this._settings)
         );
 
         const iconKey = this._weather?.icon ?? 'weather-cloud';

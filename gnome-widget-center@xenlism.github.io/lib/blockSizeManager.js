@@ -73,7 +73,7 @@ const DEFAULT_BLOCK_TYPE_NAME = '1x1';
  *
  * Redefined (2026-07-27) to exactly the 10 sizes requested, named
  * `<colsTier>x<rowsTier>` where cols/rows values map to tiers
- * 10=1, 21=2, 32=3, 43=4 (so "3x2" reads as "3 tier wide, 2 tier tall",
+ * Bar=5, 11=1, 23=2, 35=3, 47=4 (so "3x2" reads as "3 tier wide, 2 tier tall",
  * not literally 3x2 cells — see the exact cols/rows in this table for
  * the real cell counts). Every bundled widget's OLD block-type (the
  * previous named-preset system, or a widget that still had a raw
@@ -84,20 +84,20 @@ const DEFAULT_BLOCK_TYPE_NAME = '1x1';
  * anymore. */
 const BLOCK_TYPES = Object.freeze({
     // name: {cols, rows}
-    'barx1': Object.freeze({cols: 10, rows: 5}),
-    'barx2': Object.freeze({cols: 21, rows: 5}),
-    'barx3': Object.freeze({cols: 32, rows: 5}),
-    'barx4': Object.freeze({cols: 43, rows: 5}),
-    '1x1': Object.freeze({cols: 10, rows: 10}),
-    '2x1': Object.freeze({cols: 21, rows: 10}),
-    '2x2': Object.freeze({cols: 21, rows: 21}),
-    '3x1': Object.freeze({cols: 32, rows: 10}),
-    '3x2': Object.freeze({cols: 32, rows: 21}),
-    '3x3': Object.freeze({cols: 32, rows: 32}),
-    '4x1': Object.freeze({cols: 43, rows: 10}),
-    '4x2': Object.freeze({cols: 43, rows: 21}),
-    '4x3': Object.freeze({cols: 43, rows: 32}),
-    '4x4': Object.freeze({cols: 43, rows: 43}),
+    'barx1': Object.freeze({cols: 11, rows: 5}),
+    'barx2': Object.freeze({cols: 23, rows: 5}),
+    'barx3': Object.freeze({cols: 35, rows: 5}),
+    'barx4': Object.freeze({cols: 47, rows: 5}),
+    '1x1': Object.freeze({cols: 11, rows: 11}),
+    '2x1': Object.freeze({cols: 23, rows: 11}),
+    '2x2': Object.freeze({cols: 23, rows: 23}),
+    '3x1': Object.freeze({cols: 35, rows: 11}),
+    '3x2': Object.freeze({cols: 35, rows: 23}),
+    '3x3': Object.freeze({cols: 35, rows: 35}),
+    '4x1': Object.freeze({cols: 47, rows: 11}),
+    '4x2': Object.freeze({cols: 47, rows: 23}),
+    '4x3': Object.freeze({cols: 47, rows: 35}),
+    '4x4': Object.freeze({cols: 47, rows: 47}),
 });
 
 // Generous rather than tight — large enough that no real widget design

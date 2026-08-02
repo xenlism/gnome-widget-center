@@ -169,7 +169,17 @@ export default class WidgetCenterExtension extends Extension {
             this._edgeMarginChangedId = this._settings.onChanged('edge-margin',
                 value => { this._layout.edgeMargin = value; });
             this._widgetSpacingChangedId = this._settings.onChanged('widget-spacing',
-                value => { this._layout.spacing = value; });
+                value => {
+                    this._layout.spacing = value;
+                    // `this._loader` isn't assigned until just below (it's
+                    // created a few lines further down in this same
+                    // enable() call) - safe regardless, since this
+                    // callback only ever actually runs later, in response
+                    // to a real settings change, by which point enable()
+                    // has long since finished and this._loader exists.
+                    if (this._loader)
+                        this._loader.shadowOverflowMargin = value;
+                });
         }
 
         // --- widget discovery/loading ----------------------------------
@@ -181,7 +191,19 @@ export default class WidgetCenterExtension extends Extension {
 
         // Passing this._storage backs api.settings with the real
         // per-widget JSON store (task 03) instead of the old stub `{}`.
-        const loader = new WidgetLoader([bundledWidgetsPath, userWidgetsPath], this._storage);
+        // shadowOverflowMargin (4th arg) is seeded from the same
+        // `widget-spacing` GSetting LayoutEngine's own `spacing` just was
+        // above - a widget's drop-shadow is allowed to bleed past its
+        // block-type footprint, but never past the gap already
+        // guaranteed between neighboring widgets, so it can never bleed
+        // into one - see widgetLoader.js's constructor doc and
+        // WIDGET_API.md §9.3. Kept live via the same onChanged('widget-
+        // spacing', ...) listener below that already updates
+        // `this._layout.spacing`.
+        const loader = new WidgetLoader(
+            [bundledWidgetsPath, userWidgetsPath], this._storage, console,
+            this._settings?.isReady ? this._settings.getGlobalValue('widget-spacing') : 0
+        );
         this._loader = loader;
 
         // task 05: Control Center toggles write widget ids in here

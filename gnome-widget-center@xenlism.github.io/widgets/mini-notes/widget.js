@@ -1,4 +1,5 @@
 import St from 'gi://St';
+import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss} from '../../lib/widgetVisualKit.js';
 
 export default class MiniNotesWidget {
     constructor(api) {
@@ -38,7 +39,8 @@ export default class MiniNotesWidget {
     getDefaultSettings() {
         return {
             noteText: "- Buy groceries\n- Call mom\n- Finish project",
-            backgroundColor: "#fff5b1"
+            backgroundColor: "#fff5b1",
+            ...SHADOW_DEFAULTS,
         };
     }
 
@@ -49,7 +51,8 @@ export default class MiniNotesWidget {
     }
 
     _applyStyles() {
-        this._actor.style = `background-color: ${this._settings.backgroundColor};`;
+        this._actor.style = `background-color: ${this._settings.backgroundColor}; ` +
+            _shadowBoxShadowCss(this._settings);
     }
 
     _updateContent() {

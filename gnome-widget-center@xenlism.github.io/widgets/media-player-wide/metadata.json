@@ -1,0 +1,15 @@
+{
+  "id": "media-player-wide",
+  "name": "Media Player (Wide)",
+  "description": "2x1 wide Now Playing card: album cover on the left, track info and Play/Previous/Next controls on the right.",
+  "version": "1.0.0",
+  "author": "gnome-widget-center",
+  "api-version": 1,
+  "entry": "widget.js",
+  "block-type": "2x1",
+  "default-position": {
+    "x": 400,
+    "y": 40,
+    "monitor": 0
+  }
+}

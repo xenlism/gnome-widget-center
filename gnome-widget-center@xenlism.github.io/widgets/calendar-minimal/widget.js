@@ -26,6 +26,7 @@
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 import GLib from 'gi://GLib';
+import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss} from '../../lib/widgetVisualKit.js';
 
 export default class CalendarMinimalWidget {
     /**
@@ -69,6 +70,7 @@ export default class CalendarMinimalWidget {
 
     getDefaultSettings() {
         return {
+            ...SHADOW_DEFAULTS,
             cardColor: '#ffffff',
             textColor: '#1a1a1a',
             accentColor: '#d81f26',
@@ -91,7 +93,8 @@ export default class CalendarMinimalWidget {
         this._actor.set_style(
             'border-radius: 22px; ' +
             'padding: 18px 12px; ' +
-            'spacing: 4px;'
+            'spacing: 4px;' +
+            _shadowBoxShadowCss(this._settings)
         );
 
         this._dayLabel.set_text(`${now.get_day_of_month()}`);

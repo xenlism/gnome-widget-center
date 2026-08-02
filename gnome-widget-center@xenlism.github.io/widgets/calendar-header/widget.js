@@ -36,6 +36,7 @@
 import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
 import {$} from '../../lib/gjskit/st/index.js';
+import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss} from '../../lib/widgetVisualKit.js';
 
 export default class CalendarHeaderWidget {
     /**
@@ -91,6 +92,7 @@ export default class CalendarHeaderWidget {
 
     getDefaultSettings() {
         return {
+            ...SHADOW_DEFAULTS,
             headerColor: '#2563eb',
             headerTextColor: '#ffffff',
             bodyColor: '#ffffff',
@@ -113,7 +115,8 @@ export default class CalendarHeaderWidget {
 
         this._actor.set_style(
             'border-radius: 22px; ' +
-            'spacing: 0px;'
+            'spacing: 0px;' +
+            _shadowBoxShadowCss(this._settings)
         );
 
         this._header.set_style(

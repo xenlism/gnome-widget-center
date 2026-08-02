@@ -20,60 +20,11 @@ import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
-import Pango from 'gi://Pango';
 import Cairo from 'cairo';
+import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor, parseFontDescription as _parseFontDescription} from '../../lib/widgetVisualKit.js';
 
-const STACK_SIZE = 132;
+const STACK_SIZE = 148; // 1x1 block-type is now 11x11 cells (176px) not 10x10 (160px); previously exactly filled the padded card (132 = 160 - 2*14), so keep that: 176 - 2*14 = 148
 const RING_GAP = 4; // px between adjacent ring bands
-
-/** @private "#rrggbb" or "#rrggbbaa" -> {r,g,b,a} each 0..1, for Cairo's
- * setSourceRGBA(). Falls back to opaque white on anything unparseable. */
-function _hexToRgba(hex) {
-    const m = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.exec(hex ?? '');
-    if (!m)
-        return {r: 1, g: 1, b: 1, a: 1};
-    const h = m[1];
-    const r = parseInt(h.slice(0, 2), 16) / 255;
-    const g = parseInt(h.slice(2, 4), 16) / 255;
-    const b = parseInt(h.slice(4, 6), 16) / 255;
-    const a = h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1;
-    return {r, g, b, a};
-}
-
-/** @private St's CSS engine only understands 6-digit "#rrggbb" hex (plus
- * rgb()/rgba()) - an 8-digit "#rrggbbaa" hex, which is exactly what this
- * widget's alpha-enabled colorpicker fields save, is not valid St CSS and
- * gets silently dropped. Converts to "rgba(r, g, b, a)"; anything else
- * passes through unchanged. Same fix as lib/themeService.js's
- * hexToRgba(), duplicated here per this widget's self-contained
- * convention. */
-function _toCssColor(hex, fallback) {
-    const value = typeof hex === 'string' ? hex : fallback;
-    const m = /^#([0-9a-fA-F]{6})([0-9a-fA-F]{2})$/.exec(value);
-    if (!m)
-        return value;
-    const r = parseInt(m[1].slice(0, 2), 16);
-    const g = parseInt(m[1].slice(2, 4), 16);
-    const b = parseInt(m[1].slice(4, 6), 16);
-    const a = Math.round((parseInt(m[2], 16) / 255) * 1000) / 1000;
-    return `rgba(${r}, ${g}, ${b}, ${a})`;
-}
-
-/** @private Same helper as widgets/clock-modern/widget.js - splits one
- * stored Pango font-description string into family+size for St's
- * CSS-like set_style(). */
-function _parseFontDescription(fontStr, fallbackFamily, fallbackSize) {
-    try {
-        const desc = Pango.FontDescription.from_string(fontStr);
-        const rawSize = desc.get_size();
-        const size = rawSize > 0 ? Math.round(rawSize / Pango.SCALE) : fallbackSize;
-        desc.unset_fields(Pango.FontMask.SIZE);
-        const family = desc.to_string().trim();
-        return {family: family || fallbackFamily, size};
-    } catch (e) {
-        return {family: fallbackFamily, size: fallbackSize};
-    }
-}
 
 export default class CirclesClockWidget {
     /** @param {WidgetAPI} api - see WIDGET_API.md §5. */
@@ -142,6 +93,7 @@ export default class CirclesClockWidget {
 
     getDefaultSettings() {
         return {
+            ...SHADOW_DEFAULTS,
             backgroundColor: '#00000000',
             cornerRadius: 18,
 
@@ -267,7 +219,8 @@ export default class CirclesClockWidget {
         const cornerRadius = this._settings.cornerRadius ?? 18;
         this._actor.set_style(
             `background-color: ${backgroundColor}; ` +
-            `border-radius: ${cornerRadius}px;`
+            `border-radius: ${cornerRadius}px;` +
+            _shadowBoxShadowCss(this._settings)
         );
 
         const timeColor = _toCssColor(this._settings.timeColor, '#FFFFFFFF');

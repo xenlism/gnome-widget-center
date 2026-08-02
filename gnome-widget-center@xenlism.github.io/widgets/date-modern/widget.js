@@ -26,7 +26,7 @@ import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
-import Pango from 'gi://Pango';
+import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, parseFontDescription as _parseFontDescription} from '../../lib/widgetVisualKit.js';
 
 const DOW_ABBREV = {
     1: 'MO', // GLib.DateTime.get_day_of_week(): 1 = Monday ... 7 = Sunday
@@ -37,31 +37,6 @@ const DOW_ABBREV = {
     6: 'SA',
     7: 'SU',
 };
-
-/**
- * Splits a combined Pango font-description string (e.g. "Sans Bold 30")
- * into the `font-family` + `font-size` pieces this widget's CSS-style
- * `set_style()` calls need separately. See clock-modern/widget.js for the
- * full rationale - identical helper, copied as-is.
- * @param {string} fontStr
- * @param {string} fallbackFamily
- * @param {number} fallbackSize
- * @returns {{family: string, size: number}}
- */
-function _parseFontDescription(fontStr, fallbackFamily, fallbackSize) {
-    try {
-        const desc = Pango.FontDescription.from_string(fontStr);
-        const rawSize = desc.get_size();
-        const size = rawSize > 0 ? Math.round(rawSize / Pango.SCALE) : fallbackSize;
-
-        desc.unset_fields(Pango.FontMask.SIZE);
-        const family = desc.to_string().trim();
-
-        return {family: family || fallbackFamily, size};
-    } catch (e) {
-        return {family: fallbackFamily, size: fallbackSize};
-    }
-}
 
 export default class DateModernWidget {
     /**
@@ -119,6 +94,7 @@ export default class DateModernWidget {
 
     getDefaultSettings() {
         return {
+            ...SHADOW_DEFAULTS,
             monthFont: 'Sans Bold 14',
             dowFont: 'Sans Bold 16',
             dayFont: 'Sans Bold 30',
@@ -218,7 +194,8 @@ export default class DateModernWidget {
             `background-color: ${cardColor}; ` +
             `border-radius: ${cornerRadius}px; ` +
             'padding: 12px 12px; ' +
-            'spacing: 0px;'
+            'spacing: 0px;' +
+            _shadowBoxShadowCss(this._settings)
         );
 
         // Month, e.g. "Jul" - locale abbreviated month name.

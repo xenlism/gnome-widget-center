@@ -13,8 +13,8 @@
 // discover() itself only ever touches metadata.json via Gio.File, so it's
 // exactly as safe to run here as it is in extension.js.
 
-import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import {fileExists} from './fsUtils.js';
 
 import {WidgetLoader} from './widgetLoader.js';
 import {widgetHasConfigJson} from './widgetConfigReader.js';
@@ -30,7 +30,7 @@ import {widgetHasConfigJson} from './widgetConfigReader.js';
  */
 function widgetHasSettingsJs(widgetPath) {
     const settingsJsPath = GLib.build_filenamev([widgetPath, 'settings.js']);
-    return Gio.File.new_for_path(settingsJsPath).query_exists(null);
+    return fileExists(settingsJsPath);
 }
 
 export class PrefsWidgetList {

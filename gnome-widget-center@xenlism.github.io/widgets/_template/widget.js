@@ -11,6 +11,17 @@
 //   1. metadata.json  - change `id`/`name`/`description` (TODO markers below)
 //   2. widget.js       - this file (TODO markers below)
 //   3. prefs.js        - only if your widget has settings a user should edit
+//
+// Building a "card" instead (own background/border-radius/drop-shadow,
+// painted in widget.js rather than left themeable - see calendar-modern
+// or clock-modern for full examples)? Set `themeable: false` in
+// metadata.json and pull the shadow/color/font helpers from
+// lib/widgetVisualKit.js (WIDGET_API.md §9.3) instead of writing your
+// own - e.g.:
+//
+//   import {SHADOW_DEFAULTS, shadowBoxShadowCss} from '../../lib/widgetVisualKit.js';
+//   // in getDefaultSettings(): return {...SHADOW_DEFAULTS, backgroundColor: '#00000026', cornerRadius: 18, ...};
+//   // in buildActor()/onSettingsChanged(): this._actor.set_style(`background-color: ...; border-radius: ...px;` + shadowBoxShadowCss(this._settings));
 
 import St from 'gi://St';
 import GLib from 'gi://GLib';

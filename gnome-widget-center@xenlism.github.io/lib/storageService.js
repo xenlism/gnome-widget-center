@@ -1,5 +1,6 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import {ensureDirectory, readTextFile, writeTextFile, fileExists} from './fsUtils.js';
 
 /**
  * @class StorageService
@@ -36,12 +37,8 @@ export class StorageService {
         // ดึงพาธโฟลเดอร์สำหรับเก็บ Config มาตรฐานของผู้ใช้ระบบ (~/.config)
         const configPath = GLib.get_user_config_dir();
         const baseDirPath = GLib.build_filenamev([configPath, 'gnome-widget-center']);
-        this._storageDir = Gio.File.new_for_path(baseDirPath);
-
         // ตรวจสอบและสร้าง Directory หากยังไม่มีอยู่ใน Sandbox
-        if (!this._storageDir.query_exists(null)) {
-            this._storageDir.make_directory_with_parents(null);
-        }
+        this._storageDir = ensureDirectory(baseDirPath);
 
         // กำหนดพาธไฟล์ศูนย์กลางสำหรับการจัดระเบียบผังตาราง Widget
         const layoutPath = GLib.build_filenamev([baseDirPath, 'layout.json']);
@@ -54,10 +51,7 @@ export class StorageService {
         // task 03 อ้างอิง (และ acceptance criteria เช็ค path ตรงๆ) แก้ให้
         // ตรงกันแล้ว
         const widgetsDirPath = GLib.build_filenamev([baseDirPath, 'widgets']);
-        this._widgetsDir = Gio.File.new_for_path(widgetsDirPath);
-        if (!this._widgetsDir.query_exists(null)) {
-            this._widgetsDir.make_directory_with_parents(null);
-        }
+        this._widgetsDir = ensureDirectory(widgetsDirPath);
 
         this._isInitialized = true;
     }
@@ -71,17 +65,10 @@ export class StorageService {
     loadLayout() {
         if (!this._isInitialized) this.init();
 
-        if (!this._layoutFile.query_exists(null)) {
-            return null; // คืนค่าว่างหากระบบเพิ่งติดตั้งและยังไม่เคยมีการเซฟผังมาก่อน
-        }
-
         try {
-            const [success, contents] = this._layoutFile.load_contents(null);
-            if (!success) return null;
-
-            const decoder = new TextDecoder('utf-8');
-            const jsonString = decoder.decode(contents);
-            return JSON.parse(jsonString);
+            const jsonString = readTextFile(this._layoutFile.get_path());
+            // คืนค่าว่างหากระบบเพิ่งติดตั้งและยังไม่เคยมีการเซฟผังมาก่อน
+            return jsonString === null ? null : JSON.parse(jsonString);
         } catch (error) {
             logError(error, "Failed to load layout.json");
             return null;
@@ -114,17 +101,8 @@ export class StorageService {
             });
 
             const jsonString = JSON.stringify({ version: "1.0", widgets: serializedData }, null, 4);
-            const encoder = new TextEncoder();
-            const bytes = encoder.encode(jsonString);
-
             // บันทึกไฟล์ข้อมูลแบบ Atomic (แทนที่ไฟล์เก่าอย่างปลอดภัย ป้องกันข้อมูลเสียหายขณะเขียนไฟล์)
-            this._layoutFile.replace_contents(
-                bytes,
-                null,
-                false,
-                Gio.FileCreateFlags.REPLACE_DESTINATION,
-                null
-            );
+            writeTextFile(this._layoutFile.get_path(), jsonString);
         } catch (error) {
             logError(error, "Failed to save layout.json");
             throw error;
@@ -225,21 +203,12 @@ export class StorageService {
      */
     getWidgetSettings(instanceId) {
         if (!this._isInitialized) this.init();
-        const id = this._sanitizeWidgetId(instanceId);
 
         const widgetSettingsPath = this.getWidgetSettingsPath(instanceId);
-        const widgetSettingsFile = Gio.File.new_for_path(widgetSettingsPath);
-
-        if (!widgetSettingsFile.query_exists(null)) {
-            return {};
-        }
 
         try {
-            const [success, contents] = widgetSettingsFile.load_contents(null);
-            if (!success) return {};
-
-            const decoder = new TextDecoder('utf-8');
-            return JSON.parse(decoder.decode(contents));
+            const jsonString = readTextFile(widgetSettingsPath);
+            return jsonString === null ? {} : JSON.parse(jsonString);
         } catch (error) {
             logError(error, `Failed to load settings for widget instance: ${instanceId}`);
             return {};
@@ -258,19 +227,7 @@ export class StorageService {
 
         try {
             const widgetSettingsPath = this.getWidgetSettingsPath(instanceId);
-            const widgetSettingsFile = Gio.File.new_for_path(widgetSettingsPath);
-
-            const jsonString = JSON.stringify(settingsData, null, 4);
-            const encoder = new TextEncoder();
-            const bytes = encoder.encode(jsonString);
-
-            widgetSettingsFile.replace_contents(
-                bytes,
-                null,
-                false,
-                Gio.FileCreateFlags.REPLACE_DESTINATION,
-                null
-            );
+            writeTextFile(widgetSettingsPath, JSON.stringify(settingsData, null, 4));
         } catch (error) {
             logError(error, `Failed to save settings for widget instance: ${instanceId}`);
             throw error;
@@ -309,11 +266,10 @@ export class StorageService {
         if (!this._isInitialized) this.init();
 
         const widgetSettingsPath = this.getWidgetSettingsPath(instanceId);
-        const widgetSettingsFile = Gio.File.new_for_path(widgetSettingsPath);
 
         try {
-            if (widgetSettingsFile.query_exists(null))
-                widgetSettingsFile.delete(null);
+            if (fileExists(widgetSettingsPath))
+                Gio.File.new_for_path(widgetSettingsPath).delete(null);
         } catch (error) {
             logError(error, `Failed to reset settings for widget instance: ${instanceId}`);
             throw error;

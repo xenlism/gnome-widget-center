@@ -7,16 +7,21 @@
 // clock-modern, which launches ONE app for the whole card, this widget
 // launches whichever icon was actually clicked.
 //
-// Root actor is an St.Bin, not St.BoxLayout: lib/blockSizeManager.js's
-// applyBlockSize() force-sets this widget's root actor to an exact
-// cols*16 x rows*16 px size from metadata.json's block-type (see
-// WIDGET_API.md §2) regardless of what this widget would naturally lay
-// out, so centering the icon grid inside an St.Bin (x_align/y_align
-// CENTER) keeps it visually centered instead of pinned to the top-left
-// corner if the natural grid size doesn't exactly match the allocated
-// block. Background/corner-radius are painted on this Bin so they always
-// fill the full allocated card, independent of the (possibly smaller)
-// centered grid inside.
+// Root actor (this._actor) is a plain St.Widget with Clutter.FixedLayout,
+// holding a single St.Bin child (this._content) that does the actual
+// centering/painting: lib/blockSizeManager.js's applyBlockSize()
+// force-sets the root actor to an exact cols*16 x rows*16 px size from
+// metadata.json's block-type (see WIDGET_API.md §2) regardless of what
+// this widget would naturally lay out, so this._content is bound to that
+// size via a Clutter.BindConstraint and centers the icon grid inside
+// itself (x_align/y_align CENTER) - keeping it visually centered instead
+// of pinned to the top-left corner if the natural grid size doesn't
+// exactly match the allocated block. Background/corner-radius are
+// painted on this._content so they always fill the full allocated card,
+// independent of the (possibly smaller) centered grid inside. The plain
+// FixedLayout root exists so per-icon hover tooltips (see
+// _attachTooltip()) can be positioned as free-floating overlay children,
+// same reason widgets/power-menu/widget.js's root uses FixedLayout.
 //
 // The grid itself is 3 columns x 3 rows (9 slots), built as nested
 // St.BoxLayout rows rather than Clutter.GridLayout, matching this
@@ -33,29 +38,8 @@
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 import Gio from 'gi://Gio';
-
-/** @private St's CSS engine only understands 6-digit "#rrggbb" hex (plus
- * rgb()/rgba()) - an 8-digit "#rrggbbaa" hex, which is exactly what this
- * widget's alpha-enabled backgroundColor field saves (see config.json's
- * "alpha": true), is not valid St CSS. The background-color declaration
- * using it is silently dropped, which is why the folder card had no
- * visible background even though the color was saved correctly.
- * Converts the 8-digit form to "rgba(r, g, b, a)", which St does
- * support; anything else (6-digit hex, already rgba(), etc.) passes
- * through unchanged. Same fix lib/themeService.js's hexToRgba() already
- * applies for the global theme system - duplicated here per this
- * widget's self-contained convention (see file header). */
-function _toCssColor(hex, fallback) {
-    const value = typeof hex === 'string' ? hex : fallback;
-    const m = /^#([0-9a-fA-F]{6})([0-9a-fA-F]{2})$/.exec(value);
-    if (!m)
-        return value;
-    const r = parseInt(m[1].slice(0, 2), 16);
-    const g = parseInt(m[1].slice(2, 4), 16);
-    const b = parseInt(m[1].slice(4, 6), 16);
-    const a = Math.round((parseInt(m[2], 16) / 255) * 1000) / 1000;
-    return `rgba(${r}, ${g}, ${b}, ${a})`;
-}
+import GLib from 'gi://GLib';
+import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor} from '../../lib/widgetVisualKit.js';
 
 const GRID_COLS = 3;
 const GRID_ROWS = 3;
@@ -64,6 +48,10 @@ const ICON_SIZE = 64;
 const CELL_PADDING = 10;
 const GRID_SPACING = 12;
 const CARD_PADDING = 14;
+// Same delayed-hover-label pattern (and delay) as
+// widgets/power-menu/widget.js's _attachTooltip() - each app icon shows
+// its .desktop entry's Name on hover instead of a permanent text label.
+const TOOLTIP_SHOW_DELAY_MS = 400;
 
 export default class FolderWidget3x3 {
     /**
@@ -79,11 +67,32 @@ export default class FolderWidget3x3 {
     // always backfills these keys, and every settings read below also has
     // its own `??` fallback per SKILL.md §2.
     buildActor() {
-        this._actor = new St.Bin({
+        // Plain (non-layout-managed-by-parent) root so tooltip labels can
+        // be positioned as free-floating overlay children, same reason
+        // widgets/power-menu/widget.js's root uses Clutter.FixedLayout.
+        // lib/blockSizeManager.js's applyBlockSize() sets this actor's
+        // size directly (see file header), so this._content is bound to
+        // match it via a BindConstraint rather than sized here - that
+        // preserves the original St.Bin-based CENTER/CENTER behavior
+        // (the icon grid still centers inside this._content exactly as
+        // before) while giving this._actor itself a coordinate space
+        // tooltips can be placed in.
+        this._actor = new St.Widget({
             style_class: 'folder-widget-3x3-root',
+            layout_manager: new Clutter.FixedLayout(),
+            reactive: true,
+        });
+
+        this._content = new St.Bin({
+            style_class: 'folder-widget-3x3-content',
             x_align: Clutter.ActorAlign.CENTER,
             y_align: Clutter.ActorAlign.CENTER,
         });
+        this._content.add_constraint(new Clutter.BindConstraint({
+            source: this._actor,
+            coordinate: Clutter.BindCoordinate.SIZE,
+        }));
+        this._actor.add_child(this._content);
 
         const grid = new St.BoxLayout({vertical: true});
 
@@ -105,13 +114,13 @@ export default class FolderWidget3x3 {
                 bin.set_child(icon);
                 rowBox.add_child(bin);
 
-                this._cells.push({bin, icon, pressId: null, path: null});
+                this._cells.push({bin, icon, pressId: null, tooltip: null, path: null});
             }
 
             grid.add_child(rowBox);
         }
 
-        this._actor.set_child(grid);
+        this._content.set_child(grid);
         this._render();
         return this._actor;
     }
@@ -127,6 +136,7 @@ export default class FolderWidget3x3 {
 
     getDefaultSettings() {
         return {
+            ...SHADOW_DEFAULTS,
             apps: [],
             backgroundColor: '#FFFFFF0F',
             cornerRadius: 18,
@@ -146,6 +156,10 @@ export default class FolderWidget3x3 {
             cell.bin.disconnect(cell.pressId);
             cell.pressId = null;
         }
+        if (cell.tooltip) {
+            cell.tooltip.destroy();
+            cell.tooltip = null;
+        }
     }
 
     /** @private */
@@ -154,10 +168,11 @@ export default class FolderWidget3x3 {
         const backgroundColor = _toCssColor(this._settings.backgroundColor, '#FFFFFF0F');
         const cornerRadius = this._settings.cornerRadius ?? 18;
 
-        this._actor.set_style(
+        this._content.set_style(
             `background-color: ${backgroundColor}; ` +
             `border-radius: ${cornerRadius}px; ` +
-            `padding: ${CARD_PADDING}px;`
+            `padding: ${CARD_PADDING}px;` +
+            _shadowBoxShadowCss(this._settings)
         );
 
         for (let i = 0; i < this._cells.length; i++) {
@@ -174,10 +189,15 @@ export default class FolderWidget3x3 {
             }
 
             let gicon = null;
+            let tooltipText = null;
             try {
                 const appInfo = Gio.DesktopAppInfo.new_from_filename(path);
-                if (appInfo)
+                if (appInfo) {
                     gicon = appInfo.get_icon();
+                    // The .desktop file's Name= value - same field GNOME's
+                    // own app grid/dash use as each app's display name.
+                    tooltipText = appInfo.get_name();
+                }
             } catch (e) {
                 this._api.logger.info(`folder-widget-3x3: could not read ${path}: ${e}`);
             }
@@ -188,6 +208,9 @@ export default class FolderWidget3x3 {
                 cell.icon.set_gicon(gicon);
             else
                 cell.icon.set_icon_name('application-x-executable-symbolic');
+
+            if (tooltipText)
+                cell.tooltip = this._attachTooltip(cell.bin, tooltipText);
 
             cell.bin.reactive = true;
             cell.pressId = cell.bin.connect('button-press-event', (_actor, event) => {
@@ -201,6 +224,103 @@ export default class FolderWidget3x3 {
                 return Clutter.EVENT_STOP;
             });
         }
+    }
+
+    /**
+     * @private hover-tooltip for one grid cell, showing its app's
+     * .desktop Name after a short hover delay - same delayed-hover-label
+     * pattern as widgets/power-menu/widget.js's _attachTooltip(). Differs
+     * from that version in how the label's position is computed: that
+     * widget's buttons sit one level below its root (root -> GridLayout
+     * -> button), so summing each actor's own get_position() was enough.
+     * This widget's cells sit three levels below this._actor (root ->
+     * content Bin -> vertical grid -> horizontal row -> cell Bin), and
+     * the content Bin re-centers that whole stack via CENTER/CENTER
+     * alignment, so get_position() alone isn't reliably meaningful at
+     * every level. get_transformed_position() (stage/screen coordinates)
+     * sidesteps that - diffing the cell's and root's transformed
+     * positions gives the cell's position relative to the root
+     * regardless of how deeply it's nested or how its ancestors align it.
+     * Returns `{hide(), destroy()}` - see disable()/_disconnectCell()
+     * above for how each is used.
+     * @param {St.Bin} cellActor
+     * @param {string} text
+     */
+    _attachTooltip(cellActor, text) {
+        let showTimeoutId = null;
+        let tooltipLabel = null;
+
+        const hide = () => {
+            if (showTimeoutId != null) {
+                GLib.source_remove(showTimeoutId);
+                showTimeoutId = null;
+            }
+            tooltipLabel?.destroy();
+            tooltipLabel = null;
+        };
+
+        const enterId = cellActor.connect('enter-event', () => {
+            showTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, TOOLTIP_SHOW_DELAY_MS, () => {
+                showTimeoutId = null;
+                tooltipLabel = new St.Label({
+                    style_class: 'folder-widget-3x3-tooltip',
+                    text,
+                });
+                tooltipLabel.set_style(
+                    'background-color: rgba(20, 20, 20, 0.95); color: #fff; ' +
+                    'font-size: 12px; padding: 4px 8px; border-radius: 6px;'
+                );
+                this._actor.insert_child_above(tooltipLabel, this._content);
+
+                const [cellAbsX, cellAbsY] = cellActor.get_transformed_position();
+                const [rootAbsX, rootAbsY] = this._actor.get_transformed_position();
+                const cellX = cellAbsX - rootAbsX;
+                const cellY = cellAbsY - rootAbsY;
+
+                const [, labelHeight] = tooltipLabel.get_preferred_height(-1);
+                const [, labelWidth] = tooltipLabel.get_preferred_width(-1);
+                const [cardWidth, cardHeight] = this._actor.get_size();
+
+                // Prefer just above the icon, clamped to stay fully
+                // on-card - same reasoning as power-menu's version:
+                // anything outside [0, cardWidth] x [0, cardHeight] would
+                // be clipped invisible rather than floating over
+                // neighboring widgets.
+                const idealX = cellX + (cellActor.width - labelWidth) / 2;
+                const idealY = cellY - labelHeight - 6;
+                tooltipLabel.set_position(
+                    Math.max(0, Math.min(idealX, cardWidth - labelWidth)),
+                    Math.max(0, Math.min(idealY, cardHeight - labelHeight))
+                );
+
+                return GLib.SOURCE_REMOVE;
+            });
+            return Clutter.EVENT_PROPAGATE;
+        });
+        const leaveId = cellActor.connect('leave-event', () => {
+            hide();
+            return Clutter.EVENT_PROPAGATE;
+        });
+        // Hides on click too (e.g. the app is about to launch) - a
+        // second listener on 'button-press-event' alongside the launch
+        // handler _render() also connects; cellActor is a plain St.Bin
+        // (not St.Button), so there's no separate 'clicked' signal to use.
+        const pressId = cellActor.connect('button-press-event', hide);
+
+        return {
+            hide,
+            destroy() {
+                hide();
+                try {
+                    cellActor.disconnect(enterId);
+                    cellActor.disconnect(leaveId);
+                    cellActor.disconnect(pressId);
+                } catch (e) {
+                    // cellActor may already be destroyed by the caller's
+                    // own teardown - same defensive pattern as power-menu.
+                }
+            },
+        };
     }
 
     /** @private */

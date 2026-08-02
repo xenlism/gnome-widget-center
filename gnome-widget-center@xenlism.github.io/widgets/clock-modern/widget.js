@@ -43,36 +43,7 @@ import St from 'gi://St';
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import Pango from 'gi://Pango';
-
-/**
- * Splits a combined Pango font-description string ("Sans Bold 30") into
- * the two pieces this widget's CSS-style `set_style()` calls need
- * separately: a `font-family` value that still carries the face/style
- * words ("Sans Bold", not just "Sans" - matches how this widget's CSS has
- * always used a single descriptive face name rather than a strict
- * family+font-weight split) and a `font-size` pixel number.
- * @param {string} fontStr
- * @param {string} fallbackFamily
- * @param {number} fallbackSize
- * @returns {{family: string, size: number}}
- */
-function _parseFontDescription(fontStr, fallbackFamily, fallbackSize) {
-    try {
-        const desc = Pango.FontDescription.from_string(fontStr);
-        const rawSize = desc.get_size();
-        const size = rawSize > 0 ? Math.round(rawSize / Pango.SCALE) : fallbackSize;
-
-        // Drop just the point-size field and re-serialize - whatever's
-        // left (family + weight/style words Pango recognized) is exactly
-        // what used to be typed into the old separate "font face" field.
-        desc.unset_fields(Pango.FontMask.SIZE);
-        const family = desc.to_string().trim();
-
-        return {family: family || fallbackFamily, size};
-    } catch (e) {
-        return {family: fallbackFamily, size: fallbackSize};
-    }
-}
+import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, parseFontDescription as _parseFontDescription} from '../../lib/widgetVisualKit.js';
 
 export default class ClockModernWidget {
     /**
@@ -130,6 +101,7 @@ export default class ClockModernWidget {
 
     getDefaultSettings() {
         return {
+            ...SHADOW_DEFAULTS,
             format24h: true,
 
             font: 'Sans Bold 30',
@@ -231,7 +203,8 @@ export default class ClockModernWidget {
             `background-color: ${cardColor}; ` +
             `border-radius: ${cornerRadius}px; ` +
             'padding: 12px 12px; ' +
-            'spacing: 0px;'
+            'spacing: 0px;' +
+            _shadowBoxShadowCss(this._settings)
         );
 
         if (format24h) {

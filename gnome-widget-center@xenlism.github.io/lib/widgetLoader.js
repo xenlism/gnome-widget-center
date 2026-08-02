@@ -14,6 +14,7 @@
 
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
+import {fileExists} from './fsUtils.js';
 import {WidgetSettings} from './widgetSettings.js';
 import {validateSettingsSchema, getSchemaDefaults} from './settingsSchema.js';
 import {SettingsWatcher} from './settingsWatcher.js';
@@ -52,19 +53,53 @@ export class WidgetLoader {
      *   don't care about settings persistence keep working — without it,
      *   widgets get an inert `{}` for api.settings (same as before task 03).
      * @param {object} [logger] - optional {log,warn,error} - defaults to console
+     * @param {number} [shadowOverflowMargin=0] - px a widget's own paint
+     *   (its drop-shadow, specifically - see lib/widgetVisualKit.js's
+     *   shadowBoxShadowCss()) is allowed to bleed past its block-type
+     *   footprint before being clipped - see _enforceBlockSize() below.
+     *   Defaults to 0 (exact clip, no bleed - the old behavior) so
+     *   callers that don't pass this (e.g. prefs.js's PrefsWidgetList,
+     *   where _enforceBlockSize() never actually runs anyway) are
+     *   unaffected. extension.js seeds this from the `widget-spacing`
+     *   GSetting and keeps it live via the shadowOverflowMargin setter.
      */
-    constructor(searchPaths, storageService = null, logger = console) {
+    constructor(searchPaths, storageService = null, logger = console, shadowOverflowMargin = 0) {
         this._searchPaths = searchPaths;
         this._storageService = storageService;
         this._logger = logger;
         this._instances = new Map(); // id -> {id, metadata, path, ModuleClass, instance, actor, settings}
         this._errors = [];           // [{id, path, reason}]
+        this._shadowOverflowMargin = Math.max(0, Number(shadowOverflowMargin) || 0);
 
         // Cross-process live update — only meaningful with a real
         // StorageService (same optionality as `settings` itself below;
         // callers that pass none, e.g. lightweight tests, simply never
         // get file monitors installed).
         this._settingsWatcher = storageService ? new SettingsWatcher(storageService) : null;
+    }
+
+    /** Current shadow-bleed clip margin in px - see the constructor doc. */
+    get shadowOverflowMargin() {
+        return this._shadowOverflowMargin;
+    }
+
+    /** Live update (e.g. extension.js's `widget-spacing` onChanged
+     * listener) - re-clips every already-loaded widget's actor at the
+     * new margin immediately, same "takes effect without a shell
+     * restart" behavior LayoutEngine's edgeMargin/spacing setters have.
+     * A no-op for any widget whose actor no longer exists. */
+    set shadowOverflowMargin(value) {
+        this._shadowOverflowMargin = Math.max(0, Number(value) || 0);
+        for (const [id, entry] of this._instances) {
+            if (!entry.actor)
+                continue;
+            // `entry` already carries widgetInfo's fields (id, metadata,
+            // path) spread in - see loadOne()/hotReload() below - so it
+            // doubles as the widgetInfo argument _enforceBlockSize()
+            // expects.
+            this._enforceBlockSize(entry, entry.actor)
+                .catch(e => this._logger.warn?.(`[widget-loader] "${id}": failed to re-clip after widget-spacing change: ${e.message}`));
+        }
     }
 
     /** Errors recorded during the most recent discover()/loadAll() call. */
@@ -201,9 +236,8 @@ export class WidgetLoader {
     async loadModule(widgetInfo) {
         const entry = widgetInfo.metadata.entry ?? 'widget.js';
         const entryPath = GLib.build_filenamev([widgetInfo.path, entry]);
-        const entryFile = Gio.File.new_for_path(entryPath);
 
-        if (!entryFile.query_exists(null)) {
+        if (!fileExists(entryPath)) {
             this._recordError(widgetInfo, `entry file "${entry}" not found`);
             return null;
         }
@@ -453,8 +487,7 @@ export class WidgetLoader {
         try {
             const entryName = widgetInfo.metadata.entry ?? 'widget.js';
             const entryPath = GLib.build_filenamev([widgetInfo.path, entryName]);
-            const entryFile = Gio.File.new_for_path(entryPath);
-            if (!entryFile.query_exists(null))
+            if (!fileExists(entryPath))
                 throw new Error(`entry file "${entryName}" not found`);
 
             // Cache-bust: re-importing the exact same file:// URL would
@@ -530,9 +563,15 @@ export class WidgetLoader {
 
     // Locks widgetInfo's actor to the pixel size implied by its own
     // metadata.json `block-type` (falls back to DEFAULT_BLOCK_TYPE if the
-    // field is omitted) and clips any content that doesn't fit. This is
-    // deliberately enforced here — once, centrally — rather than left to
-    // each widget.js to hand-roll correctly. Relying on every widget
+    // field is omitted) and clips any content that doesn't fit - beyond
+    // `this._shadowOverflowMargin` px of bleed room specifically reserved
+    // for the widget's own drop-shadow (see the constructor doc and
+    // lib/gjskit/st/StWidget.js's clip()); a plain content overflow (a
+    // long label, a big font) still gets clipped at that same inflated
+    // boundary, it just isn't cut exactly at the block-type edge anymore
+    // when the margin is non-zero. This is deliberately enforced here —
+    // once, centrally — rather than left to each widget.js to hand-roll
+    // correctly. Relying on every widget
     // author (bundled or third-party) to independently compute
     // cols*BLOCK_CELL_SIZE and remember clip_to_allocation is exactly how
     // calendar-header ended up overflowing its box in the first place;
@@ -562,7 +601,7 @@ export class WidgetLoader {
             const {StWidgetWrapper} = await import('./gjskit/st/StWidget.js');
             new StWidgetWrapper(actor)
                 .size(cols * BLOCK_CELL_SIZE, rows * BLOCK_CELL_SIZE)
-                .clip(true);
+                .clip(true, this._shadowOverflowMargin);
         } catch (e) {
             this._recordError(widgetInfo, `failed to enforce block-type size: ${e.message}`);
         }

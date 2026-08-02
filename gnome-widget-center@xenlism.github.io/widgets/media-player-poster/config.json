@@ -1,0 +1,221 @@
+{
+  "version": "1.0",
+  "tabs": [
+    {
+      "id": "general",
+      "label": "Media Player (Poster)",
+      "description": "2x2 poster-style Now Playing card settings",
+      "icon": "multimedia-player-symbolic",
+      "groups": [
+        {
+          "id": "appearance",
+          "label": "Appearance",
+          "description": "",
+          "fields": [
+            {
+              "id": "backgroundColor",
+              "label": "Background color",
+              "description": "Solid card background - no blur",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#000000FF"
+            },
+            {
+              "id": "widgetCornerRadius",
+              "label": "Widget corner radius",
+              "description": "Roundness of the card's outer corners",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 18,
+              "min": 0,
+              "max": 80,
+              "step": 1,
+              "suffix": "px"
+            },
+            {
+              "id": "coverCornerRadius",
+              "label": "Cover corner radius",
+              "description": "Roundness of the album cover's corners",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 18,
+              "min": 0,
+              "max": 80,
+              "step": 1,
+              "suffix": "px"
+            }
+          ]
+        },
+        {
+          "id": "track",
+          "label": "Track title",
+          "description": "The big line",
+          "fields": [
+            {
+              "id": "trackFont",
+              "label": "Track title font",
+              "description": "",
+              "dataType": "string",
+              "fieldType": "fontpicker",
+              "format": "font",
+              "default": "Sans Bold 20"
+            },
+            {
+              "id": "trackColor",
+              "label": "Track title color",
+              "description": "",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#FFFFFFFF"
+            }
+          ]
+        },
+        {
+          "id": "artist",
+          "label": "Artist",
+          "description": "The small line",
+          "fields": [
+            {
+              "id": "artistFont",
+              "label": "Artist font",
+              "description": "",
+              "dataType": "string",
+              "fieldType": "fontpicker",
+              "format": "font",
+              "default": "Sans 13"
+            },
+            {
+              "id": "artistColor",
+              "label": "Artist color",
+              "description": "",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#FFFFFFB3"
+            }
+          ]
+        },
+        {
+          "id": "controls",
+          "label": "Controls",
+          "description": "",
+          "fields": [
+            {
+              "id": "buttonColor",
+              "label": "Button color",
+              "description": "Color of the Play/Previous/Next icons and their backdrop",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#FFFFFFFF"
+            }
+          ]
+        },
+        {
+          "id": "launch",
+          "label": "Launch on click",
+          "description": "Clicking the cover raises the running player, or launches this app if none is running yet. The Play button does the same on its very first click.",
+          "fields": [
+            {
+              "id": "desktopFilePath",
+              "label": "App to launch",
+              "description": "Application (.desktop file) launched when no MPRIS player is running",
+              "dataType": "string",
+              "fieldType": "filepicker",
+              "format": "file",
+              "default": "",
+              "filters": [
+                "*.desktop"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "shadow",
+      "label": "Shadow",
+      "description": "Drop shadow behind this widget.",
+      "groups": [
+        {
+          "id": "shadow",
+          "label": "Shadow effect",
+          "description": "Off by default. Default color is black at 30% transparency.",
+          "fields": [
+            {
+              "id": "shadowEnabled",
+              "label": "Enable shadow",
+              "description": "Add a drop shadow behind this widget",
+              "dataType": "boolean",
+              "fieldType": "switch",
+              "default": false
+            },
+            {
+              "id": "shadowColor",
+              "label": "Shadow color",
+              "description": "",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "default": "#000000",
+              "visibleIf": "shadowEnabled"
+            },
+            {
+              "id": "shadowOpacity",
+              "label": "Shadow transparency",
+              "description": "Shadow opacity, 0-100%",
+              "dataType": "integer",
+              "fieldType": "slider",
+              "default": 30,
+              "min": 0,
+              "max": 100,
+              "step": 1,
+              "suffix": "%",
+              "visibleIf": "shadowEnabled"
+            },
+            {
+              "id": "shadowAngle",
+              "label": "Shadow angle",
+              "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
+              "dataType": "integer",
+              "fieldType": "slider",
+              "default": 90,
+              "min": 0,
+              "max": 360,
+              "step": 1,
+              "suffix": "°",
+              "visibleIf": "shadowEnabled"
+            },
+            {
+              "id": "shadowDistance",
+              "label": "Shadow distance",
+              "description": "How far the shadow is offset, in pixels",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 6,
+              "min": 0,
+              "max": 60,
+              "step": 1,
+              "suffix": "px",
+              "visibleIf": "shadowEnabled"
+            },
+            {
+              "id": "shadowBlur",
+              "label": "Shadow blur",
+              "description": "Blur radius, in pixels",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 16,
+              "min": 0,
+              "max": 100,
+              "step": 1,
+              "suffix": "px",
+              "visibleIf": "shadowEnabled"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

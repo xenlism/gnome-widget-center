@@ -1,0 +1,15 @@
+{
+  "id": "media-player-circle",
+  "name": "Media Player (Circle)",
+  "description": "1x1 circular Now Playing card: album cover centered inside a progress ring that tracks playback position, with Play/Previous/Next controls that appear on hover.",
+  "version": "1.0.0",
+  "author": "gnome-widget-center",
+  "api-version": 1,
+  "entry": "widget.js",
+  "block-type": "1x1",
+  "default-position": {
+    "x": 220,
+    "y": 40,
+    "monitor": 0
+  }
+}

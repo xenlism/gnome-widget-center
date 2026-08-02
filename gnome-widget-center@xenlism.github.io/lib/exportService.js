@@ -34,9 +34,7 @@
 // code itself" — deliberately a different, password-protected format;
 // see that file's header for why the two aren't the same thing.
 
-import Gio from 'gi://Gio';
-import GLib from 'gi://GLib';
-
+import {writeJsonFile, readTextFile} from './fsUtils.js';
 import {readWidgetConfig} from './widgetConfigReader.js';
 import {redactSecrets} from './secretFields.js';
 import {verifyWidgetDependencies} from './dependencyChecker.js';
@@ -128,11 +126,7 @@ export function buildGwctDocument(widgets, {storage, theme}) {
  */
 export function writeGwctFile(path, document) {
     const finalPath = ensureGwctExtension(path);
-    const file = Gio.File.new_for_path(finalPath);
-    const jsonString = JSON.stringify(document, null, 2);
-    const bytes = new TextEncoder().encode(jsonString);
-
-    file.replace_contents(bytes, null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
+    writeJsonFile(finalPath, document, 2);
     return finalPath;
 }
 
@@ -144,15 +138,11 @@ export function writeGwctFile(path, document) {
  *   this build knows how to read).
  */
 export function readGwctFile(path) {
-    const file = Gio.File.new_for_path(path);
-    if (!file.query_exists(null))
+    const contents = readTextFile(path);
+    if (contents === null)
         throw new Error(`File not found: ${path}`);
 
-    const [success, contents] = file.load_contents(null);
-    if (!success)
-        throw new Error(`Failed to read: ${path}`);
-
-    const parsed = JSON.parse(new TextDecoder('utf-8').decode(contents));
+    const parsed = JSON.parse(contents);
 
     if (parsed.format !== GWCT_FORMAT)
         throw new Error('Not a GNOME Widget Center theme file (.gwct).');

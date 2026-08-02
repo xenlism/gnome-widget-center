@@ -21,6 +21,11 @@ shape rather than inventing a new one:
 | Reads CPU/RAM/network | `widgets/system-stats/` + WIDGET_API.md §9.2 (bundled widgets only) |
 | Nothing close exists yet | `widgets/_template/` |
 
+For drop-shadow CSS, hex/rgba color conversion, or Pango font-string
+parsing — nearly every card-style widget needs at least one of these —
+import from `lib/widgetVisualKit.js` (WIDGET_API.md §9.3, bundled widgets
+only) rather than pasting a local copy.
+
 Every widget needs, at minimum: `metadata.json` + `widget.js`. Add
 `config.json` only if it has user-facing settings (see §3 below).
 

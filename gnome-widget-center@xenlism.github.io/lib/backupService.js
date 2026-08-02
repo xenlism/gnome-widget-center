@@ -65,6 +65,7 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
+import {ensureDirectory, readTextFile, readBytesFile, writeBytesFile, writeJsonFile} from './fsUtils.js';
 import {verifyWidgetDependencies} from './dependencyChecker.js';
 import {randomBytes} from './crypto/randomBytes.js';
 import {pbkdf2Sha256} from './crypto/pbkdf2Sha256.js';
@@ -262,7 +263,7 @@ export function createBackup(destPath, password, userWidgets, {storage, theme, s
     const finalPath = ensureGwcbakExtension(destPath);
     const stagingPath = GLib.build_filenamev([GLib.get_tmp_dir(), `gwc-backup-${GLib.uuid_string_random()}`]);
     const tarPath = `${stagingPath}.tar.gz`;
-    Gio.File.new_for_path(stagingPath).make_directory_with_parents(null);
+    ensureDirectory(stagingPath);
 
     try {
         // --- manifest.json: appearance + every widget's position/theme/
@@ -289,9 +290,7 @@ export function createBackup(destPath, password, userWidgets, {storage, theme, s
             },
             widgets: widgetEntries,
         };
-        Gio.File.new_for_path(GLib.build_filenamev([stagingPath, 'manifest.json'])).replace_contents(
-            new TextEncoder().encode(JSON.stringify(manifest, null, 2)),
-            null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
+        writeJsonFile(GLib.build_filenamev([stagingPath, 'manifest.json']), manifest, 2);
 
         // --- gsettings.json: every host-level key from our own gschema. ---
         const gsettingsDump = {};
@@ -299,20 +298,18 @@ export function createBackup(destPath, password, userWidgets, {storage, theme, s
             for (const key of BACKUP_GSCHEMA_KEYS)
                 gsettingsDump[key] = settings.getGlobalValue(key);
         }
-        Gio.File.new_for_path(GLib.build_filenamev([stagingPath, 'gsettings.json'])).replace_contents(
-            new TextEncoder().encode(JSON.stringify(gsettingsDump, null, 2)),
-            null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
+        writeJsonFile(GLib.build_filenamev([stagingPath, 'gsettings.json']), gsettingsDump, 2);
 
         // --- widgets/<id>/ — full copy of each user-installed widget's
         // own folder (code + assets). ---
         const widgetsStagingDir = GLib.build_filenamev([stagingPath, 'widgets']);
-        Gio.File.new_for_path(widgetsStagingDir).make_directory_with_parents(null);
+        ensureDirectory(widgetsStagingDir);
         for (const widget of userWidgets)
             _copyDirRecursive(widget.path, GLib.build_filenamev([widgetsStagingDir, widget.id]));
 
         // --- tar + gzip everything staged above into one plain archive. ---
         _runSync(['tar', '-czf', tarPath, '-C', stagingPath, '.']);
-        const [, tarBytes] = Gio.File.new_for_path(tarPath).load_contents(null);
+        const tarBytes = readBytesFile(tarPath);
 
         // --- encrypt: PBKDF2 -> {encKey, macKey}, AES-256-CTR, then an
         // HMAC-SHA256 tag over salt+iv+ciphertext (Encrypt-then-MAC) so
@@ -320,15 +317,12 @@ export function createBackup(destPath, password, userWidgets, {storage, theme, s
         const salt = randomBytes(SALT_LEN);
         const iv = randomBytes(IV_LEN);
         const {encKey, macKey} = _deriveKeys(password, salt);
-        const ciphertext = aes256CtrTransform(new Uint8Array(tarBytes), encKey, iv);
+        const ciphertext = aes256CtrTransform(tarBytes, encKey, iv);
         const authTag = hmacSha256(macKey, _concatBytes(salt, iv, ciphertext));
 
         const fileBytes = _concatBytes(MAGIC, new Uint8Array([GWCBAK_VERSION]), salt, iv, authTag, ciphertext);
 
-        const destFile = Gio.File.new_for_path(finalPath);
-        if (destFile.query_exists(null))
-            destFile.delete(null);
-        destFile.replace_contents(fileBytes, null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
+        writeBytesFile(finalPath, fileBytes);
 
         return finalPath;
     } finally {
@@ -359,12 +353,9 @@ export function restoreBackup(srcPath, password, {storage, theme, settings, user
     if (!ok)
         throw new Error(`Missing required tool(s) for restore: ${missing.join(', ')}. Install them first.`);
 
-    const srcFile = Gio.File.new_for_path(srcPath);
-    if (!srcFile.query_exists(null))
+    const fileBytes = readBytesFile(srcPath);
+    if (fileBytes === null)
         throw new Error(`File not found: ${srcPath}`);
-
-    const [, fileBytesRaw] = srcFile.load_contents(null);
-    const fileBytes = new Uint8Array(fileBytesRaw);
 
     if (fileBytes.length < HEADER_LEN)
         throw new Error('Not a valid GNOME Widget Center backup (.gwcbak) — file is too short.');
@@ -392,11 +383,10 @@ export function restoreBackup(srcPath, password, {storage, theme, settings, user
 
     const stagingPath = GLib.build_filenamev([GLib.get_tmp_dir(), `gwc-restore-${GLib.uuid_string_random()}`]);
     const tarPath = `${stagingPath}.tar.gz`;
-    Gio.File.new_for_path(stagingPath).make_directory_with_parents(null);
+    ensureDirectory(stagingPath);
 
     try {
-        Gio.File.new_for_path(tarPath).replace_contents(
-            tarBytes, null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
+        writeBytesFile(tarPath, tarBytes);
 
         // Must run BEFORE extraction — see _validateTarEntries()'s doc
         // comment for why the HMAC check above doesn't already cover this.
@@ -404,21 +394,21 @@ export function restoreBackup(srcPath, password, {storage, theme, settings, user
 
         _runSync(['tar', '-xzf', tarPath, '-C', stagingPath]);
 
-        const manifestFile = Gio.File.new_for_path(GLib.build_filenamev([stagingPath, 'manifest.json']));
-        if (!manifestFile.query_exists(null))
+        const manifestText = readTextFile(GLib.build_filenamev([stagingPath, 'manifest.json']));
+        if (manifestText === null)
             throw new Error('Not a valid GNOME Widget Center backup (.gwcbak) — missing manifest.json.');
 
-        const [, manifestBytes] = manifestFile.load_contents(null);
-        const manifest = JSON.parse(new TextDecoder('utf-8').decode(manifestBytes));
+        const manifest = JSON.parse(manifestText);
         if (manifest.format !== GWCBAK_FORMAT)
             throw new Error('Not a GNOME Widget Center backup file (.gwcbak).');
 
         // --- gsettings.json first, so a widget that got just restored
         // isn't immediately hidden by a stale disabled-widgets entry. ---
-        const gsettingsFile = Gio.File.new_for_path(GLib.build_filenamev([stagingPath, 'gsettings.json']));
-        if (gsettingsFile.query_exists(null) && settings?.isReady) {
-            const [, gsBytes] = gsettingsFile.load_contents(null);
-            const gsDump = JSON.parse(new TextDecoder('utf-8').decode(gsBytes));
+        const gsettingsText = settings?.isReady
+            ? readTextFile(GLib.build_filenamev([stagingPath, 'gsettings.json']))
+            : null;
+        if (gsettingsText !== null) {
+            const gsDump = JSON.parse(gsettingsText);
             for (const key of BACKUP_GSCHEMA_KEYS) {
                 if (key in gsDump)
                     settings.setGlobalValue(key, gsDump[key]);
@@ -486,10 +476,9 @@ export function restoreBackup(srcPath, password, {storage, theme, settings, user
             restoredWidgetIds.push(entry.id);
 
             const widgetPath = GLib.build_filenamev([userWidgetsDir, entry.id]);
-            const metadataFile = Gio.File.new_for_path(GLib.build_filenamev([widgetPath, 'metadata.json']));
-            if (metadataFile.query_exists(null)) {
-                const [, metaBytes] = metadataFile.load_contents(null);
-                const metadata = JSON.parse(new TextDecoder('utf-8').decode(metaBytes));
+            const metadataText = readTextFile(GLib.build_filenamev([widgetPath, 'metadata.json']));
+            if (metadataText !== null) {
+                const metadata = JSON.parse(metadataText);
                 const {missing: missingDeps} = verifyWidgetDependencies(metadata);
                 for (const dep of missingDeps) {
                     dependencyWarnings.push({

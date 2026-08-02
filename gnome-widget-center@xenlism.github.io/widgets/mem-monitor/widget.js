@@ -31,6 +31,7 @@ import Pango from 'gi://Pango';
 import Cairo from 'cairo';
 
 import {SystemMetricsService} from '../../lib/systemMetricsApi.js';
+import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor} from '../../lib/widgetVisualKit.js';
 
 const MAX_HISTORY = 40;
 const GRAPH_HEIGHT = 46;
@@ -50,29 +51,6 @@ function _parseHexColor(hex, fallback = '#FFFFFFFF') {
  * into the pieces St's CSS-like set_style() needs separately. Same pattern
  * WIDGET_API.md §6.4 documents for widgets/clock-modern/widget.js's
  * _parseFontDescription(). */
-/** @private St's CSS engine only understands 6-digit "#rrggbb" hex (plus
- * rgb()/rgba()) - an 8-digit "#rrggbbaa" hex, which is exactly what this
- * widget's alpha-enabled colorpicker fields save (see config.json's
- * "alpha": true fields), is not valid St CSS. The whole
- * background-color/color declaration using it is silently dropped, which
- * is why the card background, graph background, and any custom font
- * color never appeared even though the settings were saved correctly.
- * Converts the 8-digit form to "rgba(r, g, b, a)", which St does
- * support; anything else (6-digit hex, already rgba(), etc.) passes
- * through unchanged. Same fix lib/themeService.js's hexToRgba() already
- * applies for the global theme system - duplicated here per this
- * widget's self-contained convention (see file header). */
-function _toCssColor(hex, fallback) {
-    const value = typeof hex === 'string' ? hex : fallback;
-    const m = /^#([0-9a-fA-F]{6})([0-9a-fA-F]{2})$/.exec(value);
-    if (!m)
-        return value;
-    const r = parseInt(m[1].slice(0, 2), 16);
-    const g = parseInt(m[1].slice(2, 4), 16);
-    const b = parseInt(m[1].slice(4, 6), 16);
-    const a = Math.round((parseInt(m[2], 16) / 255) * 1000) / 1000;
-    return `rgba(${r}, ${g}, ${b}, ${a})`;
-}
 
 function _splitFontDescription(fontStr, fallbackFamily = 'Sans', fallbackSize = 34) {
     try {
@@ -145,6 +123,7 @@ export default class MemMonitorWidget {
 
     getDefaultSettings() {
         return {
+            ...SHADOW_DEFAULTS,
             fontDesc: 'Sans Bold 34',
             fontColor: '#FFFFFFFF',
             graphLineColor: '#5AC8FAFF',
@@ -251,7 +230,8 @@ export default class MemMonitorWidget {
 
         this._actor.set_style(
             `background-color: ${backgroundColor}; ` +
-            `border-radius: ${cornerRadius}px;`
+            `border-radius: ${cornerRadius}px;` +
+            _shadowBoxShadowCss(this._settings)
         );
 
         this._textBox.set_style(`padding: ${CARD_PADDING}px ${CARD_PADDING}px 6px ${CARD_PADDING}px; spacing: 2px;`);

@@ -35,6 +35,7 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss} from '../../lib/widgetVisualKit.js';
 
 const TOOLTIP_SHOW_DELAY_MS = 400;
 const ICON_SIZE = 22;
@@ -213,6 +214,7 @@ export default class SettingsControlWidget {
             iconOnColor: '#3584e4',
             iconOffColor: '#9a9996',
             cornerRadius: 18,
+            ...SHADOW_DEFAULTS,
         };
     }
 
@@ -538,7 +540,8 @@ export default class SettingsControlWidget {
     /** @private builds the card's inline style string (see power-menu's identical helper for the hex-alpha rationale). */
     _cardStyle(hexColor, cornerRadius) {
         const {r, g, b, a} = this._hexToRgba(hexColor);
-        return `background-color: rgba(${r}, ${g}, ${b}, ${a}); border-radius: ${cornerRadius}px;`;
+        return `background-color: rgba(${r}, ${g}, ${b}, ${a}); border-radius: ${cornerRadius}px; ` +
+            _shadowBoxShadowCss(this._settings);
     }
 
     /** @private "#rrggbb" / "#rrggbbaa" (or 3/4-digit shorthand) -> {r, g, b} 0-255 each, {a} 0-1. */

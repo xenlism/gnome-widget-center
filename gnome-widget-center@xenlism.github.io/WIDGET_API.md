@@ -56,26 +56,26 @@ folder instead, discovered the same way.
   block-type system) and `lib/blockSizeManager.js`'s `BLOCK_TYPES` table
   for the authoritative list. The host multiplies the resolved cols/rows
   by `BlockSizeManager.BLOCK_CELL_SIZE` (currently 16px/cell) when placing
-  the widget. Names read as `<colsTier>x<rowsTier>`, where tier 1/2/3/4 map to
-  10/21/34/43 cells (NOT literal cols×rows — check the table for the
+  the widget. Names read as `<colsTier>x<rowsTier>`, where tier bar/1/2/3/4 map to
+  5/11/23/35/47 cells (NOT literal cols×rows — check the table for the
   real cell counts):
 
   | name    | cols × rows |
   |---------|-------------|
-  | `barx1` | 10 × 5      |
-  | `barx2` | 21 × 5      |
-  | `barx3` | 32 × 5      |
-  | `barx4` | 43 × 5      |
-  | `1x1`   | 10 × 10     |
-  | `2x1`   | 21 × 10     |
-  | `2x2`   | 21 × 21     |
-  | `3x1`   | 32 × 10     |
-  | `3x2`   | 32 × 21     |
-  | `3x3`   | 32 × 32     |
-  | `4x1`   | 43 × 10     |
-  | `4x2`   | 43 × 21     |
-  | `4x3`   | 43 × 32     |
-  | `4x4`   | 43 × 43     |
+  | `barx1` | 11 × 5      |
+  | `barx2` | 23 × 5      |
+  | `barx3` | 35 × 5      |
+  | `barx4` | 47 × 5      |
+  | `1x1`   | 11 × 11     |
+  | `2x1`   | 23 × 11     |
+  | `2x2`   | 23 × 23     |
+  | `3x1`   | 35 × 11     |
+  | `3x2`   | 35 × 23     |
+  | `3x3`   | 35 × 35     |
+  | `4x1`   | 47 × 11     |
+  | `4x2`   | 47 × 23     |
+  | `4x3`   | 47 × 35     |
+  | `4x4`   | 47 × 47     |
 
   This is a **closed** list — these 10 sizes only, nothing else. Omit
   the field entirely (or use an unrecognized name) and you get `1x1`
@@ -798,6 +798,63 @@ is the right ballpark); one `SystemMetricsService` per widget *instance*
 first `getCpuUsage()`/`getNetworkUsage()` call always returns 0 (no prior
 sample to diff against) — call once and discard during `enable()` if you
 need a correct value from the very first real frame.
+
+### 9.3 Shared visual helpers (shadow, color, font)
+
+`lib/widgetVisualKit.js` holds the small pure-function helpers almost
+every card-style widget needs: drop-shadow CSS, hex/rgba color
+conversion, and Pango font-description parsing. Import the pieces you
+need instead of pasting a local copy:
+
+```js
+import {
+    SHADOW_DEFAULTS,
+    shadowBoxShadowCss,
+    hexToRgba,
+    toCssColor,
+    parseFontDescription,
+} from '../../lib/widgetVisualKit.js';
+// bundled widgets only - see the path restriction below
+```
+
+| Export | Use it for |
+|---|---|
+| `SHADOW_DEFAULTS` | spread into `getDefaultSettings()`: `...SHADOW_DEFAULTS` |
+| `shadowBoxShadowCss(settings)` | build the `box-shadow: ...;` fragment for `set_style()` |
+| `hexToRgba(hex)` | `"#rrggbb"`/`"#rrggbbaa"` → `{r,g,b,a}` (0..1) for Cairo `setSourceRGBA()` |
+| `toCssColor(hex, fallback)` | 8-digit `"#rrggbbaa"` → `"rgba(...)"` for St CSS (St doesn't understand 8-digit hex) |
+| `parseFontDescription(fontStr, fallbackFamily, fallbackSize)` | one Pango string (`"Sans Bold 22"`) → `{family, size}` for St's separate `font-family`/`font-size` |
+
+**Path restriction:** same as §9.1/§9.2 — the relative import only
+resolves for widgets bundled inside this extension. Third-party widgets
+under `~/.local/share/gnome-widget-center/widgets/` cannot reach this
+file and must keep their own local copy of any of these helpers they
+need.
+
+Do **not** re-introduce a local `_shadowBoxShadowCss()`/`_hexToRgba()`/
+`_toCssColor()`/`_parseFontDescription()` in a new bundled widget — copy
+the import above instead. (Earlier bundled widgets each carried their own
+byte-identical copy of these; that's been consolidated here as of the
+2026-08 cleanup pass. If you're editing an old widget and still find a
+local copy, replace it with this import while you're in there.)
+
+**Shadow bleed past the block-type edge:** a widget's `box-shadow` is
+painted on the same root actor `widgetLoader.js`'s `_enforceBlockSize()`
+clips to the block-type footprint - by default that clip is exact, so a
+large `shadowBlur`/`shadowDistance` gets visibly cut off at a hard,
+dead-straight line right at the widget's edge instead of fading out.
+As of the 2026-08 cleanup pass this is no longer a hard 0px clip: the
+clip is inflated by the current `widget-spacing` GSetting value (default
+16px) in every direction, so a shadow can bleed that far past the
+block-type edge before being cut - deliberately capped at exactly
+`widget-spacing` (not more) so a bled shadow can never reach into a
+neighboring widget's own footprint, since that's the minimum gap
+`lib/layoutEngine.js`'s collision-avoidance already guarantees between
+any two widgets while `prevent-widget-overlap` is on. Nothing in
+`widget.js` needs to change to get this - it's applied centrally, the
+same as the block-size clip itself always was. If `prevent-widget-overlap`
+is off, collision-avoidance (and therefore this guarantee) is skipped
+entirely, same as it always has been for that setting.
 
 ## 10. Minimum supported version
 

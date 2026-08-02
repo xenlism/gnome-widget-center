@@ -87,7 +87,11 @@
       <description>
         Only enforced while prevent-widget-overlap is on - the minimum
         gap the collision-avoidance search in lib/layoutEngine.js keeps
-        between any two widgets' rects.
+        between any two widgets' rects. Also doubles as the max px a
+        widget's own drop-shadow is allowed to bleed past its block-type
+        footprint before being clipped (widgetLoader.js's
+        _enforceBlockSize()) - kept to this value specifically so a bled
+        shadow can never reach into a neighboring widget's own footprint.
       </description>
     </key>
 

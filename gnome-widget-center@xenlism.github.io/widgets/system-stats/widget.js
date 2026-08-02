@@ -13,6 +13,7 @@
 import St from 'gi://St';
 import GLib from 'gi://GLib';
 import {SystemMetricsService} from '../../lib/systemMetricsApi.js';
+import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss} from '../../lib/widgetVisualKit.js';
 
 const BAR_WIDTH_PX = 160;
 
@@ -74,6 +75,8 @@ export default class SystemStatsWidget {
         this._actor.add_child(this._ramBox);
         this._actor.add_child(this._netBox);
 
+        this._actor.set_style(_shadowBoxShadowCss(this._settings));
+
         return this._actor;
     }
 
@@ -89,11 +92,12 @@ export default class SystemStatsWidget {
     }
 
     getDefaultSettings() {
-        return {updateInterval: 2};
+        return {updateInterval: 2, ...SHADOW_DEFAULTS};
     }
 
     onSettingsChanged(settings) {
         this._logger.info('Settings changed, restarting timer...');
+        this._actor.set_style(_shadowBoxShadowCss(this._settings));
         this._destroyTimer();
         this._setupTimer();
     }
