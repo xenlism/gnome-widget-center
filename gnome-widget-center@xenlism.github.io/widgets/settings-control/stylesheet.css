@@ -8,6 +8,9 @@
 }
 
 .settings-control-widget-button {
+    /* actual fill is set inline in widget.js's _setToggleState() - a faint
+     * tint of iconOffColor (default #9a9996) when off, a much more opaque
+     * fill of iconOnColor (default #3584e4) when on ("lights up") */
     background-color: rgba(255, 255, 255, 0.08);
     border-radius: 50%; /* circular - actual value set inline as BUTTON_SIZE/2 */
 }
@@ -17,9 +20,9 @@
 }
 
 .settings-control-widget-button St.Icon {
-    /* color is set from settings in widget.js - iconOnColor (default
-     * #3584e4) when that toggle is on, iconOffColor (default #9a9996)
-     * when it's off */
+    /* always a constant white - state is shown by the button's own
+     * background fill instead (see .settings-control-widget-button above) */
+    color: #ffffff;
 }
 
 .settings-control-widget-tooltip {

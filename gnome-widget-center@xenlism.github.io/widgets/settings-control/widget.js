@@ -1,16 +1,32 @@
 // widgets/settings-control/widget.js
 //
-// A compact 1x1 (160x160px) card with a 2x2 grid of icon-only TOGGLE
-// buttons: Wi-Fi/Ethernet, Bluetooth, Do Not Disturb, Dark/Light mode.
-// Same no-label-just-a-tooltip visual language as widgets/power-menu -
-// see that widget's _attachTooltip() for the pattern reused here.
+// A compact 1x1 card with a 2x2 grid of icon-only TOGGLE buttons:
+// Wi-Fi/Ethernet, Bluetooth, Do Not Disturb, Dark/Light mode. Same
+// no-label-just-a-tooltip visual language as widgets/power-menu - see
+// that widget's _attachTooltip() for the pattern reused here.
+//
+// Root actor (this._actor) is a plain St.Widget with Clutter.FixedLayout,
+// holding a single St.Bin child (this._content) that does the actual
+// centering/painting - lib/blockSizeManager.js's applyBlockSize()
+// force-sets the root actor to an exact cols*16 x rows*16px size from
+// metadata.json's block-type (currently 11x11 cells = 176x176px)
+// regardless of anything set here, so this._content is bound to that
+// size via a Clutter.BindConstraint rather than a hardcoded pixel size -
+// same fix as widgets/folder-widget-2x2's root/content split. This keeps
+// the card's background/corner-radius filling the FULL allocated block
+// and the button grid centered inside it, even if block-type's cell size
+// ever changes again.
 //
 // Unlike power-menu's fire-and-forget actions, every button here reflects
-// live system state (icon color swaps between the "on"/"off" settings
-// colors) and stays in sync if the setting is changed some other way
-// (GNOME Settings app, another instance of this widget, an external
-// nmcli/bluetoothctl command, etc.) - each source below is subscribed to
-// via signals, never polled, per WIDGET_API.md §9.1's must-follow rules:
+// live system state. Rather than recoloring the icon glyph itself (icons
+// stay a constant white, matching GNOME's own Quick Settings toggles),
+// the BUTTON's background fill is what shows on/off state - a faint tint
+// of iconOffColor when off, a much more opaque fill of iconOnColor when
+// on, so the button visibly "lights up" when toggled. Each source below
+// stays in sync if the setting is changed some other way (GNOME Settings
+// app, another instance of this widget, an external nmcli/bluetoothctl
+// command, etc.) - subscribed to via signals, never polled, per
+// WIDGET_API.md §9.1's must-follow rules:
 //
 //   - Wi-Fi/Ethernet -> org.freedesktop.NetworkManager (system bus).
 //     Icon glyph switches between wifi/wired/offline based on
@@ -28,7 +44,7 @@
 // All four are wrapped defensively: a missing bus name, missing adapter,
 // or missing schema (non-GNOME session, sandboxed test environment,
 // older GNOME without a given key) leaves that one button inert (off
-// color, generic icon, logs on click) rather than throwing - buildActor()
+// fill, generic icon, logs on click) rather than throwing - buildActor()
 // itself never touches DBus/GSettings at all, only enable() does.
 
 import St from 'gi://St';
@@ -42,9 +58,6 @@ const ICON_SIZE = 22;
 const BUTTON_SIZE = 60;
 const GRID_SPACING = 8;
 const PADDING = 12;
-// 2 * BUTTON_SIZE + GRID_SPACING + 2 * PADDING = 160, matching the 1x1
-// block-type's resolved 10x10-cell (16px/cell) footprint exactly - see
-// metadata.json's block-type comment / WIDGET_API.md §2's size table.
 
 const NOTIFICATIONS_SCHEMA = 'org.gnome.desktop.notifications';
 const INTERFACE_SCHEMA = 'org.gnome.desktop.interface';
@@ -58,11 +71,15 @@ export default class SettingsControlWidget {
         this._settings = api.settings;
         this._tooltips = [];
 
-        // Re-colored on state change / onSettingsChanged - see _setIconState().
+        // Re-styled on state change / onSettingsChanged - see _setToggleState().
         this._networkIcon = null;
         this._bluetoothIcon = null;
         this._dndIcon = null;
         this._themeIcon = null;
+        this._networkButton = null;
+        this._bluetoothButton = null;
+        this._dndButton = null;
+        this._themeButton = null;
 
         // Cached appearance settings, refreshed in buildActor()/onSettingsChanged().
         this._iconOnColor = '#3584e4';
@@ -91,17 +108,28 @@ export default class SettingsControlWidget {
 
         // Plain (non-layout-managed-by-parent) root so tooltip labels can
         // be positioned as free-floating overlay children - same pattern
-        // as widgets/power-menu/widget.js.
+        // as widgets/power-menu/widget.js. Sizing itself is left entirely
+        // to lib/blockSizeManager.js's applyBlockSize() (called by the
+        // host right after buildActor() returns) - this._content below is
+        // bound to whatever size that ends up setting, rather than this
+        // widget assuming/hardcoding it.
         this._actor = new St.Widget({
             style_class: 'settings-control-widget-root',
             layout_manager: new Clutter.FixedLayout(),
             reactive: true,
         });
-        this._actor.set_size(
-            2 * BUTTON_SIZE + GRID_SPACING + 2 * PADDING,
-            2 * BUTTON_SIZE + GRID_SPACING + 2 * PADDING
-        );
-        this._actor.set_style(this._cardStyle(backgroundColor, cornerRadius));
+
+        this._content = new St.Bin({
+            style_class: 'settings-control-widget-content',
+            x_align: Clutter.ActorAlign.CENTER,
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        this._content.add_constraint(new Clutter.BindConstraint({
+            source: this._actor,
+            coordinate: Clutter.BindCoordinate.SIZE,
+        }));
+        this._actor.add_child(this._content);
+        this._content.set_style(this._cardStyle(backgroundColor, cornerRadius) + `padding: ${PADDING}px;`);
 
         this._grid = new St.Widget({
             style_class: 'settings-control-widget-grid',
@@ -110,41 +138,40 @@ export default class SettingsControlWidget {
                 row_spacing: GRID_SPACING,
             }),
         });
-        this._grid.set_position(PADDING, PADDING);
-        this._actor.add_child(this._grid);
+        this._content.set_child(this._grid);
 
         const layout = this._grid.layout_manager;
 
         this._networkIcon = new St.Icon({icon_name: 'network-wireless-offline-symbolic', icon_size: ICON_SIZE});
-        const networkButton = this._makeButton(this._networkIcon, () => this._toggleNetwork());
-        layout.attach(networkButton, 0, 0, 1, 1);
-        this._tooltips.push(this._attachTooltip(networkButton, 'Wi-Fi'));
+        this._networkButton = this._makeButton(this._networkIcon, () => this._toggleNetwork());
+        layout.attach(this._networkButton, 0, 0, 1, 1);
+        this._tooltips.push(this._attachTooltip(this._networkButton, 'Wi-Fi'));
 
         this._bluetoothIcon = new St.Icon({icon_name: 'bluetooth-symbolic', icon_size: ICON_SIZE});
-        const bluetoothButton = this._makeButton(this._bluetoothIcon, () => this._toggleBluetooth());
-        layout.attach(bluetoothButton, 1, 0, 1, 1);
-        this._tooltips.push(this._attachTooltip(bluetoothButton, 'Bluetooth'));
+        this._bluetoothButton = this._makeButton(this._bluetoothIcon, () => this._toggleBluetooth());
+        layout.attach(this._bluetoothButton, 1, 0, 1, 1);
+        this._tooltips.push(this._attachTooltip(this._bluetoothButton, 'Bluetooth'));
 
         this._dndIcon = new St.Icon({icon_name: 'notifications-disabled-symbolic', icon_size: ICON_SIZE});
-        const dndButton = this._makeButton(this._dndIcon, () => this._toggleDnd());
-        layout.attach(dndButton, 0, 1, 1, 1);
-        this._tooltips.push(this._attachTooltip(dndButton, 'Do Not Disturb'));
+        this._dndButton = this._makeButton(this._dndIcon, () => this._toggleDnd());
+        layout.attach(this._dndButton, 0, 1, 1, 1);
+        this._tooltips.push(this._attachTooltip(this._dndButton, 'Do Not Disturb'));
 
         // 'weather-clear-night-symbolic' isn't part of the GNOME48 Adwaita
         // icon set (see https://github.com/StorageB/icons/blob/main/GNOME48Adwaita/icons.md,
         // no 'weather' category at all) - night-light-symbolic is the
         // closest available stand-in and is what this widget uses.
         this._themeIcon = new St.Icon({icon_name: 'night-light-symbolic', icon_size: ICON_SIZE});
-        const themeButton = this._makeButton(this._themeIcon, () => this._toggleTheme());
-        layout.attach(themeButton, 1, 1, 1, 1);
-        this._tooltips.push(this._attachTooltip(themeButton, 'Dark Mode'));
+        this._themeButton = this._makeButton(this._themeIcon, () => this._toggleTheme());
+        layout.attach(this._themeButton, 1, 1, 1, 1);
+        this._tooltips.push(this._attachTooltip(this._themeButton, 'Dark Mode'));
 
         // Placeholder state (all "off") until enable() reads the real
         // thing - buildActor() itself must stay side-effect-free.
-        this._setIconState(this._networkIcon, false);
-        this._setIconState(this._bluetoothIcon, false);
-        this._setIconState(this._dndIcon, false);
-        this._setIconState(this._themeIcon, false);
+        this._setToggleState(this._networkIcon, this._networkButton, false);
+        this._setToggleState(this._bluetoothIcon, this._bluetoothButton, false);
+        this._setToggleState(this._dndIcon, this._dndButton, false);
+        this._setToggleState(this._themeIcon, this._themeButton, false);
 
         return this._actor;
     }
@@ -228,7 +255,7 @@ export default class SettingsControlWidget {
 
         const backgroundColor = settings?.backgroundColor ?? '#ffffffd9';
         const cornerRadius = settings?.cornerRadius ?? 18;
-        this._actor.set_style(this._cardStyle(backgroundColor, cornerRadius));
+        this._content.set_style(this._cardStyle(backgroundColor, cornerRadius) + `padding: ${PADDING}px;`);
 
         this._iconOnColor = settings?.iconOnColor ?? '#3584e4';
         this._iconOffColor = settings?.iconOffColor ?? '#9a9996';
@@ -273,7 +300,7 @@ export default class SettingsControlWidget {
             iconName = 'network-wireless-symbolic';
         this._networkIcon.icon_name = iconName;
 
-        this._setIconState(this._networkIcon, enabled);
+        this._setToggleState(this._networkIcon, this._networkButton, enabled);
     }
 
     /** @private */
@@ -325,7 +352,7 @@ export default class SettingsControlWidget {
         if (!this._bluetoothIcon)
             return;
         const powered = this._btProxy?.get_cached_property('Powered')?.unpack() ?? false;
-        this._setIconState(this._bluetoothIcon, powered);
+        this._setToggleState(this._bluetoothIcon, this._bluetoothButton, powered);
     }
 
     /** @private */
@@ -362,7 +389,7 @@ export default class SettingsControlWidget {
         // Do Not Disturb is "on" when banners are turned off - same
         // inverted relationship GNOME's own Quick Settings toggle uses.
         const dndOn = this._notifSettings ? !this._notifSettings.get_boolean('show-banners') : false;
-        this._setIconState(this._dndIcon, dndOn);
+        this._setToggleState(this._dndIcon, this._dndButton, dndOn);
     }
 
     /** @private */
@@ -394,7 +421,7 @@ export default class SettingsControlWidget {
         if (!this._themeIcon)
             return;
         const scheme = this._interfaceSettings?.get_string('color-scheme') ?? 'default';
-        this._setIconState(this._themeIcon, scheme === 'prefer-dark');
+        this._setToggleState(this._themeIcon, this._themeButton, scheme === 'prefer-dark');
     }
 
     /** @private */
@@ -419,17 +446,26 @@ export default class SettingsControlWidget {
             track_hover: true,
         });
         button.set_size(BUTTON_SIZE, BUTTON_SIZE);
-        button.set_style(
-            `background-color: rgba(255, 255, 255, 0.08); border-radius: ${BUTTON_SIZE / 2}px;`
-        );
+        // Background fill is set by _setToggleState() below, not here -
+        // it depends on on/off state, which isn't known yet at construction.
         button.connect('clicked', onClicked);
         return button;
     }
 
-    /** @private colors one button's icon according to its on/off state. */
-    _setIconState(icon, isOn) {
-        const color = isOn ? this._iconOnColor : this._iconOffColor;
-        icon.set_style(`color: ${color};`);
+    /**
+     * @private styles one button + its icon according to on/off state.
+     * The icon glyph itself stays a constant white (GNOME's own Quick
+     * Settings toggles use this same convention) - it's the BUTTON's
+     * background that "lights up": a faint tint of iconOffColor when
+     * off, a much more opaque fill of iconOnColor when on.
+     */
+    _setToggleState(icon, button, isOn) {
+        icon.set_style('color: #ffffff;');
+
+        const hex = isOn ? this._iconOnColor : this._iconOffColor;
+        const {r, g, b} = this._hexToRgba(hex);
+        const alpha = isOn ? 0.9 : 0.12;
+        button.set_style(`background-color: rgba(${r}, ${g}, ${b}, ${alpha}); border-radius: ${BUTTON_SIZE / 2}px;`);
     }
 
     /**

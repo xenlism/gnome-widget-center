@@ -1,10 +1,23 @@
 // widgets/power-menu/widget.js
 //
-// A compact 1x1 (160x160px) card with a 2x2 grid of icon-only buttons:
-// Suspend, Restart, Power Off, Log Out. No text labels - each button
-// shows a hover tooltip instead (same delayed-hover-label pattern used
-// by lib/widgetEditMode.js's toolbar buttons, reimplemented locally here
+// A compact 1x1 card with a 2x2 grid of icon-only buttons: Suspend,
+// Restart, Power Off, Log Out. No text labels - each button shows a
+// hover tooltip instead (same delayed-hover-label pattern used by
+// lib/widgetEditMode.js's toolbar buttons, reimplemented locally here
 // since widget.js can't import lib/widgetEditMode.js's private method).
+//
+// Root actor (this._actor) is a plain St.Widget with Clutter.FixedLayout,
+// holding a single St.Bin child (this._content) that does the actual
+// centering/painting - lib/blockSizeManager.js's applyBlockSize()
+// force-sets the root actor to an exact cols*16 x rows*16px size from
+// metadata.json's block-type (currently 11x11 cells = 176x176px)
+// regardless of anything set here, so this._content is bound to that
+// size via a Clutter.BindConstraint rather than a hardcoded pixel size -
+// same fix as widgets/folder-widget-2x2's root/content split and
+// widgets/settings-control's identical fix. This keeps the card's
+// background/corner-radius filling the FULL allocated block and the
+// button grid centered inside it, even if block-type's cell size ever
+// changes again.
 //
 // Actions go through the same two system services GNOME Shell's own
 // system menu uses, so behavior (confirmation dialogs, inhibitors, etc.)
@@ -29,9 +42,6 @@ const ICON_SIZE = 22;
 const BUTTON_SIZE = 60;
 const GRID_SPACING = 8;
 const PADDING = 12;
-// 2 * BUTTON_SIZE + GRID_SPACING + 2 * PADDING = 160, matching the 1x1
-// block-type's resolved 10x10-cell (16px/cell) footprint exactly - see
-// metadata.json's block-type comment / WIDGET_API.md §2's size table.
 
 export default class PowerMenuWidget {
     /**
@@ -57,17 +67,28 @@ export default class PowerMenuWidget {
         // Plain (non-layout-managed-by-parent) root so tooltip labels can
         // be positioned as free-floating overlay children, same reason
         // lib/widgetEditMode.js's toolbar uses Clutter.FixedLayout for its
-        // own root - see that file's _buildToolbar() doc comment.
+        // own root - see that file's _buildToolbar() doc comment. Sizing
+        // itself is left entirely to lib/blockSizeManager.js's
+        // applyBlockSize() (called by the host right after buildActor()
+        // returns) - this._content below is bound to whatever size that
+        // ends up setting, rather than this widget assuming/hardcoding it.
         this._actor = new St.Widget({
             style_class: 'power-menu-widget-root',
             layout_manager: new Clutter.FixedLayout(),
             reactive: true,
         });
-        this._actor.set_size(
-            2 * BUTTON_SIZE + GRID_SPACING + 2 * PADDING,
-            2 * BUTTON_SIZE + GRID_SPACING + 2 * PADDING
-        );
-        this._actor.set_style(this._cardStyle(backgroundColor, cornerRadius));
+
+        this._content = new St.Bin({
+            style_class: 'power-menu-widget-content',
+            x_align: Clutter.ActorAlign.CENTER,
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        this._content.add_constraint(new Clutter.BindConstraint({
+            source: this._actor,
+            coordinate: Clutter.BindCoordinate.SIZE,
+        }));
+        this._actor.add_child(this._content);
+        this._content.set_style(this._cardStyle(backgroundColor, cornerRadius) + `padding: ${PADDING}px;`);
 
         this._grid = new St.Widget({
             style_class: 'power-menu-widget-grid',
@@ -76,8 +97,7 @@ export default class PowerMenuWidget {
                 row_spacing: GRID_SPACING,
             }),
         });
-        this._grid.set_position(PADDING, PADDING);
-        this._actor.add_child(this._grid);
+        this._content.set_child(this._grid);
 
         const actions = [
             // 'system-suspend-symbolic' isn't part of the GNOME48 Adwaita
@@ -161,7 +181,7 @@ export default class PowerMenuWidget {
 
         const backgroundColor = settings?.backgroundColor ?? '#ffffffd9';
         const cornerRadius = settings?.cornerRadius ?? 18;
-        this._actor.set_style(this._cardStyle(backgroundColor, cornerRadius));
+        this._content.set_style(this._cardStyle(backgroundColor, cornerRadius) + `padding: ${PADDING}px;`);
 
         const iconColor = settings?.iconColor ?? '#2e2e2e';
         for (const icon of this._icons)
