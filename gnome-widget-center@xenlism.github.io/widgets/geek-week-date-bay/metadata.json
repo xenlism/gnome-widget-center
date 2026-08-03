@@ -1,0 +1,15 @@
+{
+  "id": "geek-week-date-bay",
+  "name": "Geek Date/Week (Bay)",
+  "description": "Medium `3x1` card (35\u00d711 grid cells): big centered week line on top, date line centered underneath.",
+  "version": "1.0.0",
+  "author": "GNOME Widget Center",
+  "api-version": 1,
+  "entry": "widget.js",
+  "block-type": "3x1",
+  "default-position": {
+    "x": 60,
+    "y": 60,
+    "monitor": 0
+  }
+}

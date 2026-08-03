@@ -1,0 +1,15 @@
+{
+  "id": "geek-clock-date-bar",
+  "name": "Geek Clock Date (Bar)",
+  "description": "Wide `barx3` card (35\u00d75 grid cells): big centered clock on top, date line centered underneath.",
+  "version": "1.0.0",
+  "author": "GNOME Widget Center",
+  "api-version": 1,
+  "entry": "widget.js",
+  "block-type": "barx3",
+  "default-position": {
+    "x": 60,
+    "y": 60,
+    "monitor": 0
+  }
+}

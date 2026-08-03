@@ -1,0 +1,220 @@
+{
+  "version": "1.0",
+  "tabs": [
+    {
+      "id": "general",
+      "label": "Circles Battery",
+      "description": "Battery ring gauge settings",
+      "icon": "battery-full-symbolic",
+      "groups": [
+        {
+          "id": "card",
+          "label": "Card",
+          "description": "",
+          "fields": [
+            {
+              "id": "backgroundColor",
+              "label": "Background color",
+              "description": "Card background. Use the alpha slider for transparency.",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#000000a9"
+            },
+            {
+              "id": "cornerRadius",
+              "label": "Corner radius",
+              "description": "Roundness of the card corners",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 18,
+              "min": 0,
+              "max": 64,
+              "step": 1,
+              "suffix": "px"
+            }
+          ]
+        },
+        {
+          "id": "ring",
+          "label": "Ring colors",
+          "description": "The ring's color switches automatically by charge level (or to the charging color while plugged in).",
+          "fields": [
+            {
+              "id": "circleBaseColor",
+              "label": "Circle base color (track)",
+              "description": "Base/track color drawn behind the progress ring",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#FFFFFF26"
+            },
+            {
+              "id": "ringColorLow",
+              "label": "Low battery color (< 20%)",
+              "description": "Ring color while battery is below 20% and not charging",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#E01B24FF"
+            },
+            {
+              "id": "ringColorMid",
+              "label": "Medium battery color (20-50%)",
+              "description": "Ring color while battery is between 20% and 50% and not charging",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#F5C211FF"
+            },
+            {
+              "id": "ringColorHigh",
+              "label": "High battery color (> 50%)",
+              "description": "Ring color while battery is above 50% and not charging",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#33D17AFF"
+            },
+            {
+              "id": "ringColorCharging",
+              "label": "Charging color",
+              "description": "Ring (and bolt icon) color while the battery is charging, regardless of percentage",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#3584E4FF"
+            },
+            {
+              "id": "ringThickness",
+              "label": "Ring thickness",
+              "description": "Stroke width of both the base track and the progress ring",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 10,
+              "min": 4,
+              "max": 24,
+              "step": 1,
+              "suffix": "px"
+            }
+          ]
+        },
+        {
+          "id": "text",
+          "label": "Text",
+          "description": "Only shown while not charging - see the Ring colors group for what shows while charging.",
+          "fields": [
+            {
+              "id": "percentFont",
+              "label": "Percent font",
+              "description": "Face and size used for the percentage number",
+              "dataType": "string",
+              "fieldType": "fontpicker",
+              "format": "font",
+              "default": "Sans Bold 22"
+            },
+            {
+              "id": "percentColor",
+              "label": "Percent color",
+              "description": "Color of the percentage number",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#FFFFFFFF"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "shadow",
+      "label": "Shadow",
+      "description": "Drop shadow behind this widget.",
+      "groups": [
+        {
+          "id": "shadow",
+          "label": "Shadow effect",
+          "description": "Off by default. Default color is black at 30% transparency.",
+          "fields": [
+            {
+              "id": "shadowEnabled",
+              "label": "Enable shadow",
+              "description": "Add a drop shadow behind this widget",
+              "dataType": "boolean",
+              "fieldType": "switch",
+              "default": false
+            },
+            {
+              "id": "shadowColor",
+              "label": "Shadow color",
+              "description": "",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "default": "#000000",
+              "visibleIf": "shadowEnabled"
+            },
+            {
+              "id": "shadowOpacity",
+              "label": "Shadow transparency",
+              "description": "Shadow opacity, 0-100%",
+              "dataType": "integer",
+              "fieldType": "slider",
+              "default": 30,
+              "min": 0,
+              "max": 100,
+              "step": 1,
+              "suffix": "%",
+              "visibleIf": "shadowEnabled"
+            },
+            {
+              "id": "shadowAngle",
+              "label": "Shadow angle",
+              "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
+              "dataType": "integer",
+              "fieldType": "slider",
+              "default": 90,
+              "min": 0,
+              "max": 360,
+              "step": 1,
+              "suffix": "°",
+              "visibleIf": "shadowEnabled"
+            },
+            {
+              "id": "shadowDistance",
+              "label": "Shadow distance",
+              "description": "How far the shadow is offset, in pixels",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 6,
+              "min": 0,
+              "max": 60,
+              "step": 1,
+              "suffix": "px",
+              "visibleIf": "shadowEnabled"
+            },
+            {
+              "id": "shadowBlur",
+              "label": "Shadow blur",
+              "description": "Blur radius, in pixels",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 16,
+              "min": 0,
+              "max": 100,
+              "step": 1,
+              "suffix": "px",
+              "visibleIf": "shadowEnabled"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

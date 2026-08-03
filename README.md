@@ -25,7 +25,7 @@ KDE Plasma Widgets, while following the GNOME Human Interface Guidelines
 - gives every widget its own settings page, generated automatically from a
   declarative `config.json` (or a hand-written GTK4/libadwaita `prefs.js`
   for anything more custom);
-- ships a Control Center (Overview / Store / Preferences) for managing,
+- ships a Control Center (Overview / Themes / Preferences) for managing,
   theming, and configuring widgets, plus theme export/import as portable
   `.gwct` files.
 
@@ -41,14 +41,17 @@ the same folder for the condensed, build-one-now version.
 ## ❤️ Support Development
 
 If you find **GNOME Widget Center** useful, please consider supporting its development.
+### Ko-fi
+
+[![Support on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/xenlism)
 
 ### PayPal
 
-[![PayPal QR Code](assets/paypal.jpg)](assets/paypal.jpg)
+[PayPal QR Code](assets/paypal.jpg)
 
 ### USDT (TRC20 Network)
 
-[![USDT TRC20 QR Code](assets/usdt.jpg)](assets/usdt.jpg)
+[USDT TRC20 QR Code](assets/usdt.jpg)
 
 Every contribution helps support development, maintenance, bug fixes, and new features.
 
@@ -56,9 +59,10 @@ Every contribution helps support development, maintenance, bug fixes, and new fe
 ## Screenshots
 
 ### Edit Mode ( Settings Reset Move By Right Click Toggle)
-
-![editmode](assets/editmode.png)
+**▶️ [Edit Mode](assets/editmode.m4v)**
 <video src="assets/editmode.m4v" controls width="1920"></video>
+![editmode](assets/editmode.png)
+
 
 
 ### Desktop
@@ -170,6 +174,7 @@ gnome-widget-center@xenlism.github.io/   # the extension itself
 - GTK4 + Libadwaita
 - GObject / GSettings
 - Meson (packaging)
+- GjsKit (Xenlism GJS Framework)
 
 ---
 
@@ -185,3 +190,8 @@ Contributions, bug reports, and feature suggestions are welcome.
 ## License
 
 GNU General Public License v3.0
+
+
+## 👥 Visitor
+
+![](https://github-visitor-counter-tau.vercel.app/api?repo=gnome-widget-center&displayMode=topCountries&theme=transparent)

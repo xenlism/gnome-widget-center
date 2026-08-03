@@ -3,8 +3,8 @@
   "tabs": [
     {
       "id": "general",
-      "label": "System Fetch",
-      "description": "neofetch-style system info card",
+      "label": "Geek Archey Sysfetch (Square)",
+      "description": "neofetch-style system info card - square layout",
       "icon": "utilities-terminal-symbolic",
       "groups": [
         {
@@ -210,6 +210,14 @@
               "max": 64,
               "step": 1,
               "suffix": "px"
+            },
+            {
+              "id": "showColorPalette",
+              "label": "Show color palette",
+              "description": "Row of 16 small color swatches under Memory, like neofetch/archey4's trailing color-block strip. Turn off if it doesn't fit your chosen block-type/font size.",
+              "dataType": "boolean",
+              "fieldType": "switch",
+              "default": true
             }
           ]
         }

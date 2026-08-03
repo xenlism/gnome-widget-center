@@ -1,4 +1,4 @@
-// widgets/sysfetch/widget.js
+// widgets/geek-archey-systech-bay/widget.js
 //
 // neofetch/archey4-style system info card (archey4 reference:
 // https://github.com/HorlogeSkynet/archey4): a small ASCII distro mark on
@@ -107,6 +107,19 @@ const ROW_DEFS = [
     ['memory', 'Memory', '#7aa2f7'],
 ];
 
+// The little "16 color swatches" row every real neofetch/archey4
+// screenshot ends with (normal 0-7 then bright 8-15) - not read from the
+// actual terminal's palette (this widget doesn't run inside one), just a
+// fixed reference palette picked to match the accent colors ROW_DEFS
+// above already uses (Tokyo Night), same spirit as GENERIC_ART's
+// hardcoded placeholder color.
+const PALETTE_COLORS = [
+    '#1a1b26', '#f7768e', '#9ece6a', '#e0af68',
+    '#7aa2f7', '#bb9af7', '#7dcfff', '#a9b1d6',
+    '#414868', '#f7768e', '#9ece6a', '#e0af68',
+    '#7aa2f7', '#bb9af7', '#7dcfff', '#c0caf5',
+];
+
 // Fallback mark shown before a logo module has finished loading (or if
 // loading one ever fails) - NOT copied from archey4's own logo files,
 // just a same-spirit placeholder glyph. Real per-distro logos now live
@@ -168,7 +181,7 @@ function _logoLineToMarkup(line, colors) {
     return markup;
 }
 
-export default class SysfetchWidget {
+export default class GeekArcheySystechBayWidget {
     /**
      * @param {WidgetAPI} api - see development/docs/WIDGET_API.md §5.
      */
@@ -197,37 +210,54 @@ export default class SysfetchWidget {
     // proxies.
     buildActor() {
         this._actor = new St.Bin({
-            style_class: 'sysfetch-root',
+            style_class: 'geek-archey-systech-bay-root',
             x_align: Clutter.ActorAlign.CENTER,
             y_align: Clutter.ActorAlign.CENTER,
         });
 
         const content = new St.BoxLayout({vertical: false});
 
-        this._asciiLabel = new St.Label({style_class: 'sysfetch-ascii'});
+        this._asciiLabel = new St.Label({style_class: 'geek-archey-systech-bay-ascii'});
         this._asciiLabel.clutter_text.set_use_markup(true);
         this._asciiLabel.clutter_text.set_line_wrap(false);
         content.add_child(this._asciiLabel);
 
-        const infoBox = new St.BoxLayout({vertical: true, style_class: 'sysfetch-info'});
+        const infoBox = new St.BoxLayout({vertical: true, style_class: 'geek-archey-systech-bay-info'});
         infoBox.set_style('margin-left: 18px;');
 
-        this._headerLabel = new St.Label({style_class: 'sysfetch-header'});
+        this._headerLabel = new St.Label({style_class: 'geek-archey-systech-bay-header'});
         infoBox.add_child(this._headerLabel);
 
-        this._sepLabel = new St.Label({style_class: 'sysfetch-sep'});
+        this._sepLabel = new St.Label({style_class: 'geek-archey-systech-bay-sep'});
         infoBox.add_child(this._sepLabel);
 
         this._rows = {}; // key -> {bullet: St.Label, value: St.Label, label, color}
         for (const [key, label, color] of ROW_DEFS) {
-            const row = new St.BoxLayout({vertical: false, style_class: 'sysfetch-row'});
-            const bullet = new St.Label({text: '\u25A0', style_class: 'sysfetch-bullet'});
-            const value = new St.Label({style_class: 'sysfetch-value'});
+            const row = new St.BoxLayout({vertical: false, style_class: 'geek-archey-systech-bay-row'});
+            const bullet = new St.Label({text: '\u25A0', style_class: 'geek-archey-systech-bay-bullet'});
+            const value = new St.Label({style_class: 'geek-archey-systech-bay-value'});
             row.add_child(bullet);
             row.add_child(value);
             infoBox.add_child(row);
             this._rows[key] = {bullet, value, label, color};
         }
+
+        // Color-palette swatch row, e.g. neofetch's/archey4's trailing
+        // strip of 16 little colored squares - built once here (fixed
+        // count/order, only each square's own style_class-independent
+        // background-color ever changes) and shown/hidden per the
+        // showColorPalette setting in _render(). Own St.Widget squares
+        // rather than St.Label so nothing needs a glyph/font to render a
+        // solid color block.
+        this._paletteRow = new St.BoxLayout({vertical: false, style_class: 'geek-archey-systech-bay-palette'});
+        this._paletteRow.set_style('margin-top: 6px;');
+        this._paletteSwatches = PALETTE_COLORS.map(() => {
+            const swatch = new St.Widget({style_class: 'geek-archey-systech-bay-swatch'});
+            swatch.set_style('width: 12px; height: 12px; margin-right: 3px; border-radius: 2px;');
+            this._paletteRow.add_child(swatch);
+            return swatch;
+        });
+        infoBox.add_child(this._paletteRow);
 
         content.add_child(infoBox);
         this._actor.set_child(content);
@@ -272,6 +302,13 @@ export default class SysfetchWidget {
             distroDetected: false,
             backgroundColor: '#00000026',
             cornerRadius: 18,
+            // On by default - there's spare vertical space in this
+            // widget's fixed block-type height most of the time (see
+            // ROW_DEFS's row count vs. the block-type's row budget), but
+            // it's still a plain switch so it can be turned off by hand
+            // if a particular block-type/font-size combination ever
+            // leaves too little room for it.
+            showColorPalette: true,
         };
     }
 
@@ -373,7 +410,7 @@ export default class SysfetchWidget {
             this._logoModule = module;
             this._render();
         }).catch(e => {
-            logError(e, `sysfetch: failed to load logo for "${distroKey}"`);
+            logError(e, `geek-archey-systech-bay: failed to load logo for "${distroKey}"`);
             applyFallback();
         });
     }
@@ -423,6 +460,15 @@ export default class SysfetchWidget {
             bullet.set_style(`font-family: monospace; font-size: 11px; color: ${color}; margin-right: 6px;`);
             value.set_style('font-family: monospace; font-size: 11px; color: #e5e5e5;');
             value.text = `${label}: ${this._info[key] ?? '\u2026'}`;
+        }
+
+        const showColorPalette = this._settings.showColorPalette ?? true;
+        this._paletteRow.visible = showColorPalette;
+        if (showColorPalette) {
+            this._paletteSwatches.forEach((swatch, i) => {
+                const hex = PALETTE_COLORS[i] ?? '#000000';
+                swatch.set_style(`background-color: ${hex}; width: 12px; height: 12px; margin-right: 3px; border-radius: 2px;`);
+            });
         }
     }
 

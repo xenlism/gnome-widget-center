@@ -1,0 +1,152 @@
+{
+  "version": "1.0",
+  "tabs": [
+    {
+      "id": "general",
+      "label": "Switches",
+      "description": "Appearance settings",
+      "icon": "preferences-system-symbolic",
+      "groups": [
+        {
+          "id": "card",
+          "label": "Card",
+          "description": "",
+          "fields": [
+            {
+              "id": "backgroundColor",
+              "label": "Background color",
+              "description": "Card background. Use the alpha slider for transparency.",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#000000a9"
+            },
+            {
+              "id": "cornerRadius",
+              "label": "Card corner radius",
+              "description": "Roundness of the card's own corners",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 18,
+              "min": 0,
+              "max": 64,
+              "step": 1,
+              "suffix": "px"
+            }
+          ]
+        },
+        {
+          "id": "buttons",
+          "label": "Switch colors",
+          "description": "Each pill switch's fill is base color when off, highlight color when on. The icon glyph itself always stays white.",
+          "fields": [
+            {
+              "id": "baseColor",
+              "label": "Base color",
+              "description": "Pill fill when that switch is off",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#9a9996"
+            },
+            {
+              "id": "highlightColor",
+              "label": "Highlight color",
+              "description": "Pill fill when that switch is on",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#3584e4"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "shadow",
+      "label": "Shadow",
+      "description": "Drop shadow behind this widget.",
+      "groups": [
+        {
+          "id": "shadow",
+          "label": "Shadow effect",
+          "description": "Off by default. Default color is black at 30% transparency.",
+          "fields": [
+            {
+              "id": "shadowEnabled",
+              "label": "Enable shadow",
+              "description": "Add a drop shadow behind this widget",
+              "dataType": "boolean",
+              "fieldType": "switch",
+              "default": false
+            },
+            {
+              "id": "shadowColor",
+              "label": "Shadow color",
+              "description": "",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "default": "#000000",
+              "visibleIf": "shadowEnabled"
+            },
+            {
+              "id": "shadowOpacity",
+              "label": "Shadow transparency",
+              "description": "Shadow opacity, 0-100%",
+              "dataType": "integer",
+              "fieldType": "slider",
+              "default": 30,
+              "min": 0,
+              "max": 100,
+              "step": 1,
+              "suffix": "%",
+              "visibleIf": "shadowEnabled"
+            },
+            {
+              "id": "shadowAngle",
+              "label": "Shadow angle",
+              "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
+              "dataType": "integer",
+              "fieldType": "slider",
+              "default": 90,
+              "min": 0,
+              "max": 360,
+              "step": 1,
+              "suffix": "°",
+              "visibleIf": "shadowEnabled"
+            },
+            {
+              "id": "shadowDistance",
+              "label": "Shadow distance",
+              "description": "How far the shadow is offset, in pixels",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 6,
+              "min": 0,
+              "max": 60,
+              "step": 1,
+              "suffix": "px",
+              "visibleIf": "shadowEnabled"
+            },
+            {
+              "id": "shadowBlur",
+              "label": "Shadow blur",
+              "description": "Blur radius, in pixels",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 16,
+              "min": 0,
+              "max": 100,
+              "step": 1,
+              "suffix": "px",
+              "visibleIf": "shadowEnabled"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

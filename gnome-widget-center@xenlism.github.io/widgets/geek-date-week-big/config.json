@@ -1,0 +1,286 @@
+{
+  "version": "1.0",
+  "tabs": [
+    {
+      "id": "general",
+      "label": "Geek Date Week Big",
+      "description": "Date text + Week text card settings",
+      "icon": "x-office-calendar-symbolic",
+      "groups": [
+        {
+          "id": "date-text",
+          "label": "Date text",
+          "description": "The date line, e.g. \"02 DECEMBER 2026\".",
+          "fields": [
+            {
+              "id": "dateFont",
+              "label": "Date font",
+              "description": "Font face and size for the date line",
+              "dataType": "string",
+              "fieldType": "fontpicker",
+              "format": "font",
+              "default": "Sans Bold 44"
+            },
+            {
+              "id": "dateColor",
+              "label": "Date color",
+              "description": "Color of the date text",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#ffffff"
+            }
+          ]
+        },
+        {
+          "id": "week-text",
+          "label": "Week text",
+          "description": "The weekday line, e.g. \"THURSDAY\".",
+          "fields": [
+            {
+              "id": "weekFont",
+              "label": "Week font",
+              "description": "Font face and size for the week line",
+              "dataType": "string",
+              "fieldType": "fontpicker",
+              "format": "font",
+              "default": "Sans Bold 20"
+            },
+            {
+              "id": "weekColor",
+              "label": "Week color",
+              "description": "Color of the week text",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#e6e6e6"
+            }
+          ]
+        },
+        {
+          "id": "layout",
+          "label": "Layout",
+          "description": "Text alignment for the widget's lines.",
+          "fields": [
+            {
+              "id": "textAlign",
+              "label": "Text align",
+              "description": "Horizontal alignment of the text lines inside the card.",
+              "dataType": "string",
+              "fieldType": "dropdown",
+              "default": "center",
+              "options": [
+                {
+                  "value": "left",
+                  "label": "Left"
+                },
+                {
+                  "value": "center",
+                  "label": "Center"
+                },
+                {
+                  "value": "right",
+                  "label": "Right"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "card",
+          "label": "Card",
+          "description": "Card background and shape.",
+          "fields": [
+            {
+              "id": "backgroundColor",
+              "label": "Background color",
+              "description": "Card background color (supports transparency)",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "default": "#1a2a33b3"
+            },
+            {
+              "id": "cornerRadius",
+              "label": "Corner radius",
+              "description": "Roundness of the card's corners",
+              "dataType": "number",
+              "fieldType": "spinbutton",
+              "default": 18,
+              "min": 0,
+              "max": 60,
+              "step": 1,
+              "suffix": "px"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "text-shadow",
+      "label": "Text Shadow",
+      "description": "Drop shadow drawn under the text itself.",
+      "groups": [
+        {
+          "id": "text-shadow",
+          "label": "Text shadow effect",
+          "description": "Off by default. Default color is black at 60% transparency.",
+          "fields": [
+            {
+              "id": "textShadowEnabled",
+              "label": "Enable text shadow",
+              "description": "Add a shadow behind the text",
+              "dataType": "boolean",
+              "fieldType": "switch",
+              "default": false
+            },
+            {
+              "id": "textShadowColor",
+              "label": "Text shadow color",
+              "description": "",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "default": "#000000",
+              "visibleIf": "textShadowEnabled"
+            },
+            {
+              "id": "textShadowOpacity",
+              "label": "Text shadow transparency",
+              "description": "Shadow opacity, 0-100%",
+              "dataType": "integer",
+              "fieldType": "slider",
+              "default": 60,
+              "min": 0,
+              "max": 100,
+              "step": 1,
+              "suffix": "%",
+              "visibleIf": "textShadowEnabled"
+            },
+            {
+              "id": "textShadowAngle",
+              "label": "Text shadow angle",
+              "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
+              "dataType": "integer",
+              "fieldType": "slider",
+              "default": 90,
+              "min": 0,
+              "max": 360,
+              "step": 1,
+              "suffix": "\u00b0",
+              "visibleIf": "textShadowEnabled"
+            },
+            {
+              "id": "textShadowDistance",
+              "label": "Text shadow distance",
+              "description": "How far the shadow is offset, in pixels",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 2,
+              "min": 0,
+              "max": 30,
+              "step": 1,
+              "suffix": "px",
+              "visibleIf": "textShadowEnabled"
+            },
+            {
+              "id": "textShadowBlur",
+              "label": "Text shadow blur",
+              "description": "Blur radius, in pixels",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 4,
+              "min": 0,
+              "max": 40,
+              "step": 1,
+              "suffix": "px",
+              "visibleIf": "textShadowEnabled"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "shadow",
+      "label": "Widget Shadow",
+      "description": "Drop shadow behind the whole widget card.",
+      "groups": [
+        {
+          "id": "shadow",
+          "label": "Shadow effect",
+          "description": "Off by default. Default color is black at 30% transparency.",
+          "fields": [
+            {
+              "id": "shadowEnabled",
+              "label": "Enable shadow",
+              "description": "Add a drop shadow behind this widget",
+              "dataType": "boolean",
+              "fieldType": "switch",
+              "default": false
+            },
+            {
+              "id": "shadowColor",
+              "label": "Shadow color",
+              "description": "",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "default": "#000000",
+              "visibleIf": "shadowEnabled"
+            },
+            {
+              "id": "shadowOpacity",
+              "label": "Shadow transparency",
+              "description": "Shadow opacity, 0-100%",
+              "dataType": "integer",
+              "fieldType": "slider",
+              "default": 30,
+              "min": 0,
+              "max": 100,
+              "step": 1,
+              "suffix": "%",
+              "visibleIf": "shadowEnabled"
+            },
+            {
+              "id": "shadowAngle",
+              "label": "Shadow angle",
+              "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
+              "dataType": "integer",
+              "fieldType": "slider",
+              "default": 90,
+              "min": 0,
+              "max": 360,
+              "step": 1,
+              "suffix": "\u00b0",
+              "visibleIf": "shadowEnabled"
+            },
+            {
+              "id": "shadowDistance",
+              "label": "Shadow distance",
+              "description": "How far the shadow is offset, in pixels",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 6,
+              "min": 0,
+              "max": 60,
+              "step": 1,
+              "suffix": "px",
+              "visibleIf": "shadowEnabled"
+            },
+            {
+              "id": "shadowBlur",
+              "label": "Shadow blur",
+              "description": "Blur radius, in pixels",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 16,
+              "min": 0,
+              "max": 100,
+              "step": 1,
+              "suffix": "px",
+              "visibleIf": "shadowEnabled"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

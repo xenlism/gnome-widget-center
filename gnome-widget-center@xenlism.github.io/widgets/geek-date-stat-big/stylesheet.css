@@ -1,0 +1,18 @@
+/* widgets/geek-date-stat-big/stylesheet.css
+ *
+ * Documentation / class-name hooks only - not loaded by the host yet (see
+ * SKILL.md: "stylesheet.css is not loaded by the host (yet)"). All actual
+ * styling happens inline via set_style() in widget.js's _render().
+ */
+
+.geek-date-stat-big-widget-root {
+    /* background-color / border-radius / padding / box-shadow set inline */
+}
+
+.geek-date-stat-big-widget-date {
+    /* color / font-family / font-size / text-shadow set inline */
+}
+
+.geek-date-stat-big-widget-stats {
+    /* color / font-family / font-size / text-shadow set inline */
+}

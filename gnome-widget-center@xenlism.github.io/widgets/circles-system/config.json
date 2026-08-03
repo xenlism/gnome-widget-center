@@ -1,0 +1,286 @@
+{
+  "version": "1.0",
+  "tabs": [
+    {
+      "id": "general",
+      "label": "Circles System",
+      "description": "CPU / Memory / Disk ring gauges",
+      "icon": "utilities-system-monitor-symbolic",
+      "groups": [
+        {
+          "id": "card",
+          "label": "Card",
+          "description": "",
+          "fields": [
+            {
+              "id": "backgroundColor",
+              "label": "Background color",
+              "description": "Card background. Use the alpha slider for transparency.",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#00000026"
+            },
+            {
+              "id": "cornerRadius",
+              "label": "Corner radius",
+              "description": "Roundness of the card corners",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 18,
+              "min": 0,
+              "max": 64,
+              "step": 1,
+              "suffix": "px"
+            }
+          ]
+        },
+        {
+          "id": "rings",
+          "label": "Ring colors",
+          "description": "Each ring's progress color, plus one shared track color and thickness.",
+          "fields": [
+            {
+              "id": "circleBaseColor",
+              "label": "Circle base color (track)",
+              "description": "Shared base/track color drawn behind all three progress rings",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#FFFFFF26"
+            },
+            {
+              "id": "cpuRingColor",
+              "label": "CPU ring color",
+              "description": "Progress color of the CPU ring",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#33D17AFF"
+            },
+            {
+              "id": "memRingColor",
+              "label": "Memory ring color",
+              "description": "Progress color of the Memory ring",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#3584E4FF"
+            },
+            {
+              "id": "hddRingColor",
+              "label": "Disk ring color",
+              "description": "Progress color of the Disk (HDD) ring",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#F5C211FF"
+            },
+            {
+              "id": "ringThickness",
+              "label": "Ring thickness",
+              "description": "Stroke width shared by all three rings",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 6,
+              "min": 2,
+              "max": 16,
+              "step": 1,
+              "suffix": "px"
+            }
+          ]
+        },
+        {
+          "id": "text",
+          "label": "Text",
+          "description": "Font and color for each ring's percentage value, plus the shared CPU/MEM/HDD captions underneath.",
+          "fields": [
+            {
+              "id": "captionFont",
+              "label": "Caption font",
+              "description": "Face and size used for the \"CPU\" / \"MEM\" / \"HDD\" captions below the rings",
+              "dataType": "string",
+              "fieldType": "fontpicker",
+              "format": "font",
+              "default": "Sans 8"
+            },
+            {
+              "id": "captionColor",
+              "label": "Caption color",
+              "description": "Color of the \"CPU\" / \"MEM\" / \"HDD\" captions",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#FFFFFFB3"
+            },
+            {
+              "id": "cpuValueFont",
+              "label": "CPU text font",
+              "description": "Face and size of the CPU percentage number",
+              "dataType": "string",
+              "fieldType": "fontpicker",
+              "format": "font",
+              "default": "Sans Bold 11"
+            },
+            {
+              "id": "cpuValueColor",
+              "label": "CPU text color",
+              "description": "Color of the CPU percentage number",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#FFFFFFFF"
+            },
+            {
+              "id": "memValueFont",
+              "label": "Memory text font",
+              "description": "Face and size of the Memory percentage number",
+              "dataType": "string",
+              "fieldType": "fontpicker",
+              "format": "font",
+              "default": "Sans Bold 11"
+            },
+            {
+              "id": "memValueColor",
+              "label": "Memory text color",
+              "description": "Color of the Memory percentage number",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#FFFFFFFF"
+            },
+            {
+              "id": "hddValueFont",
+              "label": "Disk text font",
+              "description": "Face and size of the Disk percentage number",
+              "dataType": "string",
+              "fieldType": "fontpicker",
+              "format": "font",
+              "default": "Sans Bold 11"
+            },
+            {
+              "id": "hddValueColor",
+              "label": "Disk text color",
+              "description": "Color of the Disk percentage number",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#FFFFFFFF"
+            }
+          ]
+        },
+        {
+          "id": "behavior",
+          "label": "Behavior",
+          "description": "",
+          "fields": [
+            {
+              "id": "refreshRateSeconds",
+              "label": "Refresh rate",
+              "description": "How often CPU/Memory/Disk are re-read",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 2,
+              "min": 1,
+              "max": 60,
+              "step": 1,
+              "suffix": "s"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "shadow",
+      "label": "Shadow",
+      "description": "Drop shadow behind this widget.",
+      "groups": [
+        {
+          "id": "shadow",
+          "label": "Shadow effect",
+          "description": "Off by default. Default color is black at 30% transparency.",
+          "fields": [
+            {
+              "id": "shadowEnabled",
+              "label": "Enable shadow",
+              "description": "Add a drop shadow behind this widget",
+              "dataType": "boolean",
+              "fieldType": "switch",
+              "default": false
+            },
+            {
+              "id": "shadowColor",
+              "label": "Shadow color",
+              "description": "",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "default": "#000000",
+              "visibleIf": "shadowEnabled"
+            },
+            {
+              "id": "shadowOpacity",
+              "label": "Shadow transparency",
+              "description": "Shadow opacity, 0-100%",
+              "dataType": "integer",
+              "fieldType": "slider",
+              "default": 30,
+              "min": 0,
+              "max": 100,
+              "step": 1,
+              "suffix": "%",
+              "visibleIf": "shadowEnabled"
+            },
+            {
+              "id": "shadowAngle",
+              "label": "Shadow angle",
+              "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
+              "dataType": "integer",
+              "fieldType": "slider",
+              "default": 90,
+              "min": 0,
+              "max": 360,
+              "step": 1,
+              "suffix": "°",
+              "visibleIf": "shadowEnabled"
+            },
+            {
+              "id": "shadowDistance",
+              "label": "Shadow distance",
+              "description": "How far the shadow is offset, in pixels",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 6,
+              "min": 0,
+              "max": 60,
+              "step": 1,
+              "suffix": "px",
+              "visibleIf": "shadowEnabled"
+            },
+            {
+              "id": "shadowBlur",
+              "label": "Shadow blur",
+              "description": "Blur radius, in pixels",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 16,
+              "min": 0,
+              "max": 100,
+              "step": 1,
+              "suffix": "px",
+              "visibleIf": "shadowEnabled"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

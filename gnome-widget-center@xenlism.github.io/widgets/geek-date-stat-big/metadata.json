@@ -1,0 +1,15 @@
+{
+  "id": "geek-date-stat-big",
+  "name": "Geek Date Stat (Big)",
+  "description": "Large card: big centered date on top, CPU/MEM/DISK percentages centered underneath.",
+  "version": "1.0.0",
+  "author": "GNOME Widget Center",
+  "api-version": 1,
+  "entry": "widget.js",
+  "block-type": "4x1",
+  "default-position": {
+    "x": 60,
+    "y": 60,
+    "monitor": 0
+  }
+}
