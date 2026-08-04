@@ -21,83 +21,21 @@ import Gio from 'gi://Gio';
 import Pango from 'gi://Pango';
 import Cairo from 'cairo';
 import {MprisMediaService} from '../../lib/mediaApi.js';
+// Standardized on lib/widgetVisualKit.js (2026-08-03) - see the identical
+// note in media-player-square/widget.js for why this replaced a local
+// per-file copy of these helpers.
+import {
+    SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor,
+} from '../../lib/widgetVisualKit.js';
 
-// --- Drop shadow (self-contained per-widget copy - see WIDGET_API.md
-// section 9's "bundled widgets only" restriction on lib/ imports; every
-// widget under widgets/ carries its own small copy of this instead of
-// sharing one, since widgets must not reach into each other or into
-// files outside their own folder) ---
-const SHADOW_DEFAULTS = {
-    shadowEnabled: false,
-    shadowColor: '#000000',
-    shadowOpacity: 30, // percent, 0-100
-    shadowAngle: 90,   // degrees: 0 = right, 90 = down, 180 = left, 270 = up
-    shadowDistance: 6, // px
-    shadowBlur: 16,    // px
-};
-
-/** @private Builds a `box-shadow: ...;` CSS declaration (St supports the
- * standard CSS box-shadow syntax) from this widget's own shadow
- * settings, or '' when the shadow is off - always safe to splice
- * directly into a set_style() template literal. */
-function _shadowBoxShadowCss(settings) {
-    const s = settings ?? {};
-    if (!(s.shadowEnabled ?? SHADOW_DEFAULTS.shadowEnabled))
-        return '';
-
-    const opacityPercent = Number.isFinite(s.shadowOpacity) ? s.shadowOpacity : SHADOW_DEFAULTS.shadowOpacity;
-    const angleDeg = Number.isFinite(s.shadowAngle) ? s.shadowAngle : SHADOW_DEFAULTS.shadowAngle;
-    const distance = Number.isFinite(s.shadowDistance) ? s.shadowDistance : SHADOW_DEFAULTS.shadowDistance;
-    const blur = Number.isFinite(s.shadowBlur) ? Math.max(0, s.shadowBlur) : SHADOW_DEFAULTS.shadowBlur;
-
-    const rad = (angleDeg * Math.PI) / 180;
-    const offsetX = Math.round(Math.cos(rad) * distance * 100) / 100;
-    const offsetY = Math.round(Math.sin(rad) * distance * 100) / 100;
-
-    let hex = (s.shadowColor ?? SHADOW_DEFAULTS.shadowColor).trim().replace(/^#/, '');
-    if (hex.length === 3)
-        hex = hex.split('').map(c => c + c).join('');
-    if (!/^[0-9a-fA-F]{6}$/.test(hex))
-        hex = '000000';
-    const r = parseInt(hex.slice(0, 2), 16);
-    const g = parseInt(hex.slice(2, 4), 16);
-    const b = parseInt(hex.slice(4, 6), 16);
-    const a = Math.min(1, Math.max(0, opacityPercent / 100));
-
-    return `box-shadow: ${offsetX}px ${offsetY}px ${blur}px 0px rgba(${r}, ${g}, ${b}, ${a});`;
-}
-
-const SIZE = 336;
+// 2x2 block-type is 23x23 cells x 16px = 368px, not 336px - see the
+// identical note in media-player-square/widget.js. PADDING kept fixed
+// (card design constant, not size-derived) so CONTENT_SIZE grows with
+// SIZE; COVER_HEIGHT scaled by the same 368/336 ratio.
+const SIZE = 368;
 const PADDING = 16;
 const CONTENT_SIZE = SIZE - PADDING * 2;
-const COVER_HEIGHT = 172;
-
-/** @private "#rrggbb" or "#rrggbbaa" -> {r,g,b,a} each 0..1, for Cairo. */
-function _hexToRgba(hex) {
-    const m = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.exec(hex ?? '');
-    if (!m)
-        return {r: 1, g: 1, b: 1, a: 1};
-    const h = m[1];
-    const r = parseInt(h.slice(0, 2), 16) / 255;
-    const g = parseInt(h.slice(2, 4), 16) / 255;
-    const b = parseInt(h.slice(4, 6), 16) / 255;
-    const a = h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1;
-    return {r, g, b, a};
-}
-
-/** @private 8-digit "#rrggbbaa" -> "rgba(r, g, b, a)" for St CSS. Same
- * fix as lib/themeService.js's hexToRgba(). */
-function _toCssColor(hex, fallback) {
-    const value = typeof hex === 'string' ? hex : fallback;
-    const m = /^#([0-9a-fA-F]{6})([0-9a-fA-F]{2})$/.exec(value);
-    if (!m)
-        return value;
-    const r = parseInt(m[1].slice(0, 2), 16);
-    const g = parseInt(m[1].slice(2, 4), 16);
-    const b = parseInt(m[1].slice(4, 6), 16);
-    const a = Math.round((parseInt(m[2], 16) / 255) * 1000) / 1000;
-    return `rgba(${r}, ${g}, ${b}, ${a})`;
-}
+const COVER_HEIGHT = 188;
 
 /** @private splits a combined Pango font-description string into the
  * family/size pieces St's set_style() needs - see
@@ -162,8 +100,15 @@ export default class MediaPlayerPosterWidget {
         });
         this._coverStack.add_child(this._fallbackIcon);
 
-        this._artIcon = new St.Icon({
-            icon_size: COVER_HEIGHT - 4,
+        // Album art layer - painted via CSS background-image/cover
+        // instead of St.Icon; see media-player-square's identical fix
+        // for the full explanation. Sized to CONTENT_SIZE x COVER_HEIGHT
+        // (the full rectangular cover area, not a centered square) since
+        // this is the widget where the aspect-ratio mismatch was most
+        // visible - a square icon centered in a much wider rectangle.
+        this._artIcon = new St.Widget({
+            width: CONTENT_SIZE,
+            height: COVER_HEIGHT,
             x_align: Clutter.ActorAlign.CENTER,
             y_align: Clutter.ActorAlign.CENTER,
             visible: false,
@@ -289,15 +234,17 @@ export default class MediaPlayerPosterWidget {
 
     /** @private */
     _render() {
-        const backgroundColor = _toCssColor(this._settings.backgroundColor, '#000000FF');
-        const widgetCornerRadius = this._settings.widgetCornerRadius ?? 18;
-        this._actor.set_style(`background-color: ${backgroundColor}; border-radius: ${widgetCornerRadius}px;` +
-            _shadowBoxShadowCss(this._settings));
+        this._actor.set_style(_cardStyleCss(this._settings, {
+            backgroundColorFallback: '#000000FF',
+            cornerRadiusKey: 'widgetCornerRadius',
+            cornerRadiusFallback: 18,
+        }));
 
         const coverCornerRadius = this._settings.coverCornerRadius ?? 18;
         this._coverStack.set_style(
             `background-color: rgba(255,255,255,0.05); border-radius: ${coverCornerRadius}px;`
         );
+        this._artIcon.set_style(`border-radius: ${coverCornerRadius}px; background-size: cover; background-position: center;`);
 
         const trackColor = _toCssColor(this._settings.trackColor, '#FFFFFFFF');
         const trackFont = _parseFontDescription(this._settings.trackFont ?? 'Sans Bold 20', 'Sans Bold', 20);
@@ -333,13 +280,17 @@ export default class MediaPlayerPosterWidget {
         this._state = state;
 
         if (!state) {
-            this._titleLabel.set_text('No media playing');
+            this._titleLabel.set_text('');
             this._artistLabel.set_text('');
+            this._titleLabel.hide();
+            this._artistLabel.hide();
             this._playPauseButton.child.icon_name = 'media-playback-start-symbolic';
             this._showFallbackArt();
             return;
         }
 
+        this._titleLabel.show();
+        this._artistLabel.show();
         this._titleLabel.set_text(state.title);
         this._artistLabel.set_text(state.artist);
         this._playPauseButton.child.icon_name = state.status === 'Playing'
@@ -351,7 +302,11 @@ export default class MediaPlayerPosterWidget {
                 const file = state.artUrl.startsWith('file://')
                     ? Gio.File.new_for_uri(state.artUrl)
                     : Gio.File.new_for_path(state.artUrl);
-                this._artIcon.gicon = new Gio.FileIcon({file});
+                const coverCornerRadius = this._settings.coverCornerRadius ?? 18;
+                this._artIcon.set_style(
+                    `border-radius: ${coverCornerRadius}px; background-size: cover; background-position: center; ` +
+                    `background-image: url("${file.get_uri()}");`
+                );
                 this._showArt();
             } catch (e) {
                 this._showFallbackArt();

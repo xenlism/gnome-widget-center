@@ -194,7 +194,15 @@ export const PrefsWidgetManagementMixin = Base => class extends Base {
      *   nothing matched the current locale — never rejects.
      */
     _loadWidgetI18n(widget) {
-        return loadTranslations(GLib.build_filenamev([widget.path, 'i18n'])).catch(() => ({}));
+        // 2026-08-04: same `language` override as everywhere else - see
+        // prefsWindowController.js's build() for the identical read
+        // against this._settings for the main window's own chrome
+        // strings. this._settings is already set by the time any widget
+        // subpage can be opened (build() runs first).
+        const languageOverride = this._settings?.isReady
+            ? (this._settings.getGlobalValue('language') || undefined)
+            : undefined;
+        return loadTranslations(GLib.build_filenamev([widget.path, 'i18n']), languageOverride).catch(() => ({}));
     }
 
     /** @private translations[key] if present, else `fallback`. */

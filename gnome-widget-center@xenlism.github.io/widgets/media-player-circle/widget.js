@@ -30,83 +30,19 @@ import Gio from 'gi://Gio';
 import Pango from 'gi://Pango';
 import Cairo from 'cairo';
 import {MprisMediaService} from '../../lib/mediaApi.js';
+// Standardized on lib/widgetVisualKit.js (2026-08-03) - see the identical
+// note in media-player-square/widget.js for why this replaced a local
+// per-file copy of these helpers.
+import {
+    SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor,
+} from '../../lib/widgetVisualKit.js';
 
-// --- Drop shadow (self-contained per-widget copy - see WIDGET_API.md
-// section 9's "bundled widgets only" restriction on lib/ imports; every
-// widget under widgets/ carries its own small copy of this instead of
-// sharing one, since widgets must not reach into each other or into
-// files outside their own folder) ---
-const SHADOW_DEFAULTS = {
-    shadowEnabled: false,
-    shadowColor: '#000000',
-    shadowOpacity: 30, // percent, 0-100
-    shadowAngle: 90,   // degrees: 0 = right, 90 = down, 180 = left, 270 = up
-    shadowDistance: 6, // px
-    shadowBlur: 16,    // px
-};
-
-/** @private Builds a `box-shadow: ...;` CSS declaration (St supports the
- * standard CSS box-shadow syntax) from this widget's own shadow
- * settings, or '' when the shadow is off - always safe to splice
- * directly into a set_style() template literal. */
-function _shadowBoxShadowCss(settings) {
-    const s = settings ?? {};
-    if (!(s.shadowEnabled ?? SHADOW_DEFAULTS.shadowEnabled))
-        return '';
-
-    const opacityPercent = Number.isFinite(s.shadowOpacity) ? s.shadowOpacity : SHADOW_DEFAULTS.shadowOpacity;
-    const angleDeg = Number.isFinite(s.shadowAngle) ? s.shadowAngle : SHADOW_DEFAULTS.shadowAngle;
-    const distance = Number.isFinite(s.shadowDistance) ? s.shadowDistance : SHADOW_DEFAULTS.shadowDistance;
-    const blur = Number.isFinite(s.shadowBlur) ? Math.max(0, s.shadowBlur) : SHADOW_DEFAULTS.shadowBlur;
-
-    const rad = (angleDeg * Math.PI) / 180;
-    const offsetX = Math.round(Math.cos(rad) * distance * 100) / 100;
-    const offsetY = Math.round(Math.sin(rad) * distance * 100) / 100;
-
-    let hex = (s.shadowColor ?? SHADOW_DEFAULTS.shadowColor).trim().replace(/^#/, '');
-    if (hex.length === 3)
-        hex = hex.split('').map(c => c + c).join('');
-    if (!/^[0-9a-fA-F]{6}$/.test(hex))
-        hex = '000000';
-    const r = parseInt(hex.slice(0, 2), 16);
-    const g = parseInt(hex.slice(2, 4), 16);
-    const b = parseInt(hex.slice(4, 6), 16);
-    const a = Math.min(1, Math.max(0, opacityPercent / 100));
-
-    return `box-shadow: ${offsetX}px ${offsetY}px ${blur}px 0px rgba(${r}, ${g}, ${b}, ${a});`;
-}
-
-const SIZE = 160;
-const RING_SIZE = 148;
-const RING_THICKNESS = 5;
-const COVER_SIZE = 104;
-
-/** @private "#rrggbb" or "#rrggbbaa" -> {r,g,b,a} each 0..1, for Cairo. */
-function _hexToRgba(hex) {
-    const m = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.exec(hex ?? '');
-    if (!m)
-        return {r: 1, g: 1, b: 1, a: 1};
-    const h = m[1];
-    const r = parseInt(h.slice(0, 2), 16) / 255;
-    const g = parseInt(h.slice(2, 4), 16) / 255;
-    const b = parseInt(h.slice(4, 6), 16) / 255;
-    const a = h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1;
-    return {r, g, b, a};
-}
-
-/** @private 8-digit "#rrggbbaa" -> "rgba(r, g, b, a)" for St CSS. Same
- * fix as lib/themeService.js's hexToRgba(). */
-function _toCssColor(hex, fallback) {
-    const value = typeof hex === 'string' ? hex : fallback;
-    const m = /^#([0-9a-fA-F]{6})([0-9a-fA-F]{2})$/.exec(value);
-    if (!m)
-        return value;
-    const r = parseInt(m[1].slice(0, 2), 16);
-    const g = parseInt(m[1].slice(2, 4), 16);
-    const b = parseInt(m[1].slice(4, 6), 16);
-    const a = Math.round((parseInt(m[2], 16) / 255) * 1000) / 1000;
-    return `rgba(${r}, ${g}, ${b}, ${a})`;
-}
+// 1x1 block-type is 176px, not 160px - see the identical note in
+// media-player-square/widget.js. Scaled by 176/160 = 1.1.
+const SIZE = 176;
+const RING_SIZE = 163;
+const RING_THICKNESS = 6;
+const COVER_SIZE = 114;
 
 /** @private splits a combined Pango font-description string into the
  * family/size pieces St's set_style() needs - see
@@ -138,8 +74,7 @@ export default class MediaPlayerCircleWidget {
 
         this._tickTimerId = null;
         this._ringRepaintId = null;
-        this._enterId = null;
-        this._leaveId = null;
+        this._hoverId = null;
     }
 
     buildActor() {
@@ -185,10 +120,19 @@ export default class MediaPlayerCircleWidget {
         });
         this._coverStack.add_child(this._fallbackIcon);
 
-        this._artIcon = new St.Icon({
-            icon_size: COVER_SIZE - 10,
+        // Album art layer - painted via CSS background-image/cover
+        // instead of St.Icon (see media-player-square's identical fix for
+        // the full "why" comment). The border-radius here is set to
+        // 999px (full round) since this widget's cover is circular - an
+        // actor's own background is clipped to its own border-radius, so
+        // this is what actually makes the art appear as a circle instead
+        // of a square poking out past the round frame.
+        this._artIcon = new St.Widget({
+            width: COVER_SIZE,
+            height: COVER_SIZE,
             x_align: Clutter.ActorAlign.CENTER,
             y_align: Clutter.ActorAlign.CENTER,
+            style: `border-radius: 999px; background-size: cover; background-position: center;`,
             visible: false,
         });
         this._coverStack.add_child(this._artIcon);
@@ -237,13 +181,12 @@ export default class MediaPlayerCircleWidget {
         this._controls.add_child(this._nextButton);
         this._actor.add_child(this._controls);
 
-        this._enterId = this._actor.connect('enter-event', () => {
-            this._controls.show();
-            return Clutter.EVENT_PROPAGATE;
-        });
-        this._leaveId = this._actor.connect('leave-event', () => {
-            this._controls.hide();
-            return Clutter.EVENT_PROPAGATE;
+        // See media-player-square's identical comment: track_hover is the
+        // robust way to do this with overlapping reactive children,
+        // rather than hand-rolled enter/leave pairs.
+        this._actor.set_track_hover(true);
+        this._hoverId = this._actor.connect('notify::hover', () => {
+            this._controls.visible = this._actor.hover;
         });
 
         this._render();
@@ -267,13 +210,9 @@ export default class MediaPlayerCircleWidget {
             this._fallbackArea.disconnect(this._fallbackRepaintId);
             this._fallbackRepaintId = null;
         }
-        if (this._enterId !== null && this._actor) {
-            this._actor.disconnect(this._enterId);
-            this._enterId = null;
-        }
-        if (this._leaveId !== null && this._actor) {
-            this._actor.disconnect(this._leaveId);
-            this._leaveId = null;
+        if (this._hoverId !== null && this._actor) {
+            this._actor.disconnect(this._hoverId);
+            this._hoverId = null;
         }
     }
 
@@ -338,9 +277,10 @@ export default class MediaPlayerCircleWidget {
 
     /** @private */
     _render() {
-        const backgroundColor = _toCssColor(this._settings.backgroundColor, '#000000F5');
-        this._actor.set_style(`background-color: ${backgroundColor}; border-radius: 999px;` +
-            _shadowBoxShadowCss(this._settings));
+        // Always fully round (999px) regardless of any cornerRadius
+        // setting - this widget doesn't expose one, so cardStyleCss's
+        // fallback is what actually applies here.
+        this._actor.set_style(_cardStyleCss(this._settings, {cornerRadiusFallback: 999}));
 
         const infoColor = _toCssColor(this._settings.infoColor, '#FFFFFFFF');
         const infoFont = _parseFontDescription(this._settings.infoFont ?? 'Sans Bold 11', 'Sans Bold', 11);
@@ -375,8 +315,9 @@ export default class MediaPlayerCircleWidget {
         this._state = state;
 
         if (!state) {
-            this._titleLabel.set_text('No media playing');
+            this._titleLabel.set_text('');
             this._artistLabel.set_text('');
+            this._textBox.hide();
             this._playPauseButton.child.icon_name = 'media-playback-start-symbolic';
             this._showFallbackArt();
             this._fraction = 0;
@@ -386,6 +327,7 @@ export default class MediaPlayerCircleWidget {
             return;
         }
 
+        this._textBox.show();
         this._titleLabel.set_text(state.title);
         this._artistLabel.set_text(state.artist);
         this._playPauseButton.child.icon_name = state.status === 'Playing'
@@ -397,7 +339,10 @@ export default class MediaPlayerCircleWidget {
                 const file = state.artUrl.startsWith('file://')
                     ? Gio.File.new_for_uri(state.artUrl)
                     : Gio.File.new_for_path(state.artUrl);
-                this._artIcon.gicon = new Gio.FileIcon({file});
+                this._artIcon.set_style(
+                    `border-radius: 999px; background-size: cover; background-position: center; ` +
+                    `background-image: url("${file.get_uri()}");`
+                );
                 this._showArt();
             } catch (e) {
                 this._showFallbackArt();

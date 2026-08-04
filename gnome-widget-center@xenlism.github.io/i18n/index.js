@@ -50,15 +50,24 @@ export function scanAvailableLocales(dirPath) {
 
 /**
  * Picks the best available locale for the current system out of
- * `available` (from scanAvailableLocales()) using GLib's own resolved
- * language preference order, falling back to "en" if present, else the
- * first available language, else null (no i18n at all).
+ * `available` (from scanAvailableLocales()), falling back to "en" if
+ * present, else the first available language, else null (no i18n at all).
  * @param {string[]} available
+ * @param {string} [overrideLocale] - 2026-08-04. The host `language`
+ *   preference (gschema key `language`, read directly via SettingsService
+ *   in this Prefs-process copy - widgetConfigUI.js's call site), a locale
+ *   code like "th", or ''/undefined for no override. Takes priority over
+ *   the system-locale order below when set AND this available list
+ *   actually has that locale; otherwise skipped entirely, never a hard
+ *   failure.
  * @returns {string|null}
  */
-export function pickLocale(available) {
+export function pickLocale(available, overrideLocale) {
     if (available.length === 0)
         return null;
+
+    if (overrideLocale && available.includes(overrideLocale))
+        return overrideLocale;
 
     for (const name of GLib.get_language_names()) {
         const code = name.slice(0, 2).toLowerCase();
@@ -71,12 +80,13 @@ export function pickLocale(available) {
 /**
  * Loads this folder's translations for the current locale.
  * @param {string} dirPath - absolute path to the i18n/ folder
+ * @param {string} [overrideLocale] - see pickLocale()'s doc above.
  * @returns {Promise<Object>} flat {key: string} translation table, {} if
  *   nothing could be loaded (never throws - caller keeps using its own
  *   English defaults in that case).
  */
-export async function loadTranslations(dirPath) {
-    const locale = pickLocale(scanAvailableLocales(dirPath));
+export async function loadTranslations(dirPath, overrideLocale) {
+    const locale = pickLocale(scanAvailableLocales(dirPath), overrideLocale);
     if (!locale)
         return {};
 

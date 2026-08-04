@@ -26,20 +26,10 @@ import GLib from 'gi://GLib';
 // Clutter earlier than others by accident (calendar-modern hit this, see
 // SKILL.md "Before writing anything" table / gotchas).
 import Clutter from 'gi://Clutter';
-import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor, parseFontDescription as _parseFontDescription} from '../../lib/widgetVisualKit.js';
-
-/** Local default settings for the text-shadow (shadow drawn under the
- * text labels themselves) - same shape as SHADOW_DEFAULTS so the
- * angle/distance/blur/opacity math below can mirror
- * widgetVisualKit.js's shadowBoxShadowCss() exactly. */
-const TEXT_SHADOW_DEFAULTS = {
-    textShadowEnabled: false,
-    textShadowColor: '#000000',
-    textShadowOpacity: 60,
-    textShadowAngle: 90,
-    textShadowDistance: 2,
-    textShadowBlur: 4,
-};
+import {
+    SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor,
+    parseFontDescription as _parseFontDescription, TEXT_SHADOW_DEFAULTS, textShadowCss as _textShadowCss,
+} from '../../lib/widgetVisualKit.js';
 
 export default class GeekWeekDateBayWidget {
     /**
@@ -88,6 +78,7 @@ export default class GeekWeekDateBayWidget {
         return {
             ...SHADOW_DEFAULTS,
             ...TEXT_SHADOW_DEFAULTS,
+            textShadowEnabled: true, textShadowDistance: 2, textShadowBlur: 4,
 
             weekFont: 'Sans Bold 32',
             weekColor: '#ffffff',
@@ -127,37 +118,6 @@ export default class GeekWeekDateBayWidget {
         }
     }
 
-    /** @private mirrors lib/widgetVisualKit.js's shadowBoxShadowCss(), just
-     * emitting `text-shadow:` instead of `box-shadow:` (text-shadow has no
-     * spread/inset parameters, so those are simply omitted). Kept local
-     * since text-shadow isn't in widgetVisualKit.js yet. */
-    _textShadowCss() {
-        const s = this._settings;
-        if (!(s.textShadowEnabled ?? TEXT_SHADOW_DEFAULTS.textShadowEnabled))
-            return '';
-
-        const opacityPercent = Number.isFinite(s.textShadowOpacity) ? s.textShadowOpacity : TEXT_SHADOW_DEFAULTS.textShadowOpacity;
-        const angleDeg = Number.isFinite(s.textShadowAngle) ? s.textShadowAngle : TEXT_SHADOW_DEFAULTS.textShadowAngle;
-        const distance = Number.isFinite(s.textShadowDistance) ? s.textShadowDistance : TEXT_SHADOW_DEFAULTS.textShadowDistance;
-        const blur = Number.isFinite(s.textShadowBlur) ? Math.max(0, s.textShadowBlur) : TEXT_SHADOW_DEFAULTS.textShadowBlur;
-
-        const rad = (angleDeg * Math.PI) / 180;
-        const offsetX = Math.round(Math.cos(rad) * distance * 100) / 100;
-        const offsetY = Math.round(Math.sin(rad) * distance * 100) / 100;
-
-        let hex = (s.textShadowColor ?? TEXT_SHADOW_DEFAULTS.textShadowColor).trim().replace(/^#/, '');
-        if (hex.length === 3)
-            hex = hex.split('').map(c => c + c).join('');
-        if (!/^[0-9a-fA-F]{6}$/.test(hex))
-            hex = '000000';
-        const r = parseInt(hex.slice(0, 2), 16);
-        const g = parseInt(hex.slice(2, 4), 16);
-        const b = parseInt(hex.slice(4, 6), 16);
-        const a = Math.min(1, Math.max(0, opacityPercent / 100));
-
-        return `text-shadow: ${offsetX}px ${offsetY}px ${blur}px rgba(${r}, ${g}, ${b}, ${a});`;
-    }
-
     /** @private */
     _render() {
         const now = GLib.DateTime.new_now_local();
@@ -172,7 +132,7 @@ export default class GeekWeekDateBayWidget {
         const backgroundColor = _toCssColor(this._settings.backgroundColor ?? '#1a2a33b3', '#1a2a33b3');
         const cornerRadius = this._settings.cornerRadius ?? 18;
         const textAlign = ['left', 'center', 'right'].includes(this._settings.textAlign) ? this._settings.textAlign : 'center';
-        const textShadowCss = this._textShadowCss();
+        const textShadowCss = _textShadowCss(this._settings);
 
         this._actor.set_style(
             `background-color: ${backgroundColor}; ` +

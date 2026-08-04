@@ -124,30 +124,6 @@
           "description": "",
           "fields": [
             {
-              "id": "maxDownloadMbps",
-              "label": "Max download (Mbps)",
-              "description": "Download speed that fills the outer ring completely",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 100,
-              "min": 1,
-              "max": 10000,
-              "step": 1,
-              "suffix": "Mbps"
-            },
-            {
-              "id": "maxUploadMbps",
-              "label": "Max upload (Mbps)",
-              "description": "Upload speed that fills the inner ring completely",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 20,
-              "min": 1,
-              "max": 10000,
-              "step": 1,
-              "suffix": "Mbps"
-            },
-            {
               "id": "refreshRateSeconds",
               "label": "Refresh rate",
               "description": "How often the network reading updates",

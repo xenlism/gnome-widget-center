@@ -53,7 +53,8 @@
 //         "offsetX": 0,
 //         "offsetY": 4,
 //         "blurRadius": 12,
-//         "spread": 0
+//         "spread": 0,
+//         "force": false
 //       }
 //     },
 //     "widgets": {
@@ -121,6 +122,13 @@ const DEFAULT_GLOBAL_THEME = Object.freeze({
         offsetY: 4,
         blurRadius: 12,
         spread: 0,
+        // 2026-08-03: same "force" pattern as background/cornerRadius
+        // above - added later because it was missed in the 2026-07-25
+        // change, not because shadow is a lesser property. Before this,
+        // there was no way to pin every widget to the global shadow: a
+        // widget's `config.dropShadow` override was ALWAYS merged in
+        // (see getEffectiveWidgetTheme() below), unconditionally.
+        force: false,
     }),
 });
 
@@ -426,11 +434,13 @@ export class ThemeService {
      * every other global field. Widgets that set nothing there just get
      * the global theme unchanged.
      *
-     * `global.background.force` / `global.cornerRadius.force` (2026-07-25)
-     * short-circuit this per-widget merge entirely for that one property —
-     * while force is on, `config.background` / `config.cornerRadius` are
-     * not read at all, so a widget can't even partially override a forced
-     * property (e.g. keep the global color but change its own blur).
+     * `global.background.force` / `global.cornerRadius.force` /
+     * `global.dropShadow.force` (dropShadow.force added 2026-08-03) short-
+     * circuit this per-widget merge entirely for that one property —
+     * while force is on, `config.background` / `config.cornerRadius` /
+     * `config.dropShadow` is not read at all, so a widget can't even
+     * partially override a forced property (e.g. keep the global color
+     * but change its own blur radius).
      * @param {string} widgetId
      * @returns {{background: object, cornerRadius: object, dropShadow: object}}
      */
@@ -446,11 +456,11 @@ export class ThemeService {
             ? {...base.cornerRadius}
             : {...base.cornerRadius, ...(config?.cornerRadius ?? {})};
 
-        return {
-            background,
-            cornerRadius,
-            dropShadow: {...base.dropShadow, ...(config?.dropShadow ?? {})},
-        };
+        const dropShadow = base.dropShadow.force
+            ? {...base.dropShadow}
+            : {...base.dropShadow, ...(config?.dropShadow ?? {})};
+
+        return {background, cornerRadius, dropShadow};
     }
 
     /**

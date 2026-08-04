@@ -18,9 +18,11 @@
 // so this works correctly even on multi-battery laptops without this
 // widget needing to combine multiple devices itself. Read via a plain
 // Gio.DBusProxy exactly like widgets/settings-control/widget.js's
-// NetworkManager/BlueZ proxies (WIDGET_API.md §9.1: subscribe via
-// `g-properties-changed`, never poll) - no bundled-widgets-only import
-// needed here since this is plain Gio, not lib/systemMetricsApi.js.
+// NetworkManager/BlueZ proxies, subscribed to `g-properties-changed`
+// for near-instant updates - PLUS a periodic re-read on a
+// GLib.timeout_add_seconds() timer (refreshRateSeconds) as a backstop,
+// since some UPower/driver combinations are known to be slow or
+// inconsistent about firing PropertiesChanged for Percentage.
 //
 // Devices with no battery at all (desktop, most VMs) leave
 // DisplayDevice's IsPresent false - handled defensively: the ring shows
@@ -30,9 +32,10 @@
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 import Cairo from 'cairo';
 
-import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor, parseFontDescription as _parseFontDescription} from '../../lib/widgetVisualKit.js';
+import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor, parseFontDescription as _parseFontDescription} from '../../lib/widgetVisualKit.js';
 
 const RING_SIZE = 128; // 1x1 block-type is 11x11 cells = 176px; matches widgets/circles-cpu's own sizing note.
 
@@ -56,6 +59,7 @@ export default class CirclesBatteryWidget {
 
         this._upowerProxy = null;
         this._upowerSignalId = null;
+        this._timerId = null;
     }
 
     buildActor() {
@@ -102,9 +106,12 @@ export default class CirclesBatteryWidget {
 
     enable() {
         this._connectUPower();
+        this._startTimer();
     }
 
     disable() {
+        this._stopTimer();
+
         if (this._upowerProxy && this._upowerSignalId !== null) {
             try {
                 this._upowerProxy.disconnect(this._upowerSignalId);
@@ -136,11 +143,33 @@ export default class CirclesBatteryWidget {
 
             percentFont: 'Sans Bold 22',
             percentColor: '#FFFFFFFF',
+
+            refreshRateSeconds: 5,
         };
     }
 
     onSettingsChanged() {
         this._render();
+        this._startTimer(); // picks up a changed refreshRateSeconds too
+    }
+
+    /** @private (re)starts the periodic backstop refresh - see this
+     * file's header for why this exists alongside `g-properties-changed`. */
+    _startTimer() {
+        this._stopTimer();
+        const seconds = Math.max(1, this._settings.refreshRateSeconds ?? 5);
+        this._timerId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, seconds, () => {
+            this._readBattery();
+            return GLib.SOURCE_CONTINUE;
+        });
+    }
+
+    /** @private */
+    _stopTimer() {
+        if (this._timerId !== null) {
+            GLib.source_remove(this._timerId);
+            this._timerId = null;
+        }
     }
 
     /** @private */
@@ -181,7 +210,7 @@ export default class CirclesBatteryWidget {
     _currentRingColorSetting() {
         if (this._charging)
             return 'ringColorCharging';
-        if (this._fraction * 100 < 20)
+        if (this._fraction * 100 <= 20)
             return 'ringColorLow';
         if (this._fraction * 100 < 50)
             return 'ringColorMid';
@@ -190,13 +219,7 @@ export default class CirclesBatteryWidget {
 
     /** @private */
     _render() {
-        const backgroundColor = _toCssColor(this._settings.backgroundColor, '#000000a9');
-        const cornerRadius = this._settings.cornerRadius ?? 18;
-        this._actor.set_style(
-            `background-color: ${backgroundColor}; ` +
-            `border-radius: ${cornerRadius}px;` +
-            _shadowBoxShadowCss(this._settings)
-        );
+        this._actor.set_style(_cardStyleCss(this._settings, {backgroundColorFallback: '#000000a9', cornerRadiusFallback: 18}));
 
         const ringColorKey = this._currentRingColorSetting();
         const ringColorDefault = {

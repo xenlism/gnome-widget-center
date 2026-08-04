@@ -55,3 +55,377 @@
     border-radius: 6px;
     padding: 4px 8px;
 }
+
+/* ==========================================================
+ * Drag guide lines + drop placeholder
+ * ----------------------------------------------------------
+ * These actors (lib/guideRenderer.js's pool + editModeDragController.js's
+ * _buildPlaceholder()) only ever set a style_class, never an inline
+ * style - so until this stylesheet defines these classes they paint as
+ * fully transparent boxes: correctly sized and positioned every drag
+ * frame, just invisible. That's why the alignment guides (and the
+ * green/red drop-target box) didn't show up while dragging a widget.
+ * ========================================================== */
+.widget-edit-mode-guide-line {
+    background-color: rgba(245, 166, 35, 0.9); /* amber - same accent as the media-player-circle progress ring */
+}
+
+.widget-edit-mode-placeholder-valid {
+    background-color: rgba(53, 132, 228, 0.20);
+    border: 2px dashed rgba(53, 132, 228, 0.9);
+    border-radius: 12px;
+}
+
+.widget-edit-mode-placeholder-invalid {
+    background-color: rgba(224, 27, 36, 0.20);
+    border: 2px dashed rgba(224, 27, 36, 0.9);
+    border-radius: 12px;
+}
+
+/* ==========================================================
+ * Widget Center Overlay (lib/widgetCenterOverlay.js)
+ * Standalone add-on, see that file's header before touching this section.
+ * ========================================================== */
+
+.wc-overlay {
+    background-color: rgba(20, 20, 20, 0.97);
+}
+
+.wc-overlay-header {
+    padding: 16px 24px;
+    spacing: 16px;
+}
+
+.wc-overlay-tabs {
+    spacing: 8px;
+}
+
+.wc-overlay-tab {
+    color: rgba(255, 255, 255, 0.7);
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-weight: bold;
+}
+
+.wc-overlay-tab:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.wc-overlay-tab-active {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+.wc-overlay-close {
+    color: #ffffff;
+    padding: 8px;
+    border-radius: 999px;
+}
+
+.wc-overlay-close:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.wc-overlay-content {
+    padding: 8px 24px 24px 24px;
+}
+
+.wc-overlay-scroll {
+    overflow-y: scroll;
+}
+
+.wc-overlay-grid {
+    spacing: 16px;
+}
+
+.wc-overlay-row {
+    spacing: 16px;
+}
+
+.wc-overlay-card {
+    background-color: rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    padding: 12px;
+    spacing: 6px;
+    width: 480px;
+}
+
+.wc-overlay-card-screenshot {
+    height: 160px;
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.35);
+}
+
+.wc-overlay-card-screenshot-fallback {
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.wc-overlay-card-title {
+    color: #ffffff;
+    font-weight: bold;
+    font-size: 15px;
+}
+
+.wc-overlay-card-desc {
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 12px;
+}
+
+.wc-overlay-card-widgetlist {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 11px;
+    font-style: italic;
+}
+
+.wc-overlay-card-author {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 11px;
+}
+
+.wc-overlay-card-controls {
+    spacing: 6px;
+}
+
+.wc-overlay-toggle,
+.wc-overlay-icon-button {
+    color: #ffffff;
+    padding: 6px;
+    border-radius: 6px;
+}
+
+.wc-overlay-toggle:hover,
+.wc-overlay-icon-button:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.wc-overlay-empty {
+    color: rgba(255, 255, 255, 0.5);
+    padding: 32px;
+}
+
+.wc-overlay-settings {
+    spacing: 16px;
+}
+
+.wc-overlay-settings-launcher {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 32px 48px;
+}
+
+.wc-overlay-settings-launcher:hover {
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+.wc-overlay-settings-launcher-content {
+    spacing: 12px;
+}
+
+.wc-overlay-settings-launcher-content StIcon {
+    color: #ffffff;
+}
+
+.wc-overlay-settings-launcher-label {
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+/* ==========================================================
+ * Overlay "Preferences" tab (lib/widgetCenterOverlayPreferences.js)
+ * Native St reimplementation of the real Preferences window's
+ * categories (minus Backup & Restore / Import-Export - see that file's
+ * header for why).
+ * ========================================================== */
+
+.wc-pref-outer {
+    spacing: 12px;
+}
+
+.wc-pref-banner {
+    background-color: rgba(53, 132, 228, 0.16);
+    border: 1px solid rgba(53, 132, 228, 0.5);
+    border-radius: 10px;
+    padding: 10px 14px;
+}
+
+.wc-pref-banner:hover {
+    background-color: rgba(53, 132, 228, 0.26);
+}
+
+.wc-pref-banner-content {
+    spacing: 10px;
+}
+
+.wc-pref-banner-content StIcon {
+    color: #ffffff;
+}
+
+.wc-pref-banner-label {
+    color: #ffffff;
+    font-size: 13px;
+}
+
+.wc-pref-column {
+    spacing: 4px;
+    padding-bottom: 24px;
+}
+
+.wc-pref-category-heading {
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: bold;
+    padding: 20px 0 4px 0;
+}
+
+.wc-pref-category {
+    spacing: 2px;
+}
+
+.wc-pref-section {
+    spacing: 2px;
+    padding: 14px 0 6px 0;
+}
+
+.wc-pref-section-title {
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.wc-pref-section-desc {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 11px;
+}
+
+.wc-pref-row {
+    background-color: rgba(255, 255, 255, 0.04);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 4px;
+    spacing: 12px;
+}
+
+.wc-pref-row-text {
+    spacing: 2px;
+}
+
+.wc-pref-row-title {
+    color: #ffffff;
+    font-size: 13px;
+}
+
+.wc-pref-row-subtitle {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 11px;
+}
+
+.wc-pref-dim-label {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 12px;
+}
+
+.wc-pref-warning {
+    color: #f66151;
+    font-size: 11px;
+    padding: 4px 0;
+}
+
+/* Switch: St.Button(toggle_mode:true) + one child "knob" widget, moved
+ * left/right and recolored purely via the :checked pseudo-class - no JS
+ * state machine needed, St tracks `checked` natively. */
+.wc-pref-switch {
+    width: 44px;
+    height: 24px;
+    border-radius: 999px;
+    background-color: rgba(255, 255, 255, 0.18);
+}
+
+.wc-pref-switch:checked {
+    background-color: #3584e4;
+}
+
+.wc-pref-switch-knob {
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    background-color: #ffffff;
+    margin: 3px;
+}
+
+.wc-pref-switch:checked .wc-pref-switch-knob {
+    margin-left: 23px;
+}
+
+.wc-pref-slider-box {
+    spacing: 10px;
+    width: 220px;
+}
+
+.wc-pref-slider-value {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 11px;
+    width: 48px;
+}
+
+StSlider {
+    height: 16px;
+    -barlevel-active-background-color: #3584e4;
+    -barlevel-background-color: rgba(255, 255, 255, 0.18);
+    -barlevel-height: 4px;
+    -slider-handle-radius: 8px;
+    -slider-handle-color: #ffffff;
+}
+
+.wc-pref-color-box {
+    spacing: 8px;
+}
+
+.wc-pref-color-swatch {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.wc-pref-color-entry {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    padding: 4px 8px;
+    width: 110px;
+    font-family: monospace;
+    font-size: 12px;
+}
+
+.wc-pref-status {
+    spacing: 8px;
+    padding: 24px 8px;
+}
+
+.wc-pref-status-icon {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.wc-pref-status-title {
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.wc-pref-status-desc {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 12px;
+}
+
+.wc-pref-cycle-button {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    padding: 6px 14px;
+    color: #ffffff;
+    font-size: 12px;
+}
+
+.wc-pref-cycle-button:hover {
+    background-color: rgba(255, 255, 255, 0.14);
+}

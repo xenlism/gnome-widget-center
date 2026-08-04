@@ -27,7 +27,7 @@ import Gio from 'gi://Gio';
 import Cairo from 'cairo';
 
 import {SystemMetricsService} from '../../lib/systemMetricsApi.js';
-import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor, parseFontDescription as _parseFontDescription} from '../../lib/widgetVisualKit.js';
+import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor, parseFontDescription as _parseFontDescription} from '../../lib/widgetVisualKit.js';
 
 // 1x1 block-type is 11x11 cells (176x176px). Card padding is 12px a
 // side, leaving ~152px of content width for three rings + two gaps:
@@ -220,13 +220,7 @@ export default class CirclesSystemWidget {
 
     /** @private */
     _render() {
-        const backgroundColor = _toCssColor(this._settings.backgroundColor, '#00000026');
-        const cornerRadius = this._settings.cornerRadius ?? 18;
-        this._actor.set_style(
-            `background-color: ${backgroundColor}; ` +
-            `border-radius: ${cornerRadius}px;` +
-            _shadowBoxShadowCss(this._settings)
-        );
+        this._actor.set_style(_cardStyleCss(this._settings, {backgroundColorFallback: '#00000026', cornerRadiusFallback: 18}));
 
         const captionColor = _toCssColor(this._settings.captionColor, '#FFFFFFB3');
         const captionFont = _parseFontDescription(this._settings.captionFont ?? 'Sans 8', 'Sans', 8);

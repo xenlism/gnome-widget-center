@@ -1,0 +1,30 @@
+/* Not loaded by the host - see SKILL.md §2. Kept for documentation/
+ * class-name reference only; the real styling is applied inline in
+ * widget.js via actor.set_style(). */
+
+.settings-control-bar-widget-root {
+    /* background is rgba(color, opacity) and border-radius come from
+     * settings in widget.js (defaults: #ffffff @ 0.85 opacity, 18px) */
+}
+
+.settings-control-bar-widget-row {
+    /* plain horizontal row, 4 equal-width cells - one per toggle */
+}
+
+.settings-control-bar-widget-button {
+    /* background fill (on/off state) is set inline by _setToggleState() -
+     * a faint tint of iconOffColor when off, an opaque iconOnColor fill
+     * when on. border-radius = BUTTON_SIZE / 2 (circular). */
+}
+
+.settings-control-bar-widget-button St.Icon {
+    color: #ffffff; /* icon glyph stays constant white in both states */
+}
+
+.settings-control-bar-widget-tooltip {
+    background-color: rgba(20, 20, 20, 0.95);
+    color: #ffffff;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 6px;
+}

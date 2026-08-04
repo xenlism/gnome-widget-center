@@ -1,0 +1,15 @@
+{
+  "id": "circles-mem-half",
+  "name": "Memory (Half Ring)",
+  "description": "1x1 card: Memory usage as a half-circle (semicircle) ring next to a percentage label, instead of a full circle. The ring side can be flipped to hug the left or right edge of the card.",
+  "version": "1.0.0",
+  "author": "GNOME Widget Center",
+  "api-version": 1,
+  "entry": "widget.js",
+  "block-type": "1x1",
+  "default-position": {
+    "x": 40,
+    "y": 40,
+    "monitor": 0
+  }
+}

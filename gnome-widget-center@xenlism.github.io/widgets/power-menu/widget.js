@@ -88,6 +88,16 @@ export default class PowerMenuWidget {
             coordinate: Clutter.BindCoordinate.SIZE,
         }));
         this._actor.add_child(this._content);
+        // FixedLayout otherwise allocates this card at the grid's natural
+        // size. Keep the card at the complete 1x1 block so its 2x2 button
+        // grid has the intended, symmetric padding on every side.
+        const syncContentSize = () => {
+            this._content.set_position(0, 0);
+            this._content.set_size(this._actor.width, this._actor.height);
+        };
+        this._actor.connect('notify::width', syncContentSize);
+        this._actor.connect('notify::height', syncContentSize);
+        syncContentSize();
         this._content.set_style(this._cardStyle(backgroundColor, cornerRadius) + `padding: ${PADDING}px;`);
 
         this._grid = new St.Widget({

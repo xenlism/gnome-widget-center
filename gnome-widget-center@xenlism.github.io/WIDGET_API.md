@@ -171,6 +171,16 @@ export default class MyWidget {
     // re-render a label set once in enable(), or restart a timer whose
     // interval just changed.
     onSettingsChanged(settings) {}
+
+    // Optional, added 2026-08-04. Called when the HOST-level (not
+    // per-widget) `language` preference changes — see api.hostLanguage in
+    // §5. `language` is the new value ('' means "no override, use system
+    // locale", same meaning as api.hostLanguage). api.hostLanguage is
+    // already live (a getter, not a snapshot) even without this hook —
+    // only implement it if you need to actively redo something right now
+    // (e.g. reload a translation table and re-render), rather than just
+    // picking up the new value next time something else re-renders you.
+    onHostLanguageChanged(language) {}
 }
 ```
 
@@ -242,6 +252,7 @@ can always do more than a schema (file pickers, custom layout, anything
 | `api.path.me` | Absolute path (string) to this widget's own folder on disk — for reading a bundled asset (icons/, a template, etc.) that ships alongside `widget.js`. |
 | `api.path.id(widgetId)` | Absolute path (string) to another widget's folder by id, or `null` if no widget with that id is installed. Works for any discovered widget, loaded or not. |
 | `api.logger` | Logging pre-tagged with this widget's id. |
+| `api.hostLanguage` | 2026-08-04. The host-level UI language override (gschema key `language`), as a locale code string (e.g. `"th"`) or `''` meaning "no override, use `GLib.get_language_names()`'s system locale order" — the same thing `lib/i18nUtils.js`-adjacent `i18n/index.js` files' `pickLocale()` already do by default. A **live getter**, not a snapshot — always reflects the current value. Pass it as `pickLocale()`'s optional override argument; see `widgets/weather-dark/widget.js` for the pattern. See also `onHostLanguageChanged()` in §3 for reacting to a change immediately instead of on next render. |
 
 ## 6. Settings — four systems, in order of precedence
 

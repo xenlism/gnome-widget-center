@@ -37,6 +37,7 @@ import {WidgetEditMode} from './lib/widgetEditMode.js';
 import {EditModeDragController} from './lib/editModeDragController.js';
 import {BlockSizeManager} from './lib/blockSizeManager.js';
 import {ThemeService} from './lib/themeService.js';
+import {WidgetCenterOverlay} from './lib/widgetCenterOverlay.js';
 import {createLogger} from './lib/logger.js';
 
 export default class WidgetCenterExtension extends Extension {
@@ -137,7 +138,7 @@ export default class WidgetCenterExtension extends Extension {
                 this._editDrag?.armDragHandle(id, toolbarActor, dragArea);
             },
         }, this._logger, this._themeService);
-        this._editDrag = new EditModeDragController(this._layer, this._storage, this._layout, this._editMode, this._logger);
+        this._editDrag = new EditModeDragController(this._layer, this._storage, this._layout, this._editMode, this._logger, this._settings);
         this._editDrag.setOthersProvider((monitorIndex, excludeId) => this._othersOnMonitor(monitorIndex, excludeId));
 
         // Hot-reload dev mode (task 08) — created up front but only
@@ -202,7 +203,8 @@ export default class WidgetCenterExtension extends Extension {
         // `this._layout.spacing`.
         const loader = new WidgetLoader(
             [bundledWidgetsPath, userWidgetsPath], this._storage, console,
-            this._settings?.isReady ? this._settings.getGlobalValue('widget-spacing') : 0
+            this._settings?.isReady ? this._settings.getGlobalValue('widget-spacing') : 0,
+            this._settings
         );
         this._loader = loader;
 
@@ -218,6 +220,8 @@ export default class WidgetCenterExtension extends Extension {
         if (this._settings?.isReady) {
             this._disabledChangedId = this._settings.onChanged('disabled-widgets',
                 ids => this._applyDisabledWidgets(new Set(ids)));
+            this._languageChangedId = this._settings.onChanged('language',
+                lang => loader.notifyHostLanguageChanged(lang ?? ''));
         }
 
         let cancelled = false;
@@ -248,11 +252,42 @@ export default class WidgetCenterExtension extends Extension {
                     this._devWatcher.start(started.map(e => ({id: e.id, path: e.path})));
             })
             .catch(e => console.error('[widget-center] loadAll() failed', e));
+
+        // Widget Center Overlay (2026-08-04 merge - was a standalone,
+        // opt-in add-on staged separately until now; see
+        // lib/widgetCenterOverlay.js's own header). Tight-integration
+        // form: passes this extension's already-built services through
+        // so the overlay's Remove/Settings do exactly what Edit Mode's
+        // own buttons do, instead of falling back to its built-in
+        // discovery-only behavior. Gives: the overlay itself (Overview +
+        // Themes + Preferences tabs), Super+F12 (customizable from either
+        // Preferences copy — see widget-center-overlay-keybinding in the
+        // gschema), and D-Bus toggling for the .desktop launcher.
+        this._widgetCenterOverlay = new WidgetCenterOverlay(this, {
+            widgetLoader: this._loader,
+            logger: this._logger,
+            onWidgetSettings: id => this._openWidgetSettings(id),
+            onWidgetRemove: id => this._removeWidgetViaEditMode(id),
+            onOpenPreferences: () => this.openPreferences(),
+            onApplyThemePack: (manifest, enabled) => {
+                this._logger.debug('widget-center-overlay',
+                    `theme pack "${manifest.id}" ${enabled ? 'applied' : 'removed'}`);
+            },
+        });
+        this._widgetCenterOverlay.enable();
     }
 
     disable() {
         this._cancelLoad?.();
         this._cancelLoad = null;
+
+        // Closes the overlay if it's currently open and destroys its
+        // actors - done FIRST, before this._loader/this._editMode etc
+        // below are torn down, since the overlay only reaches those
+        // through the callbacks passed into its constructor and closing
+        // it may still be mid-teardown referencing them otherwise.
+        this._widgetCenterOverlay?.disable();
+        this._widgetCenterOverlay = null;
 
         // Stop watching theme.json for external changes before anything
         // below tears down the actors _reapplyTheme() would otherwise
@@ -263,6 +298,10 @@ export default class WidgetCenterExtension extends Extension {
         if (this._settings && this._disabledChangedId != null)
             this._settings.disconnect(this._disabledChangedId);
         this._disabledChangedId = null;
+
+        if (this._settings && this._languageChangedId != null)
+            this._settings.disconnect(this._languageChangedId);
+        this._languageChangedId = null;
 
         if (this._settings && this._devChangedId != null)
             this._settings.disconnect(this._devChangedId);

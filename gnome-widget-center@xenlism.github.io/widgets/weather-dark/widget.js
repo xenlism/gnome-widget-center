@@ -138,10 +138,18 @@ export default class WeatherDarkWidget {
     _loadI18n() {
         if (!this._api.path?.me)
             return;
-        loadTranslations(GLib.build_filenamev([this._api.path.me, 'i18n'])).then(translations => {
+        loadTranslations(GLib.build_filenamev([this._api.path.me, 'i18n']), this._api.hostLanguage).then(translations => {
             this._translations = translations;
             this._render();
         }).catch(() => {});
+    }
+
+    // 2026-08-04: host-level language preference changed while this
+    // widget was already running (WIDGET_API.md §3) - reload this
+    // widget's own i18n table for the new value right away rather than
+    // waiting for _render() to be triggered by something else.
+    onHostLanguageChanged() {
+        this._loadI18n();
     }
 
     /** @private this._translations["condition.<english>"] if present, else `english` unchanged. */

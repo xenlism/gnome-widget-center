@@ -16,15 +16,24 @@ const NORMAL_OPACITY = 255;
 const DROP_ANIMATION_MS = 120;
 
 export class EditModeDragController {
-    constructor(widgetLayer, storageService, layoutEngine, editMode, logger = null) {
+    /**
+     * @param {SettingsService|null} [settings] - 2026-08-04: optional so
+     *   existing call sites/tests that don't pass one keep working with
+     *   SnapManager/GuideRenderer's own defaults (matching the gschema
+     *   <default> values) - see _readDragSettings() below.
+     */
+    constructor(widgetLayer, storageService, layoutEngine, editMode, logger = null, settings = null) {
         this._layer = widgetLayer;
         this._storage = storageService;
         this._layout = layoutEngine;
         this._editMode = editMode;
         this._logger = logger ?? {debug() {}, warn() {}, error() {}};
+        this._settings = settings;
 
-        this._snapManager = new SnapManager(layoutEngine);
-        this._guideRenderer = new GuideRenderer();
+        this._snapManager = new SnapManager(layoutEngine, this._readSnapOptions());
+        this._guideRenderer = new GuideRenderer(this._readGuideColor());
+        this._settingsChangedIds = [];
+        this._wireSettingsLiveUpdates();
 
         this._tracked = new Map();
         this._drag = null;
@@ -36,6 +45,47 @@ export class EditModeDragController {
         this._latestY = 0;
         this._frameScheduled = false;
         this._motionGeneration = 0; // Fix 3: Cancel pending frame
+    }
+
+    /** @private initial values for the SnapManager constructed above -
+     * gschema <default>s if this._settings is null/not ready, same as
+     * every other settings read elsewhere in this codebase. */
+    _readSnapOptions() {
+        const s = this._settings;
+        if (!s?.isReady)
+            return {};
+        return {
+            enabled: s.getGlobalValue('snap-enabled') ?? true,
+            distance: s.getGlobalValue('snap-distance') ?? 16,
+            gridSnapEnabled: s.getGlobalValue('grid-snap-enabled') ?? false,
+            gridSize: s.getGlobalValue('grid-size') ?? 16,
+        };
+    }
+
+    /** @private */
+    _readGuideColor() {
+        const s = this._settings;
+        if (!s?.isReady)
+            return undefined; // GuideRenderer's own DEFAULT_COLOR
+        return s.getGlobalValue('guide-color') || undefined;
+    }
+
+    /** @private live-updates so a change in the Control Center (or the
+     * Widget Center Overlay's own mirrored Preferences tab, since both
+     * write to the same GSettings) takes effect on the very next drag
+     * frame - no restart, same cross-process pattern dev-mode/
+     * disabled-widgets already use (see extension.js's header). */
+    _wireSettingsLiveUpdates() {
+        const s = this._settings;
+        if (!s?.isReady)
+            return;
+        this._settingsChangedIds.push(
+            s.onChanged('snap-enabled', v => this._snapManager.setEnabled(v ?? true)),
+            s.onChanged('snap-distance', v => this._snapManager.setDistance(v ?? 16)),
+            s.onChanged('grid-snap-enabled', v => this._snapManager.setGridSnapEnabled(v ?? false)),
+            s.onChanged('grid-size', v => this._snapManager.setGridSize(v ?? 16)),
+            s.onChanged('guide-color', v => this._guideRenderer.setColor(v)),
+        );
     }
 
     setOthersProvider(provider) {
@@ -370,5 +420,9 @@ if (container && snapResult.guides?.length > 0) {
             
         this._guideRenderer.destroy();
         this._snapManager.destroy?.();
+
+        for (const id of this._settingsChangedIds)
+            this._settings?.disconnect(id);
+        this._settingsChangedIds = [];
     }
 }

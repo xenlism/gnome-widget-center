@@ -4,14 +4,50 @@
 // Computes snap positions, generates guide lines, and handles bounds clamping
 // so the controller doesn't have to manage geometry directly.
 
-export const SNAP_DISTANCE = 16; // pixels to trigger magnetic pull
+// Fallback only - matches the gschema <default> for snap-distance. Real
+// value comes from SettingsService via setDistance()/the constructor
+// options below; this constant is just what a SnapManager built without
+// a settings object (e.g. in a test) gets.
+export const SNAP_DISTANCE = 16;
 
 export class SnapManager {
     /**
      * @param {LayoutEngine} layoutEngine - Used to read spacing and edgeMargin settings
+     * @param {Object} [options]
+     * @param {boolean} [options.enabled=true] - master on/off for magnetic
+     *   snapping (gschema key snap-enabled). When false, computeSnap()
+     *   returns the dragged position unchanged (still subject to
+     *   grid-snap below, and to the caller's own edge-margin clamping).
+     * @param {number} [options.distance=SNAP_DISTANCE] - pull radius, px
+     *   (gschema key snap-distance).
+     * @param {boolean} [options.gridSnapEnabled=false] - opt-in fixed-grid
+     *   rounding applied after magnetic snapping (gschema key
+     *   grid-snap-enabled, 2026-08-04 - NOT the pre-2026-07-28 default
+     *   grid, this is a separate, off-by-default preference).
+     * @param {number} [options.gridSize=16] - grid cell size, px
+     *   (gschema key grid-size). Only used while gridSnapEnabled is true.
      */
-    constructor(layoutEngine) {
+    constructor(layoutEngine, options = {}) {
         this._layout = layoutEngine;
+        this._enabled = options.enabled ?? true;
+        this._distance = Number.isFinite(options.distance) ? options.distance : SNAP_DISTANCE;
+        this._gridSnapEnabled = options.gridSnapEnabled ?? false;
+        this._gridSize = Number.isFinite(options.gridSize) && options.gridSize > 0 ? options.gridSize : 16;
+    }
+
+    /** Live setters so a Control Center change (SettingsService.onChanged)
+     * can take effect on the very next drag frame, no restart needed -
+     * same pattern as everything else in this codebase that reacts to
+     * settings changes cross-process. */
+    setEnabled(enabled) { this._enabled = !!enabled; }
+    setDistance(distance) {
+        if (Number.isFinite(distance) && distance >= 0)
+            this._distance = distance;
+    }
+    setGridSnapEnabled(enabled) { this._gridSnapEnabled = !!enabled; }
+    setGridSize(size) {
+        if (Number.isFinite(size) && size > 0)
+            this._gridSize = size;
     }
 
     /**
@@ -25,12 +61,28 @@ export class SnapManager {
         const spacing = this._layout.spacing;
         const margin = this._layout.edgeMargin;
 
+        // Magnetic snapping off entirely: skip straight to grid-snap (if
+        // that's on) + bounds clamping, no guide lines.
+        if (!this._enabled) {
+            let x = dragged.x;
+            let y = dragged.y;
+            if (this._gridSnapEnabled)
+                ({x, y} = this._applyGridSnap(x, y, margin));
+            const maxX = Math.max(margin, monitorBounds.width - dragged.width - margin);
+            const maxY = Math.max(margin, monitorBounds.height - dragged.height - margin);
+            return {
+                x: Math.min(Math.max(x, margin), maxX),
+                y: Math.min(Math.max(y, margin), maxY),
+                guides: [],
+            };
+        }
+
         let snappedX = dragged.x;
         let snappedY = dragged.y;
         const guides = [];
 
-        let bestDeltaX = SNAP_DISTANCE;
-        let bestDeltaY = SNAP_DISTANCE;
+        let bestDeltaX = this._distance;
+        let bestDeltaY = this._distance;
 
         // 1. Snap to monitor edges (respecting edgeMargin)
         const screenEdgesX = [
@@ -99,13 +151,32 @@ export class SnapManager {
             }
         }
 
-        // 3. Clamp to bounds internally (so the Controller doesn't have to)
+        // 3. Optional fixed-grid rounding (2026-08-04, opt-in via
+        // grid-snap-enabled - separate from and layered on top of the
+        // magnetic snapping above, not a replacement for it). Measured
+        // from edge-margin rather than 0,0 so a grid-snapped widget still
+        // lines up with the screen-edge snap targets above it.
+        if (this._gridSnapEnabled)
+            ({x: snappedX, y: snappedY} = this._applyGridSnap(snappedX, snappedY, margin));
+
+        // 4. Clamp to bounds internally (so the Controller doesn't have to)
         const maxX = Math.max(margin, monitorBounds.width - dragged.width - margin);
         const maxY = Math.max(margin, monitorBounds.height - dragged.height - margin);
         snappedX = Math.min(Math.max(snappedX, margin), maxX);
         snappedY = Math.min(Math.max(snappedY, margin), maxY);
 
         return { x: snappedX, y: snappedY, guides };
+    }
+
+    /** @private rounds (x, y) to the nearest this._gridSize multiple,
+     * measured from `margin` so grid cells start at the same place the
+     * edge-snap targets do rather than at the screen's literal (0,0). */
+    _applyGridSnap(x, y, margin) {
+        const size = this._gridSize;
+        return {
+            x: margin + Math.round((x - margin) / size) * size,
+            y: margin + Math.round((y - margin) / size) * size,
+        };
     }
 
     /**

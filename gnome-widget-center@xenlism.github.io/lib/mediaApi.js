@@ -279,9 +279,28 @@ export class MprisMediaService {
             this._rootProxy = rootProxy;
             this._currentBusName = busName;
 
+            // NOTE on the "widget doesn't refresh when playback starts" bug:
+            // GDBusProxy's own cache is only *updated* for properties listed
+            // in `changed_properties`. Properties listed in
+            // `invalidated_properties` instead (many players, incl. the ones
+            // that triggered this bug, send Metadata that way as an
+            // optimization for big dict values) are simply *flushed* from
+            // the cache - get_cached_property() on them returns null until
+            // something explicitly re-fetches. Reading the cache
+            // unconditionally after every g-properties-changed (the old
+            // code) therefore silently dropped exactly the update that
+            // matters most: a brand new track starting. When invalidated
+            // properties are present we now explicitly re-fetch the full
+            // property set via Properties.GetAll before emitting, instead
+            // of trusting whatever GDBusProxy happened to still have cached.
             this._propsChangedId = this._playerProxy.connect(
                 'g-properties-changed',
-                () => this._emitFromProxy()
+                (_proxy, _changed, invalidated) => {
+                    if (invalidated && invalidated.length > 0)
+                        this._refreshThenEmit();
+                    else
+                        this._emitFromProxy();
+                }
             );
 
             // MPRIS Position property doesn't emit PropertiesChanged.
@@ -388,6 +407,54 @@ export class MprisMediaService {
     _safeNumber(value) {
         const n = Number(value);
         return Number.isFinite(n) ? n : 0;
+    }
+
+    /** @private Re-fetches every Player property via
+     * org.freedesktop.DBus.Properties.GetAll (bypassing whatever
+     * GDBusProxy's cache currently holds - see the comment above where
+     * this is called from) and only then emits. Still purely
+     * signal-triggered: this runs once per g-properties-changed event,
+     * never on a timer, so it stays inside WIDGET_API.md §9.1's
+     * "no polling" rule. Falls back to a plain cache-based emit if the
+     * GetAll call itself fails for any reason. */
+    _refreshThenEmit() {
+        if (!this._playerProxy || this._disposed) return;
+
+        const params = new GLib.Variant('(s)', [MPRIS_PLAYER_IFACE]);
+        this._playerProxy.call(
+            'org.freedesktop.DBus.Properties.GetAll',
+            params,
+            Gio.DBusCallFlags.NONE,
+            -1,
+            null,
+            (proxy, res) => {
+                if (this._disposed || !this._playerProxy) return;
+                try {
+                    // Deliberately NOT deep_unpack() here - that would
+                    // strip the 'v' (variant) wrapper each dict value
+                    // needs to still be a GVariant, which is what
+                    // set_cached_property() requires below. Walk the
+                    // a{sv} GVariant by hand instead to keep each value
+                    // boxed.
+                    const dict = proxy.call_finish(res).get_child_value(0);
+                    const count = dict.n_children();
+                    for (let i = 0; i < count; i++) {
+                        const entry = dict.get_child_value(i);
+                        const key = entry.get_child_value(0).get_string()[0];
+                        const value = entry.get_child_value(1).get_variant();
+                        // Feed the freshly-fetched values back into the
+                        // proxy's own cache so every other _getProp() call
+                        // in _emitFromProxy() (Position, Shuffle,
+                        // LoopStatus, ...) also sees up-to-date data, not
+                        // just Metadata.
+                        this._playerProxy.set_cached_property(key, value);
+                    }
+                } catch (e) {
+                    this._logger.warn?.('Properties.GetAll refresh failed:', e.message);
+                }
+                this._emitFromProxy();
+            }
+        );
     }
 
     _emitFromProxy() {

@@ -99,8 +99,18 @@ let buildPromise = null;
  * activations landing back to back before GTK has even mapped a window
  * yet) waits on the SAME build rather than kicking off a second one.
  * @param {string|null} requestedWidgetId
+ * @param {string|null} focusTarget - currently only 'preferences' is
+ *   recognized (see `--focus=preferences` below); jumps straight to the
+ *   Preferences top-level tab instead of leaving Overview showing. Added
+ *   for lib/widgetCenterOverlay.js's Settings tab, which already has its
+ *   own native widget list and only wants Store/Preferences from this
+ *   window — see PrefsWindowController.showPreferencesPage()'s own doc
+ *   comment for why this can't just remove the Overview tab outright:
+ *   this app is a shared single-instance window, and a plain `gjs -m
+ *   widget-center-prefs-app.js` or gear-icon launch still needs Overview
+ *   to be there.
  */
-async function presentWindow(requestedWidgetId) {
+async function presentWindow(requestedWidgetId, focusTarget = null) {
     if (!controller) {
         window = new Adw.PreferencesWindow({application: app});
         controller = new PrefsWindowController(EXTENSION_PATH);
@@ -121,6 +131,8 @@ async function presentWindow(requestedWidgetId) {
 
     if (requestedWidgetId)
         controller.jumpToWidget(window, requestedWidgetId);
+    else if (focusTarget === 'preferences')
+        controller.showPreferencesPage(window);
 
     window.present();
 }
@@ -141,11 +153,14 @@ app.connect('activate', () => {
 app.connect('command-line', (application, commandLine) => {
     const argv = commandLine.get_arguments();
     let requestedWidgetId = null;
+    let focusTarget = null;
     for (const arg of argv) {
         if (arg.startsWith('--widget-id='))
             requestedWidgetId = arg.slice('--widget-id='.length);
+        else if (arg.startsWith('--focus='))
+            focusTarget = arg.slice('--focus='.length);
     }
-    presentWindow(requestedWidgetId).catch(e =>
+    presentWindow(requestedWidgetId, focusTarget).catch(e =>
         logError(e, '[widget-center] widget-center-prefs-app: command-line handling failed'));
     return 0;
 });

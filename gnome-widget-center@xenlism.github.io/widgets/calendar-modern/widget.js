@@ -25,7 +25,7 @@
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 import GLib from 'gi://GLib';
-import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss} from '../../lib/widgetVisualKit.js';
+import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss} from '../../lib/widgetVisualKit.js';
 
 export default class CalendarModernWidget {
     /**
@@ -100,11 +100,8 @@ export default class CalendarModernWidget {
         const textColor = this._settings.textColor ?? '#1a1a1a';
 
         this._actor.set_style(
-            `background-color: ${cardColor}; ` +
-            'border-radius: 22px; ' +
-            'padding: 18px 12px; ' +
-            'spacing: 4px;' +
-            _shadowBoxShadowCss(this._settings)
+            _cardStyleCss(this._settings, {backgroundColorKey: 'cardColor', cornerRadiusFallback: 22}) +
+            ' padding: 18px 12px; spacing: 4px;'
         );
 
         this._monthLabel.set_text((now.format('%B') ?? '').toUpperCase());

@@ -24,6 +24,7 @@ import {ThemeService} from './themeService.js';
 import {buildGwctDocument, writeGwctFile, readGwctFile, importGwctDocument} from './exportService.js';
 import {createBackup, restoreBackup} from './backupService.js';
 import {rgbaToHex} from './colorUtils.js';
+import {SUPPORTED_LOCALES} from '../i18n/index.js';
 
 export const PrefsPageBuildersMixin = Base => class extends Base {
     /**
@@ -136,9 +137,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         const categories = [
             {id: 'general', title: this._tr('category.general', 'General'), subtitle: 'General settings and behavior',
                 icon: 'preferences-system-symbolic',
-                build: () => this._buildComingSoonCategory('General',
-                    'GNOME Shell extensions load automatically when enabled, so there\'s no ' +
-                    'separate autostart/update setting to expose here yet.')},
+                build: () => this._buildGeneralCategory(settings)},
             {id: 'appearance', title: this._tr('category.appearance', 'Appearance'), subtitle: 'Theme, colors and layout',
                 icon: 'applications-graphics-symbolic',
                 build: () => this._buildAppearanceCategory()},
@@ -147,8 +146,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
                 build: () => this._buildDesktopCategory(settings)},
             {id: 'interactions', title: this._tr('category.interactions', 'Interactions'), subtitle: 'Dragging, animations and actions',
                 icon: 'input-mouse-symbolic',
-                build: () => this._buildComingSoonCategory('Interactions',
-                    'Drag/snap behavior and animation toggles will live here.')},
+                build: () => this._buildInteractionsCategory(settings)},
             {id: 'backup', title: this._tr('category.backup', 'Backup & Restore'), subtitle: 'Backup and restore widgets',
                 icon: 'cloud-upload-symbolic',
                 build: () => this._buildBackupCategory(window, settings, storage, discoveredWidgets, widgetPaths)},
@@ -218,6 +216,12 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
 
         // Select "General" first so the right pane is never blank.
         listBox.select_row(listBox.get_row_at_index(0));
+
+        // Returned so PrefsWindowController.showPreferencesPage() can jump
+        // straight to this page (skipping Overview) — see
+        // lib/widgetCenterOverlay.js's Preferences tab / widget-center-
+        // prefs-app.js's `--focus=preferences` flag.
+        return page;
     }
 
     /** @private a simple "not built yet" placeholder used by several Preferences categories. */
@@ -528,7 +532,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         const bgRgba = new Gdk.RGBA();
         bgRgba.parse(current.background.color ?? '#1e1e2e');
         const bgColorButton = new Gtk.ColorDialogButton({
-            dialog: new Gtk.ColorDialog(),
+            dialog: new Gtk.ColorDialog({with_alpha: true}),
             rgba: bgRgba,
             valign: Gtk.Align.CENTER,
         });
@@ -691,6 +695,14 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         });
         shadowGroup.add(shadowSpreadRow);
 
+        const shadowForceRow = new Adw.SwitchRow({
+            title: 'Force this drop shadow on every widget',
+            subtitle: 'Overrides any drop shadow a widget sets for itself ' +
+                'in its own Appearance settings.',
+            active: !!current.dropShadow.force,
+        });
+        shadowGroup.add(shadowForceRow);
+
         const saveShadow = () => {
             theme.setGlobalTheme({
                 dropShadow: {
@@ -702,11 +714,12 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
                     offsetY: shadowOffsetYRow.value,
                     blurRadius: shadowBlurRow.value,
                     spread: shadowSpreadRow.value,
+                    force: shadowForceRow.active,
                 },
             });
         };
         for (const row of [shadowEnabledRow, shadowTransparentRow, shadowOpacityRow,
-            shadowOffsetXRow, shadowOffsetYRow, shadowBlurRow, shadowSpreadRow]) {
+            shadowOffsetXRow, shadowOffsetYRow, shadowBlurRow, shadowSpreadRow, shadowForceRow]) {
             row.connect(row instanceof Adw.SwitchRow ? 'notify::active' : 'notify::value', saveShadow);
         }
         shadowColorButton.connect('notify::rgba', saveShadow);
@@ -727,6 +740,226 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
      *   `_buildAppearanceCategory()`'s doc comment for why this no
      *   longer takes/uses `window`.
      */
+    /**
+     * @private "General" category — the `language` GSettings key
+     * (2026-08-04). See WIDGET_API.md §5's api.hostLanguage and this
+     * repo's i18n/index.js's pickLocale() for how widgets and this very
+     * Preferences window's own chrome both honor it. Same live-sync
+     * pattern as _buildAdvancedCategory()'s Development Mode switch.
+     * @param {SettingsService} settings
+     * @returns {Adw.PreferencesPage}
+     */
+    _buildGeneralCategory(settings) {
+        const page = new Adw.PreferencesPage();
+
+        const group = new Adw.PreferencesGroup({
+            title: 'Language',
+            description: 'Overrides the system locale for this extension\'s own UI text and ' +
+                'any widget that ships translations - only where a widget actually has that ' +
+                'language available, otherwise it falls back to the system locale as before.',
+        });
+        page.add(group);
+
+        // index 0 is always "System default" ('' - no override)
+        const localeNames = {
+            en: 'English', zh: '中文', es: 'Español', th: 'ไทย', de: 'Deutsch', ja: '日本語',
+        };
+        const codes = ['', ...SUPPORTED_LOCALES];
+        const labels = ['System default', ...SUPPORTED_LOCALES.map(c => localeNames[c] ?? c)];
+
+        const row = new Adw.ComboRow({
+            title: 'UI language',
+            subtitle: 'Applies immediately, no restart needed.',
+            model: Gtk.StringList.new(labels),
+            selected: Math.max(0, codes.indexOf(settings.isReady ? (settings.getGlobalValue('language') || '') : '')),
+            sensitive: settings.isReady,
+        });
+        row.connect('notify::selected', () => {
+            if (!settings.isReady) {
+                logError(new Error('SettingsService not ready — could not save language'));
+                return;
+            }
+            try {
+                settings.setGlobalValue('language', codes[row.selected] ?? '');
+            } catch (e) {
+                logError(e, 'could not save language');
+            }
+        });
+        group.add(row);
+
+        return page;
+    }
+
+    /**
+     * @private "Interactions" category (2026-08-04) — drag/snap behavior:
+     * the alignment-guide color, magnetic snapping's own on/off + pull
+     * distance, the opt-in fixed-grid snap on top of it, and the overlay
+     * keyboard shortcut. See lib/snapManager.js/lib/guideRenderer.js for
+     * where these are actually consumed, and lib/editModeDragController.js
+     * for the live SettingsService.onChanged() wiring that picks up a
+     * change made here immediately, no restart.
+     * @param {SettingsService} settings
+     * @returns {Adw.PreferencesPage}
+     */
+    _buildInteractionsCategory(settings) {
+        const page = new Adw.PreferencesPage();
+        const ready = settings.isReady;
+
+        // --- Magnetic snapping ---
+        const snapGroup = new Adw.PreferencesGroup({
+            title: 'Magnetic snapping',
+            description: 'Pulls a dragged widget toward screen edges and other widgets\' edges.',
+        });
+        page.add(snapGroup);
+
+        const snapEnabledRow = new Adw.SwitchRow({
+            title: 'Enable snapping',
+            active: ready ? !!settings.getGlobalValue('snap-enabled') : true,
+            sensitive: ready,
+        });
+        snapEnabledRow.connect('notify::active', () => {
+            if (!ready) return;
+            try {
+                settings.setGlobalValue('snap-enabled', snapEnabledRow.active);
+            } catch (e) {
+                logError(e, 'could not save snap-enabled');
+            }
+        });
+        snapGroup.add(snapEnabledRow);
+
+        const snapDistanceRow = new Adw.SpinRow({
+            title: 'Snap distance',
+            subtitle: 'How close (px) an edge must get before it\'s pulled the rest of the way.',
+            adjustment: new Gtk.Adjustment({
+                lower: 0, upper: 128, step_increment: 1,
+                value: ready ? settings.getGlobalValue('snap-distance') : 16,
+            }),
+            sensitive: ready,
+        });
+        snapDistanceRow.connect('notify::value', () => {
+            if (!ready) return;
+            try {
+                settings.setGlobalValue('snap-distance', Math.round(snapDistanceRow.value));
+            } catch (e) {
+                logError(e, 'could not save snap-distance');
+            }
+        });
+        snapGroup.add(snapDistanceRow);
+
+        const guideColorRow = new Adw.ActionRow({title: 'Guide line color'});
+        const guideColorButton = new Gtk.ColorDialogButton({
+            dialog: new Gtk.ColorDialog({with_alpha: true}),
+            valign: Gtk.Align.CENTER,
+            sensitive: ready,
+        });
+        const initialGuideColor = new Gdk.RGBA();
+        initialGuideColor.parse(ready ? (settings.getGlobalValue('guide-color') || '#F5A623E6') : '#F5A623E6');
+        guideColorButton.set_rgba(initialGuideColor);
+        guideColorButton.connect('notify::rgba', () => {
+            if (!ready) return;
+            try {
+                settings.setGlobalValue('guide-color', rgbaToHex(guideColorButton.rgba));
+            } catch (e) {
+                logError(e, 'could not save guide-color');
+            }
+        });
+        guideColorRow.add_suffix(guideColorButton);
+        guideColorRow.activatable_widget = guideColorButton;
+        snapGroup.add(guideColorRow);
+
+        // --- Fixed grid snap (opt-in, 2026-08-04 - separate from and
+        // layered on top of the magnetic snapping above, NOT the pre-
+        // 2026-07-28 default grid, which was removed for everyone) ---
+        const gridGroup = new Adw.PreferencesGroup({
+            title: 'Fixed grid snap',
+            description: 'Off by default. Rounds a dragged widget\'s position to the nearest ' +
+                'grid cell, applied after magnetic snapping above.',
+        });
+        page.add(gridGroup);
+
+        const gridEnabledRow = new Adw.SwitchRow({
+            title: 'Snap to grid',
+            active: ready ? !!settings.getGlobalValue('grid-snap-enabled') : false,
+            sensitive: ready,
+        });
+        gridEnabledRow.connect('notify::active', () => {
+            if (!ready) return;
+            try {
+                settings.setGlobalValue('grid-snap-enabled', gridEnabledRow.active);
+            } catch (e) {
+                logError(e, 'could not save grid-snap-enabled');
+            }
+        });
+        gridGroup.add(gridEnabledRow);
+
+        const gridSizeRow = new Adw.SpinRow({
+            title: 'Grid size',
+            subtitle: 'Cell size in pixels. Only applies while Snap to grid above is on.',
+            adjustment: new Gtk.Adjustment({
+                lower: 4, upper: 128, step_increment: 1,
+                value: ready ? settings.getGlobalValue('grid-size') : 16,
+            }),
+            sensitive: ready,
+        });
+        gridSizeRow.connect('notify::value', () => {
+            if (!ready) return;
+            try {
+                settings.setGlobalValue('grid-size', Math.round(gridSizeRow.value));
+            } catch (e) {
+                logError(e, 'could not save grid-size');
+            }
+        });
+        gridGroup.add(gridSizeRow);
+
+        // --- Shortcut ---
+        const shortcutGroup = new Adw.PreferencesGroup({
+            title: 'Keyboard shortcut',
+            description: 'Opens/closes the Widget Center Overlay (lib/widgetCenterOverlay.js). ' +
+                'Also editable live from the overlay\'s own Preferences tab.',
+        });
+        page.add(shortcutGroup);
+
+        const currentAccel = ready ? (settings.getGlobalValue('widget-center-overlay-keybinding')?.[0] ?? '') : '<Super>F12';
+        const shortcutRow = new Adw.EntryRow({
+            title: 'Shortcut',
+            text: currentAccel,
+            sensitive: ready,
+        });
+        shortcutRow.connect('notify::text', () => {
+            if (!ready) return;
+            const text = shortcutRow.text.trim();
+            if (text.length === 0) {
+                try {
+                    settings.setGlobalValue('widget-center-overlay-keybinding', []);
+                } catch (e) {
+                    logError(e, 'could not clear widget-center-overlay-keybinding');
+                }
+                shortcutRow.remove_css_class('error');
+                return;
+            }
+            const [ok] = Gtk.accelerator_parse(text);
+            if (!ok) {
+                shortcutRow.add_css_class('error');
+                return;
+            }
+            shortcutRow.remove_css_class('error');
+            try {
+                settings.setGlobalValue('widget-center-overlay-keybinding', [text]);
+            } catch (e) {
+                logError(e, 'could not save widget-center-overlay-keybinding');
+            }
+        });
+        shortcutGroup.add(shortcutRow);
+
+        const shortcutHint = new Adw.ActionRow({
+            title: 'GTK accelerator syntax, e.g. <Super>F12 , or leave empty to disable.',
+        });
+        shortcutHint.add_css_class('dim-label');
+        shortcutGroup.add(shortcutHint);
+
+        return page;
+    }
+
     _buildAdvancedCategory(settings) {
         const page = new Adw.PreferencesPage();
 

@@ -44,8 +44,10 @@ import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor a
 const GRID_COLS = 2;
 const GRID_ROWS = 2;
 const MAX_APPS = GRID_COLS * GRID_ROWS;
-const ICON_SIZE = 44;
-const CELL_PADDING = 8;
+// Each 60px cell now matches the 1x1 control widgets' button footprint:
+// a larger 48px app icon with a uniform 6px inset.
+const ICON_SIZE = 48;
+const CELL_PADDING = 6;
 const GRID_SPACING = 8;
 const CARD_PADDING = 12;
 // Same delayed-hover-label pattern (and delay) as
@@ -93,6 +95,18 @@ export default class FolderWidget2x2 {
             coordinate: Clutter.BindCoordinate.SIZE,
         }));
         this._actor.add_child(this._content);
+        // FixedLayout uses a child's natural size when allocating it.  A
+        // BindConstraint alone therefore leaves this card at the icon
+        // grid's natural 152px square instead of the root's block size.
+        // Mirror root-size changes explicitly so the painted card always
+        // occupies the complete block allocated by BlockSizeManager.
+        const syncContentSize = () => {
+            this._content.set_position(0, 0);
+            this._content.set_size(this._actor.width, this._actor.height);
+        };
+        this._actor.connect('notify::width', syncContentSize);
+        this._actor.connect('notify::height', syncContentSize);
+        syncContentSize();
 
         const grid = new St.BoxLayout({vertical: true});
 

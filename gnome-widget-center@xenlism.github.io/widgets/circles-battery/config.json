@@ -130,6 +130,25 @@
               "default": "#FFFFFFFF"
             }
           ]
+        },
+        {
+          "id": "behavior",
+          "label": "Behavior",
+          "description": "",
+          "fields": [
+            {
+              "id": "refreshRateSeconds",
+              "label": "Refresh rate",
+              "description": "How often battery status is re-read, in addition to updating instantly on UPower change notifications",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 5,
+              "min": 1,
+              "max": 60,
+              "step": 1,
+              "suffix": "s"
+            }
+          ]
         }
       ]
     },

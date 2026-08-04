@@ -23,83 +23,32 @@ import Gio from 'gi://Gio';
 import Pango from 'gi://Pango';
 import Cairo from 'cairo';
 import {MprisMediaService} from '../../lib/mediaApi.js';
+// Standardized on lib/widgetVisualKit.js (2026-08-03) - this widget used
+// to carry its own local copy of SHADOW_DEFAULTS/box-shadow-CSS/hex-color
+// helpers (see git history), which is how the "1x1 is 176px not 160px"
+// migration and other fixes had to be applied four times over in
+// media-player-square/circle/wide/poster instead of once. Every other
+// bundled widget (archey-sysfetch, folder-widget-*, power-menu,
+// settings-control, circles-*, calendar-*, ...) already imports this same
+// file - WIDGET_API.md §9's restriction is on reaching into OTHER
+// widgets' folders, not on lib/, so this was always allowed, just never
+// done here.
+import {
+    SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor,
+} from '../../lib/widgetVisualKit.js';
 
-// --- Drop shadow (self-contained per-widget copy - see WIDGET_API.md
-// section 9's "bundled widgets only" restriction on lib/ imports; every
-// widget under widgets/ carries its own small copy of this instead of
-// sharing one, since widgets must not reach into each other or into
-// files outside their own folder) ---
-const SHADOW_DEFAULTS = {
-    shadowEnabled: false,
-    shadowColor: '#000000',
-    shadowOpacity: 30, // percent, 0-100
-    shadowAngle: 90,   // degrees: 0 = right, 90 = down, 180 = left, 270 = up
-    shadowDistance: 6, // px
-    shadowBlur: 16,    // px
-};
-
-/** @private Builds a `box-shadow: ...;` CSS declaration (St supports the
- * standard CSS box-shadow syntax) from this widget's own shadow
- * settings, or '' when the shadow is off - always safe to splice
- * directly into a set_style() template literal. */
-function _shadowBoxShadowCss(settings) {
-    const s = settings ?? {};
-    if (!(s.shadowEnabled ?? SHADOW_DEFAULTS.shadowEnabled))
-        return '';
-
-    const opacityPercent = Number.isFinite(s.shadowOpacity) ? s.shadowOpacity : SHADOW_DEFAULTS.shadowOpacity;
-    const angleDeg = Number.isFinite(s.shadowAngle) ? s.shadowAngle : SHADOW_DEFAULTS.shadowAngle;
-    const distance = Number.isFinite(s.shadowDistance) ? s.shadowDistance : SHADOW_DEFAULTS.shadowDistance;
-    const blur = Number.isFinite(s.shadowBlur) ? Math.max(0, s.shadowBlur) : SHADOW_DEFAULTS.shadowBlur;
-
-    const rad = (angleDeg * Math.PI) / 180;
-    const offsetX = Math.round(Math.cos(rad) * distance * 100) / 100;
-    const offsetY = Math.round(Math.sin(rad) * distance * 100) / 100;
-
-    let hex = (s.shadowColor ?? SHADOW_DEFAULTS.shadowColor).trim().replace(/^#/, '');
-    if (hex.length === 3)
-        hex = hex.split('').map(c => c + c).join('');
-    if (!/^[0-9a-fA-F]{6}$/.test(hex))
-        hex = '000000';
-    const r = parseInt(hex.slice(0, 2), 16);
-    const g = parseInt(hex.slice(2, 4), 16);
-    const b = parseInt(hex.slice(4, 6), 16);
-    const a = Math.min(1, Math.max(0, opacityPercent / 100));
-
-    return `box-shadow: ${offsetX}px ${offsetY}px ${blur}px 0px rgba(${r}, ${g}, ${b}, ${a});`;
-}
-
-const SIZE = 160;
-const COVER_SIZE = 140;
-const COVER_RADIUS = 16;
-
-/** @private "#rrggbb" or "#rrggbbaa" -> {r,g,b,a} each 0..1, for Cairo. */
-function _hexToRgba(hex) {
-    const m = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.exec(hex ?? '');
-    if (!m)
-        return {r: 1, g: 1, b: 1, a: 1};
-    const h = m[1];
-    const r = parseInt(h.slice(0, 2), 16) / 255;
-    const g = parseInt(h.slice(2, 4), 16) / 255;
-    const b = parseInt(h.slice(4, 6), 16) / 255;
-    const a = h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1;
-    return {r, g, b, a};
-}
-
-/** @private 8-digit "#rrggbbaa" -> "rgba(r, g, b, a)" for St CSS, which
- * doesn't understand 8-digit hex on its own. Anything else passes
- * through unchanged. Same fix as lib/themeService.js's hexToRgba(). */
-function _toCssColor(hex, fallback) {
-    const value = typeof hex === 'string' ? hex : fallback;
-    const m = /^#([0-9a-fA-F]{6})([0-9a-fA-F]{2})$/.exec(value);
-    if (!m)
-        return value;
-    const r = parseInt(m[1].slice(0, 2), 16);
-    const g = parseInt(m[1].slice(2, 4), 16);
-    const b = parseInt(m[1].slice(4, 6), 16);
-    const a = Math.round((parseInt(m[2], 16) / 255) * 1000) / 1000;
-    return `rgba(${r}, ${g}, ${b}, ${a})`;
-}
+// 1x1 block-type is 11x11 cells x BLOCK_CELL_SIZE(16px) = 176px, not
+// 160px (that was the old 10x10-cell table, replaced 2026-07-27 - see
+// blockSizeManager.js's BLOCK_TYPES). The widget's root actor already
+// gets forced to the correct 176x176 by BlockSizeManager.applyBlockSize()
+// regardless of what SIZE says here, but this widget's own layout still
+// built the cover/card *inside* that actor sized off the stale 160,
+// leaving a real ~16px unfilled gap around the card - i.e. the
+// background genuinely wasn't 100% of the block. COVER_SIZE/COVER_RADIUS
+// scaled by the same 176/160 ratio to keep proportions.
+const SIZE = 176;
+const COVER_SIZE = 154;
+const COVER_RADIUS = 18;
 
 /** @private splits a combined Pango font-description string into the
  * family/size pieces St's set_style() needs separately - same pattern as
@@ -126,8 +75,7 @@ export default class MediaPlayerSquareWidget {
         this._state = null;
 
         this._coverPressId = null;
-        this._enterId = null;
-        this._leaveId = null;
+        this._hoverId = null;
         this._repaintId = null;
     }
 
@@ -164,8 +112,23 @@ export default class MediaPlayerSquareWidget {
         });
         this._coverStack.add_child(this._fallbackIcon);
 
-        this._artIcon = new St.Icon({
-            icon_size: COVER_SIZE - 8,
+        // Album art layer: a plain St.Widget painted via CSS
+        // background-image rather than an St.Icon holding a Gio.FileIcon.
+        // St.Icon fits the image *inside* its icon_size box preserving
+        // aspect ratio ("contain"), which is why art used to show up
+        // letterboxed with visible gaps instead of filling the cover
+        // area. Painting it as this actor's own background with
+        // `background-size: cover` crops any overflow instead of padding
+        // it, so the art always fills COVER_SIZE x COVER_SIZE exactly.
+        // It's also drawn at full COVER_SIZE with its own border-radius
+        // matching the cover frame - an actor's *background* respects its
+        // own border-radius when St paints it, even though
+        // clip_to_allocation on a parent only clips to a plain rectangle.
+        // (That mismatch - a square icon child inside a circular parent -
+        // was why media-player-circle's art never actually looked round.)
+        this._artIcon = new St.Widget({
+            width: COVER_SIZE,
+            height: COVER_SIZE,
             x_align: Clutter.ActorAlign.CENTER,
             y_align: Clutter.ActorAlign.CENTER,
             visible: false,
@@ -227,13 +190,20 @@ export default class MediaPlayerSquareWidget {
         this._controls.add_child(this._nextButton);
         this._actor.add_child(this._controls);
 
-        this._enterId = this._actor.connect('enter-event', () => {
-            this._controls.show();
-            return Clutter.EVENT_PROPAGATE;
-        });
-        this._leaveId = this._actor.connect('leave-event', () => {
-            this._controls.hide();
-            return Clutter.EVENT_PROPAGATE;
+        // Hover-reveal via St's built-in track_hover/`hover` property
+        // rather than manually wiring enter-event/leave-event on the
+        // root actor. The root has several overlapping reactive
+        // descendants on top of it (coverButton, and the controls
+        // themselves once shown) - track_hover is what St widgets use
+        // internally to track pointer hover correctly across exactly
+        // this kind of overlapping-children layout (it's the same
+        // mechanism behind every ":hover" CSS pseudo-class in the Shell),
+        // whereas hand-rolled enter/leave pairs on a plain actor are the
+        // documented-flaky way to do it and were the source of hover
+        // sometimes not registering while over the cover or the text.
+        this._actor.set_track_hover(true);
+        this._hoverId = this._actor.connect('notify::hover', () => {
+            this._controls.visible = this._actor.hover;
         });
 
         this._render();
@@ -252,13 +222,9 @@ export default class MediaPlayerSquareWidget {
             this._fallbackArea.disconnect(this._repaintId);
             this._repaintId = null;
         }
-        if (this._enterId !== null && this._actor) {
-            this._actor.disconnect(this._enterId);
-            this._enterId = null;
-        }
-        if (this._leaveId !== null && this._actor) {
-            this._actor.disconnect(this._leaveId);
-            this._leaveId = null;
+        if (this._hoverId !== null && this._actor) {
+            this._actor.disconnect(this._hoverId);
+            this._hoverId = null;
         }
     }
 
@@ -321,14 +287,20 @@ export default class MediaPlayerSquareWidget {
         }
     }
 
+    /** @private keeps the art layer's rounding in sync with the cover
+     * frame it sits inside - called from _render() since it's cheap and
+     * settings-driven radius changes should apply immediately. */
+    _applyArtStyle() {
+        if (this._artIcon)
+            this._artIcon.set_style(`border-radius: ${COVER_RADIUS}px; background-size: cover; background-position: center;`);
+    }
+
     /** @private applies settings-driven colors/fonts; safe to call before
      * a player has ever been seen. */
     _render() {
-        const backgroundColor = _toCssColor(this._settings.backgroundColor, '#000000F5');
-        const cornerRadius = this._settings.cornerRadius ?? 18;
-        this._actor.set_style(`background-color: ${backgroundColor}; border-radius: ${cornerRadius}px;` +
-            _shadowBoxShadowCss(this._settings));
+        this._actor.set_style(_cardStyleCss(this._settings, {cornerRadiusFallback: 18}));
         this._coverStack.set_style(`background-color: rgba(255,255,255,0.05); border-radius: ${COVER_RADIUS}px;`);
+        this._applyArtStyle();
 
         const infoColor = _toCssColor(this._settings.infoColor, '#FFFFFFFF');
         const infoFont = _parseFontDescription(this._settings.infoFont ?? 'Sans Bold 13', 'Sans Bold', 13);
@@ -362,14 +334,18 @@ export default class MediaPlayerSquareWidget {
         this._state = state;
 
         if (!state) {
-            this._titleLabel.set_text('No media playing');
+            this._titleLabel.set_text('');
             this._albumLabel.set_text('');
             this._artistLabel.set_text('');
+            this._textBox.hide();
+            this._scrim.hide();
             this._playPauseButton.child.icon_name = 'media-playback-start-symbolic';
             this._showFallbackArt();
             return;
         }
 
+        this._textBox.show();
+        this._scrim.show();
         this._titleLabel.set_text(state.title);
         this._albumLabel.set_text(state.album);
         this._artistLabel.set_text(state.artist);
@@ -382,7 +358,15 @@ export default class MediaPlayerSquareWidget {
                 const file = state.artUrl.startsWith('file://')
                     ? Gio.File.new_for_uri(state.artUrl)
                     : Gio.File.new_for_path(state.artUrl);
-                this._artIcon.gicon = new Gio.FileIcon({file});
+                // Painted as a CSS background (not an St.Icon gicon) so
+                // `background-size: cover` (set in _applyArtStyle()) can
+                // crop the art to fill COVER_SIZE x COVER_SIZE exactly,
+                // instead of St.Icon's aspect-preserving "contain" fit
+                // that left visible gaps around non-square artwork.
+                this._artIcon.set_style(
+                    `border-radius: ${COVER_RADIUS}px; background-size: cover; background-position: center; ` +
+                    `background-image: url("${file.get_uri()}");`
+                );
                 this._showArt();
             } catch (e) {
                 this._showFallbackArt();

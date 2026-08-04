@@ -1,0 +1,15 @@
+{
+  "id": "archey-sysfetch",
+  "name": "Archey System Fetch",
+  "description": "archey4-style card: ASCII distro logo plus OS, host, kernel, uptime, packages, shell, resolution, desktop, CPU, GPU and memory.",
+  "version": "1.0.0",
+  "author": "GNOME Widget Center",
+  "api-version": 1,
+  "entry": "widget.js",
+  "block-type": "4x1",
+  "default-position": {
+    "x": 40,
+    "y": 40,
+    "monitor": 0
+  }
+}

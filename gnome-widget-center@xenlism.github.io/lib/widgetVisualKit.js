@@ -66,6 +66,91 @@ export function shadowBoxShadowCss(settings) {
     return `box-shadow: ${offsetX}px ${offsetY}px ${blur}px 0px rgba(${r}, ${g}, ${b}, ${a});`;
 }
 
+/** Default text-shadow settings a widget's getDefaultSettings() should
+ * spread in (`...TEXT_SHADOW_DEFAULTS`). Same angle/distance/blur model
+ * as SHADOW_DEFAULTS above, just applied as `text-shadow` (behind glyphs)
+ * instead of `box-shadow` (behind the whole actor) - used for legibility
+ * of text sitting on top of a background image or a busy accent color.
+ * Default of angle 90 / distance 5 / blur 0 = a plain "0px 5px" drop
+ * straight down, no soft blur. */
+export const TEXT_SHADOW_DEFAULTS = {
+    textShadowEnabled: false,
+    textShadowColor: '#000000',
+    textShadowOpacity: 60, // percent, 0-100
+    textShadowAngle: 90,   // degrees: 0 = right, 90 = down, 180 = left, 270 = up
+    textShadowDistance: 5, // px
+    textShadowBlur: 0,     // px
+};
+
+/** Builds a `text-shadow: ...;` CSS declaration (St supports this the
+ * same way it supports box-shadow) from a widget's text-shadow settings,
+ * or '' when the shadow is off.
+ * @param {object} settings - widget settings object; only the
+ *   textShadow* fields are read, missing ones fall back to
+ *   TEXT_SHADOW_DEFAULTS.
+ * @returns {string}
+ */
+export function textShadowCss(settings) {
+    const s = settings ?? {};
+    if (!(s.textShadowEnabled ?? TEXT_SHADOW_DEFAULTS.textShadowEnabled))
+        return '';
+
+    const opacityPercent = Number.isFinite(s.textShadowOpacity) ? s.textShadowOpacity : TEXT_SHADOW_DEFAULTS.textShadowOpacity;
+    const angleDeg = Number.isFinite(s.textShadowAngle) ? s.textShadowAngle : TEXT_SHADOW_DEFAULTS.textShadowAngle;
+    const distance = Number.isFinite(s.textShadowDistance) ? s.textShadowDistance : TEXT_SHADOW_DEFAULTS.textShadowDistance;
+    const blur = Number.isFinite(s.textShadowBlur) ? Math.max(0, s.textShadowBlur) : TEXT_SHADOW_DEFAULTS.textShadowBlur;
+
+    const rad = (angleDeg * Math.PI) / 180;
+    const offsetX = Math.round(Math.cos(rad) * distance * 100) / 100;
+    const offsetY = Math.round(Math.sin(rad) * distance * 100) / 100;
+
+    let hex = (s.textShadowColor ?? TEXT_SHADOW_DEFAULTS.textShadowColor).trim().replace(/^#/, '');
+    if (hex.length === 3)
+        hex = hex.split('').map(c => c + c).join('');
+    if (!/^[0-9a-fA-F]{6}$/.test(hex))
+        hex = '000000';
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    const a = Math.min(1, Math.max(0, opacityPercent / 100));
+
+    return `text-shadow: ${offsetX}px ${offsetY}px ${blur}px rgba(${r}, ${g}, ${b}, ${a});`;
+}
+
+/** Standard "card style" builder — the single function every widget
+ * should call to build its root/content actor's `background-color;
+ * border-radius; box-shadow;` CSS, instead of hand-concatenating those
+ * three declarations itself (which is how media-player-square/circle/
+ * wide/poster ended up with four near-identical, slowly-drifting local
+ * copies of the same three lines before 2026-08-03).
+ * @param {object} settings - the widget's settings object
+ * @param {object} [options]
+ * @param {string} [options.backgroundColorKey='backgroundColor'] - settings field to read the background color from
+ * @param {string} [options.backgroundColorFallback='#000000F5'] - used when the field is missing/invalid
+ * @param {string} [options.cornerRadiusKey='cornerRadius'] - settings field to read the corner radius from
+ * @param {number} [options.cornerRadiusFallback=18] - used when the field is missing/invalid
+ * @param {boolean} [options.includeShadow=true] - append shadowBoxShadowCss(settings) too
+ * @returns {string} ready for `actor.set_style()`
+ */
+export function cardStyleCss(settings, options = {}) {
+    const {
+        backgroundColorKey = 'backgroundColor',
+        backgroundColorFallback = '#000000F5',
+        cornerRadiusKey = 'cornerRadius',
+        cornerRadiusFallback = 18,
+        includeShadow = true,
+    } = options;
+
+    const backgroundColor = toCssColor(settings?.[backgroundColorKey], backgroundColorFallback);
+    const cornerRadiusRaw = settings?.[cornerRadiusKey];
+    const cornerRadius = Number.isFinite(cornerRadiusRaw) ? cornerRadiusRaw : cornerRadiusFallback;
+
+    let css = `background-color: ${backgroundColor}; border-radius: ${cornerRadius}px;`;
+    if (includeShadow)
+        css += shadowBoxShadowCss(settings);
+    return css;
+}
+
 /** "#rrggbb" or "#rrggbbaa" -> {r,g,b,a} each 0..1, for Cairo drawing
  * (cr.setSourceRGBA() etc). Invalid input falls back to opaque white.
  * @param {string} hex

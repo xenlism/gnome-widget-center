@@ -106,6 +106,32 @@ class PrefsWindowControllerBase {
         this._settings = null;
         this._storage = null;
         this._discovered = [];
+        /** @private set once build() has run - see showPreferencesPage(). */
+        this._preferencesPage = null;
+    }
+
+    /**
+     * @description Jumps an already-built window straight to the
+     * "Preferences" top-level tab, skipping past Overview/Store — added
+     * for widget-center-prefs-app.js's `--focus=preferences` flag (used
+     * by lib/widgetCenterOverlay.js's Preferences tab, which already has
+     * its own native widget list and doesn't want to show Overview
+     * again). No-op if build() hasn't run yet. Same idle-loop deferral as
+     * jumpToWidget()/_jumpToWidgetPrefs() and for the same reason: the
+     * window needs to be mapped before set_visible_page() takes effect.
+     * @param {Adw.PreferencesWindow} window
+     */
+    showPreferencesPage(window) {
+        if (!this._preferencesPage)
+            return;
+        GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            try {
+                window.set_visible_page(this._preferencesPage);
+            } catch (e) {
+                logError(e, '[widget-center] prefs: showPreferencesPage() failed');
+            }
+            return GLib.SOURCE_REMOVE;
+        });
     }
 
     /** @private standalone-app fallback for `this.metadata` (see constructor doc) - plain JSON read, same file GNOME itself parses for the ExtensionPreferences path. */
@@ -165,6 +191,15 @@ class PrefsWindowControllerBase {
             return false; // still allow the window to close normally.
         });
 
+        const settings = new SettingsService(
+            this._extensionObject ?? GLib.build_filenamev([this.path, 'schemas'])
+        );
+        try {
+            settings.init();
+        } catch (e) {
+            logError(e, '[widget-center] prefs: SettingsService.init() failed');
+        }
+
         // Extension-level UI strings (tab titles, category names, etc —
         // see gen/generate_i18n.py's EXTENSION_KEYS). GNOME Shell awaits
         // fillPreferencesWindow() if it returns a Promise (has since
@@ -174,16 +209,12 @@ class PrefsWindowControllerBase {
         // only 15 short strings here, the wait is imperceptible, and it
         // means every tab is correctly labeled from the very first frame
         // instead of visibly relabeling itself a moment later.
-        this._i18n = await loadTranslations(GLib.build_filenamev([this.path, 'i18n'])).catch(() => ({}));
-
-        const settings = new SettingsService(
-            this._extensionObject ?? GLib.build_filenamev([this.path, 'schemas'])
-        );
-        try {
-            settings.init();
-        } catch (e) {
-            logError(e, '[widget-center] prefs: SettingsService.init() failed');
-        }
+        // 2026-08-04: settings is now built BEFORE this (used to be
+        // after) specifically so the `language` override below can be
+        // read in time for this very first load, rather than only
+        // taking effect on the next widget subpage opened afterwards.
+        const languageOverride = settings.isReady ? (settings.getGlobalValue('language') || undefined) : undefined;
+        this._i18n = await loadTranslations(GLib.build_filenamev([this.path, 'i18n']), languageOverride).catch(() => ({}));
 
         // Same StorageService file layer extension.js uses — plain
         // Gio/GLib file I/O, so it's just as safe to use from this
@@ -203,7 +234,7 @@ class PrefsWindowControllerBase {
 
         this._buildOverviewPage(window, settings, storage, ok, errors);
         this._buildStorePage(window);
-        this._buildPreferencesPage(window, settings, storage, ok, {bundledWidgetsPath, userWidgetsPath});
+        this._preferencesPage = this._buildPreferencesPage(window, settings, storage, ok, {bundledWidgetsPath, userWidgetsPath});
 
         // 2026-07-20 fix ("click settings opens the extension prefs, not
         // the widget prefs"): extension.js's Edit Mode "Settings" action

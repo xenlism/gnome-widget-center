@@ -93,6 +93,18 @@ export default class FolderWidget3x3 {
             coordinate: Clutter.BindCoordinate.SIZE,
         }));
         this._actor.add_child(this._content);
+        // FixedLayout uses a child's natural size when allocating it.  A
+        // BindConstraint alone therefore leaves this card at the icon
+        // grid's natural 304px square instead of the root's block size.
+        // Mirror root-size changes explicitly so the painted card always
+        // occupies the complete block allocated by BlockSizeManager.
+        const syncContentSize = () => {
+            this._content.set_position(0, 0);
+            this._content.set_size(this._actor.width, this._actor.height);
+        };
+        this._actor.connect('notify::width', syncContentSize);
+        this._actor.connect('notify::height', syncContentSize);
+        syncContentSize();
 
         const grid = new St.BoxLayout({vertical: true});
 

@@ -62,20 +62,48 @@ export class WidgetLoader {
      *   where _enforceBlockSize() never actually runs anyway) are
      *   unaffected. extension.js seeds this from the `widget-spacing`
      *   GSetting and keeps it live via the shadowOverflowMargin setter.
+     * @param {SettingsService|null} [hostSettings] - 2026-08-04. Optional,
+     *   only extension.js passes one (prefs.js's PrefsWidgetList doesn't
+     *   need it - it never calls buildActor()). Backs api.hostLanguage
+     *   (§5 of WIDGET_API.md) - read live off this each time a widget
+     *   accesses it, so it's never a stale snapshot even without
+     *   notifyHostLanguageChanged() below being called.
      */
-    constructor(searchPaths, storageService = null, logger = console, shadowOverflowMargin = 0) {
+    constructor(searchPaths, storageService = null, logger = console, shadowOverflowMargin = 0, hostSettings = null) {
         this._searchPaths = searchPaths;
         this._storageService = storageService;
         this._logger = logger;
         this._instances = new Map(); // id -> {id, metadata, path, ModuleClass, instance, actor, settings}
         this._errors = [];           // [{id, path, reason}]
         this._shadowOverflowMargin = Math.max(0, Number(shadowOverflowMargin) || 0);
+        this._hostSettings = hostSettings;
 
         // Cross-process live update — only meaningful with a real
         // StorageService (same optionality as `settings` itself below;
         // callers that pass none, e.g. lightweight tests, simply never
         // get file monitors installed).
         this._settingsWatcher = storageService ? new SettingsWatcher(storageService) : null;
+    }
+
+    /** Called by extension.js's SettingsService.onChanged('language', ...)
+     * listener - actively pushes the new value to every currently-loaded
+     * widget instance that opted into WIDGET_API.md §3's
+     * onHostLanguageChanged(language) hook, for widgets that need to
+     * redo work immediately (reload a translation table, re-render)
+     * rather than just picking up the new value next time something else
+     * happens to re-render them (api.hostLanguage is live either way -
+     * see the getter in _buildApi() below - this is only for the "do
+     * something right now" case).
+     * @param {string} language
+     */
+    notifyHostLanguageChanged(language) {
+        for (const entry of this._instances.values()) {
+            try {
+                entry.instance.onHostLanguageChanged?.(language);
+            } catch (e) {
+                this._logger.error?.(`[widget-loader] "${entry.id}".onHostLanguageChanged() threw`, e);
+            }
+        }
     }
 
     /** Current shadow-bleed clip margin in px - see the constructor doc. */
@@ -647,11 +675,22 @@ export class WidgetLoader {
     }
 
     _buildApi(widgetInfo, settings) {
+        const hostSettings = this._hostSettings;
         return {
             settings,
             monitorInfo: null,
             position: this._buildPositionApi(widgetInfo),
             bus: {emit() {}, on() {}, off() {}},
+            // A getter, not a plain string snapshot - always reads the
+            // CURRENT GSettings value, so it's never stale even for a
+            // widget that only reads it once during a re-render
+            // triggered by something else (see notifyHostLanguageChanged()
+            // above for actively pushing a change instead of waiting for
+            // that). '' means "no override, use system locale" - same
+            // meaning as the gschema key's own default.
+            get hostLanguage() {
+                return hostSettings?.isReady ? (hostSettings.getGlobalValue('language') || '') : '';
+            },
             path: {
                 // Absolute path to this widget's own folder on disk - e.g.
                 // for reading a bundled asset (icons/, a template file)

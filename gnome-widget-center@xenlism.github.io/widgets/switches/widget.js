@@ -42,7 +42,7 @@ import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Gvc from 'gi://Gvc';
-import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, hexToRgba as _hexToRgba} from '../../lib/widgetVisualKit.js';
+import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba} from '../../lib/widgetVisualKit.js';
 
 const BUTTON_WIDTH = 64;
 const BUTTON_HEIGHT = 140;
@@ -84,8 +84,6 @@ export default class SwitchesWidget {
     buildActor() {
         this._baseColor = this._settings?.baseColor ?? '#9a9996';
         this._highlightColor = this._settings?.highlightColor ?? '#3584e4';
-        const backgroundColor = this._settings?.backgroundColor ?? '#000000a9';
-        const cornerRadius = this._settings?.cornerRadius ?? 18;
 
         // Plain root (see widgets/settings-control/widget.js's header for
         // why): lib/blockSizeManager.js's applyBlockSize() force-sets this
@@ -108,7 +106,7 @@ export default class SwitchesWidget {
             coordinate: Clutter.BindCoordinate.SIZE,
         }));
         this._actor.add_child(this._content);
-        this._content.set_style(this._cardStyle(backgroundColor, cornerRadius) + `padding: ${PADDING}px;`);
+        this._content.set_style(_cardStyleCss(this._settings, {backgroundColorFallback: '#000000a9', cornerRadiusFallback: 18}) + `padding: ${PADDING}px;`);
 
         const row = new St.BoxLayout({vertical: false, x_align: Clutter.ActorAlign.CENTER, y_align: Clutter.ActorAlign.CENTER});
         this._content.set_child(row);
@@ -187,10 +185,8 @@ export default class SwitchesWidget {
     onSettingsChanged() {
         this._baseColor = this._settings.baseColor ?? '#9a9996';
         this._highlightColor = this._settings.highlightColor ?? '#3584e4';
-        const backgroundColor = this._settings.backgroundColor ?? '#000000a9';
-        const cornerRadius = this._settings.cornerRadius ?? 18;
         if (this._content)
-            this._content.set_style(this._cardStyle(backgroundColor, cornerRadius) + `padding: ${PADDING}px;`);
+            this._content.set_style(_cardStyleCss(this._settings, {backgroundColorFallback: '#000000a9', cornerRadiusFallback: 18}) + `padding: ${PADDING}px;`);
 
         // Re-paint both buttons at their current on/off state with the
         // (possibly changed) base/highlight colors.
@@ -315,14 +311,5 @@ export default class SwitchesWidget {
         const hex = isOn ? this._highlightColor : this._baseColor;
         const {r, g, b, a} = _hexToRgba(hex);
         button.set_style(`background-color: rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${a}); border-radius: ${BUTTON_WIDTH / 2}px;`);
-    }
-
-    /** @private builds the card's inline style string (same hex-alpha
-     * rationale as widgets/settings-control/widget.js's identical
-     * helper). */
-    _cardStyle(hexColor, cornerRadius) {
-        const {r, g, b, a} = _hexToRgba(hexColor);
-        return `background-color: rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${a}); border-radius: ${cornerRadius}px; ` +
-            _shadowBoxShadowCss(this._settings);
     }
 }

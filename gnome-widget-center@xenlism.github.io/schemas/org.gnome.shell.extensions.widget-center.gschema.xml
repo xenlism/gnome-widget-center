@@ -95,5 +95,95 @@
       </description>
     </key>
 
+    <key name="language" type="s">
+      <default>''</default>
+      <summary>UI language override</summary>
+      <description>
+        A locale code from lib/i18nUtils.js-adjacent i18n/index.js's
+        SUPPORTED_LOCALES (e.g. "th", "ja"), or '' (the default) to use
+        GLib.get_language_names()'s system locale order, unchanged, same
+        as before this key existed. See i18nUtils.js's pickLocale() —
+        callers now pass this value as its optional override argument.
+      </description>
+    </key>
+
+    <key name="guide-color" type="s">
+      <default>'#F5A623E6'</default>
+      <summary>Color of the alignment guide lines shown while dragging a widget</summary>
+      <description>
+        8-digit #rrggbbaa hex, read by lib/guideRenderer.js. Same amber
+        used for the media-player-circle progress ring, kept as the
+        default so the two don't clash visually by coincidence.
+      </description>
+    </key>
+
+    <key name="snap-enabled" type="b">
+      <default>true</default>
+      <summary>Enable magnetic edge/widget snapping while dragging</summary>
+      <description>
+        Master on/off for lib/snapManager.js's SnapManager.computeSnap()
+        - the "pull toward screen edges and other widgets' edges while
+        dragging" behavior. When off, a dragged widget follows the
+        pointer exactly (still subject to prevent-widget-overlap/
+        edge-margin clamping, which are separate settings above).
+      </description>
+    </key>
+
+    <key name="snap-distance" type="i">
+      <default>16</default>
+      <summary>Magnetic snap pull radius, in pixels</summary>
+      <description>
+        Replaces lib/snapManager.js's old hardcoded SNAP_DISTANCE=16
+        module constant. How close (px) a dragged widget's edge must get
+        to a snap target (screen edge or another widget's edge) before
+        it's pulled the rest of the way. Only applies while snap-enabled
+        is on.
+      </description>
+    </key>
+
+    <key name="grid-snap-enabled" type="b">
+      <default>false</default>
+      <summary>Snap dragged widgets to a fixed pixel grid</summary>
+      <description>
+        2026-08-04. Off by default - free pixel placement (2026-07-28)
+        is still the default placement model. When on, applied AFTER
+        magnetic snapping/clamping in lib/snapManager.js:
+        computeSnap()'s result is additionally rounded to the nearest
+        grid-size multiple (measured from edge-margin, not from 0,0) -
+        an explicit opt-in for users who want the old grid-snap feel
+        back, without reintroducing it as the default for everyone.
+      </description>
+    </key>
+
+    <key name="grid-size" type="i">
+      <default>16</default>
+      <summary>Grid cell size (px) used by grid-snap-enabled</summary>
+      <description>
+        Only has any effect while grid-snap-enabled is on. Unrelated to
+        lib/blockSizeManager.js's BLOCK_CELL_SIZE=16 (a widget's own
+        block-type footprint math) even though they happen to share the
+        same default value - that one is fixed/internal, this one is a
+        user-facing drag-snap preference and can be changed freely.
+      </description>
+    </key>
+
+    <key name="widget-center-overlay-keybinding" type="as">
+      <default>['&lt;Super&gt;F12']</default>
+      <summary>Shortcut that toggles the fullscreen Widget Center overlay</summary>
+      <description>
+        Read by lib/widgetCenterOverlay.js via Main.wm.addKeybinding().
+        Array-of-strings type is required by that API's GSettings contract
+        even though only the first entry is ever used here.
+        User-customizable both from the overlay's own Preferences tab
+        (lib/widgetCenterOverlayPreferences.js, captured live via a
+        Clutter key-press grab) and from this extension's real
+        Preferences window's Interactions category
+        (lib/prefsPageBuilders.js). 2026-08-04: this key replaces an
+        earlier, unmerged draft called "overlay-shortcut" that duplicated
+        this same feature before the overlay's own already-working
+        keybinding code was found - never shipped, no migration needed.
+      </description>
+    </key>
+
   </schema>
 </schemalist>

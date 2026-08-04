@@ -57,7 +57,10 @@ import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import {SystemMetricsService} from '../../lib/systemMetricsApi.js';
-import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor} from '../../lib/widgetVisualKit.js';
+import {
+    SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor,
+    TEXT_SHADOW_DEFAULTS, textShadowCss as _textShadowCss,
+} from '../../lib/widgetVisualKit.js';
 
 const REFRESH_INTERVAL_SECONDS = 30;
 const CARD_PADDING = 16;
@@ -295,6 +298,11 @@ export default class GeekArcheySystechSqureWidget {
     getDefaultSettings() {
         return {
             ...SHADOW_DEFAULTS,
+            // On by default, matching every other 'geek' widget - see
+            // lib/widgetVisualKit.js's TEXT_SHADOW_DEFAULTS. 90deg/0px/5px
+            // is a plain soft drop straight down.
+            ...TEXT_SHADOW_DEFAULTS,
+            textShadowEnabled: true,
             distro: 'linux',
             // Set true once _detectLinuxDistro() has run and written its
             // guess into `distro` - keeps first-run auto-detection from
@@ -450,7 +458,11 @@ export default class GeekArcheySystechSqureWidget {
 
         const user = GLib.get_user_name();
         const host = GLib.get_host_name();
-        this._headerLabel.set_style('font-family: monospace; font-size: 13px; font-weight: bold; color: #ffffff;');
+        const textShadow = _textShadowCss(this._settings);
+
+        this._headerLabel.set_style(
+            `font-family: monospace; font-size: 13px; font-weight: bold; color: #ffffff;${textShadow}`
+        );
         this._headerLabel.text = `${user}@${host}`;
 
         this._sepLabel.set_style(`font-family: monospace; font-size: 11px; color: ${accent}; margin-bottom: 4px;`);
@@ -458,7 +470,7 @@ export default class GeekArcheySystechSqureWidget {
 
         for (const [key, {bullet, value, label, color}] of Object.entries(this._rows)) {
             bullet.set_style(`font-family: monospace; font-size: 11px; color: ${color}; margin-right: 6px;`);
-            value.set_style('font-family: monospace; font-size: 11px; color: #e5e5e5;');
+            value.set_style(`font-family: monospace; font-size: 11px; color: #e5e5e5;${textShadow}`);
             value.text = `${label}: ${this._info[key] ?? '\u2026'}`;
         }
 

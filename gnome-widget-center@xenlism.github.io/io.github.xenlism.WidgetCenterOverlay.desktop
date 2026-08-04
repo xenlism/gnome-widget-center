@@ -1,0 +1,25 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=GNOME Widget Center
+Comment=Open the fullscreen Widget Center overlay (widgets, themes, settings)
+Icon=view-grid-symbolic
+Terminal=false
+NoDisplay=false
+Categories=Settings;GTK;GNOME;
+StartupWMClass=io.github.xenlism.WidgetCenterOverlay
+
+; The overlay itself (lib/widgetCenterOverlay.js) is St/Clutter-based, so —
+; unlike widget-center-prefs-app.js's standalone Adw window — it can ONLY
+; run inside the running gnome-shell process; this .desktop can't launch
+; it directly as its own process. Instead it asks the extension (if
+; enabled and WidgetCenterOverlay.enable() has run — see
+; lib/widget-center-overlay-integration-example.js) to toggle its already-
+; running overlay over the D-Bus interface that file exports:
+;   io.github.xenlism.WidgetCenterOverlay  /io/github/xenlism/WidgetCenterOverlay
+; @EXTENSION_INSTALL_PATH@ is unused here (no absolute path needed, unlike
+; the Prefs .desktop) but the substitution step this project already uses
+; for io.github.xenlism.WidgetCenterPrefs.desktop is worth keeping around
+; in case a packaging script wants to template both the same way — see
+; that file's own comment for the sed example.
+Exec=gdbus call --session --dest io.github.xenlism.WidgetCenterOverlay --object-path /io/github/xenlism/WidgetCenterOverlay --method io.github.xenlism.WidgetCenterOverlay.Toggle
