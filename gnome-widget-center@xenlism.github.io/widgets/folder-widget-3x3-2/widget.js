@@ -39,7 +39,7 @@ import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
-import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss} from '../../lib/widgetVisualKit.js';
+import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor} from '../../lib/widgetVisualKit.js';
 
 const GRID_COLS = 3;
 const GRID_ROWS = 3;
@@ -93,6 +93,18 @@ export default class FolderWidget3x3 {
             coordinate: Clutter.BindCoordinate.SIZE,
         }));
         this._actor.add_child(this._content);
+        // FixedLayout uses a child's natural size when allocating it.  A
+        // BindConstraint alone therefore leaves this card at the icon
+        // grid's natural 304px square instead of the root's block size.
+        // Mirror root-size changes explicitly so the painted card always
+        // occupies the complete block allocated by BlockSizeManager.
+        const syncContentSize = () => {
+            this._content.set_position(0, 0);
+            this._content.set_size(this._actor.width, this._actor.height);
+        };
+        this._actor.connect('notify::width', syncContentSize);
+        this._actor.connect('notify::height', syncContentSize);
+        syncContentSize();
 
         const grid = new St.BoxLayout({vertical: true});
 
@@ -165,9 +177,14 @@ export default class FolderWidget3x3 {
     /** @private */
     _render() {
         const apps = (this._settings.apps ?? []).slice(0, MAX_APPS);
+        const backgroundColor = _toCssColor(this._settings.backgroundColor, '#FFFFFF0F');
+        const cornerRadius = this._settings.cornerRadius ?? 18;
+
         this._content.set_style(
-            _cardStyleCss(this._settings, {backgroundColorFallback: '#FFFFFF0F', cornerRadiusFallback: 18}) +
-            `padding: ${CARD_PADDING}px;`
+            `background-color: ${backgroundColor}; ` +
+            `border-radius: ${cornerRadius}px; ` +
+            `padding: ${CARD_PADDING}px;` +
+            _shadowBoxShadowCss(this._settings)
         );
 
         for (let i = 0; i < this._cells.length; i++) {

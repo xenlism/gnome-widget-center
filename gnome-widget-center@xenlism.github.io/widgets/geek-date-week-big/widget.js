@@ -27,7 +27,7 @@ import GLib from 'gi://GLib';
 // SKILL.md "Before writing anything" table / gotchas).
 import Clutter from 'gi://Clutter';
 import {
-    SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss,
+    SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor,
     parseFontDescription as _parseFontDescription, TEXT_SHADOW_DEFAULTS, textShadowCss as _textShadowCss,
 } from '../../lib/widgetVisualKit.js';
 
@@ -80,12 +80,12 @@ export default class GeekDateWeekBigWidget {
             ...TEXT_SHADOW_DEFAULTS,
             textShadowEnabled: true, textShadowDistance: 2, textShadowBlur: 4,
 
-            dateFont: 'Sans Bold 80',
+            dateFont: 'Sans Bold 44',
             dateColor: '#ffffff',
-            weekFont: 'Sans Bold 14',
+            weekFont: 'Sans Bold 20',
             weekColor: '#e6e6e6',
 
-            backgroundColor: '#FFFFFF00',
+            backgroundColor: '#1a2a33b3',
             textAlign: 'center',
             cornerRadius: 18,
         };
@@ -123,18 +123,23 @@ export default class GeekDateWeekBigWidget {
         const now = GLib.DateTime.new_now_local();
 
         const {family: dateFontFamily, size: dateFontSize} =
-            _parseFontDescription(this._settings.dateFont ?? 'Sans Bold 80', 'Sans Bold', 80);
+            _parseFontDescription(this._settings.dateFont ?? 'Sans Bold 44', 'Sans Bold', 44);
         const {family: weekFontFamily, size: weekFontSize} =
-            _parseFontDescription(this._settings.weekFont ?? 'Sans Bold 14', 'Sans Bold', 14);
+            _parseFontDescription(this._settings.weekFont ?? 'Sans Bold 20', 'Sans Bold', 20);
 
         const dateColor = this._settings.dateColor ?? '#ffffff';
         const weekColor = this._settings.weekColor ?? '#e6e6e6';
+        const backgroundColor = _toCssColor(this._settings.backgroundColor ?? '#1a2a33b3', '#1a2a33b3');
+        const cornerRadius = this._settings.cornerRadius ?? 18;
         const textAlign = ['left', 'center', 'right'].includes(this._settings.textAlign) ? this._settings.textAlign : 'center';
         const textShadowCss = _textShadowCss(this._settings);
 
         this._actor.set_style(
-            _cardStyleCss(this._settings, {backgroundColorFallback: '#FFFFFF00', cornerRadiusFallback: 18}) +
-            'padding: 20px 28px; spacing: 8px;'
+            `background-color: ${backgroundColor}; ` +
+            `border-radius: ${cornerRadius}px; ` +
+            'padding: 20px 28px; ' +
+            'spacing: 8px;' +
+            _shadowBoxShadowCss(this._settings)
         );
 
         const topText = (now.format('%d %B %Y') ?? '').toUpperCase();

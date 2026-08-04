@@ -29,7 +29,7 @@ import Gio from 'gi://Gio';
 import Clutter from 'gi://Clutter';
 import {SystemMetricsService} from '../../lib/systemMetricsApi.js';
 import {
-    SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss,
+    SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor,
     parseFontDescription as _parseFontDescription, TEXT_SHADOW_DEFAULTS, textShadowCss as _textShadowCss,
 } from '../../lib/widgetVisualKit.js';
 
@@ -155,6 +155,8 @@ export default class GeekWeekStatBarWidget {
 
         const weekColor = this._settings.weekColor ?? '#ffffff';
         const systemColor = this._settings.systemColor ?? '#e6e6e6';
+        const backgroundColor = _toCssColor(this._settings.backgroundColor ?? '#1a2a33b3', '#1a2a33b3');
+        const cornerRadius = this._settings.cornerRadius ?? 18;
         const textAlign = ['left', 'center', 'right'].includes(this._settings.textAlign) ? this._settings.textAlign : 'center';
         const textShadowCss = _textShadowCss(this._settings);
 
@@ -165,8 +167,11 @@ export default class GeekWeekStatBarWidget {
             `MEM ${Math.round(memory.percent)}%   ` +
             `DISK ${Math.round(disk.percent)}%`;
         this._actor.set_style(
-            _cardStyleCss(this._settings, {backgroundColorFallback: '#1a2a33b3', cornerRadiusFallback: 18}) +
-            'padding: 8px 18px; spacing: 2px;'
+            `background-color: ${backgroundColor}; ` +
+            `border-radius: ${cornerRadius}px; ` +
+            'padding: 8px 18px; ' +
+            'spacing: 2px;' +
+            _shadowBoxShadowCss(this._settings)
         );
 
         const topText = (now.format('%A') ?? '').toUpperCase();

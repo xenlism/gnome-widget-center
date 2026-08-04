@@ -37,14 +37,14 @@
           ]
         },
         {
-          "id": "buttons",
-          "label": "Switch colors",
-          "description": "Each pill switch's fill is base color when off, highlight color when on. The icon glyph itself always stays white.",
+          "id": "sliders",
+          "label": "Slider colors",
+          "description": "Each pill is a vertical drag slider (bottom = 0%, top = 100%). Base color is the empty track, highlight color is the filled portion. The icon glyph itself always stays white.",
           "fields": [
             {
               "id": "baseColor",
               "label": "Base color",
-              "description": "Pill fill when that switch is off",
+              "description": "Pill track color - the empty (unfilled) portion",
               "dataType": "string",
               "fieldType": "colorpicker",
               "format": "color",
@@ -54,12 +54,31 @@
             {
               "id": "highlightColor",
               "label": "Highlight color",
-              "description": "Pill fill when that switch is on",
+              "description": "Pill fill color - the filled portion, from the bottom up to the current level",
               "dataType": "string",
               "fieldType": "colorpicker",
               "format": "color",
               "alpha": true,
               "default": "#3584e4"
+            }
+          ]
+        },
+        {
+          "id": "behavior",
+          "label": "Behavior",
+          "description": "",
+          "fields": [
+            {
+              "id": "refreshRateSeconds",
+              "label": "Refresh rate",
+              "description": "How often volume/brightness are re-read as a backstop, in addition to updating instantly on change notifications",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 3,
+              "min": 1,
+              "max": 60,
+              "step": 1,
+              "suffix": "s"
             }
           ]
         }

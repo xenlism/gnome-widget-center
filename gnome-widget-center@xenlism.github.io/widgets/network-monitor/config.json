@@ -35,7 +35,7 @@
         {
           "id": "graph",
           "label": "Graph",
-          "description": "",
+          "description": "Download and upload share an adaptive scale based on recent traffic.",
           "fields": [
             {
               "id": "downloadLineColor",

@@ -34,7 +34,7 @@ import Gio from 'gi://Gio';
 import Clutter from 'gi://Clutter';
 import {SystemMetricsService} from '../../lib/systemMetricsApi.js';
 import {
-    SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss,
+    SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor,
     parseFontDescription as _parseFontDescription, TEXT_SHADOW_DEFAULTS, textShadowCss as _textShadowCss,
 } from '../../lib/widgetVisualKit.js';
 
@@ -95,13 +95,13 @@ export default class GeekDateStatBigWidget {
             updateInterval: 2,
             diskPath: '/',
 
-            dateFont: 'Sans Bold 80',
+            dateFont: 'Sans Bold 44',
             dateColor: '#ffffff',
 
-            systemFont: 'Sans Bold 14',
+            systemFont: 'Sans Bold 20',
             systemColor: '#e6e6e6',
 
-            backgroundColor: '#FFFFFF00',
+            backgroundColor: '#1a2a33b3',
             textAlign: 'center',
             cornerRadius: 18,
         };
@@ -157,18 +157,23 @@ export default class GeekDateStatBigWidget {
         const now = GLib.DateTime.new_now_local();
 
         const {family: dateFontFamily, size: dateFontSize} =
-            _parseFontDescription(this._settings.dateFont ?? 'Sans Bold 80', 'Sans Bold', 80);
+            _parseFontDescription(this._settings.dateFont ?? 'Sans Bold 44', 'Sans Bold', 44);
         const {family: systemFontFamily, size: systemFontSize} =
-            _parseFontDescription(this._settings.systemFont ?? 'Sans Bold 14', 'Sans Bold', 14);
+            _parseFontDescription(this._settings.systemFont ?? 'Sans Bold 20', 'Sans Bold', 20);
 
         const dateColor = this._settings.dateColor ?? '#ffffff';
         const systemColor = this._settings.systemColor ?? '#e6e6e6';
+        const backgroundColor = _toCssColor(this._settings.backgroundColor ?? '#1a2a33b3', '#1a2a33b3');
+        const cornerRadius = this._settings.cornerRadius ?? 18;
         const textAlign = ['left', 'center', 'right'].includes(this._settings.textAlign) ? this._settings.textAlign : 'center';
         const textShadowCss = _textShadowCss(this._settings);
 
         this._actor.set_style(
-            _cardStyleCss(this._settings, {backgroundColorFallback: '#FFFFFF00', cornerRadiusFallback: 18}) +
-            'padding: 20px 28px; spacing: 8px;'
+            `background-color: ${backgroundColor}; ` +
+            `border-radius: ${cornerRadius}px; ` +
+            'padding: 20px 28px; ' +
+            'spacing: 8px;' +
+            _shadowBoxShadowCss(this._settings)
         );
 
         // Date line, e.g. "02 AUGUST 2026" - locale day/month/year,

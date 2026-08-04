@@ -36,7 +36,7 @@ import GLib from 'gi://GLib';
 // SKILL.md "Before writing anything" table / gotchas).
 import Clutter from 'gi://Clutter';
 import {
-    SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss,
+    SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor,
     parseFontDescription as _parseFontDescription, TEXT_SHADOW_DEFAULTS, textShadowCss as _textShadowCss,
 } from '../../lib/widgetVisualKit.js';
 
@@ -89,19 +89,19 @@ export default class GeekClockDateBayWidget {
             ...TEXT_SHADOW_DEFAULTS,
             textShadowEnabled: true, textShadowDistance: 2, textShadowBlur: 4,
 
-            clockFont: 'Sans Bold 80',
+            clockFont: 'Sans Bold 40',
             clockColor: '#ffffff',
             clock24Hour: true,
             clockShowSeconds: false,
 
             dateTextEnabled: true,
-            dateFont: 'Sans Bold 14',
+            dateFont: 'Sans Bold 18',
             dateColor: '#e6e6e6',
             dateFormat: 'auto',
 
             textAlign: 'center',
 
-            backgroundColor: '#FFFFFF00',
+            backgroundColor: '#1a2a33b3',
             cornerRadius: 18,
         };
     }
@@ -179,19 +179,24 @@ export default class GeekClockDateBayWidget {
         const now = GLib.DateTime.new_now_local();
 
         const {family: clockFontFamily, size: clockFontSize} =
-            _parseFontDescription(this._settings.clockFont ?? 'Sans Bold 80', 'Sans Bold', 80);
+            _parseFontDescription(this._settings.clockFont ?? 'Sans Bold 40', 'Sans Bold', 40);
         const {family: dateFontFamily, size: dateFontSize} =
-            _parseFontDescription(this._settings.dateFont ?? 'Sans Bold 14', 'Sans Bold', 14);
+            _parseFontDescription(this._settings.dateFont ?? 'Sans Bold 18', 'Sans Bold', 18);
 
         const clockColor = this._settings.clockColor ?? '#ffffff';
         const dateColor = this._settings.dateColor ?? '#e6e6e6';
+        const backgroundColor = _toCssColor(this._settings.backgroundColor ?? '#1a2a33b3', '#1a2a33b3');
+        const cornerRadius = this._settings.cornerRadius ?? 18;
         const textAlign = ['left', 'center', 'right'].includes(this._settings.textAlign) ? this._settings.textAlign : 'center';
         const textShadowCss = _textShadowCss(this._settings);
         const dateTextEnabled = this._settings.dateTextEnabled ?? true;
 
         this._actor.set_style(
-            _cardStyleCss(this._settings, {backgroundColorFallback: '#FFFFFF00', cornerRadiusFallback: 18}) +
-            'padding: 14px 24px; spacing: 6px;'
+            `background-color: ${backgroundColor}; ` +
+            `border-radius: ${cornerRadius}px; ` +
+            'padding: 14px 24px; ' +
+            'spacing: 6px;' +
+            _shadowBoxShadowCss(this._settings)
         );
 
         // Clock line, e.g. "14:30" / "02:30:05 PM" depending on the

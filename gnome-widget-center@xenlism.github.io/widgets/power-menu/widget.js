@@ -35,7 +35,7 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
-import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss} from '../../lib/widgetVisualKit.js';
+import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss} from '../../lib/widgetVisualKit.js';
 
 const TOOLTIP_SHOW_DELAY_MS = 400;
 const ICON_SIZE = 22;
@@ -60,6 +60,8 @@ export default class PowerMenuWidget {
     // (DBus proxies are created in enable(); a click before that simply
     // no-ops via the `?.` guards in the *_call* helpers below).
     buildActor() {
+        const backgroundColor = this._settings?.backgroundColor ?? '#ffffffd9';
+        const cornerRadius = this._settings?.cornerRadius ?? 18;
         const iconColor = this._settings?.iconColor ?? '#2e2e2e';
 
         // Plain (non-layout-managed-by-parent) root so tooltip labels can
@@ -86,7 +88,17 @@ export default class PowerMenuWidget {
             coordinate: Clutter.BindCoordinate.SIZE,
         }));
         this._actor.add_child(this._content);
-        this._content.set_style(_cardStyleCss(this._settings, {backgroundColorFallback: '#ffffffd9', cornerRadiusFallback: 18}) + `padding: ${PADDING}px;`);
+        // FixedLayout otherwise allocates this card at the grid's natural
+        // size. Keep the card at the complete 1x1 block so its 2x2 button
+        // grid has the intended, symmetric padding on every side.
+        const syncContentSize = () => {
+            this._content.set_position(0, 0);
+            this._content.set_size(this._actor.width, this._actor.height);
+        };
+        this._actor.connect('notify::width', syncContentSize);
+        this._actor.connect('notify::height', syncContentSize);
+        syncContentSize();
+        this._content.set_style(this._cardStyle(backgroundColor, cornerRadius) + `padding: ${PADDING}px;`);
 
         this._grid = new St.Widget({
             style_class: 'power-menu-widget-grid',
@@ -177,11 +189,46 @@ export default class PowerMenuWidget {
         if (!this._actor)
             return;
 
-        this._content.set_style(_cardStyleCss(settings, {backgroundColorFallback: '#ffffffd9', cornerRadiusFallback: 18}) + `padding: ${PADDING}px;`);
+        const backgroundColor = settings?.backgroundColor ?? '#ffffffd9';
+        const cornerRadius = settings?.cornerRadius ?? 18;
+        this._content.set_style(this._cardStyle(backgroundColor, cornerRadius) + `padding: ${PADDING}px;`);
 
         const iconColor = settings?.iconColor ?? '#2e2e2e';
         for (const icon of this._icons)
             icon.set_style(`color: ${iconColor};`);
+    }
+
+    /**
+     * @private builds the card's inline style string. Transparency comes
+     * straight from the hex color itself - an 8-digit "#rrggbbaa" (what
+     * the Control Center's alpha-enabled color picker saves, e.g.
+     * "#FFFFFFAA") rather than a separate opacity setting - converted to
+     * rgba() for the actual style string since that's the unambiguous
+     * format St's CSS parser is already known to accept (see the tooltip
+     * label's style above), rather than assuming St parses 8-digit hex
+     * colors directly.
+     */
+    _cardStyle(hexColor, cornerRadius) {
+        const {r, g, b, a} = this._hexToRgba(hexColor);
+        return `background-color: rgba(${r}, ${g}, ${b}, ${a}); border-radius: ${cornerRadius}px; ` +
+            _shadowBoxShadowCss(this._settings);
+    }
+
+    /**
+     * @private "#rrggbb" / "#rrggbbaa" (or the 3/4-digit shorthands) ->
+     * {r, g, b} 0-255 each, {a} 0-1. A 6-digit (or 3-digit) hex with no
+     * alpha pair is treated as fully opaque (a: 1).
+     */
+    _hexToRgba(hex) {
+        let value = String(hex).replace('#', '');
+        if (value.length === 3 || value.length === 4)
+            value = [...value].map(c => c + c).join('');
+        const rgbNum = parseInt(value.slice(0, 6), 16);
+        if (Number.isNaN(rgbNum))
+            return {r: 255, g: 255, b: 255, a: 0.85}; // falls back to the default #ffffffd9
+        const alphaByte = value.length >= 8 ? parseInt(value.slice(6, 8), 16) : 255;
+        const a = Number.isNaN(alphaByte) ? 1 : Math.round((alphaByte / 255) * 1000) / 1000;
+        return {r: (rgbNum >> 16) & 255, g: (rgbNum >> 8) & 255, b: rgbNum & 255, a};
     }
 
     /** @private */

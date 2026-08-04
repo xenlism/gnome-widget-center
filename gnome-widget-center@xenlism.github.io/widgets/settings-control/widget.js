@@ -51,7 +51,7 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
-import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss} from '../../lib/widgetVisualKit.js';
+import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss} from '../../lib/widgetVisualKit.js';
 
 const TOOLTIP_SHOW_DELAY_MS = 400;
 const ICON_SIZE = 22;
@@ -101,6 +101,8 @@ export default class SettingsControlWidget {
     // generic) icons - enable() fills in real state right after this
     // actor is placed in the Widget Layer.
     buildActor() {
+        const backgroundColor = this._settings?.backgroundColor ?? '#ffffffd9';
+        const cornerRadius = this._settings?.cornerRadius ?? 18;
         this._iconOnColor = this._settings?.iconOnColor ?? '#3584e4';
         this._iconOffColor = this._settings?.iconOffColor ?? '#9a9996';
 
@@ -127,7 +129,17 @@ export default class SettingsControlWidget {
             coordinate: Clutter.BindCoordinate.SIZE,
         }));
         this._actor.add_child(this._content);
-        this._content.set_style(_cardStyleCss(this._settings, {backgroundColorFallback: '#ffffffd9', cornerRadiusFallback: 18}) + `padding: ${PADDING}px;`);
+        // FixedLayout otherwise allocates this card at the grid's natural
+        // size. Keep the card at the complete 1x1 block so its 2x2 button
+        // grid has the intended, symmetric padding on every side.
+        const syncContentSize = () => {
+            this._content.set_position(0, 0);
+            this._content.set_size(this._actor.width, this._actor.height);
+        };
+        this._actor.connect('notify::width', syncContentSize);
+        this._actor.connect('notify::height', syncContentSize);
+        syncContentSize();
+        this._content.set_style(this._cardStyle(backgroundColor, cornerRadius) + `padding: ${PADDING}px;`);
 
         this._grid = new St.Widget({
             style_class: 'settings-control-widget-grid',
@@ -251,7 +263,9 @@ export default class SettingsControlWidget {
         if (!this._actor)
             return;
 
-        this._content.set_style(_cardStyleCss(settings, {backgroundColorFallback: '#ffffffd9', cornerRadiusFallback: 18}) + `padding: ${PADDING}px;`);
+        const backgroundColor = settings?.backgroundColor ?? '#ffffffd9';
+        const cornerRadius = settings?.cornerRadius ?? 18;
+        this._content.set_style(this._cardStyle(backgroundColor, cornerRadius) + `padding: ${PADDING}px;`);
 
         this._iconOnColor = settings?.iconOnColor ?? '#3584e4';
         this._iconOffColor = settings?.iconOffColor ?? '#9a9996';
@@ -567,6 +581,13 @@ export default class SettingsControlWidget {
         } catch (e) {
             this._api.logger.error(`settings-control: setting ${interfaceName}.${propertyName} failed: ${e.message}`);
         }
+    }
+
+    /** @private builds the card's inline style string (see power-menu's identical helper for the hex-alpha rationale). */
+    _cardStyle(hexColor, cornerRadius) {
+        const {r, g, b, a} = this._hexToRgba(hexColor);
+        return `background-color: rgba(${r}, ${g}, ${b}, ${a}); border-radius: ${cornerRadius}px; ` +
+            _shadowBoxShadowCss(this._settings);
     }
 
     /** @private "#rrggbb" / "#rrggbbaa" (or 3/4-digit shorthand) -> {r, g, b} 0-255 each, {a} 0-1. */

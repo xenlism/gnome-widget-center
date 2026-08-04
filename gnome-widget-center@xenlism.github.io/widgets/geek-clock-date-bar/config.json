@@ -147,7 +147,6 @@
               "dataType": "string",
               "fieldType": "colorpicker",
               "format": "color",
-              "alpha": true,
               "default": "#1a2a33b3"
             },
             {

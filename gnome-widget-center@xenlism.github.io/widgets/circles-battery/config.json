@@ -54,7 +54,7 @@
             {
               "id": "ringColorLow",
               "label": "Low battery color (< 20%)",
-              "description": "Ring color while battery is below 20% and not charging",
+              "description": "Ring color while battery is at or below 20% and not charging",
               "dataType": "string",
               "fieldType": "colorpicker",
               "format": "color",
@@ -64,7 +64,7 @@
             {
               "id": "ringColorMid",
               "label": "Medium battery color (20-50%)",
-              "description": "Ring color while battery is between 20% and 50% and not charging",
+              "description": "Ring color while battery is above 20% and below 50% and not charging",
               "dataType": "string",
               "fieldType": "colorpicker",
               "format": "color",
@@ -74,7 +74,7 @@
             {
               "id": "ringColorHigh",
               "label": "High battery color (> 50%)",
-              "description": "Ring color while battery is above 50% and not charging",
+              "description": "Ring color while battery is at or above 50% and not charging",
               "dataType": "string",
               "fieldType": "colorpicker",
               "format": "color",
@@ -106,28 +106,21 @@
           ]
         },
         {
-          "id": "text",
-          "label": "Text",
-          "description": "Only shown while not charging - see the Ring colors group for what shows while charging.",
+          "id": "behavior",
+          "label": "Behavior",
+          "description": "",
           "fields": [
             {
-              "id": "percentFont",
-              "label": "Percent font",
-              "description": "Face and size used for the percentage number",
-              "dataType": "string",
-              "fieldType": "fontpicker",
-              "format": "font",
-              "default": "Sans Bold 22"
-            },
-            {
-              "id": "percentColor",
-              "label": "Percent color",
-              "description": "Color of the percentage number",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "alpha": true,
-              "default": "#FFFFFFFF"
+              "id": "refreshRateSeconds",
+              "label": "Refresh rate",
+              "description": "How often battery status is re-read, in addition to updating instantly on UPower change notifications",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 5,
+              "min": 1,
+              "max": 60,
+              "step": 1,
+              "suffix": "s"
             }
           ]
         }

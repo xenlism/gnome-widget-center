@@ -1,5 +1,5 @@
 import St from 'gi://St';
-import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss} from '../../lib/widgetVisualKit.js';
+import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss} from '../../lib/widgetVisualKit.js';
 
 export default class MiniNotesWidget {
     constructor(api) {
@@ -51,7 +51,8 @@ export default class MiniNotesWidget {
     }
 
     _applyStyles() {
-        this._actor.style = _cardStyleCss(this._settings, {backgroundColorFallback: '#fff5b1', cornerRadiusFallback: 0});
+        this._actor.style = `background-color: ${this._settings.backgroundColor}; ` +
+            _shadowBoxShadowCss(this._settings);
     }
 
     _updateContent() {
