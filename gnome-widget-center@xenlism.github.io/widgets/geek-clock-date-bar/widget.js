@@ -36,7 +36,7 @@ import GLib from 'gi://GLib';
 // SKILL.md "Before writing anything" table / gotchas).
 import Clutter from 'gi://Clutter';
 import {
-    SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor,
+    SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss,
     parseFontDescription as _parseFontDescription, TEXT_SHADOW_DEFAULTS, textShadowCss as _textShadowCss,
 } from '../../lib/widgetVisualKit.js';
 
@@ -185,18 +185,13 @@ export default class GeekClockDateBarWidget {
 
         const clockColor = this._settings.clockColor ?? '#ffffff';
         const dateColor = this._settings.dateColor ?? '#e6e6e6';
-        const backgroundColor = _toCssColor(this._settings.backgroundColor ?? '#1a2a33b3', '#1a2a33b3');
-        const cornerRadius = this._settings.cornerRadius ?? 18;
         const textAlign = ['left', 'center', 'right'].includes(this._settings.textAlign) ? this._settings.textAlign : 'center';
         const textShadowCss = _textShadowCss(this._settings);
         const dateTextEnabled = this._settings.dateTextEnabled ?? true;
 
         this._actor.set_style(
-            `background-color: ${backgroundColor}; ` +
-            `border-radius: ${cornerRadius}px; ` +
-            'padding: 8px 18px; ' +
-            'spacing: 2px;' +
-            _shadowBoxShadowCss(this._settings)
+            _cardStyleCss(this._settings, {backgroundColorFallback: '#1a2a33b3', cornerRadiusFallback: 18}) +
+            'padding: 8px 18px; spacing: 2px;'
         );
 
         // Clock line, e.g. "14:30" / "02:30:05 PM" depending on the

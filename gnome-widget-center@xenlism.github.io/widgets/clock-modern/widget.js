@@ -43,7 +43,7 @@ import St from 'gi://St';
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import Pango from 'gi://Pango';
-import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, parseFontDescription as _parseFontDescription} from '../../lib/widgetVisualKit.js';
+import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, parseFontDescription as _parseFontDescription} from '../../lib/widgetVisualKit.js';
 
 export default class ClockModernWidget {
     /**
@@ -200,11 +200,8 @@ export default class ClockModernWidget {
         const cornerRadius = this._settings.cornerRadius ?? 18;
 
         this._actor.set_style(
-            `background-color: ${cardColor}; ` +
-            `border-radius: ${cornerRadius}px; ` +
-            'padding: 12px 12px; ' +
-            'spacing: 0px;' +
-            _shadowBoxShadowCss(this._settings)
+            _cardStyleCss(this._settings, {backgroundColorKey: 'cardColor', cornerRadiusFallback: 18}) +
+            'padding: 12px 12px; spacing: 0px;'
         );
 
         if (format24h) {

@@ -34,7 +34,7 @@ import Gio from 'gi://Gio';
 import Clutter from 'gi://Clutter';
 import {SystemMetricsService} from '../../lib/systemMetricsApi.js';
 import {
-    SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor,
+    SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss,
     parseFontDescription as _parseFontDescription, TEXT_SHADOW_DEFAULTS, textShadowCss as _textShadowCss,
 } from '../../lib/widgetVisualKit.js';
 
@@ -163,17 +163,12 @@ export default class GeekDateStatBarWidget {
 
         const dateColor = this._settings.dateColor ?? '#ffffff';
         const systemColor = this._settings.systemColor ?? '#e6e6e6';
-        const backgroundColor = _toCssColor(this._settings.backgroundColor ?? '#1a2a33b3', '#1a2a33b3');
-        const cornerRadius = this._settings.cornerRadius ?? 18;
         const textAlign = ['left', 'center', 'right'].includes(this._settings.textAlign) ? this._settings.textAlign : 'center';
         const textShadowCss = _textShadowCss(this._settings);
 
         this._actor.set_style(
-            `background-color: ${backgroundColor}; ` +
-            `border-radius: ${cornerRadius}px; ` +
-            'padding: 8px 18px; ' +
-            'spacing: 2px;' +
-            _shadowBoxShadowCss(this._settings)
+            _cardStyleCss(this._settings, {backgroundColorFallback: '#1a2a33b3', cornerRadiusFallback: 18}) +
+            'padding: 8px 18px; spacing: 2px;'
         );
 
         // Date line, e.g. "02 AUGUST 2026" - locale day/month/year,

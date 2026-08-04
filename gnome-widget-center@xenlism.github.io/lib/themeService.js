@@ -95,6 +95,25 @@ import {ensureDirectory, readTextFile, writeTextFile} from './fsUtils.js';
 const THEME_FILE_NAME = 'theme.json';
 
 const DEFAULT_GLOBAL_THEME = Object.freeze({
+    // 2026-08-04, part of the Function Helper task's Border/Blur/Opacity
+    // additions (see lib/widgetVisualKit.js's BORDER_DEFAULTS/borderCss()
+    // - the per-widget settings-field equivalent of this). Same
+    // independent-from-background reasoning as cornerRadius above: a
+    // widget can want a border with no fill, or a fill with no border.
+    border: Object.freeze({
+        enabled: false,
+        width: 1,
+        color: '#FFFFFF33',
+        force: false,
+    }),
+    // 2026-08-04. Fades the ENTIRE widget - background, text, icons,
+    // everything - unlike background.transparent/color's alpha channel,
+    // which only affects the background fill. See
+    // lib/widgetVisualKit.js's OPACITY_DEFAULTS/opacityValue().
+    opacity: Object.freeze({
+        value: 100, // percent, 0-100
+        force: false,
+    }),
     background: Object.freeze({
         transparent: true,
         color: '#1e1e2e',
@@ -102,7 +121,13 @@ const DEFAULT_GLOBAL_THEME = Object.freeze({
         // 2026-07-25: when true, every themeable widget uses THIS
         // background (transparent/color/blur) verbatim — any per-widget
         // `config.background` override (see getEffectiveWidgetTheme())
-        // is ignored while this is on.
+        // is ignored while this is on. blur here is the Function Helper
+        // task's "Blur" appearance category (2026-08-04) - kept as a
+        // background sub-property rather than its own top-level entry
+        // since it was already modeled that way before this task and
+        // there's no independent use for blur without a background to
+        // blur - see lib/widgetVisualKit.js's BLUR_DEFAULTS/
+        // applyCardBlur() for the per-widget settings-field equivalent.
         force: false,
     }),
     // 2026-07-25: widget card corner radius — separate from `background`
@@ -435,14 +460,16 @@ export class ThemeService {
      * the global theme unchanged.
      *
      * `global.background.force` / `global.cornerRadius.force` /
-     * `global.dropShadow.force` (dropShadow.force added 2026-08-03) short-
-     * circuit this per-widget merge entirely for that one property —
-     * while force is on, `config.background` / `config.cornerRadius` /
-     * `config.dropShadow` is not read at all, so a widget can't even
+     * `global.dropShadow.force` / `global.border.force` /
+     * `global.opacity.force` (border/opacity added 2026-08-04, same
+     * pattern) short-circuit this per-widget merge entirely for that one
+     * property — while force is on, `config.background` /
+     * `config.cornerRadius` / `config.dropShadow` / `config.border` /
+     * `config.opacity` is not read at all, so a widget can't even
      * partially override a forced property (e.g. keep the global color
      * but change its own blur radius).
      * @param {string} widgetId
-     * @returns {{background: object, cornerRadius: object, dropShadow: object}}
+     * @returns {{background: object, cornerRadius: object, dropShadow: object, border: object, opacity: object}}
      */
     getEffectiveWidgetTheme(widgetId) {
         const base = this.getGlobalTheme();
@@ -460,7 +487,15 @@ export class ThemeService {
             ? {...base.dropShadow}
             : {...base.dropShadow, ...(config?.dropShadow ?? {})};
 
-        return {background, cornerRadius, dropShadow};
+        const border = base.border.force
+            ? {...base.border}
+            : {...base.border, ...(config?.border ?? {})};
+
+        const opacity = base.opacity.force
+            ? {...base.opacity}
+            : {...base.opacity, ...(config?.opacity ?? {})};
+
+        return {background, cornerRadius, dropShadow, border, opacity};
     }
 
     /**

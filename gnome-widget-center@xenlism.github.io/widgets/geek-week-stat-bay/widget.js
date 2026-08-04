@@ -29,7 +29,7 @@ import Gio from 'gi://Gio';
 import Clutter from 'gi://Clutter';
 import {SystemMetricsService} from '../../lib/systemMetricsApi.js';
 import {
-    SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor,
+    SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss,
     parseFontDescription as _parseFontDescription, TEXT_SHADOW_DEFAULTS, textShadowCss as _textShadowCss,
 } from '../../lib/widgetVisualKit.js';
 
@@ -89,12 +89,12 @@ export default class GeekWeekStatBayWidget {
             updateInterval: 2,
             diskPath: '/',
 
-            weekFont: 'Sans Bold 32',
+            weekFont: 'Sans Bold 80',
             weekColor: '#ffffff',
-            systemFont: 'Sans Bold 16',
+            systemFont: 'Sans Bold 14',
             systemColor: '#e6e6e6',
 
-            backgroundColor: '#1a2a33b3',
+            backgroundColor: '#FFFFFF00',
             textAlign: 'center',
             cornerRadius: 18,
         };
@@ -149,14 +149,12 @@ export default class GeekWeekStatBayWidget {
         const now = GLib.DateTime.new_now_local();
 
         const {family: weekFontFamily, size: weekFontSize} =
-            _parseFontDescription(this._settings.weekFont ?? 'Sans Bold 32', 'Sans Bold', 32);
+            _parseFontDescription(this._settings.weekFont ?? 'Sans Bold 80', 'Sans Bold', 80);
         const {family: systemFontFamily, size: systemFontSize} =
-            _parseFontDescription(this._settings.systemFont ?? 'Sans Bold 16', 'Sans Bold', 16);
+            _parseFontDescription(this._settings.systemFont ?? 'Sans Bold 14', 'Sans Bold', 14);
 
         const weekColor = this._settings.weekColor ?? '#ffffff';
         const systemColor = this._settings.systemColor ?? '#e6e6e6';
-        const backgroundColor = _toCssColor(this._settings.backgroundColor ?? '#1a2a33b3', '#1a2a33b3');
-        const cornerRadius = this._settings.cornerRadius ?? 18;
         const textAlign = ['left', 'center', 'right'].includes(this._settings.textAlign) ? this._settings.textAlign : 'center';
         const textShadowCss = _textShadowCss(this._settings);
 
@@ -167,11 +165,8 @@ export default class GeekWeekStatBayWidget {
             `MEM ${Math.round(memory.percent)}%   ` +
             `DISK ${Math.round(disk.percent)}%`;
         this._actor.set_style(
-            `background-color: ${backgroundColor}; ` +
-            `border-radius: ${cornerRadius}px; ` +
-            'padding: 14px 24px; ' +
-            'spacing: 5px;' +
-            _shadowBoxShadowCss(this._settings)
+            _cardStyleCss(this._settings, {backgroundColorFallback: '#FFFFFF00', cornerRadiusFallback: 18}) +
+            'padding: 14px 24px; spacing: 5px;'
         );
 
         const topText = (now.format('%A') ?? '').toUpperCase();

@@ -39,15 +39,13 @@ import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
-import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor} from '../../lib/widgetVisualKit.js';
+import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss} from '../../lib/widgetVisualKit.js';
 
 const GRID_COLS = 2;
 const GRID_ROWS = 2;
 const MAX_APPS = GRID_COLS * GRID_ROWS;
-// Each 60px cell now matches the 1x1 control widgets' button footprint:
-// a larger 48px app icon with a uniform 6px inset.
-const ICON_SIZE = 48;
-const CELL_PADDING = 6;
+const ICON_SIZE = 44;
+const CELL_PADDING = 8;
 const GRID_SPACING = 8;
 const CARD_PADDING = 12;
 // Same delayed-hover-label pattern (and delay) as
@@ -95,18 +93,6 @@ export default class FolderWidget2x2 {
             coordinate: Clutter.BindCoordinate.SIZE,
         }));
         this._actor.add_child(this._content);
-        // FixedLayout uses a child's natural size when allocating it.  A
-        // BindConstraint alone therefore leaves this card at the icon
-        // grid's natural 152px square instead of the root's block size.
-        // Mirror root-size changes explicitly so the painted card always
-        // occupies the complete block allocated by BlockSizeManager.
-        const syncContentSize = () => {
-            this._content.set_position(0, 0);
-            this._content.set_size(this._actor.width, this._actor.height);
-        };
-        this._actor.connect('notify::width', syncContentSize);
-        this._actor.connect('notify::height', syncContentSize);
-        syncContentSize();
 
         const grid = new St.BoxLayout({vertical: true});
 
@@ -179,14 +165,9 @@ export default class FolderWidget2x2 {
     /** @private */
     _render() {
         const apps = (this._settings.apps ?? []).slice(0, MAX_APPS);
-        const backgroundColor = _toCssColor(this._settings.backgroundColor, '#FFFFFF0F');
-        const cornerRadius = this._settings.cornerRadius ?? 18;
-
         this._content.set_style(
-            `background-color: ${backgroundColor}; ` +
-            `border-radius: ${cornerRadius}px; ` +
-            `padding: ${CARD_PADDING}px;` +
-            _shadowBoxShadowCss(this._settings)
+            _cardStyleCss(this._settings, {backgroundColorFallback: '#FFFFFF0F', cornerRadiusFallback: 18}) +
+            `padding: ${CARD_PADDING}px;`
         );
 
         for (let i = 0; i < this._cells.length; i++) {

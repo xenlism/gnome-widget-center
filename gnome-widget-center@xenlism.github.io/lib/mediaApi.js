@@ -295,7 +295,42 @@ export class MprisMediaService {
             // of trusting whatever GDBusProxy happened to still have cached.
             this._propsChangedId = this._playerProxy.connect(
                 'g-properties-changed',
-                (_proxy, _changed, invalidated) => {
+                (_proxy, changed, invalidated) => {
+                    // Bug fix: this used to ignore `changed` entirely and
+                    // decide purely off `invalidated`, on the assumption
+                    // GDBusProxy's own internal cache is always already
+                    // in sync with `changed_properties` by the time this
+                    // callback runs. That assumption is exactly why a
+                    // plain Play<->Pause toggle (which nearly every
+                    // player sends via `changed_properties`, not
+                    // `invalidated_properties` - it's a small scalar,
+                    // there's no reason to invalidate it) could still
+                    // show a stale icon: nothing here actually GUARANTEED
+                    // the new PlaybackStatus reached this widget's own
+                    // read of the cache before _emitFromProxy() ran off
+                    // it. Apply `changed` into the proxy's cache
+                    // ourselves first - same "keep it boxed as a
+                    // variant" walk _refreshThenEmit() below already does
+                    // for GetAll's result - so PlaybackStatus (and
+                    // anything else that arrived this way) is guaranteed
+                    // current on THIS callback, synchronously, with no
+                    // dependency on cache-timing and no DBus round-trip.
+                    if (changed) {
+                        const count = changed.n_children();
+                        for (let i = 0; i < count; i++) {
+                            const entry = changed.get_child_value(i);
+                            const key = entry.get_child_value(0).get_string()[0];
+                            const value = entry.get_child_value(1).get_variant();
+                            this._playerProxy.set_cached_property(key, value);
+                        }
+                    }
+
+                    // Metadata (and occasionally other properties, on
+                    // some players) still arrives via
+                    // `invalidated_properties` instead - see
+                    // _refreshThenEmit()'s own doc comment - so that path
+                    // is unchanged: a full Properties.GetAll re-fetch for
+                    // whatever wasn't included above.
                     if (invalidated && invalidated.length > 0)
                         this._refreshThenEmit();
                     else

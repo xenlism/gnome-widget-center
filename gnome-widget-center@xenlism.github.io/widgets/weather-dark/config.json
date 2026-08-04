@@ -35,6 +35,7 @@
               "dataType": "string",
               "fieldType": "colorpicker",
               "format": "color",
+              "alpha": true,
               "default": "#1c1f26"
             },
             {

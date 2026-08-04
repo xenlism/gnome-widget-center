@@ -1,335 +1,336 @@
 {
-  "version": "1.0",
-  "tabs": [
-    {
-      "id": "general",
-      "label": "Geek Clock Date Bay",
-      "description": "Clock + date card settings",
-      "icon": "x-office-calendar-symbolic",
-      "groups": [
+    "version": "1.0",
+    "tabs": [
         {
-          "id": "clock-text",
-          "label": "Clock text",
-          "description": "The big centered clock line, e.g. \"14:30\" or \"02:30 PM\".",
-          "fields": [
-            {
-              "id": "clockFont",
-              "label": "Clock font",
-              "description": "Font face and size for the clock line",
-              "dataType": "string",
-              "fieldType": "fontpicker",
-              "format": "font",
-              "default": "Sans Bold 40"
-            },
-            {
-              "id": "clockColor",
-              "label": "Clock color",
-              "description": "Color of the clock text",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "default": "#ffffff"
-            },
-            {
-              "id": "clock24Hour",
-              "label": "24-hour format",
-              "description": "Show 24-hour time (14:30) instead of 12-hour with AM/PM (02:30 PM)",
-              "dataType": "boolean",
-              "fieldType": "switch",
-              "default": true
-            },
-            {
-              "id": "clockShowSeconds",
-              "label": "Show seconds",
-              "description": "Add seconds to the clock line (e.g. 14:30:05)",
-              "dataType": "boolean",
-              "fieldType": "switch",
-              "default": false
-            }
-          ]
-        },
-        {
-          "id": "date-text",
-          "label": "Date text",
-          "description": "The small centered date line underneath the clock, e.g. \"02-12-2026\".",
-          "fields": [
-            {
-              "id": "dateTextEnabled",
-              "label": "Show date line",
-              "description": "Show or hide the date line under the clock",
-              "dataType": "boolean",
-              "fieldType": "switch",
-              "default": true
-            },
-            {
-              "id": "dateFont",
-              "label": "Date font",
-              "description": "Font face and size for the date line",
-              "dataType": "string",
-              "fieldType": "fontpicker",
-              "format": "font",
-              "default": "Sans Bold 18",
-              "visibleIf": "dateTextEnabled"
-            },
-            {
-              "id": "dateColor",
-              "label": "Date color",
-              "description": "Color of the date text",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "default": "#e6e6e6",
-              "visibleIf": "dateTextEnabled"
-            },
-            {
-              "id": "dateFormat",
-              "label": "Date format",
-              "description": "Numeric date format. \"Auto\" picks MM-DD-YYYY or DD-MM-YYYY based on your system's country/locale.",
-              "dataType": "string",
-              "fieldType": "dropdown",
-              "default": "auto",
-              "options": [
+            "id": "general",
+            "label": "Geek Clock Date Bay",
+            "description": "Clock + date card settings",
+            "icon": "x-office-calendar-symbolic",
+            "groups": [
                 {
-                  "value": "auto",
-                  "label": "Auto (by country)"
+                    "id": "clock-text",
+                    "label": "Clock text",
+                    "description": "The big centered clock line, e.g. \"14:30\" or \"02:30 PM\".",
+                    "fields": [
+                        {
+                            "id": "clockFont",
+                            "label": "Clock font",
+                            "description": "Font face and size for the clock line",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "format": "font",
+                            "default": "Sans Bold 80"
+                        },
+                        {
+                            "id": "clockColor",
+                            "label": "Clock color",
+                            "description": "Color of the clock text",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "default": "#ffffff"
+                        },
+                        {
+                            "id": "clock24Hour",
+                            "label": "24-hour format",
+                            "description": "Show 24-hour time (14:30) instead of 12-hour with AM/PM (02:30 PM)",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": true
+                        },
+                        {
+                            "id": "clockShowSeconds",
+                            "label": "Show seconds",
+                            "description": "Add seconds to the clock line (e.g. 14:30:05)",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": false
+                        }
+                    ]
                 },
                 {
-                  "value": "mm-dd-yyyy",
-                  "label": "MM-DD-YYYY"
+                    "id": "date-text",
+                    "label": "Date text",
+                    "description": "The small centered date line underneath the clock, e.g. \"02-12-2026\".",
+                    "fields": [
+                        {
+                            "id": "dateTextEnabled",
+                            "label": "Show date line",
+                            "description": "Show or hide the date line under the clock",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": true
+                        },
+                        {
+                            "id": "dateFont",
+                            "label": "Date font",
+                            "description": "Font face and size for the date line",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "format": "font",
+                            "default": "Sans Bold 14",
+                            "visibleIf": "dateTextEnabled"
+                        },
+                        {
+                            "id": "dateColor",
+                            "label": "Date color",
+                            "description": "Color of the date text",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "default": "#e6e6e6",
+                            "visibleIf": "dateTextEnabled"
+                        },
+                        {
+                            "id": "dateFormat",
+                            "label": "Date format",
+                            "description": "Numeric date format. \"Auto\" picks MM-DD-YYYY or DD-MM-YYYY based on your system's country/locale.",
+                            "dataType": "string",
+                            "fieldType": "dropdown",
+                            "default": "auto",
+                            "options": [
+                                {
+                                    "value": "auto",
+                                    "label": "Auto (by country)"
+                                },
+                                {
+                                    "value": "mm-dd-yyyy",
+                                    "label": "MM-DD-YYYY"
+                                },
+                                {
+                                    "value": "dd-mm-yyyy",
+                                    "label": "DD-MM-YYYY"
+                                }
+                            ],
+                            "visibleIf": "dateTextEnabled"
+                        }
+                    ]
                 },
                 {
-                  "value": "dd-mm-yyyy",
-                  "label": "DD-MM-YYYY"
+                    "id": "layout",
+                    "label": "Layout",
+                    "description": "Text alignment for the widget's lines.",
+                    "fields": [
+                        {
+                            "id": "textAlign",
+                            "label": "Text align",
+                            "description": "Horizontal alignment of the clock and date lines inside the card.",
+                            "dataType": "string",
+                            "fieldType": "dropdown",
+                            "default": "center",
+                            "options": [
+                                {
+                                    "value": "left",
+                                    "label": "Left"
+                                },
+                                {
+                                    "value": "center",
+                                    "label": "Center"
+                                },
+                                {
+                                    "value": "right",
+                                    "label": "Right"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "card",
+                    "label": "Card",
+                    "description": "Card background and shape.",
+                    "fields": [
+                        {
+                            "id": "backgroundColor",
+                            "label": "Background color",
+                            "description": "Card background color (supports transparency)",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFF00"
+                        },
+                        {
+                            "id": "cornerRadius",
+                            "label": "Corner radius",
+                            "description": "Roundness of the card's corners",
+                            "dataType": "number",
+                            "fieldType": "spinbutton",
+                            "default": 18,
+                            "min": 0,
+                            "max": 60,
+                            "step": 1,
+                            "suffix": "px"
+                        }
+                    ]
                 }
-              ],
-              "visibleIf": "dateTextEnabled"
-            }
-          ]
+            ]
         },
         {
-          "id": "layout",
-          "label": "Layout",
-          "description": "Text alignment for the widget's lines.",
-          "fields": [
-            {
-              "id": "textAlign",
-              "label": "Text align",
-              "description": "Horizontal alignment of the clock and date lines inside the card.",
-              "dataType": "string",
-              "fieldType": "dropdown",
-              "default": "center",
-              "options": [
+            "id": "text-shadow",
+            "label": "Text Shadow",
+            "description": "Drop shadow drawn under the text itself.",
+            "groups": [
                 {
-                  "value": "left",
-                  "label": "Left"
-                },
-                {
-                  "value": "center",
-                  "label": "Center"
-                },
-                {
-                  "value": "right",
-                  "label": "Right"
+                    "id": "text-shadow",
+                    "label": "Text shadow effect",
+                    "description": "Off by default. Default color is black at 60% transparency.",
+                    "fields": [
+                        {
+                            "id": "textShadowEnabled",
+                            "label": "Enable text shadow",
+                            "description": "Add a shadow behind the clock and date text",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": false
+                        },
+                        {
+                            "id": "textShadowColor",
+                            "label": "Text shadow color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#000000",
+                            "visibleIf": "textShadowEnabled"
+                        },
+                        {
+                            "id": "textShadowOpacity",
+                            "label": "Text shadow transparency",
+                            "description": "Shadow opacity, 0-100%",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 60,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "suffix": "%",
+                            "visibleIf": "textShadowEnabled"
+                        },
+                        {
+                            "id": "textShadowAngle",
+                            "label": "Text shadow angle",
+                            "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 90,
+                            "min": 0,
+                            "max": 360,
+                            "step": 1,
+                            "suffix": "\u00b0",
+                            "visibleIf": "textShadowEnabled"
+                        },
+                        {
+                            "id": "textShadowDistance",
+                            "label": "Text shadow distance",
+                            "description": "How far the shadow is offset, in pixels",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 2,
+                            "min": 0,
+                            "max": 30,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "textShadowEnabled"
+                        },
+                        {
+                            "id": "textShadowBlur",
+                            "label": "Text shadow blur",
+                            "description": "Blur radius, in pixels",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 4,
+                            "min": 0,
+                            "max": 40,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "textShadowEnabled"
+                        }
+                    ]
                 }
-              ]
-            }
-          ]
+            ]
         },
         {
-          "id": "card",
-          "label": "Card",
-          "description": "Card background and shape.",
-          "fields": [
-            {
-              "id": "backgroundColor",
-              "label": "Background color",
-              "description": "Card background color (supports transparency)",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "default": "#1a2a33b3"
-            },
-            {
-              "id": "cornerRadius",
-              "label": "Corner radius",
-              "description": "Roundness of the card's corners",
-              "dataType": "number",
-              "fieldType": "spinbutton",
-              "default": 18,
-              "min": 0,
-              "max": 60,
-              "step": 1,
-              "suffix": "px"
-            }
-          ]
+            "id": "shadow",
+            "label": "Widget Shadow",
+            "description": "Drop shadow behind the whole widget card.",
+            "groups": [
+                {
+                    "id": "shadow",
+                    "label": "Shadow effect",
+                    "description": "Off by default. Default color is black at 30% transparency.",
+                    "fields": [
+                        {
+                            "id": "shadowEnabled",
+                            "label": "Enable shadow",
+                            "description": "Add a drop shadow behind this widget",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": false
+                        },
+                        {
+                            "id": "shadowColor",
+                            "label": "Shadow color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#000000",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowOpacity",
+                            "label": "Shadow transparency",
+                            "description": "Shadow opacity, 0-100%",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 30,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "suffix": "%",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowAngle",
+                            "label": "Shadow angle",
+                            "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 90,
+                            "min": 0,
+                            "max": 360,
+                            "step": 1,
+                            "suffix": "\u00b0",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowDistance",
+                            "label": "Shadow distance",
+                            "description": "How far the shadow is offset, in pixels",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 6,
+                            "min": 0,
+                            "max": 60,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowBlur",
+                            "label": "Shadow blur",
+                            "description": "Blur radius, in pixels",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 16,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "shadowEnabled"
+                        }
+                    ]
+                }
+            ]
         }
-      ]
-    },
-    {
-      "id": "text-shadow",
-      "label": "Text Shadow",
-      "description": "Drop shadow drawn under the text itself.",
-      "groups": [
-        {
-          "id": "text-shadow",
-          "label": "Text shadow effect",
-          "description": "Off by default. Default color is black at 60% transparency.",
-          "fields": [
-            {
-              "id": "textShadowEnabled",
-              "label": "Enable text shadow",
-              "description": "Add a shadow behind the clock and date text",
-              "dataType": "boolean",
-              "fieldType": "switch",
-              "default": false
-            },
-            {
-              "id": "textShadowColor",
-              "label": "Text shadow color",
-              "description": "",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "default": "#000000",
-              "visibleIf": "textShadowEnabled"
-            },
-            {
-              "id": "textShadowOpacity",
-              "label": "Text shadow transparency",
-              "description": "Shadow opacity, 0-100%",
-              "dataType": "integer",
-              "fieldType": "slider",
-              "default": 60,
-              "min": 0,
-              "max": 100,
-              "step": 1,
-              "suffix": "%",
-              "visibleIf": "textShadowEnabled"
-            },
-            {
-              "id": "textShadowAngle",
-              "label": "Text shadow angle",
-              "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
-              "dataType": "integer",
-              "fieldType": "slider",
-              "default": 90,
-              "min": 0,
-              "max": 360,
-              "step": 1,
-              "suffix": "\u00b0",
-              "visibleIf": "textShadowEnabled"
-            },
-            {
-              "id": "textShadowDistance",
-              "label": "Text shadow distance",
-              "description": "How far the shadow is offset, in pixels",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 2,
-              "min": 0,
-              "max": 30,
-              "step": 1,
-              "suffix": "px",
-              "visibleIf": "textShadowEnabled"
-            },
-            {
-              "id": "textShadowBlur",
-              "label": "Text shadow blur",
-              "description": "Blur radius, in pixels",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 4,
-              "min": 0,
-              "max": 40,
-              "step": 1,
-              "suffix": "px",
-              "visibleIf": "textShadowEnabled"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "shadow",
-      "label": "Widget Shadow",
-      "description": "Drop shadow behind the whole widget card.",
-      "groups": [
-        {
-          "id": "shadow",
-          "label": "Shadow effect",
-          "description": "Off by default. Default color is black at 30% transparency.",
-          "fields": [
-            {
-              "id": "shadowEnabled",
-              "label": "Enable shadow",
-              "description": "Add a drop shadow behind this widget",
-              "dataType": "boolean",
-              "fieldType": "switch",
-              "default": false
-            },
-            {
-              "id": "shadowColor",
-              "label": "Shadow color",
-              "description": "",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "default": "#000000",
-              "visibleIf": "shadowEnabled"
-            },
-            {
-              "id": "shadowOpacity",
-              "label": "Shadow transparency",
-              "description": "Shadow opacity, 0-100%",
-              "dataType": "integer",
-              "fieldType": "slider",
-              "default": 30,
-              "min": 0,
-              "max": 100,
-              "step": 1,
-              "suffix": "%",
-              "visibleIf": "shadowEnabled"
-            },
-            {
-              "id": "shadowAngle",
-              "label": "Shadow angle",
-              "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
-              "dataType": "integer",
-              "fieldType": "slider",
-              "default": 90,
-              "min": 0,
-              "max": 360,
-              "step": 1,
-              "suffix": "\u00b0",
-              "visibleIf": "shadowEnabled"
-            },
-            {
-              "id": "shadowDistance",
-              "label": "Shadow distance",
-              "description": "How far the shadow is offset, in pixels",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 6,
-              "min": 0,
-              "max": 60,
-              "step": 1,
-              "suffix": "px",
-              "visibleIf": "shadowEnabled"
-            },
-            {
-              "id": "shadowBlur",
-              "label": "Shadow blur",
-              "description": "Blur radius, in pixels",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 16,
-              "min": 0,
-              "max": 100,
-              "step": 1,
-              "suffix": "px",
-              "visibleIf": "shadowEnabled"
-            }
-          ]
-        }
-      ]
-    }
-  ]
+    ]
 }

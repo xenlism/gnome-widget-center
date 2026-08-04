@@ -71,7 +71,6 @@ export default class CalendarMinimalWidget {
     getDefaultSettings() {
         return {
             ...SHADOW_DEFAULTS,
-            cardColor: '#ffffff',
             textColor: '#1a1a1a',
             accentColor: '#d81f26',
             showMonth: true,
@@ -85,7 +84,6 @@ export default class CalendarMinimalWidget {
     /** @private */
     _render() {
         const now = GLib.DateTime.new_now_local();
-        const cardColor = this._settings.cardColor ?? '#ffffff';
         const textColor = this._settings.textColor ?? '#1a1a1a';
         const accentColor = this._settings.accentColor ?? '#6b6b6b';
         const showMonth = this._settings.showMonth ?? true;

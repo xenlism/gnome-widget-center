@@ -19,6 +19,50 @@
 
 import Pango from 'gi://Pango';
 
+// --- Global "Force" theme state (2026-08-04 bug fix) ------------------
+//
+// Bug: the Appearance page's "Force this X on every widget" switches
+// (lib/themeService.js's background.force/cornerRadius.force/
+// dropShadow.force/border.force) only ever actually reached 2 real
+// widgets (calendar-minimal, clock) - everything else that calls
+// cardStyleCss()/shadowBoxShadowCss() below (~50 widgets, after
+// 2026-08-03's standardization sweep) kept painting its own local
+// settings, completely unaware "force" existed, and its next natural
+// re-render (a media player's next track, a clock's next tick, a
+// settings change, ...) would silently overwrite whatever
+// lib/themeService.js's applyWidgetStyle() had painted moments earlier
+// anyway - that mechanism only runs once, at widget placement / on a
+// theme.json file change, not on every render.
+//
+// Fix: rather than touch every widget's own call site (or every
+// widget's _render() needing to know about ThemeService), the force
+// state lives here as plain module state that these CSS-string builder
+// functions consult on every call, transparently to their callers - so
+// the exact same `cardStyleCss(this._settings, {...})` every widget
+// already calls automatically starts respecting "force" the moment
+// setForcedTheme() below has been called once, with zero widget.js
+// changes needed. extension.js calls setForcedTheme() once at startup
+// and again every time ThemeService's file-watch fires (theme.json
+// changed - same live cross-process reload path applyWidgetStyle()
+// already used).
+let _forcedTheme = null;
+
+/**
+ * Sets (or clears, with `null`) the process-wide forced theme state that
+ * cardStyleCss()/shadowBoxShadowCss()/borderCss()/blurCss() below consult.
+ * Called by extension.js, never by a widget itself.
+ * @param {{background: object, cornerRadius: object, dropShadow: object, border: object}|null} theme
+ *   - the shape lib/themeService.js's ThemeService.getGlobalTheme() returns.
+ */
+export function setForcedTheme(theme) {
+    _forcedTheme = theme ?? null;
+}
+
+/** @private true if `_forcedTheme[category].force` is on. */
+function _isForced(category) {
+    return !!_forcedTheme?.[category]?.force;
+}
+
 /** Default shadow settings a widget's getDefaultSettings() should spread
  * in (`...SHADOW_DEFAULTS`) so the shadow fields exist with sane values
  * even before the user opens the widget's settings panel. */
@@ -35,11 +79,20 @@ export const SHADOW_DEFAULTS = {
  * CSS box-shadow syntax) from a widget's shadow settings, or '' when the
  * shadow is off - always safe to splice directly into a set_style()
  * template literal.
+ *
+ * When the global "Force this drop shadow on every widget" switch is on
+ * (see the module-level Force state note above `setForcedTheme()`), the
+ * forced dropShadow settings are used instead of `settings` entirely -
+ * same "can't even partially override" contract
+ * lib/themeService.js's getEffectiveWidgetTheme() documents.
  * @param {object} settings - widget settings object; only the
  *   shadow* fields are read, missing ones fall back to SHADOW_DEFAULTS.
  * @returns {string}
  */
 export function shadowBoxShadowCss(settings) {
+    if (_isForced('dropShadow'))
+        return _forcedShadowBoxShadowCss(_forcedTheme.dropShadow);
+
     const s = settings ?? {};
     if (!(s.shadowEnabled ?? SHADOW_DEFAULTS.shadowEnabled))
         return '';
@@ -64,6 +117,38 @@ export function shadowBoxShadowCss(settings) {
     const a = Math.min(1, Math.max(0, opacityPercent / 100));
 
     return `box-shadow: ${offsetX}px ${offsetY}px ${blur}px 0px rgba(${r}, ${g}, ${b}, ${a});`;
+}
+
+/** @private converts lib/themeService.js's global dropShadow shape
+ * (`{enabled, transparent, color, opacity: 0-1, offsetX, offsetY,
+ * blurRadius, spread}` - notably a flat 0-1 opacity float and separate
+ * offsetX/offsetY rather than shadowBoxShadowCss()'s own
+ * angle+distance model) into the same `box-shadow: ...;` string shape,
+ * mirroring lib/themeService.js's applyWidgetStyle()'s identical
+ * conversion so both code paths produce the same visual result. */
+function _forcedShadowBoxShadowCss(dropShadow) {
+    if (!dropShadow?.enabled || dropShadow?.transparent)
+        return '';
+    const opacity = Number.isFinite(dropShadow.opacity) ? Math.min(1, Math.max(0, dropShadow.opacity)) : 0.45;
+    const offsetX = Number.isFinite(dropShadow.offsetX) ? dropShadow.offsetX : 0;
+    const offsetY = Number.isFinite(dropShadow.offsetY) ? dropShadow.offsetY : 4;
+    const blur = Number.isFinite(dropShadow.blurRadius) ? Math.max(0, dropShadow.blurRadius) : 12;
+    const spread = Number.isFinite(dropShadow.spread) ? dropShadow.spread : 0;
+    const color = toCssColor(_withAlphaHex(dropShadow.color ?? '#000000', opacity), 'rgba(0, 0, 0, 0.45)');
+    return `box-shadow: ${offsetX}px ${offsetY}px ${blur}px ${spread}px ${color};`;
+}
+
+/** @private "#rrggbb" + a 0-1 alpha float -> "#rrggbbaa", so it can be
+ * run back through toCssColor() the same way every other color in this
+ * file is - keeps the hex-alpha-encoding convention in exactly one
+ * place (toCssColor()) instead of building an rgba() string by hand
+ * here too. */
+function _withAlphaHex(hex6, alpha01) {
+    const m = /^#([0-9a-fA-F]{6})$/.exec((hex6 ?? '').trim());
+    if (!m)
+        return '#000000' + Math.round(Math.min(1, Math.max(0, alpha01)) * 255).toString(16).padStart(2, '0');
+    const alphaByte = Math.round(Math.min(1, Math.max(0, alpha01)) * 255).toString(16).padStart(2, '0');
+    return `#${m[1]}${alphaByte}`;
 }
 
 /** Default text-shadow settings a widget's getDefaultSettings() should
@@ -117,12 +202,126 @@ export function textShadowCss(settings) {
     return `text-shadow: ${offsetX}px ${offsetY}px ${blur}px rgba(${r}, ${g}, ${b}, ${a});`;
 }
 
+/** Default border settings a widget's getDefaultSettings() should spread
+ * in (`...BORDER_DEFAULTS`). */
+export const BORDER_DEFAULTS = {
+    borderEnabled: false,
+    borderWidth: 1,     // px
+    borderColor: '#FFFFFF33',
+};
+
+/** Builds a `border: ...;` CSS declaration from a widget's border
+ * settings, or '' when the border is off. St supports plain `border`
+ * the same way it supports `border-radius`/`box-shadow`.
+ *
+ * Force-aware - see the module-level Force state note near the top of
+ * this file / setForcedTheme().
+ * @param {object} settings
+ * @returns {string}
+ */
+export function borderCss(settings) {
+    if (_isForced('border')) {
+        const forced = _forcedTheme.border;
+        if (!forced?.enabled)
+            return '';
+        const width = Number.isFinite(forced.width) ? Math.max(0, forced.width) : BORDER_DEFAULTS.borderWidth;
+        const color = toCssColor(forced.color ?? BORDER_DEFAULTS.borderColor, BORDER_DEFAULTS.borderColor);
+        return `border: ${width}px solid ${color};`;
+    }
+
+    const s = settings ?? {};
+    if (!(s.borderEnabled ?? BORDER_DEFAULTS.borderEnabled))
+        return '';
+
+    const width = Number.isFinite(s.borderWidth) ? Math.max(0, s.borderWidth) : BORDER_DEFAULTS.borderWidth;
+    const color = toCssColor(s.borderColor ?? BORDER_DEFAULTS.borderColor, BORDER_DEFAULTS.borderColor);
+    return `border: ${width}px solid ${color};`;
+}
+
+/** Default opacity setting a widget's getDefaultSettings() should spread
+ * in (`...OPACITY_DEFAULTS`). Unlike backgroundColor's own alpha channel
+ * (which only fades the background fill), this fades the ENTIRE actor -
+ * background, text, icons, everything - the same thing dragging a
+ * window's opacity slider in a compositor does. */
+export const OPACITY_DEFAULTS = {
+    opacity: 100, // percent, 0-100
+};
+
+/** Converts a widget's `opacity` setting (0-100, the unit every other
+ * field in this file uses) to the 0-255 integer St.Widget#opacity
+ * actually takes.
+ * @param {object} settings
+ * @returns {number} 0-255
+ */
+export function opacityValue(settings) {
+    const s = settings ?? {};
+    const percent = Number.isFinite(s.opacity) ? Math.min(100, Math.max(0, s.opacity)) : OPACITY_DEFAULTS.opacity;
+    return Math.round((percent / 100) * 255);
+}
+
+/** Applies a widget's `opacity` setting directly to `actor.opacity`.
+ * Thin wrapper around opacityValue() for the common case of "just set it
+ * on the root actor" - call opacityValue() directly instead if the
+ * opacity needs to go somewhere else (e.g. a child actor).
+ * @param {Clutter.Actor} actor
+ * @param {object} settings
+ */
+export function applyCardOpacity(actor, settings) {
+    if (actor)
+        actor.opacity = opacityValue(settings);
+}
+
+/** Default blur settings a widget's getDefaultSettings() should spread
+ * in (`...BLUR_DEFAULTS`). */
+export const BLUR_DEFAULTS = {
+    blurEnabled: false,
+    blurRadius: 24, // px
+};
+
+/** Builds a `-st-background-blur: ...;` CSS declaration from a widget's
+ * blur settings, or '' when blur is off. This is a real St CSS property
+ * (not a custom addition here) - see lib/themeService.js's
+ * applyWidgetStyle() for the identical property used by the global-theme
+ * force system.
+ *
+ * Force-aware, governed by the "Force this background on every widget"
+ * switch specifically (not a separate blur switch) - blur is modeled as
+ * a background sub-property throughout this codebase (see
+ * lib/themeService.js's DEFAULT_GLOBAL_THEME.background.blur), so it
+ * follows background's force flag rather than having its own.
+ * @param {object} settings
+ * @returns {string}
+ */
+export function blurCss(settings) {
+    if (_isForced('background')) {
+        const radius = _forcedTheme.background?.blur;
+        return Number.isFinite(radius) && radius > 0 ? `-st-background-blur: ${Math.round(radius)}px;` : '';
+    }
+
+    const s = settings ?? {};
+    if (!(s.blurEnabled ?? BLUR_DEFAULTS.blurEnabled))
+        return '';
+    const radius = Number.isFinite(s.blurRadius) ? Math.max(0, s.blurRadius) : BLUR_DEFAULTS.blurRadius;
+    return `-st-background-blur: ${Math.round(radius)}px;`;
+}
+
 /** Standard "card style" builder — the single function every widget
  * should call to build its root/content actor's `background-color;
- * border-radius; box-shadow;` CSS, instead of hand-concatenating those
- * three declarations itself (which is how media-player-square/circle/
+ * border; border-radius; box-shadow;` CSS, instead of hand-concatenating
+ * those declarations itself (which is how media-player-square/circle/
  * wide/poster ended up with four near-identical, slowly-drifting local
- * copies of the same three lines before 2026-08-03).
+ * copies of the same lines before 2026-08-03).
+ *
+ * Deliberately does NOT cover opacity or blur - those aren't expressible
+ * as a `set_style()` CSS string (opacity is a plain Clutter.Actor
+ * property, blur needs an Actor effect) - use applyCardOpacity()/
+ * applyCardBlur() alongside this for those two.
+ *
+ * Per the Function Helper design (2026-08-04): this covers Background/
+ * Border/Corner Radius/Shadow only - the "theme" properties every widget
+ * should be consistent about. Font, layout, padding, margin, animation,
+ * and any other widget-specific CSS stay the widget's own responsibility,
+ * appended to this function's return value same as before.
  * @param {object} settings - the widget's settings object
  * @param {object} [options]
  * @param {string} [options.backgroundColorKey='backgroundColor'] - settings field to read the background color from
@@ -130,6 +329,8 @@ export function textShadowCss(settings) {
  * @param {string} [options.cornerRadiusKey='cornerRadius'] - settings field to read the corner radius from
  * @param {number} [options.cornerRadiusFallback=18] - used when the field is missing/invalid
  * @param {boolean} [options.includeShadow=true] - append shadowBoxShadowCss(settings) too
+ * @param {boolean} [options.includeBorder=true] - append borderCss(settings) too
+ * @param {boolean} [options.includeBlur=true] - append blurCss(settings) too
  * @returns {string} ready for `actor.set_style()`
  */
 export function cardStyleCss(settings, options = {}) {
@@ -139,13 +340,37 @@ export function cardStyleCss(settings, options = {}) {
         cornerRadiusKey = 'cornerRadius',
         cornerRadiusFallback = 18,
         includeShadow = true,
+        includeBorder = true,
+        includeBlur = true,
     } = options;
 
-    const backgroundColor = toCssColor(settings?.[backgroundColorKey], backgroundColorFallback);
-    const cornerRadiusRaw = settings?.[cornerRadiusKey];
-    const cornerRadius = Number.isFinite(cornerRadiusRaw) ? cornerRadiusRaw : cornerRadiusFallback;
+    // background.force and cornerRadius.force are independent switches
+    // (see lib/themeService.js's getEffectiveWidgetTheme()) - either,
+    // both, or neither can be on, so they're checked separately here
+    // rather than as one combined "is anything forced" branch.
+    let backgroundColor;
+    if (_isForced('background')) {
+        const forced = _forcedTheme.background;
+        const alpha = forced.transparent ? 0 : 1;
+        backgroundColor = toCssColor(_withAlphaHex(forced.color ?? '#1e1e2e', alpha), backgroundColorFallback);
+    } else {
+        backgroundColor = toCssColor(settings?.[backgroundColorKey], backgroundColorFallback);
+    }
+
+    let cornerRadius;
+    if (_isForced('cornerRadius')) {
+        const forcedRadius = _forcedTheme.cornerRadius?.value;
+        cornerRadius = Number.isFinite(forcedRadius) ? Math.max(0, forcedRadius) : cornerRadiusFallback;
+    } else {
+        const cornerRadiusRaw = settings?.[cornerRadiusKey];
+        cornerRadius = Number.isFinite(cornerRadiusRaw) ? cornerRadiusRaw : cornerRadiusFallback;
+    }
 
     let css = `background-color: ${backgroundColor}; border-radius: ${cornerRadius}px;`;
+    if (includeBorder)
+        css += borderCss(settings);
+    if (includeBlur)
+        css += blurCss(settings);
     if (includeShadow)
         css += shadowBoxShadowCss(settings);
     return css;

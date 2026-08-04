@@ -6,7 +6,7 @@
   "author": "GNOME Widget Center",
   "api-version": 1,
   "entry": "widget.js",
-  "block-type": "4x2",
+  "block-type": "3x2",
   "default-position": {
     "x": 40,
     "y": 40,

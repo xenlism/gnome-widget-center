@@ -183,6 +183,15 @@ Fixed (definitions added + an inline-style fallback in the JS itself).
   own separate Opacity slider, and `shadowBoxShadowCss()` only accepts a
   strict 6-digit hex for `shadowColor`; enabling alpha there would silently
   break to black instead.
+- **Per-widget background color fields, all widgets** (2026-08-04): every
+  widget's own `config.json` `backgroundColor`/`cardColor` colorpicker
+  field now has `"alpha": true` too (`lib/widgetConfigFieldRows.js`'s
+  colorpicker renderer only enables alpha in its `Gtk.ColorDialog` when the
+  field declares it — most widgets' fields didn't). 22 widgets were
+  missing it: `calendar-modern`, `clock-modern`, `date-modern`,
+  `weather-{dark,minimal}`, all 4 `media-player-*`, and 14 of the 16
+  `geek-*` widgets. Verified zero remaining gaps by re-scanning every
+  widget's `config.json` afterward.
 
 ---
 
@@ -199,6 +208,177 @@ Fixed (definitions added + an inline-style fallback in the JS itself).
 - **`circles-system`, `circles-battery`, `switches`**: already imported
   the shared `widgetVisualKit.js` kit on arrival (no local-copy cleanup
   needed); migrated their root card style onto `cardStyleCss()`.
+
+---
+
+## Force theme bug fix + Function Helper extension (2026-08-04, later session)
+
+**Real bug found and fixed**: the Appearance page's "Force this X on every
+widget" switches only ever actually reached 2 real widgets
+(`calendar-minimal`, `clock`) — everything else that calls
+`cardStyleCss()` (the ~50 widgets from the standardization sweep above)
+kept painting its own local settings, completely unaware "force" existed.
+Root cause: the old force mechanism (`ThemeService.applyWidgetStyle()`)
+only ran once, at widget placement / on a `theme.json` file change — any
+widget's own next natural re-render (a media player's next track, a
+clock's next tick, ...) would silently overwrite it right back, and it
+was gated behind `metadata.json`'s `"themeable": true`, which almost
+nothing opts into.
+
+**Fix**: `lib/widgetVisualKit.js` now has module-level forced-theme state
+(`setForcedTheme()`) that `cardStyleCss()`/`shadowBoxShadowCss()`/
+`borderCss()`/`blurCss()` all consult transparently — every widget's
+existing `cardStyleCss(this._settings, {...})` call site is unchanged,
+but automatically becomes force-aware. `extension.js` seeds this at
+startup and refreshes it on every `theme.json` change (same file-watch
+that already existed), and `_reapplyTheme()` now calls `_render()` on
+every widget (not just `themeable: true` ones) so a Force toggle takes
+effect immediately instead of waiting for the widget's own next render.
+
+**Function Helper extended**: `cardStyleCss()`'s scope grew from
+Background/CornerRadius/Shadow to also include **Border** (`borderCss()`,
+plain St `border` CSS) and **Blur** (`blurCss()`, St's real
+`-st-background-blur` CSS property — already in use by
+`applyWidgetStyle()`, reused rather than reinventing via a Clutter
+effect). **Opacity** (`opacityValue()`/`applyCardOpacity()`) is separate —
+it's a `Clutter.Actor` property, not expressible as a CSS string, so it's
+not folded into `cardStyleCss()`'s return value; call it alongside.
+Font/layout/padding/margin/animation/widget-specific CSS were explicitly
+left out of this helper's scope, per design brief — a widget still writes
+that part of its own `set_style()` call itself.
+
+`lib/themeService.js`'s `DEFAULT_GLOBAL_THEME` gained `border` and
+`opacity` as full categories (their own `force` flag each, matching
+`background`/`cornerRadius`/`dropShadow`). **Not yet done**: the
+Preferences UI (either copy) doesn't expose Border/Opacity controls yet —
+only the backend + force-awareness exists so far.
+
+**Also fixed**: the redundant "Close" button on a widget's settings
+subpage — removed, kept "Save & Close" only (both did the identical
+flush-and-close underneath).
+
+**Still unreconciled**: a large (58-widget) batch upload with the user's
+own hand/AI edits on top of a chunk of this session's own tree — includes
+what look like genuinely new widgets (`circles-{battery,cpu,disk,mem,net}
+-half`, `circles-system-nested`, `power-menu-bar`, `settings-control-bar`)
+mixed in with edited versions of existing ones. Not yet diffed or merged.
+
+## Geek series bay/big widgets: text sizes + transparent background — this session
+
+Applied to the 9 two-line "bay"/"big" geek widgets specifically (excludes
+`bar` variants - smaller, still tuned for their own size - and
+`geek-archey-systech-{bay,squre}`, which are neofetch-style info dumps
+with no single top/lower text-line pair to resize):
+`geek-clock-date-{bay,big}`, `geek-date-stat-big`,
+`geek-date-week-{bay,big}`, `geek-week-date-{bay,big}`,
+`geek-week-stat-{bay,big}`.
+
+- **Top text line** (whichever field renders first -
+  `clockFont`/`dateFont`/`weekFont` depending on the widget - confirmed
+  against each widget's own `add_child()` order, not just guessed from
+  field order) → font size default **80**.
+- **Lower text line** → font size default **14**.
+- **`backgroundColor`** default → **`#FFFFFF00`** (transparent white -
+  `alpha:true` was already set on all of these per the 2026-08-04 sweep;
+  this only changes the stored default value, same field).
+
+Changed in **both** places each widget declares its own defaults - not
+just `config.json` (the value a freshly-added widget/a Reset-to-defaults
+starts from) but also each `widget.js`'s own `getDefaultSettings()` +
+`_parseFontDescription(..., fallback string, fallback family, fallback
+size)` call + `_cardStyleCss(..., {backgroundColorFallback: ...})` call
+(the value used if `api.settings` is ever missing/malformed at
+render-time) - these three copies existed per widget already and had to
+stay in sync by hand; this is exactly the "config.json field-default
+audit... haven't been cross-checked" gap HANDOVER.md previously flagged
+for these widgets, now done for this specific set of fields. Regex-
+replaced with a match-count assertion per occurrence (1 in
+`getDefaultSettings()`, 1 in the `_parseFontDescription()` call, 2 for
+the background fallback) so a widget with an unexpected shape would have
+been caught rather than silently skipped - all 9 matched cleanly.
+
+`node --check` across the whole tree + JSON-parsed every `config.json`
+after the edit: clean.
+
+---
+
+## Media player: play/pause icon could lag one step behind — fixed this session
+
+Real bug, separate from the earlier Metadata `invalidated_properties` fix
+(2026-08-04, still valid and unchanged). `lib/mediaApi.js`'s
+`g-properties-changed` handler decided how to refresh purely off the
+signal's `invalidated_properties` argument and **completely discarded
+`changed_properties`**, trusting GDBusProxy's own cache to already be in
+sync with it by the time the callback ran. A plain Play↔Pause toggle -
+which almost every player sends via `changed_properties` (a small scalar,
+no reason to ever invalidate it) rather than `invalidated_properties` -
+had no code path here that actually guaranteed the new `PlaybackStatus`
+landed in the widget's read before `_emitFromProxy()` ran off the cache;
+all four widgets' `_renderState()` themselves have always applied
+`state.status` to the icon correctly and immediately, so the delay/
+staleness traced back to here, not to widget.js.
+
+**Fix**: the handler now walks `changed_properties` itself (same boxed-
+variant `n_children()`/`get_child_value()` pattern `_refreshThenEmit()`
+already used for `Properties.GetAll`'s result) and calls
+`set_cached_property()` for every key in it, synchronously, before
+`_emitFromProxy()` reads the cache — no dependency on cache-timing
+assumptions, no DBus round-trip for anything that arrived this way.
+`invalidated_properties` handling (the async `Properties.GetAll` refresh
+for Metadata et al) is untouched. Shared by all four widgets
+(`media-player-{square,circle,wide,poster}`) since they all go through
+this one file — no per-widget changes needed or made.
+
+`node --check` clean across the whole tree after the change (same
+whole-tree pass as below).
+
+---
+
+## Text/content overflow clipping — verified this session
+
+Explicit ask this session: *"Text must never extend beyond the widget's
+block size... implemented in the core rendering function, not
+individually inside each widget."* Audited the tree for this rather than
+adding a new mechanism, because one already exists and already matches
+the ask exactly:
+
+- `lib/widgetLoader.js`'s `_enforceBlockSize()` is the **only** place any
+  widget actor's pixel size is ever set at load/hot-reload time (called
+  from both `loadOne()` and the hot-reload path, plus re-run on every
+  `shadowOverflowMargin` change) — it sizes the actor to
+  `cols/rows * BLOCK_CELL_SIZE` from `BlockSizeManager.getBlockSizeFor()`
+  and then calls `StWidgetWrapper.clip(true, shadowOverflowMargin)`
+  (`lib/gjskit/st/StWidget.js`), which sets `clip_to_allocation` (or an
+  inflated explicit `Clutter` clip rect when shadow bleed room is
+  configured).
+- This is a **paint-level clip on the widget's own root actor** — Clutter
+  clips that actor's paint, and every descendant's paint, at the
+  allocation boundary regardless of what's inside (a long `St.Label`, a
+  child with its own oversized inline/CSS width, absolute positioning,
+  etc.). Individual widgets don't need their own clipping logic, and
+  can't accidentally opt out of it — confirmed no widget's `widget.js`
+  calls `clip_to_allocation`/`set_clip` itself (grepped the tree; none
+  do).
+- Confirmed `WidgetLoader` is the sole caller of any widget's
+  `buildActor()` anywhere in the extension (`widgetLayer.js`,
+  `widgetEditMode.js`, `extension.js` only ever consume the actor
+  `WidgetLoader` already built and clipped — none of them build widget
+  actors independently). `extension.js`'s own
+  `BlockSizeManager.applyBlockSize()` calls (theme-reapply /
+  hot-reload-adjacent paths) only re-set size, never touch clipping —
+  harmless, since the clip installed by `_enforceBlockSize()` stays in
+  effect (and `clip_to_allocation`, the default `shadowOverflowMargin=0`
+  case, auto-tracks any later size change; only the non-default
+  explicit-clip-rect path, used when shadow bleed room is configured,
+  would need a re-clip if size changed after the fact outside
+  `_enforceBlockSize()` — not currently a real path since
+  `applyBlockSize()` is called with metadata that hasn't changed size).
+- `prefs.js`'s `PrefsWidgetList` path never calls `buildActor()` at all
+  (GTK4 process, no St), so nothing there needs or has this.
+
+No code changes made for this — the ask was already met. Ran
+`node --check` across the whole tree as a final syntax sanity pass (all
+clean) rather than touching working clipping code.
 
 ---
 

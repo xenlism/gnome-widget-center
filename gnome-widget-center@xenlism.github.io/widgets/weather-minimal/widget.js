@@ -42,7 +42,7 @@ import Gio from 'gi://Gio';
 import Soup from 'gi://Soup?version=3.0';
 
 import {loadTranslations} from './i18n/index.js';
-import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, parseFontDescription as _parseFontDescription} from '../../lib/widgetVisualKit.js';
+import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, parseFontDescription as _parseFontDescription} from '../../lib/widgetVisualKit.js';
 
 const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
 
@@ -441,8 +441,6 @@ export default class WeatherMinimalWidget {
 
     /** @private */
     _render() {
-        const cardColor = this._settings.cardColor ?? '#ffffff';
-        const cornerRadius = this._settings.cornerRadius ?? 18;
         const iconColor = this._settings.iconColor ?? '#1a1a1a';
         const iconSize = this._settings.iconSize ?? 64;
         const conditionColor = this._settings.conditionColor ?? '#1a1a1a';
@@ -455,11 +453,8 @@ export default class WeatherMinimalWidget {
             _parseFontDescription(this._settings.tempFont ?? 'Sans Bold 34', 'Sans Bold', 34);
 
         this._actor.set_style(
-            `background-color: ${cardColor}; ` +
-            `border-radius: ${cornerRadius}px; ` +
-            'padding: 14px 14px; ' +
-            'spacing: 6px;' +
-            _shadowBoxShadowCss(this._settings)
+            _cardStyleCss(this._settings, {backgroundColorKey: 'cardColor', backgroundColorFallback: '#ffffff', cornerRadiusFallback: 18}) +
+            'padding: 14px 14px; spacing: 6px;'
         );
 
         const iconKey = this._weather?.icon ?? 'weather-cloud';

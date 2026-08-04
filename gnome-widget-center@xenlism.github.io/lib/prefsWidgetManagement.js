@@ -464,14 +464,20 @@ export const PrefsWidgetManagementMixin = Base => class extends Base {
      * / widgets' own hand-written prefs.js), so there was never a
      * separate "Save" step, and closing relied entirely on the Control
      * Center window's own title-bar chrome. That's not obvious enough on
-     * its own, so every settings subpage now gets an explicit action bar:
-     * both "Close" and "Save & Close" flush any pending debounced write
+     * its own, so every settings subpage gets an explicit action bar with
+     * a "Save & Close" button that flushes any pending debounced write
      * immediately (see the 2026-07-26 bug-fix note on
      * fillPreferencesWindow()'s close-request handler for why relying on
-     * the ~300ms debounce alone was silently losing edits) — the two
-     * buttons are kept distinct only so "my change is saved" stays an
-     * explicit, visible action for anyone who wants that confirmation,
-     * not because "Close" behaves any differently underneath.
+     * the ~300ms debounce alone was silently losing edits).
+     *
+     * 2026-08-04: this used to also show a separate plain "Close" button
+     * next to it — removed. It flushed the exact same pending write and
+     * closed the exact same way underneath (see the 2026-07-19 note
+     * above: every row already writes straight through, there's no
+     * "discard" semantics for either button to actually differ on), so
+     * having two buttons just implied a real Close-without-saving/Save
+     * distinction that never existed and cost real confusion for no
+     * benefit — one honest button.
      * @param {Adw.PreferencesWindow} window
      * @param {object} widget - discovered widget entry (needs .id for
      *   WidgetSettings.flush()).
@@ -492,13 +498,6 @@ export const PrefsWidgetManagementMixin = Base => class extends Base {
             halign: Gtk.Align.END,
         });
 
-        const closeButton = new Gtk.Button({label: 'Close'});
-        closeButton.connect('clicked', () => {
-            WidgetSettings.flush(widget.id);
-            onClose();
-            window.close_subpage();
-        });
-
         const saveButton = new Gtk.Button({
             label: 'Save & Close',
             css_classes: ['suggested-action'],
@@ -509,7 +508,6 @@ export const PrefsWidgetManagementMixin = Base => class extends Base {
             window.close_subpage();
         });
 
-        buttonBox.append(closeButton);
         buttonBox.append(saveButton);
         actionsGroup.add(buttonBox);
         prefsPage.add(actionsGroup);

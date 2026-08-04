@@ -2,9 +2,8 @@
 //
 // 1x1 card: "↓ download" / "↑ upload" throughput numbers on top (each in
 // its own line color), a two-line sparkline history strip on the bottom
-// (download + upload overlaid, adaptively scaled together so they stay
-// comparable and low traffic remains visible), on a rounded card background.
-// Sibling of cpu-monitor and
+// (download + upload overlaid, auto-scaled together so they stay
+// comparable), on a rounded card background. Sibling of cpu-monitor and
 // mem-monitor - see cpu-monitor/widget.js's header for the shared
 // conventions (self-contained widget folders, Cairo import, etc.) this
 // file repeats rather than importing from a sibling widget folder.
@@ -26,14 +25,12 @@ import Pango from 'gi://Pango';
 import Cairo from 'cairo';
 
 import {SystemMetricsService} from '../../lib/systemMetricsApi.js';
-import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor} from '../../lib/widgetVisualKit.js';
+import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, toCssColor as _toCssColor} from '../../lib/widgetVisualKit.js';
 
 const MAX_HISTORY = 40;
 const GRAPH_HEIGHT = 46;
 const CARD_PADDING = 16;
-const RECENT_SCALE_SAMPLES = 8;
-const MIN_SCALE_BYTES_PER_SEC = 64;
-const SCALE_HEADROOM = 1.25;
+const MIN_SCALE_BYTES_PER_SEC = 1024; // 1 KB/s floor so an idle graph isn't jittery noise
 
 /** @private Splits "#RRGGBB" or "#RRGGBBAA" into 0-1 float channels. */
 function _parseHexColor(hex, fallback = '#FFFFFFFF') {
@@ -244,11 +241,7 @@ export default class NetworkMonitorWidget {
         const graphBaseColor = _toCssColor(this._settings.graphBaseColor, '#FFFFFF12');
         const font = _splitFontDescription(this._settings.fontDesc ?? 'Sans Bold 20', 'Sans', 20);
 
-        this._actor.set_style(
-            `background-color: ${backgroundColor}; ` +
-            `border-radius: ${cornerRadius}px;` +
-            _shadowBoxShadowCss(this._settings)
-        );
+        this._actor.set_style(_cardStyleCss(this._settings, {backgroundColorFallback: '#000000FF', cornerRadiusFallback: 18}));
 
         this._textBox.set_style(`padding: ${CARD_PADDING}px ${CARD_PADDING}px 4px ${CARD_PADDING}px; spacing: 2px;`);
 
@@ -273,9 +266,10 @@ export default class NetworkMonitorWidget {
             this._graphArea.queue_repaint();
     }
 
-    /** @private Draws both sparklines on one adaptive scale based on recent
-     * traffic. The shared scale keeps directions comparable, while dropping
-     * an old burst after a few samples lets small current traffic be seen. */
+    /** @private Draws both the download and upload sparklines on a shared
+     * auto-scaled 0..max range, so the two stay visually comparable
+     * instead of each being independently stretched to fill the strip.
+     * Never throws on an empty/short history. */
     _onRepaint(area) {
         const cr = area.get_context();
         const [width, height] = area.get_surface_size();
@@ -286,11 +280,10 @@ export default class NetworkMonitorWidget {
 
         const longest = Math.max(this._rxHistory.length, this._txHistory.length);
         if (longest >= 2) {
-            const recentValues = [
-                ...this._rxHistory.slice(-RECENT_SCALE_SAMPLES),
-                ...this._txHistory.slice(-RECENT_SCALE_SAMPLES),
-            ];
-            const maxValue = Math.max(MIN_SCALE_BYTES_PER_SEC, ...recentValues) * SCALE_HEADROOM;
+            const maxValue = Math.max(
+                MIN_SCALE_BYTES_PER_SEC,
+                ...this._rxHistory, ...this._txHistory
+            );
             const stepX = width / Math.max(1, MAX_HISTORY - 1);
 
             const drawLine = (history, hexColor) => {
@@ -303,10 +296,7 @@ export default class NetworkMonitorWidget {
                 cr.setSourceRGBA(r, g, b, a);
                 history.forEach((value, i) => {
                     const x = (startIndex + i) * stepX;
-                    // Square-root response gives lower rates enough height
-                    // to read while retaining the full range for bursts.
-                    const fraction = Math.sqrt(Math.min(1, Math.max(0, value) / maxValue));
-                    const y = height - 6 - fraction * (height - 12);
+                    const y = height - 6 - (Math.max(0, value) / maxValue) * (height - 12);
                     if (i === 0)
                         cr.moveTo(x, y);
                     else

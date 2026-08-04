@@ -2,10 +2,9 @@
 //
 // 1x1 card: two concentric ring gauges sharing one center - outer ring =
 // download throughput, inner ring = upload throughput, each a base
-// track + progress arc using its own adaptive recent-traffic scale. A raw
-// byte rate has no natural "100%" the way CPU/memory/disk percentages do;
-// adapting the scale keeps light traffic visible instead of leaving the
-// rings empty on a fast connection. The "NET"
+// track + progress arc scaled against its own configurable max-speed
+// setting (maxDownloadMbps/maxUploadMbps), since a raw byte rate has no
+// natural "100%" the way CPU/memory/disk percentages do. The "NET"
 // caption plus the live download/upload numbers (each in its own ring's
 // color) sit centered on top - same Clutter.BinLayout stack idea as
 // widgets/circles-cpu and widgets/system-monitor-mini, with two rings
@@ -31,9 +30,6 @@ import {
 
 const RING_SIZE = 128; // 1x1 block-type is now 11x11 cells (176px) not 10x10 (160px); scaled 116 * (176/160) = 127.6 -> 128
 const RING_GAP = 4; // px between the download (outer) and upload (inner) bands
-const MIN_DYNAMIC_SCALE_BYTES_PER_SEC = 8 * 1024;
-const SCALE_HEADROOM = 1.25;
-const SCALE_DECAY = 0.85;
 
 /** @private Human-readable throughput, e.g. 1536 -> "1.5 KB/s". Same
  * helper as widgets/network-monitor/widget.js's _formatRate(). */
@@ -49,19 +45,6 @@ function _formatRate(bytesPerSec) {
     return `${value.toFixed(decimals)} ${units[i]}`;
 }
 
-/** @private Maintains a responsive scale for one traffic direction.
- * New peaks become visible immediately with a little headroom; a previous
- * peak fades gradually so ordinary fluctuations do not make the ring jump. */
-function _adaptiveFraction(bytesPerSec, previousScale) {
-    const rate = Math.max(0, Number.isFinite(bytesPerSec) ? bytesPerSec : 0);
-    const scale = Math.max(
-        MIN_DYNAMIC_SCALE_BYTES_PER_SEC,
-        rate * SCALE_HEADROOM,
-        (Number.isFinite(previousScale) ? previousScale : 0) * SCALE_DECAY
-    );
-    return {scale, fraction: Math.min(1, rate / scale)};
-}
-
 export default class CirclesNetWidget {
     /** @param {WidgetAPI} api - see WIDGET_API.md §5. */
     constructor(api) {
@@ -72,8 +55,6 @@ export default class CirclesNetWidget {
         this._pressId = null;
         this._downloadFraction = 0;
         this._uploadFraction = 0;
-        this._downloadScale = MIN_DYNAMIC_SCALE_BYTES_PER_SEC;
-        this._uploadScale = MIN_DYNAMIC_SCALE_BYTES_PER_SEC;
     }
 
     buildActor() {
@@ -151,6 +132,8 @@ export default class CirclesNetWidget {
             uploadColor: '#FF9F0AFF',
             ringThickness: 9,
 
+            maxDownloadMbps: 100,
+            maxUploadMbps: 20,
             refreshRateSeconds: 2,
             launchAppPath: '',
         };
@@ -185,12 +168,11 @@ export default class CirclesNetWidget {
     _tick() {
         const {totalRxBytesPerSec, totalTxBytesPerSec} = this._metrics.getNetworkUsage();
 
-        const download = _adaptiveFraction(totalRxBytesPerSec, this._downloadScale);
-        const upload = _adaptiveFraction(totalTxBytesPerSec, this._uploadScale);
-        this._downloadScale = download.scale;
-        this._uploadScale = upload.scale;
-        this._downloadFraction = download.fraction;
-        this._uploadFraction = upload.fraction;
+        const maxDownloadBytesPerSec = Math.max(1, this._settings.maxDownloadMbps ?? 100) * 1_000_000 / 8;
+        const maxUploadBytesPerSec = Math.max(1, this._settings.maxUploadMbps ?? 20) * 1_000_000 / 8;
+
+        this._downloadFraction = Math.max(0, Math.min(1, totalRxBytesPerSec / maxDownloadBytesPerSec));
+        this._uploadFraction = Math.max(0, Math.min(1, totalTxBytesPerSec / maxUploadBytesPerSec));
 
         this._downloadLabel.set_text(`\u2193 ${_formatRate(totalRxBytesPerSec)}`);
         this._uploadLabel.set_text(`\u2191 ${_formatRate(totalTxBytesPerSec)}`);

@@ -30,7 +30,7 @@ import Pango from 'gi://Pango';
 import Cairo from 'cairo';
 
 import {SystemMetricsService} from '../../lib/systemMetricsApi.js';
-import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor} from '../../lib/widgetVisualKit.js';
+import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, toCssColor as _toCssColor} from '../../lib/widgetVisualKit.js';
 
 const MAX_HISTORY = 40;
 const GRAPH_HEIGHT = 46;
@@ -226,11 +226,7 @@ export default class CpuMonitorWidget {
         const graphBaseColor = _toCssColor(this._settings.graphBaseColor, '#FFFFFF12');
         const font = _splitFontDescription(this._settings.fontDesc ?? 'Sans Bold 34', 'Sans', 34);
 
-        this._actor.set_style(
-            `background-color: ${backgroundColor}; ` +
-            `border-radius: ${cornerRadius}px;` +
-            _shadowBoxShadowCss(this._settings)
-        );
+        this._actor.set_style(_cardStyleCss(this._settings, {backgroundColorFallback: '#000000FF', cornerRadiusFallback: 18}));
 
         this._textBox.set_style(`padding: ${CARD_PADDING}px ${CARD_PADDING}px 6px ${CARD_PADDING}px; spacing: 2px;`);
 

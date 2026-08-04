@@ -37,6 +37,7 @@ import {WidgetEditMode} from './lib/widgetEditMode.js';
 import {EditModeDragController} from './lib/editModeDragController.js';
 import {BlockSizeManager} from './lib/blockSizeManager.js';
 import {ThemeService} from './lib/themeService.js';
+import {setForcedTheme} from './lib/widgetVisualKit.js';
 import {WidgetCenterOverlay} from './lib/widgetCenterOverlay.js';
 import {createLogger} from './lib/logger.js';
 
@@ -54,12 +55,22 @@ export default class WidgetCenterExtension extends Extension {
         // the first time any widget is flipped.
         this._themeService = new ThemeService();
         this._themeService.init();
+        // 2026-08-04 bug fix: seed lib/widgetVisualKit.js's module-level
+        // forced-theme state right away, not just on the first
+        // theme.json change below - otherwise every widget that opens
+        // with a Force switch already on would render un-forced once at
+        // startup. See widgetVisualKit.js's setForcedTheme() doc comment
+        // for the full story on why this exists.
+        setForcedTheme(this._themeService.getGlobalTheme());
         // Cross-process live reload (2026-07-21): the Control Center's
         // Appearance page (prefs.js, separate process) writes theme.json
         // directly via ThemeService.setGlobalTheme()/setWidgetTheme() —
         // this picks that up in the Shell process without needing a
         // restart, same pattern as settingsWatcher.js for widgets/<id>.json.
-        this._themeService.watch(() => this._reapplyTheme());
+        this._themeService.watch(() => {
+            setForcedTheme(this._themeService.getGlobalTheme());
+            this._reapplyTheme();
+        });
 
         this._settings = new SettingsService(this);
         try {
@@ -294,6 +305,7 @@ export default class WidgetCenterExtension extends Extension {
         // touch on a stray in-flight debounced callback.
         this._themeService?.unwatch();
         this._themeService = null;
+        setForcedTheme(null);
 
         if (this._settings && this._disabledChangedId != null)
             this._settings.disconnect(this._disabledChangedId);
@@ -386,12 +398,27 @@ export default class WidgetCenterExtension extends Extension {
     }
 
     /**
-     * @private Re-styles every currently-placed widget (that opted in via
-     * `themeable: true`) plus every already-built Edit Mode back card,
-     * from the current (just-reloaded) theme. Called by the
-     * `ThemeService.watch()` callback wired in enable() — see there for
-     * why this exists (cross-process live reload from the Control
-     * Center's Appearance page).
+     * @private Re-styles every currently-placed widget from the current
+     * (just-reloaded) theme, plus every already-built Edit Mode back
+     * card. Called by the `ThemeService.watch()` callback wired in
+     * enable() — see there for why this exists (cross-process live
+     * reload from the Control Center's Appearance page).
+     *
+     * Two different mechanisms cover two different sets of widgets here:
+     *  - `themeable: true` widgets (a handful, e.g. calendar-minimal/
+     *    clock, that don't paint their own background at all) get
+     *    lib/themeService.js's applyWidgetStyle() as before - it fully
+     *    owns their style.
+     *  - EVERY OTHER widget (the ~50 that call
+     *    lib/widgetVisualKit.js's cardStyleCss() from their own
+     *    _render()) gets a plain `_render()` call instead. 2026-08-04 bug
+     *    fix: previously nothing told these widgets a Force toggle had
+     *    changed at all - cardStyleCss() is now Force-aware (see
+     *    widgetVisualKit.js's setForcedTheme(), called right before this
+     *    method runs), but a widget only picks that up the next time it
+     *    happens to re-render on its own. This makes the change visible
+     *    immediately instead of "eventually, next time something else
+     *    triggers this widget's own re-render".
      */
     _reapplyTheme() {
         if (!this._themeService)
@@ -399,10 +426,11 @@ export default class WidgetCenterExtension extends Extension {
 
         if (this._loader) {
             for (const entry of this._loader.instances) {
-                if (!entry.metadata['themeable'])
-                    continue;
                 try {
-                    this._themeService.applyWidgetStyle(entry.actor, entry.id);
+                    if (entry.metadata['themeable'])
+                        this._themeService.applyWidgetStyle(entry.actor, entry.id);
+                    else
+                        entry.instance._render?.();
                 } catch (e) {
                     console.error(`[widget-center] Failed to reapply theme for "${entry.id}"`, e);
                 }

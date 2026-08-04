@@ -42,18 +42,13 @@ the same folder for the condensed, build-one-now version.
 
 If you find **GNOME Widget Center** useful, please consider supporting its development.
 
-
-### Ko-fi
-
-[![Support on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/xenlism)
-
 ### PayPal
 
-[PayPal QR Code](assets/paypal.jpg)
+[![PayPal QR Code](assets/paypal.jpg)](assets/paypal.jpg)
 
 ### USDT (TRC20 Network)
 
-[USDT TRC20 QR Code](assets/usdt.jpg)
+[![USDT TRC20 QR Code](assets/usdt.jpg)](assets/usdt.jpg)
 
 Every contribution helps support development, maintenance, bug fixes, and new features.
 
@@ -62,11 +57,8 @@ Every contribution helps support development, maintenance, bug fixes, and new fe
 
 ### Edit Mode ( Settings Reset Move By Right Click Toggle)
 
-**▶️ [Edit Mode](assets/editmode.mp4)**
-<video src="assets/editmode.mp4" controls width="1920"></video>
-
 ![editmode](assets/editmode.png)
-
+<video src="assets/editmode.m4v" controls width="1920"></video>
 
 
 ### Desktop

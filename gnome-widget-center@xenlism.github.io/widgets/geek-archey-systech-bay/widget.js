@@ -58,7 +58,7 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import {SystemMetricsService} from '../../lib/systemMetricsApi.js';
 import {
-    SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor,
+    SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss,
     TEXT_SHADOW_DEFAULTS, textShadowCss as _textShadowCss,
 } from '../../lib/widgetVisualKit.js';
 
@@ -428,12 +428,9 @@ export default class GeekArcheySystechBayWidget {
      * safe to call as often as needed (every info fetch above calls this
      * once it resolves, rather than hand-updating one label at a time). */
     _render() {
-        const backgroundColor = _toCssColor(this._settings.backgroundColor ?? '#00000026', '#00000026');
-        const cornerRadius = this._settings.cornerRadius ?? 18;
-
         this._actor.set_style(
-            `background-color: ${backgroundColor}; border-radius: ${cornerRadius}px; padding: ${CARD_PADDING}px;` +
-            _shadowBoxShadowCss(this._settings)
+            _cardStyleCss(this._settings, {backgroundColorFallback: '#00000026', cornerRadiusFallback: 18}) +
+            `padding: ${CARD_PADDING}px;`
         );
 
         // this._logoModule is whatever _loadLogo() last resolved for the

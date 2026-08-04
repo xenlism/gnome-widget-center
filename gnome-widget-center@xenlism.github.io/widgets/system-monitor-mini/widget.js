@@ -48,7 +48,7 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import Cairo from 'cairo';
 import {SystemMetricsService} from '../../lib/systemMetricsApi.js';
-import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor, parseFontDescription as _parseFontDescription} from '../../lib/widgetVisualKit.js';
+import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor, parseFontDescription as _parseFontDescription} from '../../lib/widgetVisualKit.js';
 
 const RING_SIZE = 84;
 const RING_THICKNESS = 8;
@@ -291,10 +291,8 @@ export default class SystemMonitorMiniWidget {
         const backgroundColor = _toCssColor(this._settings.backgroundColor, '#1C1C1EE6');
         const cornerRadius = this._settings.cornerRadius ?? 18;
         this._actor.set_style(
-            `background-color: ${backgroundColor}; ` +
-            `border-radius: ${cornerRadius}px; ` +
-            `padding: ${CARD_PADDING}px;` +
-            _shadowBoxShadowCss(this._settings)
+            _cardStyleCss(this._settings, {backgroundColorFallback: '#1C1C1EE6', cornerRadiusFallback: 18}) +
+            `padding: ${CARD_PADDING}px;`
         );
 
         const {family, size} = _parseFontDescription(this._settings.font ?? 'Sans Bold 18', 'Sans Bold', 18);
