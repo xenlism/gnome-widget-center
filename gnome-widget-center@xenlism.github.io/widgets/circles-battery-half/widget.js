@@ -19,8 +19,8 @@
 //
 // Ring/text color banding is the same idea as widgets/circles-battery:
 //
-//   < 20%              -> ringColorLow  (red by default)
-//   20% <= x < 50%      -> ringColorMid  (yellow by default)
+//   <= 20%             -> ringColorLow  (red by default)
+//   20% < x < 50%       -> ringColorMid  (yellow by default)
 //   >= 50%              -> ringColorHigh (green by default)
 //   charging (any %)    -> ringColorCharging (blue by default), and the
 //                          text label is replaced by a bolt glyph in
@@ -52,6 +52,7 @@ const RING_COLUMN_WIDTH = 74;
 const CONTENT_HEIGHT = 148;
 const COLUMN_GAP = 10;
 const CARD_PADDING = 14;
+const RING_GAP = 4;
 
 const UPOWER_BUS_NAME = 'org.freedesktop.UPower';
 const UPOWER_DISPLAY_DEVICE_PATH = '/org/freedesktop/UPower/devices/DisplayDevice';
@@ -253,7 +254,7 @@ export default class CirclesBatteryHalfWidget {
     _currentRingColorSetting() {
         if (this._charging)
             return 'ringColorCharging';
-        if (this._fraction * 100 < 20)
+        if (this._fraction * 100 <= 20)
             return 'ringColorLow';
         if (this._fraction * 100 < 50)
             return 'ringColorMid';
@@ -320,29 +321,34 @@ export default class CirclesBatteryHalfWidget {
         // left toward its text, and a left-side ring bends right.
         const cx = side === 'left' ? 0 : RING_COLUMN_WIDTH;
         const cy = CONTENT_HEIGHT / 2;
-        const radius = Math.min(RING_COLUMN_WIDTH - thickness / 2 - 2, CONTENT_HEIGHT / 2 - thickness / 2 - 2);
+        const outerRadius = Math.min(RING_COLUMN_WIDTH - thickness / 2 - 2, CONTENT_HEIGHT / 2 - thickness / 2 - 2);
         const fraction = Math.max(0, Math.min(1, this._fraction));
         const start = -Math.PI / 2; // top
+        const rings = [outerRadius, outerRadius - thickness - RING_GAP];
 
         cr.setLineWidth(thickness);
         // Flat (butt) caps, not round - a round cap would poke past the
         // flat diameter edge at the 0%/top end.
         cr.setLineCap(Cairo.LineCap.BUTT);
 
-        cr.setSourceRGBA(baseColor.r, baseColor.g, baseColor.b, baseColor.a);
-        if (side === 'left')
-            cr.arc(cx, cy, radius, start, start + Math.PI);
-        else
-            cr.arcNegative(cx, cy, radius, start, start - Math.PI);
-        cr.stroke();
-
-        if (fraction > 0) {
-            cr.setSourceRGBA(ringColor.r, ringColor.g, ringColor.b, ringColor.a);
+        for (const radius of rings) {
+            if (radius <= 0)
+                continue;
+            cr.setSourceRGBA(baseColor.r, baseColor.g, baseColor.b, baseColor.a);
             if (side === 'left')
-                cr.arc(cx, cy, radius, start, start + fraction * Math.PI);
+                cr.arc(cx, cy, radius, start, start + Math.PI);
             else
-                cr.arcNegative(cx, cy, radius, start, start - fraction * Math.PI);
+                cr.arcNegative(cx, cy, radius, start, start - Math.PI);
             cr.stroke();
+
+            if (fraction > 0) {
+                cr.setSourceRGBA(ringColor.r, ringColor.g, ringColor.b, ringColor.a);
+                if (side === 'left')
+                    cr.arc(cx, cy, radius, start, start + fraction * Math.PI);
+                else
+                    cr.arcNegative(cx, cy, radius, start, start - fraction * Math.PI);
+                cr.stroke();
+            }
         }
 
         cr.$dispose();

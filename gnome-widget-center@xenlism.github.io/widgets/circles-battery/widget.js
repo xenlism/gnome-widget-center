@@ -6,12 +6,13 @@
 // the ring's own color switches automatically by charge level instead
 // of being one fixed color:
 //
-//   < 20%              -> ringColorLow  (red by default)
-//   20% <= x < 50%      -> ringColorMid  (yellow by default)
+//   <= 20%             -> ringColorLow  (red by default)
+//   20% < x < 50%       -> ringColorMid  (yellow by default)
 //   >= 50%              -> ringColorHigh (green by default)
-//   charging (any %)    -> ringColorCharging (blue by default), and the
-//                          centered text is replaced by a bolt glyph in
-//                          that same color instead of a percentage
+//   charging (any %)    -> ringColorCharging (blue by default)
+//
+// This full-circle variant is deliberately ring-only: it does not
+// overlay a percentage, caption, or charging glyph in the center.
 //
 // Data source: org.freedesktop.UPower's DisplayDevice - the same
 // aggregate battery object GNOME Shell's own battery indicator reads,
@@ -35,7 +36,7 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Cairo from 'cairo';
 
-import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor, parseFontDescription as _parseFontDescription} from '../../lib/widgetVisualKit.js';
+import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor} from '../../lib/widgetVisualKit.js';
 
 const RING_SIZE = 128; // 1x1 block-type is 11x11 cells = 176px; matches widgets/circles-cpu's own sizing note.
 
@@ -88,18 +89,6 @@ export default class CirclesBatteryWidget {
         this._stack.add_child(this._ringArea);
         this._repaintId = this._ringArea.connect('repaint', () => this._onRepaint());
 
-        // One label doubles as both the percentage text (not charging)
-        // and the bolt glyph (charging) - simplest way to keep exactly
-        // one centered text node instead of swapping actors in/out.
-        this._valueLabel = new St.Label({
-            text: '0%',
-            x_align: Clutter.ActorAlign.CENTER,
-            y_align: Clutter.ActorAlign.CENTER,
-            x_expand: true,
-            y_expand: true,
-        });
-        this._stack.add_child(this._valueLabel);
-
         this._render();
         return this._actor;
     }
@@ -140,9 +129,6 @@ export default class CirclesBatteryWidget {
             ringColorHigh: '#33D17AFF',
             ringColorCharging: '#3584E4FF',
             ringThickness: 10,
-
-            percentFont: 'Sans Bold 22',
-            percentColor: '#FFFFFFFF',
 
             refreshRateSeconds: 5,
         };
@@ -189,8 +175,8 @@ export default class CirclesBatteryWidget {
 
     /** @private reads Percentage/State/IsPresent off the cached proxy
      * properties (populated at proxy-creation time and kept live by
-     * `g-properties-changed`), updates the ring fraction + label, and
-     * queues a repaint. */
+     * `g-properties-changed`), updates the ring fraction, and queues a
+     * repaint. */
     _readBattery() {
         const isPresent = this._upowerProxy?.get_cached_property('IsPresent')?.unpack() ?? false;
         const percent = this._upowerProxy?.get_cached_property('Percentage')?.unpack() ?? 0;
@@ -227,26 +213,6 @@ export default class CirclesBatteryWidget {
             ringColorHigh: '#33D17AFF', ringColorCharging: '#3584E4FF',
         }[ringColorKey];
         const ringColorCss = _toCssColor(this._settings[ringColorKey], ringColorDefault);
-
-        if (this._charging) {
-            // No percentage text while charging - just a bolt glyph, in
-            // the same color as the (charging-colored) ring, per this
-            // widget's spec.
-            this._valueLabel.set_text('\u26A1'); // ⚡
-            const font = _parseFontDescription(this._settings.percentFont ?? 'Sans Bold 22', 'Sans Bold', 22);
-            this._valueLabel.set_style(
-                `color: ${ringColorCss}; font-family: ${font.family}; ` +
-                `font-size: ${font.size}px; text-align: center;`
-            );
-        } else {
-            const percentColor = _toCssColor(this._settings.percentColor, '#FFFFFFFF');
-            const percentFont = _parseFontDescription(this._settings.percentFont ?? 'Sans Bold 22', 'Sans Bold', 22);
-            this._valueLabel.set_text(`${Math.round(this._fraction * 100)}%`);
-            this._valueLabel.set_style(
-                `color: ${percentColor}; font-family: ${percentFont.family}; ` +
-                `font-size: ${percentFont.size}px; font-weight: bold; text-align: center;`
-            );
-        }
 
         if (this._ringArea)
             this._ringArea.queue_repaint();

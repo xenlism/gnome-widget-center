@@ -54,7 +54,7 @@
             {
               "id": "ringColorLow",
               "label": "Low battery color (< 20%)",
-              "description": "Ring color while battery is below 20% and not charging",
+              "description": "Ring color while battery is at or below 20% and not charging",
               "dataType": "string",
               "fieldType": "colorpicker",
               "format": "color",
@@ -64,7 +64,7 @@
             {
               "id": "ringColorMid",
               "label": "Medium battery color (20-50%)",
-              "description": "Ring color while battery is between 20% and 50% and not charging",
+              "description": "Ring color while battery is above 20% and below 50% and not charging",
               "dataType": "string",
               "fieldType": "colorpicker",
               "format": "color",
@@ -74,7 +74,7 @@
             {
               "id": "ringColorHigh",
               "label": "High battery color (> 50%)",
-              "description": "Ring color while battery is above 50% and not charging",
+              "description": "Ring color while battery is at or above 50% and not charging",
               "dataType": "string",
               "fieldType": "colorpicker",
               "format": "color",
