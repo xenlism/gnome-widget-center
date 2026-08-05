@@ -25,6 +25,7 @@ import {buildGwctDocument, writeGwctFile, readGwctFile, importGwctDocument} from
 import {createBackup, restoreBackup} from './backupService.js';
 import {rgbaToHex} from './colorUtils.js';
 import {SUPPORTED_LOCALES} from '../i18n/index.js';
+import {SHADOW_ANGLE_STEPS} from './widgetVisualKit.js';
 
 export const PrefsPageBuildersMixin = Base => class extends Base {
     /**
@@ -246,8 +247,9 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         const group = new Adw.PreferencesGroup({
             title: this._tr('importexport.group.title', 'Theme file (.gwct)'),
             description: this._tr('importexport.group.description',
-                'Appearance and per-widget settings, with any passwords, API keys, ' +
-                'usernames or emails left out. Does not include the widgets themselves — ' +
+                'Appearance, host preferences, and settings for your currently-enabled ' +
+                'widgets, with any passwords, API keys, usernames or emails left out. ' +
+                'Disabled widgets and the widgets themselves are not included — ' +
                 'importing on a machine missing one of these widgets will skip it.'),
         });
         page.add(group);
@@ -268,7 +270,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
             try {
                 const theme = new ThemeService();
                 theme.init();
-                const {document, redactedFields} = buildGwctDocument(discoveredWidgets, {storage, theme});
+                const {document, redactedFields} = buildGwctDocument(discoveredWidgets, {storage, theme, settings: this._settings});
                 const finalPath = writeGwctFile(path, document);
 
                 const lines = [
@@ -305,7 +307,8 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
                 this._tr('importexport.import.confirm_heading', 'Import this theme?'),
                 this._tr('importexport.import.confirm_body',
                     'This applies appearance and widget settings from the chosen file, ' +
-                    'overwriting any current values for the widgets it covers. This cannot be undone.'),
+                    'overwriting any current values for the widgets it covers, and disables ' +
+                    'every other widget so your desktop matches the theme exactly. This cannot be undone.'),
                 this._tr('importexport.import.confirm_button', 'Import'));
             if (!confirmed)
                 return;
@@ -316,7 +319,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
                 theme.init();
                 const discoveredWidgetsById = new Map(discoveredWidgets.map(w => [w.id, w]));
                 const {appliedWidgetIds, missingWidgets, dependencyWarnings} =
-                    importGwctDocument(document, {storage, theme, discoveredWidgetsById});
+                    importGwctDocument(document, {storage, theme, settings: this._settings, discoveredWidgetsById});
 
                 const lines = [this._tr('importexport.result.applied_to', 'Applied to {count} widget(s).').replace('{count}', appliedWidgetIds.length)];
                 if (missingWidgets.length > 0) {
@@ -655,25 +658,25 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         });
         shadowGroup.add(shadowOpacityRow);
 
-        const shadowOffsetXRow = new Adw.SpinRow({
-            title: 'Offset X',
-            subtitle: 'px',
-            adjustment: new Gtk.Adjustment({
-                lower: -64, upper: 64, step_increment: 1,
-                value: current.dropShadow.offsetX ?? 0,
-            }),
+        const shadowAngleModel = new Gtk.StringList({strings: SHADOW_ANGLE_STEPS.map(deg => `${deg}\u00b0`)});
+        const shadowAngleRow = new Adw.ComboRow({
+            title: 'Shadow angle',
+            subtitle: 'Direction the shadow is cast in.',
+            model: shadowAngleModel,
         });
-        shadowGroup.add(shadowOffsetXRow);
+        const shadowAngleIndex = SHADOW_ANGLE_STEPS.indexOf(current.dropShadow.angle ?? 90);
+        shadowAngleRow.selected = shadowAngleIndex >= 0 ? shadowAngleIndex : SHADOW_ANGLE_STEPS.indexOf(90);
+        shadowGroup.add(shadowAngleRow);
 
-        const shadowOffsetYRow = new Adw.SpinRow({
-            title: 'Offset Y',
+        const shadowDistanceRow = new Adw.SpinRow({
+            title: 'Distance',
             subtitle: 'px',
             adjustment: new Gtk.Adjustment({
-                lower: -64, upper: 64, step_increment: 1,
-                value: current.dropShadow.offsetY ?? 4,
+                lower: 0, upper: 64, step_increment: 1,
+                value: current.dropShadow.distance ?? 4,
             }),
         });
-        shadowGroup.add(shadowOffsetYRow);
+        shadowGroup.add(shadowDistanceRow);
 
         const shadowBlurRow = new Adw.SpinRow({
             title: 'Blur radius',
@@ -710,8 +713,8 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
                     transparent: shadowTransparentRow.active,
                     color: rgbaToHex(shadowColorButton.rgba),
                     opacity: shadowOpacityRow.value,
-                    offsetX: shadowOffsetXRow.value,
-                    offsetY: shadowOffsetYRow.value,
+                    angle: SHADOW_ANGLE_STEPS[shadowAngleRow.selected] ?? 90,
+                    distance: shadowDistanceRow.value,
                     blurRadius: shadowBlurRow.value,
                     spread: shadowSpreadRow.value,
                     force: shadowForceRow.active,
@@ -719,9 +722,10 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
             });
         };
         for (const row of [shadowEnabledRow, shadowTransparentRow, shadowOpacityRow,
-            shadowOffsetXRow, shadowOffsetYRow, shadowBlurRow, shadowSpreadRow, shadowForceRow]) {
+            shadowDistanceRow, shadowBlurRow, shadowSpreadRow, shadowForceRow]) {
             row.connect(row instanceof Adw.SwitchRow ? 'notify::active' : 'notify::value', saveShadow);
         }
+        shadowAngleRow.connect('notify::selected', saveShadow);
         shadowColorButton.connect('notify::rgba', saveShadow);
 
         return page;

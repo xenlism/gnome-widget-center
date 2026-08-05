@@ -178,7 +178,7 @@ export default class MediaPlayerWideWidget {
     getDefaultSettings() {
         return {
             ...SHADOW_DEFAULTS,
-            backgroundColor: '#000000F5',
+            backgroundColor: '#FFFFFF00',
             cornerRadius: 18,
             infoFont: 'Sans Bold 18',
             infoColor: '#FFFFFFFF',

@@ -79,10 +79,12 @@ export class WidgetCenterOverlay {
      *     discover() is used (matches the live desktop exactly); if not,
      *     this file does its own read-only metadata.json folder scan.
      *   - onWidgetSettings(id), onWidgetRemove(id), onOpenPreferences(),
-     *     onWidgetEnabledChanged(id, enabled), onApplyThemePack(manifest, enabled):
-     *     hooks a real integration can use to do more than the built-in
-     *     fallback (e.g. onWidgetRemove actually deleting layout/settings
-     *     via StorageService, not just disabling).
+     *     onWidgetEnabledChanged(id, enabled), onApplyThemePack(manifest, enabled),
+     *     onThemePackRemove(entry): hooks a real integration can use to do
+     *     more than the built-in fallback (e.g. onWidgetRemove actually
+     *     deleting layout/settings via StorageService, not just
+     *     disabling; onThemePackRemove doing something other than a
+     *     straight recursive delete of the pack's folder).
      *   - logger: anything with a .debug(tag, msg) method (see lib/logger.js).
      */
     constructor(extensionObject, services = {}) {
@@ -284,7 +286,16 @@ export class WidgetCenterOverlay {
     _buildHeader() {
         const header = new St.BoxLayout({style_class: 'wc-overlay-header', vertical: false});
 
-        const tabsBox = new St.BoxLayout({style_class: 'wc-overlay-tabs', x_expand: true});
+        // Center the tab strip in the header instead of it hugging the
+        // left edge: tabsBox itself is sized to its own content (no
+        // x_expand), flanked by two equal x_expand spacers, so BoxLayout
+        // splits the leftover width evenly on both sides of it. The close
+        // button stays pinned to the far right, outside this centering
+        // group, matching the "tabs centered, close in the corner" layout
+        // requested for the overlay (see development/handoff-2026-08-05-
+        // bg-alpha-media-fix.md item 4).
+        const leftSpacer = new St.Widget({x_expand: true});
+        const tabsBox = new St.BoxLayout({style_class: 'wc-overlay-tabs'});
         for (const [id, label] of [['overview', 'Overview'], ['themes', 'Themes'], ['settings', 'Preferences']]) {
             const button = new St.Button({
                 style_class: 'wc-overlay-tab',
@@ -296,7 +307,10 @@ export class WidgetCenterOverlay {
             this._tabButtons[id] = button;
             tabsBox.add_child(button);
         }
+        const rightSpacer = new St.Widget({x_expand: true});
+        header.add_child(leftSpacer);
         header.add_child(tabsBox);
+        header.add_child(rightSpacer);
 
         const closeButton = this._buildIconButton('window-close-symbolic', () => this.close());
         closeButton.add_style_class_name('wc-overlay-close');
@@ -439,10 +453,6 @@ export class WidgetCenterOverlay {
             card.add_child(desc);
         }
 
-        const widgetList = (manifest.widgets ?? []).join(', ');
-        if (widgetList)
-            card.add_child(new St.Label({text: widgetList, style_class: 'wc-overlay-card-widgetlist'}));
-
         if (manifest.author)
             card.add_child(new St.Label({text: `by ${manifest.author}`, style_class: 'wc-overlay-card-author'}));
 
@@ -451,6 +461,7 @@ export class WidgetCenterOverlay {
             this._isThemePackEnabled(manifest), enabled => this._setThemePackEnabled(manifest, enabled)));
         controls.add_child(new St.Widget({x_expand: true}));
         controls.add_child(this._buildIconButton('emblem-system-symbolic', () => this._openThemePackSettings(id)));
+        controls.add_child(this._buildIconButton('window-close-symbolic', () => this._removeThemePack(entry)));
         card.add_child(controls);
 
         return card;
@@ -479,6 +490,49 @@ export class WidgetCenterOverlay {
             return;
         }
         this._openExtensionPreferences();
+    }
+
+    /**
+     * Remove a theme pack. Prefer `services.onThemePackRemove(entry)` if
+     * given (e.g. a real integration that wants to confirm with the user
+     * first, or log it) — otherwise falls back to deleting the pack's
+     * folder straight off disk (`<themepacks>/<id>/`), since unlike a
+     * bundled widget (see `_removeWidget()`'s fallback, which only
+     * disables rather than deletes) a theme pack is just a `theme.json` +
+     * optional screenshot the user or a prior session dropped into
+     * `themepacks/` themselves — there's nothing else referencing it
+     * that a straight delete could leave dangling.
+     */
+    _removeThemePack(entry) {
+        if (this._services.onThemePackRemove) {
+            this._services.onThemePackRemove(entry);
+            this._themePackRegistry = null;
+            this._renderTab(this._activeTab);
+            return;
+        }
+        try {
+            const dir = Gio.File.new_for_path(entry.path);
+            this._deleteRecursive(dir);
+        } catch (e) {
+            console.error(`[widget-center] overlay: could not remove theme pack "${entry.id}"`, e);
+        }
+        this._themePackRegistry = null;
+        this._renderTab(this._activeTab);
+    }
+
+    /** @private Recursively deletes a Gio.File directory (or a single
+     * file) — Gio.File has no built-in recursive delete, and
+     * `delete_finish()`/`delete(null)` only removes an already-empty
+     * directory. */
+    _deleteRecursive(file) {
+        const info = file.query_info('standard::type', Gio.FileQueryInfoFlags.NONE, null);
+        if (info.get_file_type() === Gio.FileType.DIRECTORY) {
+            const enumerator = file.enumerate_children('standard::name', Gio.FileQueryInfoFlags.NONE, null);
+            let child;
+            while ((child = enumerator.next_file(null)) !== null)
+                this._deleteRecursive(file.get_child(child.get_name()));
+        }
+        file.delete(null);
     }
 
     // --- Tab 3: Settings --------------------------------------------------
@@ -547,12 +601,22 @@ export class WidgetCenterOverlay {
     _buildGrid(entries, buildCard) {
         const scroll = new St.ScrollView({
             style_class: 'wc-overlay-scroll', x_expand: true, y_expand: true,
+            hscrollbar_policy: St.PolicyType.NEVER,
         });
-        const box = new St.BoxLayout({vertical: true, style_class: 'wc-overlay-grid'});
+        // vertical BoxLayout, not x_expand: its own width is just
+        // "widest row", so it needs x_align: CENTER to sit in the middle
+        // of the (wider) scroll viewport instead of hugging the left
+        // edge — same fix as _buildHeader()'s tab strip, see the comment
+        // there. Each row gets it too, so a short last row (fewer cards
+        // than `columns`) centers on its own rather than sitting left
+        // under a full row above it.
+        const box = new St.BoxLayout({
+            vertical: true, style_class: 'wc-overlay-grid', x_align: Clutter.ActorAlign.CENTER,
+        });
 
         const columns = this._gridColumns();
         for (let i = 0; i < entries.length; i += columns) {
-            const row = new St.BoxLayout({style_class: 'wc-overlay-row'});
+            const row = new St.BoxLayout({style_class: 'wc-overlay-row', x_align: Clutter.ActorAlign.CENTER});
             for (let c = 0; c < columns; c++) {
                 if (entries[i + c])
                     row.add_child(buildCard(entries[i + c]));

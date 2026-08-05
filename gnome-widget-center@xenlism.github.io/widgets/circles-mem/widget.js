@@ -99,7 +99,7 @@ export default class CirclesMemWidget {
     getDefaultSettings() {
         return {
             ...SHADOW_DEFAULTS,
-            backgroundColor: '#00000026',
+            backgroundColor: '#FFFFFF00',
             cornerRadius: 18,
 
             labelFont: 'Sans 12',
@@ -199,7 +199,7 @@ export default class CirclesMemWidget {
 
     /** @private */
     _render() {
-        const backgroundColor = _toCssColor(this._settings.backgroundColor, '#00000026');
+        const backgroundColor = _toCssColor(this._settings.backgroundColor, '#FFFFFF00');
         const cornerRadius = this._settings.cornerRadius ?? 18;
         this._actor.set_style(_cardStyleCss(this._settings, {cornerRadiusFallback: 18}));
 

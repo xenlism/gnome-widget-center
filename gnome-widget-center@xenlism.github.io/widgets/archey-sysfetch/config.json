@@ -197,7 +197,7 @@
               "fieldType": "colorpicker",
               "format": "color",
               "alpha": true,
-              "default": "#00000026"
+              "default": "#FFFFFF00"
             },
             {
               "id": "cornerRadius",
@@ -265,7 +265,7 @@
               "min": 0,
               "max": 360,
               "step": 1,
-              "suffix": "°",
+              "suffix": "\u00b0",
               "visibleIf": "shadowEnabled"
             },
             {
@@ -306,7 +306,7 @@
         {
           "id": "textShadow",
           "label": "Text shadow effect",
-          "description": "On by default: a plain soft drop straight down (90°, 0px, 5px).",
+          "description": "On by default: a plain soft drop straight down (90\u00b0, 0px, 5px).",
           "fields": [
             {
               "id": "textShadowEnabled",
@@ -348,7 +348,7 @@
               "min": 0,
               "max": 360,
               "step": 1,
-              "suffix": "°",
+              "suffix": "\u00b0",
               "visibleIf": "textShadowEnabled"
             },
             {

@@ -173,7 +173,7 @@ export default class MediaPlayerPosterWidget {
     getDefaultSettings() {
         return {
             ...SHADOW_DEFAULTS,
-            backgroundColor: '#000000FF',
+            backgroundColor: '#FFFFFF00',
             widgetCornerRadius: 18,
             coverCornerRadius: 18,
             trackFont: 'Sans Bold 20',
@@ -235,7 +235,7 @@ export default class MediaPlayerPosterWidget {
     /** @private */
     _render() {
         this._actor.set_style(_cardStyleCss(this._settings, {
-            backgroundColorFallback: '#000000FF',
+            backgroundColorFallback: '#FFFFFF00',
             cornerRadiusKey: 'widgetCornerRadius',
             cornerRadiusFallback: 18,
         }));

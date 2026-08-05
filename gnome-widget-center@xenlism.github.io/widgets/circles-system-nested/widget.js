@@ -104,7 +104,7 @@ export default class CirclesSystemNestedWidget {
     getDefaultSettings() {
         return {
             ...SHADOW_DEFAULTS,
-            backgroundColor: '#000000a9',
+            backgroundColor: '#FFFFFF00',
             cornerRadius: 18,
 
             circleBaseColor: '#FFFFFF26',
@@ -177,7 +177,7 @@ export default class CirclesSystemNestedWidget {
 
     /** @private */
     _render() {
-        this._actor.set_style(_cardStyleCss(this._settings, {backgroundColorFallback: '#000000a9', cornerRadiusFallback: 18}));
+        this._actor.set_style(_cardStyleCss(this._settings, {backgroundColorFallback: '#FFFFFF00', cornerRadiusFallback: 18}));
 
         const showCenterText = this._settings.showCenterText ?? true;
         this._centerBox.visible = showCenterText;

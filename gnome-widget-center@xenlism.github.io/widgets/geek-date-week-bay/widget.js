@@ -85,7 +85,7 @@ export default class GeekDateWeekBayWidget {
             weekFont: 'Sans Bold 16',
             weekColor: '#e6e6e6',
 
-            backgroundColor: '#1a2a33b3',
+            backgroundColor: '#FFFFFF00',
             textAlign: 'center',
             cornerRadius: 18,
         };
@@ -129,7 +129,7 @@ export default class GeekDateWeekBayWidget {
 
         const dateColor = this._settings.dateColor ?? '#ffffff';
         const weekColor = this._settings.weekColor ?? '#e6e6e6';
-        const backgroundColor = _toCssColor(this._settings.backgroundColor ?? '#1a2a33b3', '#1a2a33b3');
+        const backgroundColor = _toCssColor(this._settings.backgroundColor ?? '#FFFFFF00', '#FFFFFF00');
         const cornerRadius = this._settings.cornerRadius ?? 18;
         const textAlign = ['left', 'center', 'right'].includes(this._settings.textAlign) ? this._settings.textAlign : 'center';
         const textShadowCss = _textShadowCss(this._settings);

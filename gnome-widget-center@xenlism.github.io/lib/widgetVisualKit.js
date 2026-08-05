@@ -63,6 +63,26 @@ function _isForced(category) {
     return !!_forcedTheme?.[category]?.force;
 }
 
+/** Allowed shadow-angle steps, shared by every "Shadow angle" dropdown in
+ * the codebase (a widget's own Appearance settings, the Control Center's
+ * global Appearance page, and its St-overlay twin) so they can never drift
+ * out of sync with each other. Degrees: 0 = right, 90 = down, 180 = left,
+ * 270 = up - same convention SHADOW_DEFAULTS/TEXT_SHADOW_DEFAULTS below
+ * already documented before this became a fixed-step dropdown. */
+export const SHADOW_ANGLE_STEPS = [45, 90, 135, 180, 225, 275];
+
+/** Degrees + px distance -> `{offsetX, offsetY}` px, the one trig
+ * conversion every box-shadow/text-shadow builder in this file (and
+ * lib/themeService.js's global-theme equivalents) goes through, so an
+ * angle always maps to the same offset everywhere it's used. */
+export function angleDistanceToOffset(angleDeg, distance) {
+    const rad = (angleDeg * Math.PI) / 180;
+    return {
+        offsetX: Math.round(Math.cos(rad) * distance * 100) / 100,
+        offsetY: Math.round(Math.sin(rad) * distance * 100) / 100,
+    };
+}
+
 /** Default shadow settings a widget's getDefaultSettings() should spread
  * in (`...SHADOW_DEFAULTS`) so the shadow fields exist with sane values
  * even before the user opens the widget's settings panel. */
@@ -70,10 +90,36 @@ export const SHADOW_DEFAULTS = {
     shadowEnabled: false,
     shadowColor: '#000000',
     shadowOpacity: 30, // percent, 0-100
-    shadowAngle: 90,   // degrees: 0 = right, 90 = down, 180 = left, 270 = up
+    shadowAngle: 90,   // degrees - one of SHADOW_ANGLE_STEPS above
     shadowDistance: 6, // px
     shadowBlur: 16,    // px
 };
+
+/** @private shared by shadowBoxShadowCss()/_forcedShadowBoxShadowCss()
+ * below so the two "which shape of shadow settings am I reading" code
+ * paths (a widget's own angle+distance settings vs. lib/themeService.js's
+ * global angle+distance theme) still funnel through exactly one
+ * "build the box-shadow string" implementation, instead of two copies
+ * that could quietly drift apart.
+ * @param {{color: string, opacityPercent: number, angleDeg: number,
+ *   distance: number, blur: number, spread: number}} shadow
+ * @returns {string}
+ */
+function _boxShadowCss({color, opacityPercent, angleDeg, distance, blur, spread}) {
+    const {offsetX, offsetY} = angleDistanceToOffset(angleDeg, distance);
+
+    let hex = (color ?? SHADOW_DEFAULTS.shadowColor).trim().replace(/^#/, '');
+    if (hex.length === 3)
+        hex = hex.split('').map(c => c + c).join('');
+    if (!/^[0-9a-fA-F]{6}$/.test(hex))
+        hex = '000000';
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    const a = Math.min(1, Math.max(0, opacityPercent / 100));
+
+    return `box-shadow: ${offsetX}px ${offsetY}px ${Math.max(0, blur)}px ${spread}px rgba(${r}, ${g}, ${b}, ${a});`;
+}
 
 /** Builds a `box-shadow: ...;` CSS declaration (St supports the standard
  * CSS box-shadow syntax) from a widget's shadow settings, or '' when the
@@ -97,45 +143,37 @@ export function shadowBoxShadowCss(settings) {
     if (!(s.shadowEnabled ?? SHADOW_DEFAULTS.shadowEnabled))
         return '';
 
-    const opacityPercent = Number.isFinite(s.shadowOpacity) ? s.shadowOpacity : SHADOW_DEFAULTS.shadowOpacity;
-    const angleDeg = Number.isFinite(s.shadowAngle) ? s.shadowAngle : SHADOW_DEFAULTS.shadowAngle;
-    const distance = Number.isFinite(s.shadowDistance) ? s.shadowDistance : SHADOW_DEFAULTS.shadowDistance;
-    const blur = Number.isFinite(s.shadowBlur) ? Math.max(0, s.shadowBlur) : SHADOW_DEFAULTS.shadowBlur;
-
-    const rad = (angleDeg * Math.PI) / 180;
-    const offsetX = Math.round(Math.cos(rad) * distance * 100) / 100;
-    const offsetY = Math.round(Math.sin(rad) * distance * 100) / 100;
-
-    let hex = (s.shadowColor ?? SHADOW_DEFAULTS.shadowColor).trim().replace(/^#/, '');
-    if (hex.length === 3)
-        hex = hex.split('').map(c => c + c).join('');
-    if (!/^[0-9a-fA-F]{6}$/.test(hex))
-        hex = '000000';
-    const r = parseInt(hex.slice(0, 2), 16);
-    const g = parseInt(hex.slice(2, 4), 16);
-    const b = parseInt(hex.slice(4, 6), 16);
-    const a = Math.min(1, Math.max(0, opacityPercent / 100));
-
-    return `box-shadow: ${offsetX}px ${offsetY}px ${blur}px 0px rgba(${r}, ${g}, ${b}, ${a});`;
+    return _boxShadowCss({
+        color: s.shadowColor ?? SHADOW_DEFAULTS.shadowColor,
+        opacityPercent: Number.isFinite(s.shadowOpacity) ? s.shadowOpacity : SHADOW_DEFAULTS.shadowOpacity,
+        angleDeg: Number.isFinite(s.shadowAngle) ? s.shadowAngle : SHADOW_DEFAULTS.shadowAngle,
+        distance: Number.isFinite(s.shadowDistance) ? s.shadowDistance : SHADOW_DEFAULTS.shadowDistance,
+        blur: Number.isFinite(s.shadowBlur) ? s.shadowBlur : SHADOW_DEFAULTS.shadowBlur,
+        spread: 0,
+    });
 }
 
 /** @private converts lib/themeService.js's global dropShadow shape
- * (`{enabled, transparent, color, opacity: 0-1, offsetX, offsetY,
- * blurRadius, spread}` - notably a flat 0-1 opacity float and separate
- * offsetX/offsetY rather than shadowBoxShadowCss()'s own
- * angle+distance model) into the same `box-shadow: ...;` string shape,
- * mirroring lib/themeService.js's applyWidgetStyle()'s identical
- * conversion so both code paths produce the same visual result. */
+ * (`{enabled, transparent, color, opacity: 0-1, angle, distance,
+ * blurRadius, spread}` - notably a flat 0-1 opacity float rather than
+ * shadowBoxShadowCss()'s own 0-100 percent) into the same
+ * `box-shadow: ...;` string shape, through the SAME `_boxShadowCss()`
+ * helper shadowBoxShadowCss() itself uses above - mirroring
+ * lib/themeService.js's applyWidgetStyle()'s identical angle+distance
+ * conversion so every code path produces the same visual result for the
+ * same angle. */
 function _forcedShadowBoxShadowCss(dropShadow) {
     if (!dropShadow?.enabled || dropShadow?.transparent)
         return '';
     const opacity = Number.isFinite(dropShadow.opacity) ? Math.min(1, Math.max(0, dropShadow.opacity)) : 0.45;
-    const offsetX = Number.isFinite(dropShadow.offsetX) ? dropShadow.offsetX : 0;
-    const offsetY = Number.isFinite(dropShadow.offsetY) ? dropShadow.offsetY : 4;
-    const blur = Number.isFinite(dropShadow.blurRadius) ? Math.max(0, dropShadow.blurRadius) : 12;
-    const spread = Number.isFinite(dropShadow.spread) ? dropShadow.spread : 0;
-    const color = toCssColor(_withAlphaHex(dropShadow.color ?? '#000000', opacity), 'rgba(0, 0, 0, 0.45)');
-    return `box-shadow: ${offsetX}px ${offsetY}px ${blur}px ${spread}px ${color};`;
+    return _boxShadowCss({
+        color: dropShadow.color ?? '#000000',
+        opacityPercent: opacity * 100,
+        angleDeg: Number.isFinite(dropShadow.angle) ? dropShadow.angle : 90,
+        distance: Number.isFinite(dropShadow.distance) ? dropShadow.distance : 4,
+        blur: Number.isFinite(dropShadow.blurRadius) ? dropShadow.blurRadius : 12,
+        spread: Number.isFinite(dropShadow.spread) ? dropShadow.spread : 0,
+    });
 }
 
 /** @private "#rrggbb" + a 0-1 alpha float -> "#rrggbbaa", so it can be
@@ -185,9 +223,7 @@ export function textShadowCss(settings) {
     const distance = Number.isFinite(s.textShadowDistance) ? s.textShadowDistance : TEXT_SHADOW_DEFAULTS.textShadowDistance;
     const blur = Number.isFinite(s.textShadowBlur) ? Math.max(0, s.textShadowBlur) : TEXT_SHADOW_DEFAULTS.textShadowBlur;
 
-    const rad = (angleDeg * Math.PI) / 180;
-    const offsetX = Math.round(Math.cos(rad) * distance * 100) / 100;
-    const offsetY = Math.round(Math.sin(rad) * distance * 100) / 100;
+    const {offsetX, offsetY} = angleDistanceToOffset(angleDeg, distance);
 
     let hex = (s.textShadowColor ?? TEXT_SHADOW_DEFAULTS.textShadowColor).trim().replace(/^#/, '');
     if (hex.length === 3)

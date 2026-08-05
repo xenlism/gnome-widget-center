@@ -31,6 +31,7 @@ import St from 'gi://St';
 import {SettingsService} from './settingsService.js';
 import {ThemeService} from './themeService.js';
 import {SUPPORTED_LOCALES} from '../i18n/index.js';
+import {SHADOW_ANGLE_STEPS} from './widgetVisualKit.js';
 
 // --- small row-building helpers (St has no Adw.SwitchRow/SpinRow
 // equivalent, so these stand in for them) ---------------------------------
@@ -338,12 +339,13 @@ function _buildAppearanceCategory() {
     box.add_child(_row('Opacity', '0.0–1.0',
         _slider(0, 1, 0.05, current.dropShadow.opacity ?? 0.45, v => v.toFixed(2), true,
             v => { shadowState.opacity = v; saveShadow(); })));
-    box.add_child(_row('Offset X', 'px',
-        _slider(-64, 64, 1, current.dropShadow.offsetX ?? 0, v => `${Math.round(v)} px`, true,
-            v => { shadowState.offsetX = Math.round(v); saveShadow(); })));
-    box.add_child(_row('Offset Y', 'px',
-        _slider(-64, 64, 1, current.dropShadow.offsetY ?? 4, v => `${Math.round(v)} px`, true,
-            v => { shadowState.offsetY = Math.round(v); saveShadow(); })));
+    box.add_child(_row('Shadow angle', 'Direction the shadow is cast in.',
+        _cycleButton(SHADOW_ANGLE_STEPS.map(deg => ({value: deg, label: `${deg}\u00b0`})),
+            current.dropShadow.angle ?? 90, true,
+            v => { shadowState.angle = v; saveShadow(); })));
+    box.add_child(_row('Distance', 'px',
+        _slider(0, 64, 1, current.dropShadow.distance ?? 4, v => `${Math.round(v)} px`, true,
+            v => { shadowState.distance = Math.round(v); saveShadow(); })));
     box.add_child(_row('Blur radius', 'px',
         _slider(0, 128, 1, current.dropShadow.blurRadius ?? 12, v => `${Math.round(v)} px`, true,
             v => { shadowState.blurRadius = Math.round(v); saveShadow(); })));

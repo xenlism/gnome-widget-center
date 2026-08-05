@@ -294,7 +294,7 @@ export default class SwitchesWidget {
             coordinate: Clutter.BindCoordinate.SIZE,
         }));
         this._actor.add_child(this._content);
-        this._content.set_style(_cardStyleCss(this._settings, {backgroundColorFallback: '#000000a9', cornerRadiusFallback: 18}) + `padding: ${PADDING}px;`);
+        this._content.set_style(_cardStyleCss(this._settings, {backgroundColorFallback: '#FFFFFF00', cornerRadiusFallback: 18}) + `padding: ${PADDING}px;`);
 
         const row = new St.BoxLayout({vertical: false, x_align: Clutter.ActorAlign.CENTER, y_align: Clutter.ActorAlign.CENTER});
         this._content.set_child(row);
@@ -370,7 +370,7 @@ export default class SwitchesWidget {
     getDefaultSettings() {
         return {
             ...SHADOW_DEFAULTS,
-            backgroundColor: '#000000a9',
+            backgroundColor: '#FFFFFF00',
             cornerRadius: 18,
             baseColor: '#9a9996',
             highlightColor: '#3584e4',
@@ -380,7 +380,7 @@ export default class SwitchesWidget {
 
     onSettingsChanged() {
         if (this._content)
-            this._content.set_style(_cardStyleCss(this._settings, {backgroundColorFallback: '#000000a9', cornerRadiusFallback: 18}) + `padding: ${PADDING}px;`);
+            this._content.set_style(_cardStyleCss(this._settings, {backgroundColorFallback: '#FFFFFF00', cornerRadiusFallback: 18}) + `padding: ${PADDING}px;`);
         this._applyColors();
         this._startTimer(); // picks up a changed refreshRateSeconds too
     }

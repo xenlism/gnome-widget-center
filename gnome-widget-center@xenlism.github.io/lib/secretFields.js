@@ -174,7 +174,15 @@ function _redactObjectInPlace(valueObj, fields, removedKeys) {
  *   didn't make it into the export.
  */
 export function redactSecrets(settings, config) {
-    const redacted = structuredClone(settings ?? {});
+    // Bug fix: structuredClone() is a browser/Node global, not something
+    // GJS guarantees - calling it here threw "structuredClone is not
+    // defined" on every theme export, before any redaction logic even
+    // ran. Widget settings are always plain JSON-serializable data (this
+    // is exactly what gets round-tripped through widgets/<id>.json), so a
+    // JSON.parse(JSON.stringify()) round-trip is a safe, dependency-free
+    // deep clone here - no Dates/Maps/functions/circular refs to worry
+    // about losing, unlike a general-purpose structuredClone() call site.
+    const redacted = JSON.parse(JSON.stringify(settings ?? {}));
     const removedKeys = [];
 
     const topLevelFields = [];

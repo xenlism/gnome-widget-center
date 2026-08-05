@@ -98,7 +98,8 @@
               "dataType": "string",
               "fieldType": "colorpicker",
               "format": "color",
-              "default": "#1a2a33b3"
+              "default": "#FFFFFF00",
+              "alpha": true
             },
             {
               "id": "cornerRadius",

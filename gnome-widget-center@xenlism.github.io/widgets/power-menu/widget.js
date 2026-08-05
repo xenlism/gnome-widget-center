@@ -60,7 +60,7 @@ export default class PowerMenuWidget {
     // (DBus proxies are created in enable(); a click before that simply
     // no-ops via the `?.` guards in the *_call* helpers below).
     buildActor() {
-        const backgroundColor = this._settings?.backgroundColor ?? '#ffffffd9';
+        const backgroundColor = this._settings?.backgroundColor ?? '#FFFFFF00';
         const cornerRadius = this._settings?.cornerRadius ?? 18;
         const iconColor = this._settings?.iconColor ?? '#2e2e2e';
 
@@ -175,7 +175,7 @@ export default class PowerMenuWidget {
 
     getDefaultSettings() {
         return {
-            backgroundColor: '#ffffffd9', // white @ 0.85 alpha ("d9")
+            backgroundColor: '#FFFFFF00', // white @ 0.85 alpha ("d9")
             cornerRadius: 18,
             iconColor: '#2e2e2e',
             ...SHADOW_DEFAULTS,
@@ -189,7 +189,7 @@ export default class PowerMenuWidget {
         if (!this._actor)
             return;
 
-        const backgroundColor = settings?.backgroundColor ?? '#ffffffd9';
+        const backgroundColor = settings?.backgroundColor ?? '#FFFFFF00';
         const cornerRadius = settings?.cornerRadius ?? 18;
         this._content.set_style(this._cardStyle(backgroundColor, cornerRadius) + `padding: ${PADDING}px;`);
 

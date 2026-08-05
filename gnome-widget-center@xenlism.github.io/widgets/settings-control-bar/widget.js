@@ -160,7 +160,7 @@ export default class SettingsControlBarWidget {
         this._actor.connect('notify::height', syncContentSize);
         syncContentSize();
         this._content.set_style(
-            _cardStyleCss(this._settings, {backgroundColorFallback: '#ffffffd9', cornerRadiusFallback: 18}) +
+            _cardStyleCss(this._settings, {backgroundColorFallback: '#FFFFFF00', cornerRadiusFallback: 18}) +
             `padding: ${PADDING_Y}px ${PADDING_X}px;`
         );
 
@@ -288,7 +288,7 @@ export default class SettingsControlBarWidget {
 
     getDefaultSettings() {
         return {
-            backgroundColor: '#ffffffd9', // white @ 0.85 alpha ("d9")
+            backgroundColor: '#FFFFFF00', // white @ 0.85 alpha ("d9")
             iconOnColor: '#3584e4',
             iconOffColor: '#9a9996',
             cornerRadius: 18,
@@ -305,7 +305,7 @@ export default class SettingsControlBarWidget {
             return;
 
         this._content.set_style(
-            _cardStyleCss(settings, {backgroundColorFallback: '#ffffffd9', cornerRadiusFallback: 18}) +
+            _cardStyleCss(settings, {backgroundColorFallback: '#FFFFFF00', cornerRadiusFallback: 18}) +
             `padding: ${PADDING_Y}px ${PADDING_X}px;`
         );
 

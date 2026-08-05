@@ -346,7 +346,22 @@ export class MprisMediaService {
                 this._onUpdate?.(this._state);
             });
 
-            this._emitFromProxy();
+            // Bug fix: freshly-launched players commonly register their
+            // MPRIS bus name a beat before PlaybackStatus actually flips
+            // to "Playing" (or flip it right as this proxy's own
+            // construction-time property sync is running). Trusting
+            // get_cached_property() here - what _emitFromProxy() does -
+            // meant the widget's very first render after "app just
+            // started playing" could still show the stale pre-playback
+            // status forever, since that transition may never arrive as
+            // its own g-properties-changed signal if it happened before
+            // we finished attaching. Force one live Properties.GetAll
+            // round-trip on attach (same call _refreshThenEmit() already
+            // uses for the invalidated-properties case) so the very
+            // first render always reflects the player's real state
+            // instead of whatever the cache happened to hold at
+            // construction time.
+            this._refreshThenEmit();
         } catch (e) {
             if (!this._disposed) {
                 this._logger.warn?.('attach failed:', e.message);

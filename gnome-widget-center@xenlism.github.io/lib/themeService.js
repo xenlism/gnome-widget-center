@@ -8,8 +8,10 @@
 //     on/off, color, blur radius, plus a `force` flag — see below), a
 //     global widget corner radius (`cornerRadius.value` + its own
 //     `force` flag), and a global drop shadow (color, transparent on/off,
-//     opacity/offset/blur/spread) applied to every widget's card unless a
-//     widget overrides it.
+//     opacity/angle/distance/blur/spread - same angle+distance model as
+//     lib/widgetVisualKit.js's per-widget SHADOW_DEFAULTS, so a widget's
+//     own shadow and the global one share one mental model) applied to
+//     every widget's card unless a widget overrides it.
 //   - PER-WIDGET entries, keyed by widget id: which `theme` name a widget
 //     is rendering with (a widget can ship more than one stylesheet
 //     variant, e.g. macos-clock's "light"/"dark"), its own `config`
@@ -50,8 +52,8 @@
 //         "transparent": false,
 //         "color": "#000000",
 //         "opacity": 0.45,
-//         "offsetX": 0,
-//         "offsetY": 4,
+//         "angle": 90,
+//         "distance": 4,
 //         "blurRadius": 12,
 //         "spread": 0,
 //         "force": false
@@ -91,6 +93,7 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import {ensureDirectory, readTextFile, writeTextFile} from './fsUtils.js';
+import {angleDistanceToOffset} from './widgetVisualKit.js';
 
 const THEME_FILE_NAME = 'theme.json';
 
@@ -143,8 +146,14 @@ const DEFAULT_GLOBAL_THEME = Object.freeze({
         transparent: false,
         color: '#000000',
         opacity: 0.45,
-        offsetX: 0,
-        offsetY: 4,
+        // 2026-08-05: angle+distance instead of offsetX/offsetY - matches
+        // lib/widgetVisualKit.js's SHADOW_DEFAULTS model so the global
+        // shadow and a widget's own shadow settings use the same "Shadow
+        // angle" dropdown (lib/widgetVisualKit.js's SHADOW_ANGLE_STEPS)
+        // in both the Control Center prefs window and its St-overlay
+        // twin, instead of two different mental models.
+        angle: 90,      // degrees - one of SHADOW_ANGLE_STEPS
+        distance: 4,    // px
         blurRadius: 12,
         spread: 0,
         // 2026-08-03: same "force" pattern as background/cornerRadius
@@ -421,10 +430,11 @@ export class ThemeService {
 
         const alpha = clampUnit(dropShadow.opacity, DEFAULT_GLOBAL_THEME.dropShadow.opacity);
         const color = hexToRgba(dropShadow.color, alpha);
-        const offsetX = Number.isFinite(dropShadow.offsetX) ? dropShadow.offsetX : 0;
-        const offsetY = Number.isFinite(dropShadow.offsetY) ? dropShadow.offsetY : 4;
+        const angle = Number.isFinite(dropShadow.angle) ? dropShadow.angle : DEFAULT_GLOBAL_THEME.dropShadow.angle;
+        const distance = Number.isFinite(dropShadow.distance) ? dropShadow.distance : DEFAULT_GLOBAL_THEME.dropShadow.distance;
         const blur = Number.isFinite(dropShadow.blurRadius) ? Math.max(0, dropShadow.blurRadius) : 12;
         const spread = Number.isFinite(dropShadow.spread) ? dropShadow.spread : 0;
+        const {offsetX, offsetY} = angleDistanceToOffset(angle, distance);
 
         return `box-shadow: ${offsetX}px ${offsetY}px ${blur}px ${spread}px ${color};`;
     }
@@ -525,10 +535,11 @@ export class ThemeService {
         if (dropShadow.enabled && !dropShadow.transparent) {
             const shadowAlpha = clampUnit(dropShadow.opacity, DEFAULT_GLOBAL_THEME.dropShadow.opacity);
             const color = hexToRgba(dropShadow.color, shadowAlpha);
-            const offsetX = Number.isFinite(dropShadow.offsetX) ? dropShadow.offsetX : 0;
-            const offsetY = Number.isFinite(dropShadow.offsetY) ? dropShadow.offsetY : 4;
+            const angle = Number.isFinite(dropShadow.angle) ? dropShadow.angle : DEFAULT_GLOBAL_THEME.dropShadow.angle;
+            const distance = Number.isFinite(dropShadow.distance) ? dropShadow.distance : DEFAULT_GLOBAL_THEME.dropShadow.distance;
             const blur = Number.isFinite(dropShadow.blurRadius) ? Math.max(0, dropShadow.blurRadius) : 12;
             const spread = Number.isFinite(dropShadow.spread) ? dropShadow.spread : 0;
+            const {offsetX, offsetY} = angleDistanceToOffset(angle, distance);
             parts.push(`box-shadow: ${offsetX}px ${offsetY}px ${blur}px ${spread}px ${color};`);
         }
 

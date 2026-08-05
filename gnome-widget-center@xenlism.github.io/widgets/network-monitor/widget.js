@@ -138,7 +138,7 @@ export default class NetworkMonitorWidget {
             downloadLineColor: '#5AC8FAFF',
             uploadLineColor: '#FF9F0AFF',
             graphBaseColor: '#FFFFFF12',
-            backgroundColor: '#000000FF',
+            backgroundColor: '#FFFFFF00',
             cornerRadius: 18,
             refreshRateSeconds: 3,
             launchAppPath: '',
@@ -236,7 +236,7 @@ export default class NetworkMonitorWidget {
 
     /** @private */
     _render() {
-        const backgroundColor = _toCssColor(this._settings.backgroundColor, '#000000FF');
+        const backgroundColor = _toCssColor(this._settings.backgroundColor, '#FFFFFF00');
         const cornerRadius = this._settings.cornerRadius ?? 18;
         const fontColor = _toCssColor(this._settings.fontColor, '#FFFFFFFF');
         const downloadColor = _toCssColor(this._settings.downloadLineColor, '#5AC8FAFF');

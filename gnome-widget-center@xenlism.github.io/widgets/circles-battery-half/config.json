@@ -20,7 +20,7 @@
               "fieldType": "colorpicker",
               "format": "color",
               "alpha": true,
-              "default": "#000000a9"
+              "default": "#FFFFFF00"
             },
             {
               "id": "cornerRadius",
@@ -111,8 +111,14 @@
               "fieldType": "dropdown",
               "default": "right",
               "options": [
-                {"value": "right", "label": "Right (curves inward left)"},
-                {"value": "left", "label": "Left (curves inward right)"}
+                {
+                  "value": "right",
+                  "label": "Right (curves inward left)"
+                },
+                {
+                  "value": "left",
+                  "label": "Left (curves inward right)"
+                }
               ]
             }
           ]
@@ -241,7 +247,7 @@
               "min": 0,
               "max": 360,
               "step": 1,
-              "suffix": "°",
+              "suffix": "\u00b0",
               "visibleIf": "shadowEnabled"
             },
             {

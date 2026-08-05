@@ -185,7 +185,7 @@ export default class SystemMonitorMiniWidget {
             activeColor: '#33C7F5',
             baseColor: '#33383D',
             font: 'Sans Bold 18',
-            backgroundColor: '#1C1C1EE6',
+            backgroundColor: '#FFFFFF00',
             cornerRadius: 18,
             refreshRateSec: 3,
             launchOnClick: false,
@@ -288,7 +288,7 @@ export default class SystemMonitorMiniWidget {
 
     /** @private */
     _render() {
-        const backgroundColor = _toCssColor(this._settings.backgroundColor, '#1C1C1EE6');
+        const backgroundColor = _toCssColor(this._settings.backgroundColor, '#FFFFFF00');
         const cornerRadius = this._settings.cornerRadius ?? 18;
         this._actor.set_style(
             `background-color: ${backgroundColor}; ` +

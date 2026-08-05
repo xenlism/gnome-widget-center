@@ -128,7 +128,7 @@ export default class MemMonitorWidget {
             fontColor: '#FFFFFFFF',
             graphLineColor: '#5AC8FAFF',
             graphBaseColor: '#FFFFFF12',
-            backgroundColor: '#000000FF',
+            backgroundColor: '#FFFFFF00',
             cornerRadius: 18,
             refreshRateSeconds: 3,
             launchAppPath: '',
@@ -222,7 +222,7 @@ export default class MemMonitorWidget {
 
     /** @private */
     _render() {
-        const backgroundColor = _toCssColor(this._settings.backgroundColor, '#000000FF');
+        const backgroundColor = _toCssColor(this._settings.backgroundColor, '#FFFFFF00');
         const cornerRadius = this._settings.cornerRadius ?? 18;
         const fontColor = _toCssColor(this._settings.fontColor, '#FFFFFFFF');
         const graphBaseColor = _toCssColor(this._settings.graphBaseColor, '#FFFFFF12');

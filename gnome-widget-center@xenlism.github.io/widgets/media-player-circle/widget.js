@@ -219,7 +219,7 @@ export default class MediaPlayerCircleWidget {
     getDefaultSettings() {
         return {
             ...SHADOW_DEFAULTS,
-            backgroundColor: '#000000F5',
+            backgroundColor: '#FFFFFF00',
             ringColor: '#F5A623FF',
             infoFont: 'Sans Bold 11',
             infoColor: '#FFFFFFFF',

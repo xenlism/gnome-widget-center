@@ -1,5 +1,74 @@
 # Summary of all changes across this project
 
+## Theme export now includes host GSettings + only enabled widgets (this session, 2026-08-05)
+`lib/exportService.js`'s `.gwct` export previously only captured global
+`theme.json` appearance + every discovered widget's settings, regardless
+of whether that widget was actually turned on. Two changes:
+
+- **Host preferences added:** a new `hostSettings` block in the document
+  carries every non-secret host-level GSettings preference (edge margin,
+  widget spacing, snapping, language, overlay keybinding, etc — see
+  `HOST_SETTINGS_KEYS` in `exportService.js`). Deliberately excludes
+  `disabled-widgets` (superseded by the enabled-only filtering below),
+  `requested-widget-id` (a transient IPC hint, not a real preference —
+  already documented as such in the schema itself), and `dev-mode` (a
+  developer toggle, not part of "how this desktop looks"). None of these
+  keys are secrets, so nothing here goes through `secretFields.js`.
+- **Only enabled widgets exported:** `buildGwctDocument()` now filters
+  out anything in the host's `disabled-widgets` list before building
+  `widgets[]`, instead of exporting every discovered widget whether it's
+  in use or not.
+
+`importGwctDocument()` updated to match: applies `hostSettings` back
+(skipping any key the local schema doesn't recognize, so one mismatched
+key can't fail the whole import), and explicitly re-enables each
+imported widget (removing it from `disabled-widgets` if present) — since
+every entry in an exported file was enabled at export time, importing it
+should reproduce that, even onto a machine where that widget happens to
+be currently disabled. Both changes are additive to the `.gwct` format
+(no version bump) — a `hostSettings`-less older file still imports fine,
+and an older build reading a new file just won't apply the extra block.
+
+Both `settings` params are optional on both functions, so existing/
+tested callers without a `SettingsService` handy keep working exactly as
+before. Import/Export page's description text updated (`en`/`th`
+locales) to reflect the new scope; other locale files not touched.
+
+## Theme export crash: "structuredClone is not defined" (this session, 2026-08-05)
+`lib/secretFields.js`'s `redactSecrets()` — called for every widget on
+every `.gwct` theme export — used `structuredClone()` to deep-copy a
+widget's settings before redacting secrets from the copy. GJS doesn't
+reliably provide `structuredClone` as a global the way browsers/Node do,
+so this threw `structuredClone is not defined` immediately, before any
+export or redaction actually happened. Replaced with a
+`JSON.parse(JSON.stringify(...))` round-trip, which is a safe deep clone
+here since widget settings are always plain JSON-serializable data (no
+Dates/Maps/functions to worry about losing).
+
+## Media-player first-play fix + background-color alpha rollout (this session, 2026-08-05)
+Partial session — see `development/handoff-2026-08-05-bg-alpha-media-fix.md`
+for what's still outstanding (geek top-label font size, overlay tab/content
+centering, Overview help text + sort).
+
+- **Fixed:** `lib/mediaApi.js`'s `MprisMediaService._attachToPlayer()` now
+  calls `_refreshThenEmit()` (a live `Properties.GetAll`) instead of
+  `_emitFromProxy()` (a plain cache read) as its first render after attach.
+  A freshly-launched player that flips `PlaybackStatus` to `Playing` right
+  around when its MPRIS name registers could have that transition lost to
+  a race against `GDBusProxy`'s own construction-time cache sync, leaving
+  the widget stuck showing the pre-playback icon indefinitely. Affects all
+  four bundled media widgets (`media-player-poster`/`-square`/`-circle`/
+  `-wide`), which all share this file.
+- **Changed:** every `backgroundColor` field across **48 widgets**
+  (full list in the handoff doc) now has `alpha: true` and defaults to
+  `#FFFFFF00` (fully transparent), in both `config.json` and each
+  `widget.js`'s `getDefaultSettings()`/render-time fallback. `mini-notes`
+  was deliberately left alone (its opaque sticky-note yellow isn't a card
+  background). `widgets/_template/widget.js` updated too for consistency.
+  **Note:** this changes default on-screen appearance — all 48 now render
+  with a transparent card background out of the box until a color/opacity
+  is set.
+
 ## Weather Dark alignment fix (this session)
 `widgets/weather-dark/widget.js`'s root `St.Bin` had `x_align`/`y_align`
 set correctly (standard `St.Align.START`/`MIDDLE` — `St.Align` has no

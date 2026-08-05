@@ -101,7 +101,7 @@ export default class SettingsControlWidget {
     // generic) icons - enable() fills in real state right after this
     // actor is placed in the Widget Layer.
     buildActor() {
-        const backgroundColor = this._settings?.backgroundColor ?? '#ffffffd9';
+        const backgroundColor = this._settings?.backgroundColor ?? '#FFFFFF00';
         const cornerRadius = this._settings?.cornerRadius ?? 18;
         this._iconOnColor = this._settings?.iconOnColor ?? '#3584e4';
         this._iconOffColor = this._settings?.iconOffColor ?? '#9a9996';
@@ -247,7 +247,7 @@ export default class SettingsControlWidget {
 
     getDefaultSettings() {
         return {
-            backgroundColor: '#ffffffd9', // white @ 0.85 alpha ("d9")
+            backgroundColor: '#FFFFFF00', // white @ 0.85 alpha ("d9")
             iconOnColor: '#3584e4',
             iconOffColor: '#9a9996',
             cornerRadius: 18,
@@ -263,7 +263,7 @@ export default class SettingsControlWidget {
         if (!this._actor)
             return;
 
-        const backgroundColor = settings?.backgroundColor ?? '#ffffffd9';
+        const backgroundColor = settings?.backgroundColor ?? '#FFFFFF00';
         const cornerRadius = settings?.cornerRadius ?? 18;
         this._content.set_style(this._cardStyle(backgroundColor, cornerRadius) + `padding: ${PADDING}px;`);
 

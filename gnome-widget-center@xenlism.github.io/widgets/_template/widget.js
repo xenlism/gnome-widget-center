@@ -20,7 +20,7 @@
 // own - e.g.:
 //
 //   import {SHADOW_DEFAULTS, shadowBoxShadowCss} from '../../lib/widgetVisualKit.js';
-//   // in getDefaultSettings(): return {...SHADOW_DEFAULTS, backgroundColor: '#00000026', cornerRadius: 18, ...};
+//   // in getDefaultSettings(): return {...SHADOW_DEFAULTS, backgroundColor: '#FFFFFF00', cornerRadius: 18, ...};
 //   // in buildActor()/onSettingsChanged(): this._actor.set_style(`background-color: ...; border-radius: ...px;` + shadowBoxShadowCss(this._settings));
 
 import St from 'gi://St';

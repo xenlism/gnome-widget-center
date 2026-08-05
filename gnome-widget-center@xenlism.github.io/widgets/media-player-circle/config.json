@@ -19,8 +19,8 @@
               "dataType": "string",
               "fieldType": "colorpicker",
               "format": "color",
-              "alpha": true,
-              "default": "#000000F5"
+              "default": "#FFFFFF00",
+              "alpha": true
             },
             {
               "id": "ringColor",
@@ -131,7 +131,7 @@
               "min": 0,
               "max": 360,
               "step": 1,
-              "suffix": "°",
+              "suffix": "\u00b0",
               "visibleIf": "shadowEnabled"
             },
             {

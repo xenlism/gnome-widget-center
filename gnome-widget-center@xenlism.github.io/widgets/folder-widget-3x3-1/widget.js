@@ -150,7 +150,7 @@ export default class FolderWidget3x3 {
         return {
             ...SHADOW_DEFAULTS,
             apps: [],
-            backgroundColor: '#FFFFFF0F',
+            backgroundColor: '#FFFFFF00',
             cornerRadius: 18,
         };
     }
@@ -177,7 +177,7 @@ export default class FolderWidget3x3 {
     /** @private */
     _render() {
         const apps = (this._settings.apps ?? []).slice(0, MAX_APPS);
-        const backgroundColor = _toCssColor(this._settings.backgroundColor, '#FFFFFF0F');
+        const backgroundColor = _toCssColor(this._settings.backgroundColor, '#FFFFFF00');
         const cornerRadius = this._settings.cornerRadius ?? 18;
 
         this._content.set_style(

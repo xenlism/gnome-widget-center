@@ -22,8 +22,8 @@ Implemented in `products/extension/lib/themeService.js`.
       "transparent": false,
       "color": "#000000",
       "opacity": 0.45,
-      "offsetX": 0,
-      "offsetY": 4,
+      "angle": 90,
+      "distance": 4,
       "blurRadius": 12,
       "spread": 0
     }

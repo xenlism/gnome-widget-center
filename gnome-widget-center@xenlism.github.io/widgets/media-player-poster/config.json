@@ -19,8 +19,8 @@
               "dataType": "string",
               "fieldType": "colorpicker",
               "format": "color",
-              "alpha": true,
-              "default": "#000000FF"
+              "default": "#FFFFFF00",
+              "alpha": true
             },
             {
               "id": "widgetCornerRadius",
@@ -185,7 +185,7 @@
               "min": 0,
               "max": 360,
               "step": 1,
-              "suffix": "°",
+              "suffix": "\u00b0",
               "visibleIf": "shadowEnabled"
             },
             {

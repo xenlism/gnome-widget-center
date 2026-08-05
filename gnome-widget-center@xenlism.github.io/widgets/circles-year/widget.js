@@ -101,7 +101,7 @@ export default class CirclesYearWidget {
     getDefaultSettings() {
         return {
             ...SHADOW_DEFAULTS,
-            backgroundColor: '#00000000',
+            backgroundColor: '#FFFFFF00',
             cornerRadius: 18,
 
             yearFont: 'Sans Bold 26',
@@ -216,7 +216,7 @@ export default class CirclesYearWidget {
 
     /** @private */
     _render() {
-        const backgroundColor = _toCssColor(this._settings.backgroundColor, '#00000000');
+        const backgroundColor = _toCssColor(this._settings.backgroundColor, '#FFFFFF00');
         const cornerRadius = this._settings.cornerRadius ?? 18;
         this._actor.set_style(_cardStyleCss(this._settings, {cornerRadiusFallback: 18}));
 

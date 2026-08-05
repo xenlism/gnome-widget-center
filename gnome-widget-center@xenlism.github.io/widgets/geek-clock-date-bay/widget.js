@@ -101,7 +101,7 @@ export default class GeekClockDateBayWidget {
 
             textAlign: 'center',
 
-            backgroundColor: '#1a2a33b3',
+            backgroundColor: '#FFFFFF00',
             cornerRadius: 18,
         };
     }
@@ -185,7 +185,7 @@ export default class GeekClockDateBayWidget {
 
         const clockColor = this._settings.clockColor ?? '#ffffff';
         const dateColor = this._settings.dateColor ?? '#e6e6e6';
-        const backgroundColor = _toCssColor(this._settings.backgroundColor ?? '#1a2a33b3', '#1a2a33b3');
+        const backgroundColor = _toCssColor(this._settings.backgroundColor ?? '#FFFFFF00', '#FFFFFF00');
         const cornerRadius = this._settings.cornerRadius ?? 18;
         const textAlign = ['left', 'center', 'right'].includes(this._settings.textAlign) ? this._settings.textAlign : 'center';
         const textShadowCss = _textShadowCss(this._settings);

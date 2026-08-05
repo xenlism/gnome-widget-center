@@ -132,7 +132,7 @@ export default class CirclesSystemWidget {
     getDefaultSettings() {
         return {
             ...SHADOW_DEFAULTS,
-            backgroundColor: '#00000026',
+            backgroundColor: '#FFFFFF00',
             cornerRadius: 18,
 
             circleBaseColor: '#FFFFFF26',
@@ -220,7 +220,7 @@ export default class CirclesSystemWidget {
 
     /** @private */
     _render() {
-        this._actor.set_style(_cardStyleCss(this._settings, {backgroundColorFallback: '#00000026', cornerRadiusFallback: 18}));
+        this._actor.set_style(_cardStyleCss(this._settings, {backgroundColorFallback: '#FFFFFF00', cornerRadiusFallback: 18}));
 
         const captionColor = _toCssColor(this._settings.captionColor, '#FFFFFFB3');
         const captionFont = _parseFontDescription(this._settings.captionFont ?? 'Sans 8', 'Sans', 8);

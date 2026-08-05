@@ -20,7 +20,7 @@ export default {
     "category.advanced": "Advanced",
     "category.about": "About",
     "importexport.group.title": "Theme file (.gwct)",
-    "importexport.group.description": "Appearance and per-widget settings, with any passwords, API keys, usernames or emails left out. Does not include the widgets themselves — importing on a machine missing one of these widgets will skip it.",
+    "importexport.group.description": "Appearance, host preferences, and settings for your currently-enabled widgets, with any passwords, API keys, usernames or emails left out. Disabled widgets and the widgets themselves are not included — importing on a machine missing one of these widgets will skip it.",
     "importexport.export.title": "Export theme…",
     "importexport.export.subtitle": "Save the current appearance and widget settings to a .gwct file.",
     "importexport.export.filechooser_title": "Export theme",

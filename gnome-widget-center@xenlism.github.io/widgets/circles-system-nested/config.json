@@ -20,7 +20,7 @@
               "fieldType": "colorpicker",
               "format": "color",
               "alpha": true,
-              "default": "#000000a9"
+              "default": "#FFFFFF00"
             },
             {
               "id": "cornerRadius",
@@ -203,7 +203,7 @@
               "min": 0,
               "max": 360,
               "step": 1,
-              "suffix": "°",
+              "suffix": "\u00b0",
               "visibleIf": "shadowEnabled"
             },
             {
