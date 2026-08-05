@@ -263,6 +263,38 @@ what look like genuinely new widgets (`circles-{battery,cpu,disk,mem,net}
 -half`, `circles-system-nested`, `power-menu-bar`, `settings-control-bar`)
 mixed in with edited versions of existing ones. Not yet diffed or merged.
 
+## Widget Center overlay: Overview/Themes cards now a responsive flowbox — this session
+
+`lib/widgetCenterOverlay.js`'s `_buildGrid()` - shared by the Overview
+tab (every discovered widget) and the Themes tab (every discovered theme
+pack), nothing else uses it - used to hard-chunk entries 2-per-row no
+matter what, regardless of the actual monitor. Now `columns` (3 / 2 / 1)
+comes from a new `_gridColumns()` based on
+`Main.layoutManager.primaryMonitor.width` - the same monitor `_buildUI()`
+already sizes the whole overlay to:
+
+- `>= 1600px` monitor width → **3** cards per row
+- `>= 1100px` → **2**
+- otherwise → **1**
+
+Thresholds are derived from each `.wc-overlay-card`'s fixed 480px width
+(`stylesheet.css`) + 16px inter-card spacing + the content area's own
+24px×2 side padding, rounded up for breathing room rather than cut at
+the exact fitting width. Snapshotted once per tab render (same
+non-live-resize scope `_buildUI()`'s own monitor sizing already has -
+the overlay is rebuilt fresh on every open and every tab switch anyway,
+see `_renderTab()`), not wired to a live monitor-resize signal -
+deliberately, per `_gridColumns()`'s own doc comment: this codebase has
+already been bitten once by allocation-timing bugs (see
+`blockSizeManager.js`'s file header), so a width snapshot at build time
+was preferred over a Clutter.FlowLayout/live-allocation approach here.
+Settings/Preferences tab (`widgetCenterOverlayPreferences.js`) untouched
+- only Overview and Themes use `_buildGrid()`.
+
+`node --check` across the whole tree: clean.
+
+---
+
 ## Geek series bay/big widgets: text sizes + transparent background — this session
 
 Applied to the 9 two-line "bay"/"big" geek widgets specifically (excludes

@@ -4,11 +4,14 @@
 // on top of the desktop, toggled by a customizable global shortcut
 // (default Super+F12) and/or by D-Bus (see io.github.xenlism.WidgetCenterOverlay
 // .desktop). Three tabs across the top:
-//   - Overview: every discovered widget, 2 per row (screenshot, name,
-//     description, author, enable switch, Settings, Remove).
+//   - Overview: every discovered widget (screenshot, name, description,
+//     author, enable switch, Settings, Remove), in a responsive flowbox -
+//     3 per row, 2 on a medium-width screen, 1 on a small one - see
+//     _buildGrid()/_gridColumns() below.
 //   - Themes:   every discovered theme pack (lib/themePackRegistry.js),
-//     2 per row (screenshot, name, description, its widget list, author,
-//     enable switch, Settings).
+//     screenshot, name, description, its widget list, author, enable
+//     switch, Settings - same responsive 3/2/1 flowbox, same
+//     _buildGrid() call.
 //   - Settings: the overlay's own shortcut, plus a launcher for the full
 //     extension Preferences window.
 //
@@ -547,11 +550,13 @@ export class WidgetCenterOverlay {
         });
         const box = new St.BoxLayout({vertical: true, style_class: 'wc-overlay-grid'});
 
-        for (let i = 0; i < entries.length; i += 2) {
+        const columns = this._gridColumns();
+        for (let i = 0; i < entries.length; i += columns) {
             const row = new St.BoxLayout({style_class: 'wc-overlay-row'});
-            row.add_child(buildCard(entries[i]));
-            if (entries[i + 1])
-                row.add_child(buildCard(entries[i + 1]));
+            for (let c = 0; c < columns; c++) {
+                if (entries[i + c])
+                    row.add_child(buildCard(entries[i + c]));
+            }
             box.add_child(row);
         }
 
@@ -563,6 +568,36 @@ export class WidgetCenterOverlay {
 
         scroll.add_child(box);
         return scroll;
+    }
+
+    /** @private Flowbox-style column count shared by the Overview and
+     * Themes tabs' _buildGrid() call - 3 per row, dropping to 2 then 1 on
+     * a smaller screen. Each `.wc-overlay-card` is a fixed 480px
+     * (stylesheet.css) with 16px spacing between cards (`.wc-overlay-row`)
+     * and the content area's own 24px+24px side padding
+     * (`.wc-overlay-content`), so N columns needs
+     * `N*480 + (N-1)*16 + 48` px of monitor width to comfortably fit
+     * without any card getting clipped or forced to wrap oddly -
+     * thresholds below round that up with some breathing room rather
+     * than cutting exactly at the fitting width.
+     *
+     * Computed from `Main.layoutManager.primaryMonitor` - the same
+     * monitor `_buildUI()` already sizes the whole overlay to - rather
+     * than from this actor's own allocation at layout time: this
+     * codebase has already been bitten once by allocation-timing bugs
+     * (see blockSizeManager.js's file header for the history), and the
+     * overlay is rebuilt fresh on every open and every tab switch
+     * anyway (`_renderTab()` throws the old content away and calls
+     * `_buildGrid()` again), so a monitor-width snapshot taken at build
+     * time is simpler than a live resize listener and just as correct
+     * for this UI's actual lifecycle. */
+    _gridColumns() {
+        const width = Main.layoutManager.primaryMonitor?.width ?? 1920;
+        if (width >= 1600)
+            return 3;
+        if (width >= 1100)
+            return 2;
+        return 1;
     }
 
     _buildScreenshot(basePath, metadataOrManifest) {

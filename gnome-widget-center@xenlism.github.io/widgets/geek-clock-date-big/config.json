@@ -19,7 +19,7 @@
               "dataType": "string",
               "fieldType": "fontpicker",
               "format": "font",
-              "default": "Sans Bold 56"
+              "default": "Sans Bold 80"
             },
             {
               "id": "clockColor",
@@ -68,7 +68,7 @@
               "dataType": "string",
               "fieldType": "fontpicker",
               "format": "font",
-              "default": "Sans Bold 22",
+              "default": "Sans Bold 14",
               "visibleIf": "dateTextEnabled"
             },
             {
@@ -147,7 +147,8 @@
               "dataType": "string",
               "fieldType": "colorpicker",
               "format": "color",
-              "default": "#1a2a33b3"
+              "alpha": true,
+              "default": "#FFFFFF00"
             },
             {
               "id": "cornerRadius",

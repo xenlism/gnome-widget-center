@@ -19,7 +19,7 @@
               "dataType": "string",
               "fieldType": "fontpicker",
               "format": "font",
-              "default": "Sans Bold 44"
+              "default": "Sans Bold 80"
             },
             {
               "id": "dateColor",
@@ -44,7 +44,7 @@
               "dataType": "string",
               "fieldType": "fontpicker",
               "format": "font",
-              "default": "Sans Bold 20"
+              "default": "Sans Bold 14"
             },
             {
               "id": "systemColor",
@@ -118,7 +118,8 @@
               "dataType": "string",
               "fieldType": "colorpicker",
               "format": "color",
-              "default": "#1a2a33b3"
+              "alpha": true,
+              "default": "#ffffff00"
             },
             {
               "id": "cornerRadius",
