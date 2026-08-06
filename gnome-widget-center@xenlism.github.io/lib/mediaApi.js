@@ -111,10 +111,39 @@ export class MprisMediaService {
 
         if (this._disposed) return;
 
-        this._nameOwnerChangedId = this._dbusProxy.connectSignal(
-            'NameOwnerChanged',
-            (_proxy, _sender, [name, oldOwner, newOwner]) => {
-                if (this._disposed || !name.startsWith(MPRIS_PREFIX)) return;
+        // Fix (regression, 2026-08-06): must subscribe via
+        // Gio.DBus.session.signal_subscribe(), not connectSignal() on a
+        // GDBusProxy constructed *for* the bus driver (org.freedesktop.DBus)
+        // itself. A GDBusProxy's signal delivery is gated by its own internal
+        // "does the sender's current name-owner match what I think owns this
+        // name" tracking - reasonable for an ordinary service, but
+        // org.freedesktop.DBus isn't an ordinary owned name, and that extra
+        // tracking layer is a known source of NameOwnerChanged signals
+        // silently never reaching the callback (the proxy itself still works
+        // fine for method calls like ListNames below, which is why the
+        // "restart re-attaches via _findExistingPlayer" path always worked -
+        // only the live signal path was affected: the widget went silent
+        // after a fresh `Play` and only recovered when the extension was
+        // reloaded, which re-runs _findExistingPlayer). signal_subscribe()
+        // talks to the connection directly with no such gate, which is the
+        // pattern every other MPRIS-consuming GNOME Shell extension actually
+        // uses for this exact signal.
+        //
+        // Using MATCH_ARG0_NAMESPACE + the MPRIS namespace as arg0 (instead
+        // of arg0=null + filtering every NameOwnerChanged on the session bus
+        // in JS) asks the bus daemon to do that filtering for us, so this
+        // callback only ever fires for org.mpris.MediaPlayer2.* names.
+        this._nameOwnerChangedId = Gio.DBus.session.signal_subscribe(
+            DBUS_NAME,          // sender
+            DBUS_IFACE,         // interface
+            'NameOwnerChanged', // signal
+            DBUS_PATH,          // object path
+            MPRIS_PREFIX.slice(0, -1), // arg0 namespace filter ('org.mpris.MediaPlayer2')
+            Gio.DBusSignalFlags.MATCH_ARG0_NAMESPACE,
+            (_connection, _sender, _path, _iface, _signal, params) => {
+                const [name, oldOwner, newOwner] = params.deep_unpack();
+
+                if (this._disposed) return;
 
                 if (newOwner && !this._currentBusName) {
                     this._attachToPlayer(name);
@@ -160,8 +189,12 @@ export class MprisMediaService {
         this._onUpdate = null; 
         this._detachFromPlayer(false);
 
-        if (this._dbusProxy && this._nameOwnerChangedId !== null) {
-            this._dbusProxy.disconnectSignal(this._nameOwnerChangedId);
+        // Matches the low-level Gio.DBus.session.signal_subscribe() call in
+        // start() - unsubscribe via signal_unsubscribe(), not
+        // proxy.disconnectSignal() (that only applies to signals connected
+        // through a GDBusProxy, which this no longer is).
+        if (this._nameOwnerChangedId !== null) {
+            Gio.DBus.session.signal_unsubscribe(this._nameOwnerChangedId);
         }
 
         this._nameOwnerChangedId = null;
@@ -470,15 +503,24 @@ export class MprisMediaService {
     _refreshThenEmit() {
         if (!this._playerProxy || this._disposed) return;
 
+        // Capture the proxy this call is for. The GetAll round-trip is
+        // async, so if the player detaches and a *different* player attaches
+        // before the reply lands, `this._playerProxy` will have moved on to
+        // the new player by the time this callback runs - checking only
+        // `!this._playerProxy` (null-ness) doesn't catch that, only an
+        // identity check does. Without this, a fast player-swap could feed
+        // the outgoing player's stale metadata into the new player's cache.
+        const proxyAtCallTime = this._playerProxy;
+
         const params = new GLib.Variant('(s)', [MPRIS_PLAYER_IFACE]);
-        this._playerProxy.call(
+        proxyAtCallTime.call(
             'org.freedesktop.DBus.Properties.GetAll',
             params,
             Gio.DBusCallFlags.NONE,
             -1,
             null,
             (proxy, res) => {
-                if (this._disposed || !this._playerProxy) return;
+                if (this._disposed || this._playerProxy !== proxyAtCallTime) return;
                 try {
                     // Deliberately NOT deep_unpack() here - that would
                     // strip the 'v' (variant) wrapper each dict value

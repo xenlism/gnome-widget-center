@@ -1,6 +1,6 @@
-// widgets/folder-widget-2x2/widget.js
+// widgets/launcher-big/widget.js
 //
-// Android-style "Folder Widget": a rounded card holding a fixed grid of
+// Android-style "Launcher Widget": a rounded card holding a fixed grid of
 // app icons, no labels. Each icon is independently clickable and launches
 // its own .desktop entry (Gio.DesktopAppInfo.launch(), same convention as
 // widgets/clock-modern's single launchOnClick handler) - unlike
@@ -23,12 +23,12 @@
 // _attachTooltip()) can be positioned as free-floating overlay children,
 // same reason widgets/power-menu/widget.js's root uses FixedLayout.
 //
-// The grid itself is 2 columns x 2 rows (4 slots), built as nested
+// The grid itself is 3 columns x 3 rows (9 slots), built as nested
 // St.BoxLayout rows rather than Clutter.GridLayout, matching this
 // project's existing "plain St actors + inline set_style()" convention
 // (see SKILL.md §2) and avoiding an extra import. Empty slots (fewer
-// than 4 apps configured) render as a faint placeholder square so the
-// grid shape stays visible, matching the reference Android folder-widget
+// than 9 apps configured) render as a faint placeholder square so the
+// grid shape stays visible, matching the reference Android launcher-widget
 // look.
 //
 // backgroundColor supports an 8-digit #rrggbbaa hex (alpha: true on the
@@ -41,21 +41,19 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor} from '../../lib/widgetVisualKit.js';
 
-const GRID_COLS = 2;
-const GRID_ROWS = 2;
+const GRID_COLS = 3;
+const GRID_ROWS = 3;
 const MAX_APPS = GRID_COLS * GRID_ROWS;
-// Each 60px cell now matches the 1x1 control widgets' button footprint:
-// a larger 48px app icon with a uniform 6px inset.
-const ICON_SIZE = 48;
-const CELL_PADDING = 6;
-const GRID_SPACING = 8;
-const CARD_PADDING = 12;
+const ICON_SIZE = 64;
+const CELL_PADDING = 10;
+const GRID_SPACING = 12;
+const CARD_PADDING = 14;
 // Same delayed-hover-label pattern (and delay) as
 // widgets/power-menu/widget.js's _attachTooltip() - each app icon shows
 // its .desktop entry's Name on hover instead of a permanent text label.
 const TOOLTIP_SHOW_DELAY_MS = 400;
 
-export default class FolderWidget2x2 {
+export default class LauncherBig {
     /**
      * @param {WidgetAPI} api - see development/docs/WIDGET_API.md §5.
      */
@@ -80,13 +78,13 @@ export default class FolderWidget2x2 {
         // before) while giving this._actor itself a coordinate space
         // tooltips can be placed in.
         this._actor = new St.Widget({
-            style_class: 'folder-widget-2x2-root',
+            style_class: 'launcher-big-root',
             layout_manager: new Clutter.FixedLayout(),
             reactive: true,
         });
 
         this._content = new St.Bin({
-            style_class: 'folder-widget-2x2-content',
+            style_class: 'launcher-big-content',
             x_align: Clutter.ActorAlign.CENTER,
             y_align: Clutter.ActorAlign.CENTER,
         });
@@ -97,7 +95,7 @@ export default class FolderWidget2x2 {
         this._actor.add_child(this._content);
         // FixedLayout uses a child's natural size when allocating it.  A
         // BindConstraint alone therefore leaves this card at the icon
-        // grid's natural 152px square instead of the root's block size.
+        // grid's natural 304px square instead of the root's block size.
         // Mirror root-size changes explicitly so the painted card always
         // occupies the complete block allocated by BlockSizeManager.
         const syncContentSize = () => {
@@ -120,7 +118,7 @@ export default class FolderWidget2x2 {
                     rowBox.add_child(new St.Widget({width: GRID_SPACING, height: 1}));
 
                 const bin = new St.Bin({
-                    style_class: 'folder-widget-2x2-cell',
+                    style_class: 'launcher-big-cell',
                     width: ICON_SIZE + CELL_PADDING * 2,
                     height: ICON_SIZE + CELL_PADDING * 2,
                 });
@@ -213,7 +211,7 @@ export default class FolderWidget2x2 {
                     tooltipText = appInfo.get_name();
                 }
             } catch (e) {
-                this._api.logger.info(`folder-widget-2x2: could not read ${path}: ${e}`);
+                this._api.logger.info(`launcher-big: could not read ${path}: ${e}`);
             }
 
             cell.bin.set_style('background-color: transparent;');
@@ -277,7 +275,7 @@ export default class FolderWidget2x2 {
             showTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, TOOLTIP_SHOW_DELAY_MS, () => {
                 showTimeoutId = null;
                 tooltipLabel = new St.Label({
-                    style_class: 'folder-widget-2x2-tooltip',
+                    style_class: 'launcher-big-tooltip',
                     text,
                 });
                 tooltipLabel.set_style(
@@ -345,12 +343,12 @@ export default class FolderWidget2x2 {
         try {
             const appInfo = Gio.DesktopAppInfo.new_from_filename(path);
             if (!appInfo) {
-                this._api.logger.info(`folder-widget-2x2: could not read .desktop file at ${path}`);
+                this._api.logger.info(`launcher-big: could not read .desktop file at ${path}`);
                 return;
             }
             appInfo.launch([], null);
         } catch (e) {
-            this._api.logger.info(`folder-widget-2x2: failed to launch ${path}: ${e}`);
+            this._api.logger.info(`launcher-big: failed to launch ${path}: ${e}`);
         }
     }
 }

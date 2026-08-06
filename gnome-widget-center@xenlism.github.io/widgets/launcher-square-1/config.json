@@ -3,23 +3,28 @@
   "tabs": [
     {
       "id": "general",
-      "label": "Folder (3x3)",
-      "description": "9 app shortcuts in a 3x3 icon grid, no labels",
+      "label": "Launcher (Square)",
+      "description": "4 app shortcuts in a 2x2 icon grid, no labels",
       "icon": "view-grid-symbolic",
       "groups": [
         {
           "id": "apps",
           "label": "Apps",
-          "description": "Up to 9 apps, filled left-to-right, top-to-bottom. Clicking an icon launches that app.",
+          "description": "Up to 4 apps, filled left-to-right, top-to-bottom. Clicking an icon launches that app.",
           "fields": [
             {
               "id": "apps",
-              "label": "Apps (max 9)",
+              "label": "Apps (max 4)",
               "description": "Pick installed apps or browse for a .desktop file",
               "dataType": "list",
               "fieldType": "list",
-              "default": [],
-              "maxItems": 9,
+              "default": [
+                "/usr/share/applications/org.gnome.Console.desktop",
+                "/usr/share/applications/com.anthropic.Claude.desktop",
+                "/usr/share/applications/GitKraken.desktop",
+                "/usr/share/applications/code.desktop"
+              ],
+              "maxItems": 4,
               "item": {
                 "dataType": "string",
                 "format": "app",

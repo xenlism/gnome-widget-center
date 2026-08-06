@@ -1,7 +1,7 @@
 {
-  "id": "folder-widget-3x3-2",
-  "name": "Folder Widget (3x3) 2",
-  "description": "Android-style folder shortcut: 9 app icons in a 3x3 grid, no labels, click launches each app's .desktop entry.",
+  "id": "launcher-big-2",
+  "name": "Launcher (Big) 2",
+  "description": "Android-style launcher shortcut: 9 app icons in a 3x3 grid, no labels, click launches each app's .desktop entry.",
   "version": "1.0.0",
   "author": "GNOME Widget Center",
   "api-version": 1,

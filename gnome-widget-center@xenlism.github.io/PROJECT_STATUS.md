@@ -1,5 +1,35 @@
 # Project Status
 
+## 2026-08-06 — mediaApi.js: fixed live NameOwnerChanged regression, added stale-proxy guard
+
+**Scope:** `lib/mediaApi.js` only. Nothing else touched.
+
+- **Bug report:** media-player widget showed no track/cover while music was
+  actively playing, but would correctly show cover + track name after
+  disabling and re-enabling the extension. No errors in the journal.
+- **Root cause:** a prior edit had reverted the `NameOwnerChanged`
+  subscription from `Gio.DBus.session.signal_subscribe()` back to
+  `this._dbusProxy.connectSignal('NameOwnerChanged', ...)` on the
+  `org.freedesktop.DBus` proxy. A `GDBusProxy`'s signal delivery is gated by
+  its own internal name-owner tracking, which doesn't apply cleanly to
+  `org.freedesktop.DBus` itself — the signal silently never reached the
+  callback. Method calls on the same proxy (like `ListNames`) were
+  unaffected, which is why `_findExistingPlayer()` — run once on `start()`
+  — always found a player that was already playing when the extension
+  (re)loaded, while a player started *after* load was never picked up.
+- **Fix:** restored `Gio.DBus.session.signal_subscribe()` /
+  `signal_unsubscribe()` for `NameOwnerChanged`, this time filtering with
+  `Gio.DBusSignalFlags.MATCH_ARG0_NAMESPACE` on
+  `org.mpris.MediaPlayer2` so the bus daemon itself only delivers
+  MPRIS-relevant name-owner changes, instead of every `NameOwnerChanged` on
+  the session bus being filtered in JS.
+- **Also fixed:** `_refreshThenEmit()`'s `Properties.GetAll` reply handler
+  now captures the `_playerProxy` it was called against
+  (`proxyAtCallTime`) and checks identity, not just null-ness, before
+  writing the reply into the cache and emitting. Previously, a fast
+  detach-then-reattach (one player quits, another starts) while a GetAll
+  call was still in flight could feed the outgoing player's stale metadata
+  into the new player's proxy cache.
 ## 2026-07-31 — Weather widgets: one shared "location" field + IP-detect button
 
 **Scope:** `lib/widgetConfigUI.js`, `lib/widgetConfigValidator.js`,

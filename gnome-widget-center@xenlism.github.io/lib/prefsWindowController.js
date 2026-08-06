@@ -72,6 +72,9 @@ import {pickTranslation} from './i18nUtils.js';
 import {SettingsService} from './settingsService.js';
 import {StorageService} from './storageService.js';
 import {WidgetSettings} from './widgetSettings.js';
+import {ThemeService} from './themeService.js';
+import {ThemePackRegistry} from './themePackRegistry.js';
+import {openThemePackExportDialog} from './themePackExportDialog.js';
 import {loadTranslations} from '../i18n/index.js';
 import {PrefsPageBuildersMixin} from './prefsPageBuilders.js';
 import {PrefsWidgetManagementMixin} from './prefsWidgetManagement.js';
@@ -108,6 +111,9 @@ class PrefsWindowControllerBase {
         this._discovered = [];
         /** @private set once build() has run - see showPreferencesPage(). */
         this._preferencesPage = null;
+        /** @private set once build() has run - see showBackupPage(). */
+        this._categoryListBox = null;
+        this._categoryRowsById = null;
     }
 
     /**
@@ -131,6 +137,103 @@ class PrefsWindowControllerBase {
                 logError(e, '[widget-center] prefs: showPreferencesPage() failed');
             }
             return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    /**
+     * @description Jumps an already-built window straight to the
+     * "Backup & Restore" category inside the Preferences tab, skipping
+     * both Overview and the General category `_buildPreferencesPage()`
+     * otherwise selects first — added for widget-center-prefs-app.js's
+     * `--focus=backup` flag (used by lib/widgetCenterOverlay.js's new
+     * Settings-tab Backup button, so clicking it doesn't dump the user
+     * on the General page and make them find Backup & Restore
+     * themselves). No-op if build() hasn't run yet, or on a
+     * theoretical Shell-version-driven prefs window that never went
+     * through `_buildPreferencesPage()` at all — both covered by the
+     * same `this._categoryRowsById` presence check. Same idle-loop
+     * deferral as showPreferencesPage()/jumpToWidget() and for the same
+     * reason: row selection needs the window mapped first.
+     * @param {Adw.PreferencesWindow} window
+     */
+    showBackupPage(window) {
+        if (!this._preferencesPage || !this._categoryListBox || !this._categoryRowsById?.backup)
+            return;
+        GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            try {
+                window.set_visible_page(this._preferencesPage);
+                this._categoryListBox.select_row(this._categoryRowsById.backup);
+            } catch (e) {
+                logError(e, '[widget-center] prefs: showBackupPage() failed');
+            }
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    /**
+     * @description Opens the "Export Theme…" dialog
+     * (lib/themePackExportDialog.js) against an already-built window,
+     * either blank (current live-desktop selection, `prefill` omitted)
+     * or seeded from a specific already-discovered theme pack. No-op if
+     * build() hasn't finished yet (this._settings/_storage/_discovered
+     * are only set at the end of build() — see that method).
+     * @param {Adw.PreferencesWindow} window
+     * @param {object} [prefill] - see themePackExportDialog.js's own
+     *   `prefill` param doc.
+     */
+    openExportThemeDialog(window, prefill = {}) {
+        if (!this._settings || !this._storage)
+            return;
+        const theme = new ThemeService();
+        theme.init();
+        openThemePackExportDialog(window, {
+            storage: this._storage, theme, settings: this._settings, discoveredWidgets: this._discovered,
+        }, prefill);
+    }
+
+    /**
+     * @description Same as openExportThemeDialog(), but looks up an
+     * already-discovered theme pack by id first (bundled + user
+     * themepacks/ folders, same search paths
+     * lib/widgetCenterOverlay.js's Themes tab uses) and prefills the
+     * dialog's Name/Description/Author/URL fields and restricts the
+     * export to exactly that pack's own widget set — added for the
+     * overlay's per-card "Export" icon button
+     * (widget-center-prefs-app.js's `--export-theme-id=<id>` flag) so
+     * re-exporting an existing pack doesn't start from a blank form or
+     * silently pick up whatever's enabled on the live desktop right now
+     * instead of what that pack actually contains. Silently does
+     * nothing if the id isn't found (pack removed/renamed on disk
+     * between the overlay listing it and this click landing) rather
+     * than erroring — same "missing entry, not a crash" policy
+     * ThemePackRegistry.discover() itself already follows for one bad
+     * entry among many.
+     * @param {Adw.PreferencesWindow} window
+     * @param {string} themePackId
+     */
+    openExportThemeDialogForPack(window, themePackId) {
+        if (!this._settings || !this._storage)
+            return;
+        const bundledThemepacksPath = GLib.build_filenamev([this.path, 'themepacks']);
+        const userThemepacksPath = GLib.build_filenamev([
+            GLib.get_user_config_dir(), 'gnome-widget-center', 'themepacks',
+        ]);
+        const registry = new ThemePackRegistry([
+            {path: bundledThemepacksPath, source: 'bundled'},
+            {path: userThemepacksPath, source: 'user'},
+        ]);
+        const entry = registry.discover().find(e => e.id === themePackId);
+        if (!entry) {
+            logError(new Error(`theme pack "${themePackId}" not found`), '[widget-center] prefs: openExportThemeDialogForPack');
+            return;
+        }
+        this.openExportThemeDialog(window, {
+            id: entry.manifest.id,
+            name: entry.manifest.name,
+            description: entry.manifest.description ?? '',
+            author: entry.manifest.author ?? '',
+            url: entry.manifest.url ?? '',
+            widgetIds: entry.manifest.widgets ?? [],
         });
     }
 

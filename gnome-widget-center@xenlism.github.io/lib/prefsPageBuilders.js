@@ -23,6 +23,7 @@ import {showReportDialog, promptPassword, confirmOverwrite, chooseFile} from './
 import {ThemeService} from './themeService.js';
 import {buildGwctDocument, writeGwctFile, readGwctFile, importGwctDocument} from './exportService.js';
 import {createBackup, restoreBackup} from './backupService.js';
+import {openThemePackExportDialog} from './themePackExportDialog.js';
 import {rgbaToHex} from './colorUtils.js';
 import {SUPPORTED_LOCALES} from '../i18n/index.js';
 import {SHADOW_ANGLE_STEPS} from './widgetVisualKit.js';
@@ -184,11 +185,20 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         // expando property instead (safe: GJS keeps JS-side properties
         // alive alongside the wrapped GObject for as long as the row is
         // reachable, which here is the whole lifetime of the window).
+        // Stashed on `this` (not just local vars) so a caller outside this
+        // method — showBackupPage()'s "jump straight to Backup & Restore"
+        // for the Widget Center overlay's new Backup button — can select
+        // a specific row after the fact without rebuilding this whole
+        // page. Keyed by category id (see showBackupPage()'s doc comment).
+        this._categoryListBox = listBox;
+        this._categoryRowsById = {};
+
         for (const category of categories) {
             const row = new Adw.ActionRow({title: category.title, subtitle: category.subtitle});
             row.add_prefix(new Gtk.Image({icon_name: category.icon}));
             row._category = category;
             listBox.append(row);
+            this._categoryRowsById[category.id] = row;
         }
 
         listBox.connect('row-selected', (_box, row) => {
@@ -342,6 +352,36 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
             }
         });
         group.add(importRow);
+
+        // --- Theme packs (Widget Center overlay's "Themes" tab) -------
+        // A DIFFERENT export from the two rows above: those two are a
+        // plain desktop-appearance snapshot; this one bundles pack-
+        // authoring metadata (name/description/author/url + an embedded
+        // screenshot) into the SAME .gwct shape, meant to be dropped into
+        // a themepacks/ folder and shown as a browsable "Theme" card
+        // rather than silently re-applied. See
+        // lib/themePackExportDialog.js's file header.
+        const packGroup = new Adw.PreferencesGroup({
+            title: this._tr('importexport.packgroup.title', 'Theme pack (.gwct, shareable)'),
+            description: this._tr('importexport.packgroup.description',
+                'Package the current appearance and enabled widgets as a named, described, ' +
+                'screenshotted theme pack other people can drop into their own Widget Center.'),
+        });
+        page.add(packGroup);
+
+        const exportPackRow = new Adw.ActionRow({
+            title: this._tr('importexport.exportpack.title', 'Export Theme…'),
+            subtitle: this._tr('importexport.exportpack.subtitle',
+                'Name, description, author, URL and screenshot, saved to a file you choose.'),
+            activatable: true,
+        });
+        exportPackRow.add_suffix(new Gtk.Image({icon_name: 'send-to-symbolic'}));
+        exportPackRow.connect('activated', () => {
+            const theme = new ThemeService();
+            theme.init();
+            openThemePackExportDialog(window, {storage, theme, settings: this._settings, discoveredWidgets});
+        });
+        packGroup.add(exportPackRow);
 
         return page;
     }

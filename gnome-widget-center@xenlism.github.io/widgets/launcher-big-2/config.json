@@ -3,7 +3,7 @@
   "tabs": [
     {
       "id": "general",
-      "label": "Folder (3x3)",
+      "label": "Launcher (Big)",
       "description": "9 app shortcuts in a 3x3 icon grid, no labels",
       "icon": "view-grid-symbolic",
       "groups": [
@@ -18,17 +18,7 @@
               "description": "Pick installed apps or browse for a .desktop file",
               "dataType": "list",
               "fieldType": "list",
-              "default": [
-                "/usr/share/applications/google-chrome.desktop",
-                "/usr/share/applications/brave-origin.desktop",
-                "/usr/share/applications/GitKraken.desktop",
-                "/usr/share/applications/firefox.desktop",
-                "/usr/share/applications/org.gnome.Console.desktop",
-                "/usr/share/applications/org.gnome.tweaks.desktop",
-                "/usr/share/applications/org.gnome.Settings.desktop",
-                "/usr/share/applications/gnome-system-monitor-kde.desktop",
-                "/usr/share/applications/org.gnome.Extensions.desktop"
-              ],
+              "default": [],
               "maxItems": 9,
               "item": {
                 "dataType": "string",

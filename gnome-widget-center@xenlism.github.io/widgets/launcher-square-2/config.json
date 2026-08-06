@@ -3,7 +3,7 @@
   "tabs": [
     {
       "id": "general",
-      "label": "Folder (2x2)",
+      "label": "Launcher (Square)",
       "description": "4 app shortcuts in a 2x2 icon grid, no labels",
       "icon": "view-grid-symbolic",
       "groups": [
@@ -18,12 +18,7 @@
               "description": "Pick installed apps or browse for a .desktop file",
               "dataType": "list",
               "fieldType": "list",
-              "default": [
-                "/usr/share/applications/org.gnome.Console.desktop",
-                "/usr/share/applications/com.anthropic.Claude.desktop",
-                "/usr/share/applications/GitKraken.desktop",
-                "/usr/share/applications/code.desktop"
-              ],
+              "default": [],
               "maxItems": 4,
               "item": {
                 "dataType": "string",

@@ -99,18 +99,27 @@ let buildPromise = null;
  * activations landing back to back before GTK has even mapped a window
  * yet) waits on the SAME build rather than kicking off a second one.
  * @param {string|null} requestedWidgetId
- * @param {string|null} focusTarget - currently only 'preferences' is
- *   recognized (see `--focus=preferences` below); jumps straight to the
- *   Preferences top-level tab instead of leaving Overview showing. Added
+ * @param {string|null} focusTarget - 'preferences' jumps straight to the
+ *   Preferences top-level tab instead of leaving Overview showing (added
  *   for lib/widgetCenterOverlay.js's Settings tab, which already has its
  *   own native widget list and only wants Store/Preferences from this
  *   window — see PrefsWindowController.showPreferencesPage()'s own doc
  *   comment for why this can't just remove the Overview tab outright:
  *   this app is a shared single-instance window, and a plain `gjs -m
  *   widget-center-prefs-app.js` or gear-icon launch still needs Overview
- *   to be there.
+ *   to be there). 'backup' (`--focus=backup`) goes one step further and
+ *   also selects the Backup & Restore category within Preferences — see
+ *   PrefsWindowController.showBackupPage(); added for the overlay's own
+ *   Backup button.
+ * @param {string|null} exportThemeId - `--export-theme-id=<id>`: opens
+ *   the Export Theme dialog prefilled from that already-discovered theme
+ *   pack, for the overlay's per-card Export button (see
+ *   PrefsWindowController.openExportThemeDialogForPack()).
+ * @param {boolean} exportThemeNew - `--export-theme-new`: opens the same
+ *   dialog blank (current live-desktop widget selection), for the
+ *   overlay's Themes-tab "Export current desktop…" action.
  */
-async function presentWindow(requestedWidgetId, focusTarget = null) {
+async function presentWindow(requestedWidgetId, focusTarget = null, exportThemeId = null, exportThemeNew = false) {
     if (!controller) {
         window = new Adw.PreferencesWindow({application: app});
         controller = new PrefsWindowController(EXTENSION_PATH);
@@ -131,10 +140,21 @@ async function presentWindow(requestedWidgetId, focusTarget = null) {
 
     if (requestedWidgetId)
         controller.jumpToWidget(window, requestedWidgetId);
+    else if (focusTarget === 'backup')
+        controller.showBackupPage(window);
     else if (focusTarget === 'preferences')
         controller.showPreferencesPage(window);
 
     window.present();
+
+    // Opened alongside (not instead of) the base window above — the
+    // Export dialog is its own transient Adw.Window, not a page inside
+    // this one (see themePackExportDialog.js), so there's always a
+    // sensible window underneath it either way.
+    if (exportThemeId)
+        controller.openExportThemeDialogForPack(window, exportThemeId);
+    else if (exportThemeNew)
+        controller.openExportThemeDialog(window);
 }
 
 /** Plain launch, no arguments — e.g. from a .desktop file with no Exec= arguments, or `gjs -m` with none. */
@@ -154,13 +174,19 @@ app.connect('command-line', (application, commandLine) => {
     const argv = commandLine.get_arguments();
     let requestedWidgetId = null;
     let focusTarget = null;
+    let exportThemeId = null;
+    let exportThemeNew = false;
     for (const arg of argv) {
         if (arg.startsWith('--widget-id='))
             requestedWidgetId = arg.slice('--widget-id='.length);
         else if (arg.startsWith('--focus='))
             focusTarget = arg.slice('--focus='.length);
+        else if (arg.startsWith('--export-theme-id='))
+            exportThemeId = arg.slice('--export-theme-id='.length);
+        else if (arg === '--export-theme-new')
+            exportThemeNew = true;
     }
-    presentWindow(requestedWidgetId, focusTarget).catch(e =>
+    presentWindow(requestedWidgetId, focusTarget, exportThemeId, exportThemeNew).catch(e =>
         logError(e, '[widget-center] widget-center-prefs-app: command-line handling failed'));
     return 0;
 });

@@ -434,3 +434,155 @@ clean) rather than touching working clipping code.
    `cardStyleCss()`/used elsewhere for the 3 new widgets + 16 `geek-*`
    widgets haven't been cross-checked line-by-line against each
    `config.json`'s own declared defaults.
+
+---
+
+## 2026-08-05 session — Themes-tab sort/export, Backup button, user-only Remove
+
+Four asks this session, all in scope of the Widget Center overlay +
+Preferences window:
+
+1. **Themes tab: sort by Name / Widget size / Date modified.**
+2. **Settings/gear buttons on GTK4 windows must render above the
+   fullscreen St overlay** (they were opening successfully but hidden
+   behind the overlay's own chrome actor — see below for why).
+3. **Export Theme…**: a GTK4 dialog collecting Name/Description/Author/
+   URL + a screenshot (base64-embedded in the `.gwct` file), with a
+   Browse… button for the save location.
+4. **Preferences: a Backup button** that opens the existing Backup &
+   Restore page directly (also needs the above z-index fix).
+5. **Remove ("×") button only for user-installed widgets/theme packs** —
+   never for anything bundled with the extension.
+
+### What changed
+
+- **`lib/themePackRegistry.js`** — rewritten. Search paths can now be
+  `{path, source: 'bundled'|'user'}` (plain strings still work, treated
+  as `'bundled'`). Discovery now recognizes TWO on-disk shapes from the
+  same search paths: the original `<id>/theme.json` folder form, and a
+  flat `<name>.gwct` file directly inside the folder — this second form
+  matters because the actual files sitting in `themepacks/` right now
+  (`geek-half-moon.gwct`, `test-2.gwct`, `text-1.gwct`) are plain
+  desktop-appearance `.gwct` exports, not the folder+theme.json shape the
+  old registry only recognized — it would have discovered *none* of
+  them. Every entry now carries `source`, `mtimeUnix`, and `widgetCount`.
+
+- **`lib/themePackExportDialog.js`** (new) — Adw.Window dialog: Name/
+  Description/Author/URL `Adw.EntryRow`s, a screenshot "Browse…" button
+  (reads the file, base64-encodes it via `GLib.base64_encode`), and a
+  separate "Save to…" Browse button (`prefsDialogs.js`'s `chooseFile()`).
+  Reuses `exportService.js`'s `buildGwctDocument()`/`writeGwctFile()` for
+  the appearance/widgets payload, then attaches `document.packMeta =
+  {id, name, description, author, url}` and `document.screenshot =
+  {mimeType, base64}` before writing. Accepts an optional `prefill`
+  (`{id, name, description, author, url, widgetIds}`) for re-exporting an
+  existing pack rather than starting blank.
+
+- **`lib/prefsPageBuilders.js`** — added a "Theme pack (.gwct,
+  shareable)" group with an "Export Theme…" row in the Import/Export
+  category, wired to the new dialog. Also: `_buildPreferencesPage()` now
+  stashes `this._categoryListBox` and `this._categoryRowsById` (keyed by
+  category id) so a row can be selected programmatically from outside
+  that method — needed for `showBackupPage()` below.
+
+- **`lib/prefsWindowController.js`** — three new methods:
+  - `showBackupPage(window)` — selects the "Backup & Restore" row inside
+    the already-built Preferences page (same idle-loop-deferred pattern
+    `showPreferencesPage()`/`jumpToWidget()` already use).
+  - `openExportThemeDialog(window, prefill)` — thin wrapper that builds a
+    `ThemeService` and calls into `themePackExportDialog.js`.
+  - `openExportThemeDialogForPack(window, themePackId)` — looks the pack
+    up via `ThemePackRegistry` (bundled + user themepacks paths) and
+    prefills the dialog from its manifest, restricting the export to
+    that pack's own widget set rather than the live desktop's current
+    selection.
+
+- **`widget-center-prefs-app.js`** — new argv: `--focus=backup`,
+  `--export-theme-id=<id>`, `--export-theme-new`, all parsed in the
+  `command-line` handler and dispatched to the controller methods above.
+
+- **`lib/widgetCenterOverlay.js`** — the big one:
+  - `_buildSortBar()` / `_sortEntries()` — shared by Overview and Themes
+    tabs. Three modes (`SORT_MODES`): Name, Widget size (block-footprint
+    cell count for widgets; widget count for theme packs), Date modified
+    (mtime, newest first). Plain St.Button row, not a dropdown — St has
+    no native combo widget (same constraint already noted in
+    `widgetCenterOverlayPreferences.js`).
+  - `_discoverWidgets()` now tags every entry `source: 'user'|'bundled'`
+    by comparing its path against `_userWidgetsRoots()` (both
+    `~/.local/share/gnome-widget-center/widgets` — the existing
+    convention `extension.js` already uses — and
+    `~/.config/gnome-widget-center/widgets`, called out explicitly for
+    this ask), plus an `mtimeUnix`. `_buildWidgetCard()` only adds the
+    Remove button when `source === 'user'`.
+  - `_discoverThemePacks()` now passes both the bundled `themepacks/`
+    path and `~/.config/gnome-widget-center/themepacks` (tagged `source`
+    accordingly) into `ThemePackRegistry`. `_buildThemePackCard()` only
+    adds the Remove button when `source === 'user'`, and gained a new
+    Export icon button (`_exportThemePack(id)`) alongside the existing
+    Settings gear. The Themes tab header also gained an "Export current
+    desktop…" action (`_exportCurrentDesktopAsThemePack()`).
+  - `_resolveScreenshot()` / new `_decodedScreenshotCachePath()` — a
+    theme pack's `screenshotBase64` (from the new export dialog) is
+    decoded once into `~/.cache/gnome-widget-center/thumbnails/<id>.<ext>`
+    and reused, rather than re-decoding on every card rebuild.
+  - **The z-index fix**: `_launchExternalPrefsWindow(args)` replaces
+    every direct `Gio.Subprocess.new(['gjs', '-m', ...])` call site
+    (`_openWidgetSettings`, `_openExtensionPreferences`,
+    `_exportThemePack`, `_exportCurrentDesktopAsThemePack`, the new
+    Backup button). Root cause: this overlay is Shell chrome
+    (`Main.layoutManager.addChrome()`), and chrome actors paint above
+    `global.window_group` (i.e. every normal window) by construction —
+    so a spawned `Adw.PreferencesWindow` opens successfully but renders
+    completely hidden behind the overlay's own full-monitor actor.
+    Fix is `this._overlay.hide()` (not destroy) for as long as the
+    external window is open, `Meta.Window.make_above()` as defense in
+    depth, and `this._overlay.show()` again once that window is
+    `unmanaged` (closed) — tracked via `_watchForExternalPrefsWindow()`/
+    `_isPrefsWindow()` (matches `get_gtk_application_id() ===
+    'io.github.xenlism.WidgetCenterPrefs'`, with a WM_CLASS-substring
+    fallback for older Shell versions) / `_clearPrefsWatch()` (called
+    from `disable()` too, so a pending watch can't leak a signal
+    connection or GLib timeout source across a Shell restart). Handles
+    both "brand new window this session" (`window-created`) and
+    "already-running single instance just got re-presented, no new
+    `Meta.Window` fires" (scans `global.get_window_actors()` first).
+    Gives up and re-shows the overlay after 10s if no matching window
+    ever appears (e.g. `gjs` missing), so a failed launch can't leave the
+    overlay stuck hidden.
+
+- **`stylesheet.css`** — added `.wc-overlay-sortbar`/
+  `.wc-overlay-sortbar-label` rules (reuses the existing `.wc-overlay-tab`/
+  `.wc-overlay-tab-active` look for the per-mode buttons).
+
+All touched files pass `node --check` (syntax only — no real Shell/Mutter
+available in this environment, see gap #1 below, which now also covers
+`make_above()`/`unmanaged`/chrome-layering behavior specifically).
+
+### Known gaps / next things to check
+
+1. **Real-hardware verification, still nothing confirmed on an actual
+   running GNOME Shell.** The z-index fix in particular rests on
+   reasoning about Mutter/Shell actor stacking (chrome vs window_group)
+   that hasn't been checked against real behavior — worth explicitly
+   confirming: (a) the overlay really does hide/show cleanly with no
+   visible flicker, (b) `get_gtk_application_id()` actually returns
+   `'io.github.xenlism.WidgetCenterPrefs'` for this app on the target
+   Shell/Mutter version (the WM_CLASS fallback is untested too), (c) the
+   single-instance re-present case (`global.get_window_actors()` scan)
+   actually finds the window in time — GApplication activation is async,
+   there could be a race where the scan runs before the already-running
+   instance has re-mapped/raised its window.
+2. **`ThemePackRegistry`'s new flat-`.gwct` discovery hasn't been run
+   against the actual files in `themepacks/`** (`geek-half-moon.gwct`,
+   `test-2.gwct`, `text-1.gwct`) — worth a real `discover()` call against
+   that folder to confirm they parse and show up with sensible
+   name/widget-count, since those files predate `packMeta`/`screenshot`
+   entirely (plain desktop-appearance exports) and take the "name =
+   filename, no description/author/url" fallback path.
+3. **No Import counterpart for the new Export Theme Pack format** — only
+   export was asked for this session; `packMeta`/embedded `screenshot`
+   aren't consumed anywhere on import yet (`importGwctDocument()` in
+   `exportService.js` is untouched).
+4. Earlier gaps (cardStyleCss sweep, system-stats stylesheet,
+   config.json default audit) are unchanged from the previous entry.

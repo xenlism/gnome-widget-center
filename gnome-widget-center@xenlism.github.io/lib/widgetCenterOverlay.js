@@ -56,6 +56,26 @@ const SCHEMA_ID = 'org.gnome.shell.extensions.widget-center';
 const KEYBINDING_KEY = 'widget-center-overlay-keybinding';
 const DISABLED_KEY = 'disabled-widgets';
 
+// GApplication id widget-center-prefs-app.js registers itself under —
+// used by _isPrefsWindow() below to recognize a spawned/re-presented
+// preferences window among every other Meta.Window on the desktop, for
+// the "GTK4 preferences window must render above this fullscreen St
+// overlay" fix (see _launchExternalPrefsWindow()'s own doc comment for
+// why that's needed at all).
+const PREFS_APP_ID = 'io.github.xenlism.WidgetCenterPrefs';
+
+// Sort modes shared by the Overview and Themes tabs' sort control (see
+// _buildSortBar()) — 'name' first everywhere since it's the least
+// surprising default. 'size' means "widget block footprint" on the
+// Overview tab and "number of widgets in the pack" on the Themes tab —
+// same label, source-appropriate meaning, see _sortEntries()'s own doc
+// comment.
+const SORT_MODES = [
+    {id: 'name', label: 'Name'},
+    {id: 'size', label: 'Widget size'},
+    {id: 'mtime', label: 'Date modified'},
+];
+
 const DBUS_NAME = 'io.github.xenlism.WidgetCenterOverlay';
 const DBUS_PATH = '/io/github/xenlism/WidgetCenterOverlay';
 const DBUS_IFACE_XML = `
@@ -106,6 +126,23 @@ export class WidgetCenterOverlay {
         this._modalGrab = null;
 
         this._themePackRegistry = null;
+
+        // In-memory only (resets when the overlay is closed/reopened,
+        // same lifetime as _activeTab) — 'name' is the default sort for
+        // both tabs, see SORT_MODES above.
+        this._widgetSort = 'name';
+        this._themeSort = 'name';
+
+        // Watcher bookkeeping for _launchExternalPrefsWindow()'s "hide
+        // the overlay while a GTK4 prefs window is up, show it again
+        // once that window's gone" z-order fix — see that method's doc
+        // comment. Tracked so disable()/close() can clean up a
+        // still-pending watcher instead of leaking a signal connection
+        // or a GLib timeout source.
+        this._prefsWatchCreatedId = 0;
+        this._prefsWatchTimeoutId = 0;
+        this._prefsWatchUnmanagedId = 0;
+        this._prefsWatchWindow = null;
     }
 
     /** Call from the extension's enable(). Registers the shortcut + D-Bus, does not open anything. */
@@ -123,6 +160,7 @@ export class WidgetCenterOverlay {
     /** Call from the extension's disable(). Closes the overlay if open and undoes enable(). */
     disable() {
         this.close();
+        this._clearPrefsWatch();
         this._removeKeybinding();
         this._unexportDBus();
         this._gsettings = null;
@@ -344,7 +382,31 @@ export class WidgetCenterOverlay {
 
     _buildOverviewTab() {
         const disabled = new Set(this._getDisabledWidgets());
-        return this._buildGrid(this._discoverWidgets(), entry => this._buildWidgetCard(entry, disabled));
+        const outer = new St.BoxLayout({vertical: true, x_expand: true, y_expand: true});
+        outer.add_child(this._buildSortBar(
+            this._widgetSort, mode => { this._widgetSort = mode; this._renderTab('overview'); }));
+
+        const entries = this._sortEntries(this._discoverWidgets(), this._widgetSort, {
+            name: e => e.metadata?.name ?? e.id,
+            size: e => this._blockSizeCells(e.metadata?.['block-type']),
+            mtime: e => e.mtimeUnix ?? 0,
+        });
+        outer.add_child(this._buildGrid(entries, entry => this._buildWidgetCard(entry, disabled)));
+        return outer;
+    }
+
+    /** @private "2x1" -> 2 (cell count) for the Overview tab's "Widget
+     * size" sort, matching whatever declares metadata.json's
+     * `block-type` field (see blockSizeManager.js) — falls back to 0
+     * (sorts first/smallest) for a widget with no/unparsable block-type
+     * rather than throwing, since a bad metadata.json is already
+     * reported elsewhere (WidgetLoader.errors) and shouldn't also break
+     * sorting. */
+    _blockSizeCells(blockType) {
+        const match = /^(\d+)x(\d+)$/.exec(blockType ?? '');
+        if (!match)
+            return 0;
+        return Number(match[1]) * Number(match[2]);
     }
 
     _buildWidgetCard(entry, disabledSet) {
@@ -367,21 +429,65 @@ export class WidgetCenterOverlay {
             !disabledSet.has(id), enabled => this._setWidgetEnabled(id, enabled)));
         controls.add_child(new St.Widget({x_expand: true}));
         controls.add_child(this._buildIconButton('emblem-system-symbolic', () => this._openWidgetSettings(id)));
-        controls.add_child(this._buildIconButton('window-close-symbolic', () => this._removeWidget(id)));
+        // Remove button only for a widget installed under the user's own
+        // folder(s) — a built-in widget bundled with the extension itself
+        // has no Remove button at all, see entry.source/_discoverWidgets().
+        if (entry.source === 'user')
+            controls.add_child(this._buildIconButton('window-close-symbolic', () => this._removeWidget(id)));
         card.add_child(controls);
 
         return card;
     }
 
+    /** @private every directory a widget is considered "the user's own"
+     * if found under — both the convention extension.js's own
+     * WidgetLoader already uses (`~/.local/share/gnome-widget-center/
+     * widgets`) and the `~/.config/gnome-widget-center/widgets` location
+     * called out explicitly for this feature, so a widget dropped into
+     * either one loses its Remove button correctly regardless of which
+     * XDG base directory it ended up under. */
+    _userWidgetsRoots() {
+        const roots = [
+            GLib.build_filenamev([GLib.get_user_data_dir(), 'gnome-widget-center', 'widgets']),
+            GLib.build_filenamev([GLib.get_user_config_dir(), 'gnome-widget-center', 'widgets']),
+        ];
+        if (this._services.userWidgetsPath)
+            roots.push(this._services.userWidgetsPath);
+        return roots;
+    }
+
     _discoverWidgets() {
+        let entries;
         if (this._services.widgetLoader?.discover) {
             try {
-                return this._services.widgetLoader.discover();
+                entries = this._services.widgetLoader.discover();
             } catch (e) {
                 console.error('[widget-center] overlay: injected widgetLoader.discover() failed, falling back', e);
             }
         }
-        return this._scanMetadataFolders(GLib.build_filenamev([this._path, 'widgets']));
+        if (!entries)
+            entries = this._scanMetadataFolders(GLib.build_filenamev([this._path, 'widgets']));
+
+        const userRoots = this._userWidgetsRoots();
+        return entries.map(entry => {
+            const isUser = userRoots.some(root => entry.path === root || entry.path.startsWith(`${root}/`));
+            return {...entry, source: isUser ? 'user' : 'bundled', mtimeUnix: this._pathMtimeUnix(entry.path)};
+        });
+    }
+
+    /** @private best-effort mtime (Unix seconds) of a file/folder, 0 on
+     * any failure — used by the "Date modified" sort mode on both tabs. */
+    _pathMtimeUnix(path) {
+        try {
+            const info = Gio.File.new_for_path(path).query_info(
+                'time::modified', Gio.FileQueryInfoFlags.NONE, null);
+            const dt = info.get_modification_date_time?.();
+            if (dt)
+                return dt.to_unix();
+            return Number(info.get_attribute_uint64('time::modified')) || 0;
+        } catch (e) {
+            return 0;
+        }
     }
 
     _setWidgetEnabled(id, enabled) {
@@ -405,13 +511,12 @@ export class WidgetCenterOverlay {
         }
         // Same subprocess pattern as extension.js's own
         // _openWidgetSettings() — spawns the standalone prefs app
-        // (widget-center-prefs-app.js) deep-linked to this widget.
-        const scriptPath = GLib.build_filenamev([this._path, 'widget-center-prefs-app.js']);
-        try {
-            Gio.Subprocess.new(['gjs', '-m', scriptPath, `--widget-id=${id}`], Gio.SubprocessFlags.NONE);
-        } catch (e) {
-            console.error(`[widget-center] overlay: could not launch Settings for "${id}"`, e);
-        }
+        // (widget-center-prefs-app.js) deep-linked to this widget. Routed
+        // through _launchExternalPrefsWindow() (rather than a bare
+        // Gio.Subprocess.new()) so the resulting GTK4 window actually
+        // renders above this overlay instead of behind it — see that
+        // method's doc comment.
+        this._launchExternalPrefsWindow([`--widget-id=${id}`]);
     }
 
     _removeWidget(id) {
@@ -431,12 +536,54 @@ export class WidgetCenterOverlay {
     // --- Tab 2: Themes (theme packs) -------------------------------------
 
     _buildThemesTab() {
-        return this._buildGrid(this._discoverThemePacks(), entry => this._buildThemePackCard(entry));
+        const outer = new St.BoxLayout({vertical: true, x_expand: true, y_expand: true});
+
+        const bar = this._buildSortBar(
+            this._themeSort, mode => { this._themeSort = mode; this._renderTab('themes'); });
+        const exportButton = new St.Button({style_class: 'wc-overlay-icon-button', can_focus: true, reactive: true});
+        const exportContent = new St.BoxLayout();
+        exportContent.add_child(new St.Icon({icon_name: 'send-to-symbolic', icon_size: 16}));
+        exportContent.add_child(new St.Label({text: ' Export current desktop…'}));
+        exportButton.set_child(exportContent);
+        exportButton.connect('clicked', () => this._exportCurrentDesktopAsThemePack());
+        bar.add_child(exportButton);
+        outer.add_child(bar);
+
+        const entries = this._sortEntries(this._discoverThemePacks(), this._themeSort, {
+            name: e => e.manifest?.name ?? e.id,
+            size: e => e.widgetCount ?? (e.manifest?.widgets?.length ?? 0),
+            mtime: e => e.mtimeUnix ?? 0,
+        });
+        outer.add_child(this._buildGrid(entries, entry => this._buildThemePackCard(entry)));
+        return outer;
+    }
+
+    /** @private every directory a theme pack is considered "the user's
+     * own" if found under — see _userWidgetsRoots()'s matching doc
+     * comment; same reasoning, `~/.config/gnome-widget-center/themepacks`
+     * is the location called out explicitly for this feature. */
+    _userThemepacksRoots() {
+        const roots = [
+            GLib.build_filenamev([GLib.get_user_config_dir(), 'gnome-widget-center', 'themepacks']),
+        ];
+        if (this._services.userThemepacksPath)
+            roots.push(this._services.userThemepacksPath);
+        return roots;
     }
 
     _discoverThemePacks() {
-        if (!this._themePackRegistry)
-            this._themePackRegistry = new ThemePackRegistry([GLib.build_filenamev([this._path, 'themepacks'])]);
+        const bundledPath = GLib.build_filenamev([this._path, 'themepacks']);
+        const searchPaths = [
+            {path: bundledPath, source: 'bundled'},
+            ...this._userThemepacksRoots().map(path => ({path, source: 'user'})),
+        ];
+        // Rebuilt every call (search paths never change after
+        // construction) rather than cached across the overlay's whole
+        // lifetime — cheap directory scan, and always reflects a pack
+        // dropped in/removed from disk between two tab renders without
+        // needing an explicit invalidation call from _removeThemePack()/
+        // the export flow.
+        this._themePackRegistry = new ThemePackRegistry(searchPaths);
         return this._themePackRegistry.discover();
     }
 
@@ -460,8 +607,13 @@ export class WidgetCenterOverlay {
         controls.add_child(this._buildToggleButton(
             this._isThemePackEnabled(manifest), enabled => this._setThemePackEnabled(manifest, enabled)));
         controls.add_child(new St.Widget({x_expand: true}));
+        controls.add_child(this._buildIconButton('send-to-symbolic', () => this._exportThemePack(id)));
         controls.add_child(this._buildIconButton('emblem-system-symbolic', () => this._openThemePackSettings(id)));
-        controls.add_child(this._buildIconButton('window-close-symbolic', () => this._removeThemePack(entry)));
+        // Remove button only for a pack under the user's own themepacks
+        // folder(s) — a pack bundled with the extension itself has no
+        // Remove button at all, see entry.source/_discoverThemePacks().
+        if (entry.source === 'user')
+            controls.add_child(this._buildIconButton('window-close-symbolic', () => this._removeThemePack(entry)));
         card.add_child(controls);
 
         return card;
@@ -492,16 +644,38 @@ export class WidgetCenterOverlay {
         this._openExtensionPreferences();
     }
 
+    /** @private Opens the Export Theme dialog prefilled from this
+     * already-discovered pack (widget-center-prefs-app.js's
+     * `--export-theme-id=` flag → PrefsWindowController.
+     * openExportThemeDialogForPack()) — routed through
+     * _launchExternalPrefsWindow() for the same z-index-over-overlay fix
+     * as every other GTK4 window this file spawns. */
+    _exportThemePack(id) {
+        this._launchExternalPrefsWindow([`--export-theme-id=${id}`]);
+    }
+
+    /** @private "Export current desktop…" — same dialog, blank/prefilled
+     * from whatever's actually enabled on the live desktop right now
+     * (widget-center-prefs-app.js's `--export-theme-new` flag) rather
+     * than an existing pack's own widget set. */
+    _exportCurrentDesktopAsThemePack() {
+        this._launchExternalPrefsWindow(['--export-theme-new']);
+    }
+
     /**
      * Remove a theme pack. Prefer `services.onThemePackRemove(entry)` if
      * given (e.g. a real integration that wants to confirm with the user
      * first, or log it) — otherwise falls back to deleting the pack's
-     * folder straight off disk (`<themepacks>/<id>/`), since unlike a
+     * folder/file straight off disk (`<themepacks>/<id>/` or
+     * `<themepacks>/<name>.gwct`, see entry.path — ThemePackRegistry
+     * discovers both shapes now, see that file's header), since unlike a
      * bundled widget (see `_removeWidget()`'s fallback, which only
-     * disables rather than deletes) a theme pack is just a `theme.json` +
-     * optional screenshot the user or a prior session dropped into
-     * `themepacks/` themselves — there's nothing else referencing it
-     * that a straight delete could leave dangling.
+     * disables rather than deletes) a theme pack is just something the
+     * user or a prior session dropped into their own themepacks/
+     * themselves — there's nothing else referencing it that a straight
+     * delete could leave dangling. Only ever wired to a Remove button for
+     * a `source: 'user'` entry in the first place (_buildThemePackCard()),
+     * so this never runs against a bundled pack.
      */
     _removeThemePack(entry) {
         if (this._services.onThemePackRemove) {
@@ -511,8 +685,12 @@ export class WidgetCenterOverlay {
             return;
         }
         try {
-            const dir = Gio.File.new_for_path(entry.path);
-            this._deleteRecursive(dir);
+            const target = Gio.File.new_for_path(entry.path);
+            const info = target.query_info('standard::type', Gio.FileQueryInfoFlags.NONE, null);
+            if (info.get_file_type() === Gio.FileType.DIRECTORY)
+                this._deleteRecursive(target);
+            else
+                target.delete(null);
         } catch (e) {
             console.error(`[widget-center] overlay: could not remove theme pack "${entry.id}"`, e);
         }
@@ -547,22 +725,42 @@ export class WidgetCenterOverlay {
     // vice versa, live, no restart. "Backup & Restore" and "Import /
     // Export" are the one part left out (both need Gtk.FileChooserNative,
     // which needs a real GTK window - see lib/prefsDialogs.js's
-    // chooseFile()) - the banner button below opens the real window,
-    // landed on its "Preferences" tab, for those two specifically.
+    // chooseFile()) - the buttons below open the real window, landed
+    // directly on the relevant category, for those two specifically.
     _buildSettingsTab() {
         const outer = new St.BoxLayout({vertical: true, x_expand: true, y_expand: true, style_class: 'wc-pref-outer'});
 
-        const banner = new St.Button({style_class: 'wc-pref-banner', can_focus: true, reactive: true});
+        const actionsRow = new St.BoxLayout({style_class: 'wc-pref-banner-content', x_expand: true});
+
+        const backupButton = new St.Button({style_class: 'wc-pref-banner', can_focus: true, reactive: true, x_expand: true});
+        const backupContent = new St.BoxLayout({style_class: 'wc-pref-banner-content', x_expand: true});
+        backupContent.add_child(new St.Icon({icon_name: 'cloud-upload-symbolic', icon_size: 18}));
+        backupContent.add_child(new St.Label({text: 'Backup & Restore…', style_class: 'wc-pref-banner-label', x_expand: true}));
+        backupButton.set_child(backupContent);
+        // Jumps straight to the "Backup & Restore" category inside the
+        // real Preferences window (PrefsWindowController.
+        // showBackupPage(), via widget-center-prefs-app.js's
+        // `--focus=backup`) instead of just the generic Preferences
+        // landing page a plain "open the full window" banner used to —
+        // and, like every other GTK4 window this file spawns, routed
+        // through _launchExternalPrefsWindow() so it actually renders
+        // above this overlay instead of behind it.
+        backupButton.connect('clicked', () => this._launchExternalPrefsWindow(['--focus=backup']));
+        actionsRow.add_child(backupButton);
+
+        const banner = new St.Button({style_class: 'wc-pref-banner', can_focus: true, reactive: true, x_expand: true});
         const bannerContent = new St.BoxLayout({style_class: 'wc-pref-banner-content', x_expand: true});
         bannerContent.add_child(new St.Icon({icon_name: 'send-to-symbolic', icon_size: 18}));
         const bannerLabel = new St.Label({
-            text: 'Need Backup & Restore or Import / Export? Open the full Preferences window →',
+            text: 'Need Import / Export? Open the full Preferences window →',
             style_class: 'wc-pref-banner-label', x_expand: true,
         });
         bannerContent.add_child(bannerLabel);
         banner.set_child(bannerContent);
         banner.connect('clicked', () => this._openExtensionPreferences());
-        outer.add_child(banner);
+        actionsRow.add_child(banner);
+
+        outer.add_child(actionsRow);
 
         const scroll = new St.ScrollView({style_class: 'wc-overlay-scroll', x_expand: true, y_expand: true});
         try {
@@ -587,13 +785,202 @@ export class WidgetCenterOverlay {
         // --focus=preferences (widget-center-prefs-app.js +
         // PrefsWindowController.showPreferencesPage()): lands on the
         // Preferences tab directly instead of Overview, since this
-        // overlay's own Overview tab already covers that ground natively.
+        // overlay's own Overview tab already covers that ground
+        // natively. Routed through _launchExternalPrefsWindow() for the
+        // z-index-over-overlay fix — see that method's doc comment.
+        this._launchExternalPrefsWindow(['--focus=preferences']);
+    }
+
+    // --- Sorting (shared by the Overview and Themes tabs) -----------------
+
+    /** @private a small St row of buttons, one per SORT_MODES entry,
+     * highlighting whichever is `currentMode` — deliberately plain
+     * buttons rather than a dropdown/combo (St has no native dropdown
+     * widget, same constraint noted in widgetCenterOverlayPreferences.js's
+     * `_cycleButton` helper) so this stays a simple, obviously-correct
+     * St.Button loop instead of hand-rolling a popup menu for something
+     * with only three options.
+     * @param {string} currentMode - one of SORT_MODES' `id`s.
+     * @param {(mode: string) => void} onChange
+     * @returns {St.BoxLayout} - callers may add_child() more controls
+     *   onto this same row (see _buildThemesTab()'s Export button).
+     */
+    _buildSortBar(currentMode, onChange) {
+        const bar = new St.BoxLayout({style_class: 'wc-overlay-sortbar', x_expand: true});
+        bar.add_child(new St.Label({text: 'Sort by:', style_class: 'wc-overlay-sortbar-label'}));
+        for (const mode of SORT_MODES) {
+            const button = new St.Button({
+                style_class: mode.id === currentMode ? 'wc-overlay-tab wc-overlay-tab-active' : 'wc-overlay-tab',
+                label: mode.label, can_focus: true, reactive: true,
+            });
+            button.connect('clicked', () => onChange(mode.id));
+            bar.add_child(button);
+        }
+        bar.add_child(new St.Widget({x_expand: true}));
+        return bar;
+    }
+
+    /** @private Sorts a copy of `entries` by `mode` using `keyFns[mode]`
+     * to extract a comparable value from each entry — `keyFns` is
+     * per-tab (see _buildOverviewTab()'s vs _buildThemesTab()'s calls)
+     * since "size" means something different for a widget (its block
+     * footprint) than for a theme pack (how many widgets it bundles),
+     * even though both share the same `SORT_MODES` control/labels.
+     * String keys sort case-insensitively; everything else sorts
+     * numerically descending for 'mtime' (newest first — the useful
+     * order for "date modified") and ascending otherwise.
+     * @param {Array} entries
+     * @param {string} mode
+     * @param {{name: Function, size: Function, mtime: Function}} keyFns
+     */
+    _sortEntries(entries, mode, keyFns) {
+        const keyFn = keyFns[mode] ?? keyFns.name;
+        const sorted = [...entries];
+        sorted.sort((a, b) => {
+            const ka = keyFn(a);
+            const kb = keyFn(b);
+            if (typeof ka === 'string' || typeof kb === 'string')
+                return String(ka).localeCompare(String(kb));
+            return mode === 'mtime' ? kb - ka : ka - kb;
+        });
+        return sorted;
+    }
+
+    // --- External GTK4 windows: z-index-over-overlay fix -------------------
+
+    /**
+     * Spawns widget-center-prefs-app.js with `args` (or re-presents its
+     * already-running single instance — see that file's own header for
+     * the GApplication single-instance handoff) and makes sure the
+     * resulting GTK4/libadwaita window actually ends up VISIBLE to the
+     * user instead of hidden behind this overlay.
+     *
+     * Why that's a real problem, not a hypothetical one: this overlay is
+     * Shell chrome (`Main.layoutManager.addChrome()`, see open()) —
+     * chrome actors are added to `Main.layoutManager.uiGroup`, which
+     * paints above `global.window_group` (every normal application
+     * window, GTK4 prefs windows included) by construction, the same way
+     * the Activities overview or a modal dialog from the Shell itself
+     * sits above ordinary windows. A `gjs`-spawned Adw.PreferencesWindow
+     * is just another normal window as far as Mutter's stacking is
+     * concerned, so without this fix it opens successfully but renders
+     * completely hidden behind this overlay's own full-monitor St
+     * actor — clicking Settings/Export/Backup would appear to do
+     * nothing.
+     *
+     * Fix: hide (not destroy) this overlay's own actor for as long as
+     * the external window is open, so there's nothing left for it to be
+     * hidden behind, then show it again once that window closes.
+     * `Meta.Window.make_above()` is applied too as defense in depth (in
+     * case some Shell version's chrome layering differs from the above),
+     * but the hide/show is the part actually guaranteed to work
+     * regardless of Mutter internals.
+     * @param {string[]} args - argv appended to the `gjs -m` invocation.
+     */
+    _launchExternalPrefsWindow(args) {
         const scriptPath = GLib.build_filenamev([this._path, 'widget-center-prefs-app.js']);
         try {
-            Gio.Subprocess.new(['gjs', '-m', scriptPath, '--focus=preferences'], Gio.SubprocessFlags.NONE);
+            Gio.Subprocess.new(['gjs', '-m', scriptPath, ...args], Gio.SubprocessFlags.NONE);
         } catch (e) {
-            console.error('[widget-center] overlay: could not launch the Preferences app', e);
+            console.error('[widget-center] overlay: could not launch the external prefs window', e);
+            return;
         }
+        this._overlay?.hide();
+        this._watchForExternalPrefsWindow();
+    }
+
+    /** @private true if `metaWindow` looks like widget-center-prefs-app.js's
+     * own window — checked via the GTK application id first (reliable
+     * under both X11 and Wayland, unlike WM_CLASS which Wayland clients
+     * don't always set usefully) with a WM_CLASS substring match as a
+     * fallback for older Shell/Mutter versions that don't expose
+     * get_gtk_application_id(). */
+    _isPrefsWindow(metaWindow) {
+        try {
+            if (metaWindow.get_gtk_application_id?.() === PREFS_APP_ID)
+                return true;
+        } catch (e) { /* not available on this Shell version */ }
+        try {
+            const wmClass = metaWindow.get_wm_class?.();
+            if (wmClass && wmClass.toLowerCase().includes('widgetcenterprefs'))
+                return true;
+        } catch (e) { /* ignore */ }
+        return false;
+    }
+
+    /** @private Finds the prefs window (already-mapped, for the
+     * single-instance-re-present case — see widget-center-prefs-app.js's
+     * header for why a second launch doesn't create a new Meta.Window at
+     * all — or freshly created, for a first launch this session),
+     * `make_above()`s it, and re-shows this overlay once it's unmanaged
+     * (closed). Gives up after 10s if no matching window ever turns up
+     * (e.g. `gjs` missing) so this never leaks a dangling
+     * `window-created` connection or leaves the overlay permanently
+     * hidden. */
+    _watchForExternalPrefsWindow() {
+        this._clearPrefsWatch();
+
+        const attach = metaWindow => {
+            this._clearPrefsWatch();
+            try {
+                metaWindow.make_above();
+                metaWindow.activate(global.get_current_time());
+            } catch (e) { /* best effort */ }
+            this._prefsWatchWindow = metaWindow;
+            this._prefsWatchUnmanagedId = metaWindow.connect('unmanaged', () => {
+                this._prefsWatchUnmanagedId = 0;
+                this._prefsWatchWindow = null;
+                this._overlay?.show();
+            });
+        };
+
+        for (const actor of global.get_window_actors()) {
+            const metaWindow = actor.get_meta_window();
+            if (metaWindow && this._isPrefsWindow(metaWindow)) {
+                attach(metaWindow);
+                return;
+            }
+        }
+
+        this._prefsWatchCreatedId = global.display.connect('window-created', (display, metaWindow) => {
+            if (!this._isPrefsWindow(metaWindow))
+                return;
+            attach(metaWindow);
+        });
+        this._prefsWatchTimeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 10, () => {
+            this._prefsWatchTimeoutId = 0;
+            if (this._prefsWatchCreatedId) {
+                global.display.disconnect(this._prefsWatchCreatedId);
+                this._prefsWatchCreatedId = 0;
+                // No window ever showed up - don't leave the overlay
+                // hidden forever over a launch that silently failed.
+                this._overlay?.show();
+            }
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    /** @private tears down whatever _watchForExternalPrefsWindow() left
+     * connected/scheduled — called both when a watch resolves normally
+     * (attach()) and from disable(), so a Shell restart/extension
+     * disable while a prefs window watch is still pending can't leak a
+     * signal connection or GLib timeout source. */
+    _clearPrefsWatch() {
+        if (this._prefsWatchCreatedId) {
+            global.display.disconnect(this._prefsWatchCreatedId);
+            this._prefsWatchCreatedId = 0;
+        }
+        if (this._prefsWatchTimeoutId) {
+            GLib.source_remove(this._prefsWatchTimeoutId);
+            this._prefsWatchTimeoutId = 0;
+        }
+        if (this._prefsWatchWindow && this._prefsWatchUnmanagedId) {
+            try {
+                this._prefsWatchWindow.disconnect(this._prefsWatchUnmanagedId);
+            } catch (e) { /* window may already be gone */ }
+        }
+        this._prefsWatchUnmanagedId = 0;
+        this._prefsWatchWindow = null;
     }
 
     // --- Shared small-widget helpers --------------------------------------
@@ -682,11 +1069,44 @@ export class WidgetCenterOverlay {
     }
 
     _resolveScreenshot(basePath, metadataOrManifest) {
+        // Flat .gwct theme packs (see themePackRegistry.js's file header)
+        // embed the screenshot as base64 rather than a relative file on
+        // disk — decode it once into a cache file and reuse that path,
+        // rather than re-decoding on every render of the Themes tab.
+        if (metadataOrManifest?.screenshotBase64)
+            return this._decodedScreenshotCachePath(metadataOrManifest);
+
         const relative = metadataOrManifest?.screenshot;
         if (!relative)
             return null;
         const path = GLib.build_filenamev([basePath, relative]);
         return GLib.file_test(path, GLib.FileTest.EXISTS) ? path : null;
+    }
+
+    /** @private Decodes `manifest.screenshotBase64` to
+     * `~/.cache/gnome-widget-center/thumbnails/<id>.<ext>` and returns
+     * that path, reusing an already-decoded file instead of rewriting it
+     * every time a card is rebuilt (e.g. from a sort-mode change) —
+     * keyed by the pack's own id, so a re-exported pack with the same id
+     * but a new screenshot naturally overwrites the stale cached file. */
+    _decodedScreenshotCachePath(manifest) {
+        const ext = (manifest.screenshotMime ?? '').includes('png') ? 'png'
+            : (manifest.screenshotMime ?? '').includes('webp') ? 'webp' : 'jpg';
+        const cacheDir = GLib.build_filenamev([GLib.get_user_cache_dir(), 'gnome-widget-center', 'thumbnails']);
+        const cachePath = GLib.build_filenamev([cacheDir, `${manifest.id}.${ext}`]);
+
+        if (GLib.file_test(cachePath, GLib.FileTest.EXISTS))
+            return cachePath;
+
+        try {
+            GLib.mkdir_with_parents(cacheDir, 0o755);
+            const bytes = GLib.base64_decode(manifest.screenshotBase64);
+            GLib.file_set_contents(cachePath, bytes);
+            return cachePath;
+        } catch (e) {
+            console.error(`[widget-center] overlay: could not decode screenshot for "${manifest.id}"`, e);
+            return null;
+        }
     }
 
     _buildToggleButton(initialOn, onChange) {

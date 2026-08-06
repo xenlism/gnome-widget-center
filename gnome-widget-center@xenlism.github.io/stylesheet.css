@@ -116,6 +116,21 @@
     background-color: rgba(255, 255, 255, 0.15);
 }
 
+/* Sort bar (Overview + Themes tabs) — reuses the same pill look as
+ * .wc-overlay-tab/.wc-overlay-tab-active for the per-mode buttons
+ * (see widgetCenterOverlay.js's _buildSortBar()), just in a slightly
+ * tighter row since it sits above a content grid rather than in the
+ * header. */
+.wc-overlay-sortbar {
+    padding: 8px 24px;
+    spacing: 8px;
+}
+
+.wc-overlay-sortbar-label {
+    color: rgba(255, 255, 255, 0.6);
+    padding: 8px 4px;
+}
+
 .wc-overlay-close {
     color: #ffffff;
     padding: 8px;
