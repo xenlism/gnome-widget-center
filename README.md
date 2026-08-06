@@ -194,5 +194,4 @@ GNU General Public License v3.0
 
 
 ## 👥 Visitor
-
-![Visitor](https://github-visitor-counter-tau.vercel.app/api?repo=gnome-widget-center&displayMode=topCountries&theme=transparent)
+![](https://github-visitor-counter-tau.vercel.app/api?username=xenlism&repo=gnome-widget-center&displayMode=topCountries&theme=transparent&showlabels=true&text=949494)
