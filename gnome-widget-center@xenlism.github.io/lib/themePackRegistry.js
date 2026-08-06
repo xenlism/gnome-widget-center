@@ -189,6 +189,9 @@ export class ThemePackRegistry {
 
         this._addFound(found, {
             id, path: filePath, manifest, source,
+            // Keep the original export document so the overlay's Load
+            // action can apply its appearance, positions and settings.
+            document: raw,
             mtimeUnix: this._mtimeUnix(info),
             widgetCount: widgetIds.length,
         });

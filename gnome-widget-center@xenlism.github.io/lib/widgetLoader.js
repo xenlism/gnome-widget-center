@@ -591,13 +591,10 @@ export class WidgetLoader {
 
     // Locks widgetInfo's actor to the pixel size implied by its own
     // metadata.json `block-type` (falls back to DEFAULT_BLOCK_TYPE if the
-    // field is omitted) and clips any content that doesn't fit - beyond
-    // `this._shadowOverflowMargin` px of bleed room specifically reserved
-    // for the widget's own drop-shadow (see the constructor doc and
-    // lib/gjskit/st/StWidget.js's clip()); a plain content overflow (a
-    // long label, a big font) still gets clipped at that same inflated
-    // boundary, it just isn't cut exactly at the block-type edge anymore
-    // when the margin is non-zero. This is deliberately enforced here —
+    // field is omitted) and clips every child exactly at that allocation.
+    // Text, icons, images, and shadows must never extend outside the
+    // widget background or declared block footprint. This is deliberately
+    // enforced here —
     // once, centrally — rather than left to each widget.js to hand-roll
     // correctly. Relying on every widget
     // author (bundled or third-party) to independently compute
@@ -629,7 +626,7 @@ export class WidgetLoader {
             const {StWidgetWrapper} = await import('./gjskit/st/StWidget.js');
             new StWidgetWrapper(actor)
                 .size(cols * BLOCK_CELL_SIZE, rows * BLOCK_CELL_SIZE)
-                .clip(true, this._shadowOverflowMargin);
+                .clip(true);
         } catch (e) {
             this._recordError(widgetInfo, `failed to enforce block-type size: ${e.message}`);
         }

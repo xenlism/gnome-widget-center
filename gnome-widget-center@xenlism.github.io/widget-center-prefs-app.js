@@ -147,14 +147,11 @@ async function presentWindow(requestedWidgetId, focusTarget = null, exportThemeI
 
     window.present();
 
-    // Opened alongside (not instead of) the base window above — the
-    // Export dialog is its own transient Adw.Window, not a page inside
-    // this one (see themePackExportDialog.js), so there's always a
-    // sensible window underneath it either way.
     if (exportThemeId)
         controller.openExportThemeDialogForPack(window, exportThemeId);
     else if (exportThemeNew)
         controller.openExportThemeDialog(window);
+
 }
 
 /** Plain launch, no arguments — e.g. from a .desktop file with no Exec= arguments, or `gjs -m` with none. */

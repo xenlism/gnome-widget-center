@@ -249,16 +249,13 @@ class PrefsWindowControllerBase {
     }
 
     /**
-     * Top-level layout (2026-07-26 restructure): exactly three
-     * Adw.PreferencesPage siblings under `window`, which is what makes
-     * Adw.PreferencesWindow render its built-in pill-style switcher at
-     * the top matching the "Overview / Store / Preferences" concept —
+     * Top-level layout: two Adw.PreferencesPage siblings under `window`,
+     * which makes Adw.PreferencesWindow render its icon tabs —
      * see repo/concept/preferences.png / overview.png for the reference
      * mockups this maps to.
      *   1. Overview  — the widget list (previously the only/default page,
      *      titled "Widgets"; renamed, content unchanged).
-     *   2. Store     — placeholder; no widget marketplace exists yet.
-     *   3. Preferences — everything that used to be its own top-level
+     *   2. Preferences — everything that used to be its own top-level
      *      page (Appearance, Advanced) plus new placeholder categories
      *      from the concept mockup, now behind a single vertical sidebar
      *      list (`_buildPreferencesPage()`) instead of separate pill
@@ -336,7 +333,6 @@ class PrefsWindowControllerBase {
         this._discovered = ok;
 
         this._buildOverviewPage(window, settings, storage, ok, errors);
-        this._buildStorePage(window);
         this._preferencesPage = this._buildPreferencesPage(window, settings, storage, ok, {bundledWidgetsPath, userWidgetsPath});
 
         // 2026-07-20 fix ("click settings opens the extension prefs, not

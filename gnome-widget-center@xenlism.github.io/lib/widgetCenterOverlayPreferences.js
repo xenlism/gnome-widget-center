@@ -27,11 +27,13 @@
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import St from 'gi://St';
+import {Slider} from 'resource:///org/gnome/shell/ui/slider.js';
 
 import {SettingsService} from './settingsService.js';
 import {ThemeService} from './themeService.js';
 import {SUPPORTED_LOCALES} from '../i18n/index.js';
 import {SHADOW_ANGLE_STEPS} from './widgetVisualKit.js';
+import {ColorWheel} from './colorWheel.js';
 
 // --- small row-building helpers (St has no Adw.SwitchRow/SpinRow
 // equivalent, so these stand in for them) ---------------------------------
@@ -81,13 +83,17 @@ function _toggle(initial, sensitive, onChange) {
     return btn;
 }
 
-/** St.Slider is a real St widget (0..1 range internally) - min/max/step
- * are mapped on top of that here. */
+/** GNOME Shell's Slider is a real Shell widget (0..1 range internally) -
+ * min/max/step are mapped on top of that here. It deliberately comes
+ * from ui/slider.js: St does not export a Slider constructor on current
+ * GNOME Shell releases, which otherwise made every category containing a
+ * range control fail to build. */
 function _slider(min, max, step, value, format, sensitive, onChange) {
     const box = new St.BoxLayout({style_class: 'wc-pref-slider-box', x_expand: true});
     const clamped = Math.min(max, Math.max(min, value));
     const normalized = max > min ? (clamped - min) / (max - min) : 0;
-    const slider = new St.Slider(normalized);
+    const slider = new Slider(normalized);
+    slider.add_style_class_name('wc-pref-slider');
     slider.x_expand = true;
     slider.reactive = sensitive;
     slider.opacity = sensitive ? 255 : 120;
@@ -108,11 +114,11 @@ function _slider(min, max, step, value, format, sensitive, onChange) {
     return box;
 }
 
-/** Plain hex-text St.Entry + a live preview swatch - St has no native
- * color-picker dialog (that needs GTK), so a validated hex field is the
- * simplest honest equivalent. */
+/** Native shell color control: a swatch opens the in-process HSL wheel;
+ * the entry remains available for exact hex values. */
 function _colorEntry(initialHex, sensitive, onChange) {
-    const box = new St.BoxLayout({style_class: 'wc-pref-color-box'});
+    const outer = new St.BoxLayout({vertical: true, style_class: 'wc-pref-color-box'});
+    const box = new St.BoxLayout();
     const swatch = new St.Widget({
         style_class: 'wc-pref-color-swatch',
         style: `background-color: ${initialHex};`,
@@ -133,9 +139,24 @@ function _colorEntry(initialHex, sensitive, onChange) {
             }
         });
     }
+    const wheel = new ColorWheel(160);
+    wheel.visible = false;
+    wheel.connect('color-picked', (_wheel, hex) => {
+        entry.set_text(hex);
+        wheel.visible = false;
+    });
+    if (sensitive) {
+        swatch.reactive = true;
+        swatch.connect('button-press-event', () => {
+            wheel.visible = !wheel.visible;
+            return Clutter.EVENT_STOP;
+        });
+    }
     box.add_child(swatch);
     box.add_child(entry);
-    return box;
+    outer.add_child(box);
+    outer.add_child(wheel);
+    return outer;
 }
 
 function _statusPlaceholder(title, description) {
@@ -178,6 +199,50 @@ function _textEntryRow(title, subtitle, initialText, sensitive, onCommit) {
         entry.clutter_text.connect('text-changed', () => onCommit(entry.get_text().trim()));
     }
     return _row(title, subtitle, entry);
+}
+
+function _shortcutRecorder(initialAccel, sensitive, onCommit) {
+    const button = new St.Button({
+        style_class: 'wc-pref-cycle-button', can_focus: sensitive, reactive: sensitive,
+        opacity: sensitive ? 255 : 120,
+    });
+    const label = new St.Label({text: initialAccel || 'Disabled'});
+    button.set_child(label);
+    if (!sensitive)
+        return button;
+
+    let recording = false;
+    button.connect('clicked', () => {
+        recording = true;
+        label.set_text('Press shortcut…');
+        global.stage.set_key_focus(button);
+    });
+    button.connect('key-press-event', (_button, event) => {
+        if (!recording)
+            return Clutter.EVENT_PROPAGATE;
+        const key = event.get_key_symbol();
+        if (key === Clutter.KEY_Escape) {
+            recording = false;
+            label.set_text(initialAccel || 'Disabled');
+            return Clutter.EVENT_STOP;
+        }
+        const name = Clutter.keyval_name(key);
+        if (!name || ['Control_L', 'Control_R', 'Shift_L', 'Shift_R', 'Alt_L', 'Alt_R', 'Super_L', 'Super_R'].includes(name))
+            return Clutter.EVENT_STOP;
+        const state = event.get_state();
+        const modifiers = [
+            [Clutter.ModifierType.CONTROL_MASK, '<Control>'],
+            [Clutter.ModifierType.MOD1_MASK, '<Alt>'],
+            [Clutter.ModifierType.SHIFT_MASK, '<Shift>'],
+            [Clutter.ModifierType.SUPER_MASK, '<Super>'],
+        ].filter(([mask]) => state & mask).map(([, text]) => text).join('');
+        const accel = `${modifiers}${name}`;
+        recording = false;
+        label.set_text(accel);
+        onCommit(accel);
+        return Clutter.EVENT_STOP;
+    });
+    return button;
 }
 
 // --- category builders -----------------------------------------------
@@ -270,14 +335,14 @@ function _buildInteractionsCategory(settings) {
     box.add_child(_section('Keyboard shortcut', 'Opens/closes this overlay.'));
 
     const currentAccel = ready ? (settings.getGlobalValue('widget-center-overlay-keybinding')?.[0] ?? '') : '<Super>F12';
-    box.add_child(_textEntryRow('Shortcut', 'GTK accelerator syntax, e.g. <Super>F12 , or leave empty to disable.',
-        currentAccel, ready, text => {
+    box.add_child(_row('Shortcut', 'Click Record shortcut, then press the key combination.',
+        _shortcutRecorder(currentAccel, ready, accel => {
             try {
-                settings.setGlobalValue('widget-center-overlay-keybinding', text.length > 0 ? [text] : []);
+                settings.setGlobalValue('widget-center-overlay-keybinding', [accel]);
             } catch (e) {
                 console.error('[widget-center] overlay prefs: could not save widget-center-overlay-keybinding', e);
             }
-        }));
+        })));
 
     return box;
 }
@@ -473,11 +538,10 @@ export function buildOverlayPreferencesContent(extensionObject) {
     const column = new St.BoxLayout({vertical: true, style_class: 'wc-pref-column', x_expand: true});
 
     const categories = [
-        ['General', () => _buildGeneralCategory(settings)],
+        ['Desktop', () => _buildInteractionsCategory(settings)],
         ['Appearance', () => _buildAppearanceCategory()],
-        ['Desktop', () => _buildDesktopCategory(settings)],
-        ['Interactions', () => _buildInteractionsCategory(settings)],
-        ['Advanced', () => _buildAdvancedCategory(settings)],
+        ['Widget placement', () => _buildDesktopCategory(settings)],
+        ['Development mode', () => _buildAdvancedCategory(settings)],
         ['About', () => _buildAboutCategory(extensionObject?.metadata)],
     ];
 

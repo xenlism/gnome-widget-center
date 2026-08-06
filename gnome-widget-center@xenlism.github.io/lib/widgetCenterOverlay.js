@@ -55,6 +55,7 @@ import {buildOverlayPreferencesContent} from './widgetCenterOverlayPreferences.j
 const SCHEMA_ID = 'org.gnome.shell.extensions.widget-center';
 const KEYBINDING_KEY = 'widget-center-overlay-keybinding';
 const DISABLED_KEY = 'disabled-widgets';
+const ACTIVE_THEME_PACK_KEY = 'active-theme-pack';
 
 // GApplication id widget-center-prefs-app.js registers itself under —
 // used by _isPrefsWindow() below to recognize a spawned/re-presented
@@ -71,9 +72,9 @@ const PREFS_APP_ID = 'io.github.xenlism.WidgetCenterPrefs';
 // same label, source-appropriate meaning, see _sortEntries()'s own doc
 // comment.
 const SORT_MODES = [
-    {id: 'name', label: 'Name'},
-    {id: 'size', label: 'Widget size'},
-    {id: 'mtime', label: 'Date modified'},
+    {id: 'name', label: 'Name', icon: 'format-justify-left-symbolic'},
+    {id: 'size', label: 'Widget size', icon: 'view-grid-symbolic'},
+    {id: 'mtime', label: 'Date modified', icon: 'document-open-recent-symbolic'},
 ];
 
 const DBUS_NAME = 'io.github.xenlism.WidgetCenterOverlay';
@@ -189,7 +190,10 @@ export class WidgetCenterOverlay {
 
         this._logger?.debug('widget-center-overlay', 'open()');
         this._buildUI();
-        Main.layoutManager.addChrome(this._overlay, {affectsInputRegion: true});
+        // `affectsInputRegion` is not a supported addChrome() parameter.
+        // The reactive actor and pushModal() below already make this
+        // fullscreen overlay receive input on supported Shell versions.
+        Main.layoutManager.addChrome(this._overlay);
 
         try {
             // Grabs keyboard+pointer so Escape/clicks land here instead of
@@ -540,13 +544,6 @@ export class WidgetCenterOverlay {
 
         const bar = this._buildSortBar(
             this._themeSort, mode => { this._themeSort = mode; this._renderTab('themes'); });
-        const exportButton = new St.Button({style_class: 'wc-overlay-icon-button', can_focus: true, reactive: true});
-        const exportContent = new St.BoxLayout();
-        exportContent.add_child(new St.Icon({icon_name: 'send-to-symbolic', icon_size: 16}));
-        exportContent.add_child(new St.Label({text: ' Export current desktop…'}));
-        exportButton.set_child(exportContent);
-        exportButton.connect('clicked', () => this._exportCurrentDesktopAsThemePack());
-        bar.add_child(exportButton);
         outer.add_child(bar);
 
         const entries = this._sortEntries(this._discoverThemePacks(), this._themeSort, {
@@ -604,11 +601,22 @@ export class WidgetCenterOverlay {
             card.add_child(new St.Label({text: `by ${manifest.author}`, style_class: 'wc-overlay-card-author'}));
 
         const controls = new St.BoxLayout({style_class: 'wc-overlay-card-controls'});
-        controls.add_child(this._buildToggleButton(
-            this._isThemePackEnabled(manifest), enabled => this._setThemePackEnabled(manifest, enabled)));
+        // Theme state is informational. A theme is loaded as a complete
+        // desktop configuration, so making this a toggle led to every
+        // unconfigured theme looking enabled on a fresh installation.
+        controls.add_child(this._buildThemeStatus(this._isThemePackEnabled(id)));
         controls.add_child(new St.Widget({x_expand: true}));
-        controls.add_child(this._buildIconButton('send-to-symbolic', () => this._exportThemePack(id)));
-        controls.add_child(this._buildIconButton('emblem-system-symbolic', () => this._openThemePackSettings(id)));
+        // Keep the action visible: the old icon-only button was easily
+        // missed, especially on cards without screenshots.
+        const loadButton = new St.Button({
+            style_class: 'wc-overlay-load-button',
+            label: 'Load',
+            can_focus: true,
+            reactive: true,
+            accessible_name: `Load theme ${manifest.name ?? id}`,
+        });
+        loadButton.connect('clicked', () => this._loadThemePack(entry));
+        controls.add_child(loadButton);
         // Remove button only for a pack under the user's own themepacks
         // folder(s) — a pack bundled with the extension itself has no
         // Remove button at all, see entry.source/_discoverThemePacks().
@@ -619,21 +627,29 @@ export class WidgetCenterOverlay {
         return card;
     }
 
-    _isThemePackEnabled(manifest) {
-        const disabled = new Set(this._getDisabledWidgets());
-        return (manifest.widgets ?? []).every(w => !disabled.has(w));
+    _isThemePackEnabled(id) {
+        try {
+            return this._gsettings.get_string(ACTIVE_THEME_PACK_KEY) === id;
+        } catch (e) {
+            return false;
+        }
     }
 
-    _setThemePackEnabled(manifest, enabled) {
+    _loadThemePack(entry) {
+        const {id, manifest} = entry;
         const current = new Set(this._getDisabledWidgets());
         for (const widgetId of manifest.widgets ?? []) {
-            if (enabled)
-                current.delete(widgetId);
-            else
-                current.add(widgetId);
+            current.delete(widgetId);
         }
         this._writeDisabledWidgets(current);
-        this._services.onApplyThemePack?.(manifest, enabled);
+        try {
+            this._gsettings.set_string(ACTIVE_THEME_PACK_KEY, id);
+            Gio.Settings.sync();
+        } catch (e) {
+            console.error('[widget-center] overlay: could not save active theme pack', e);
+        }
+        this._services.onApplyThemePack?.(entry);
+        this._renderTab('themes');
     }
 
     _openThemePackSettings(id) {
@@ -642,24 +658,6 @@ export class WidgetCenterOverlay {
             return;
         }
         this._openExtensionPreferences();
-    }
-
-    /** @private Opens the Export Theme dialog prefilled from this
-     * already-discovered pack (widget-center-prefs-app.js's
-     * `--export-theme-id=` flag → PrefsWindowController.
-     * openExportThemeDialogForPack()) — routed through
-     * _launchExternalPrefsWindow() for the same z-index-over-overlay fix
-     * as every other GTK4 window this file spawns. */
-    _exportThemePack(id) {
-        this._launchExternalPrefsWindow([`--export-theme-id=${id}`]);
-    }
-
-    /** @private "Export current desktop…" — same dialog, blank/prefilled
-     * from whatever's actually enabled on the live desktop right now
-     * (widget-center-prefs-app.js's `--export-theme-new` flag) rather
-     * than an existing pack's own widget set. */
-    _exportCurrentDesktopAsThemePack() {
-        this._launchExternalPrefsWindow(['--export-theme-new']);
     }
 
     /**
@@ -715,52 +713,10 @@ export class WidgetCenterOverlay {
 
     // --- Tab 3: Settings --------------------------------------------------
 
-    // Everything here is read/written straight off this._gsettings — the
-    // exact same schema/keys prefs.js's own "Preferences" tab uses (see
-    // 2026-08-03: now a real native-St reimplementation of the Preferences
-    // window's General/Appearance/Desktop/Interactions/Advanced/About
-    // categories (lib/widgetCenterOverlayPreferences.js), reusing the same
-    // SettingsService/ThemeService the real window uses — same
-    // GSettings/theme.json, so a change made here shows up there too and
-    // vice versa, live, no restart. "Backup & Restore" and "Import /
-    // Export" are the one part left out (both need Gtk.FileChooserNative,
-    // which needs a real GTK window - see lib/prefsDialogs.js's
-    // chooseFile()) - the buttons below open the real window, landed
-    // directly on the relevant category, for those two specifically.
+    // The overlay hosts the same live settings as the main Preferences
+    // window. It intentionally contains no backup or export shortcuts.
     _buildSettingsTab() {
         const outer = new St.BoxLayout({vertical: true, x_expand: true, y_expand: true, style_class: 'wc-pref-outer'});
-
-        const actionsRow = new St.BoxLayout({style_class: 'wc-pref-banner-content', x_expand: true});
-
-        const backupButton = new St.Button({style_class: 'wc-pref-banner', can_focus: true, reactive: true, x_expand: true});
-        const backupContent = new St.BoxLayout({style_class: 'wc-pref-banner-content', x_expand: true});
-        backupContent.add_child(new St.Icon({icon_name: 'cloud-upload-symbolic', icon_size: 18}));
-        backupContent.add_child(new St.Label({text: 'Backup & Restore…', style_class: 'wc-pref-banner-label', x_expand: true}));
-        backupButton.set_child(backupContent);
-        // Jumps straight to the "Backup & Restore" category inside the
-        // real Preferences window (PrefsWindowController.
-        // showBackupPage(), via widget-center-prefs-app.js's
-        // `--focus=backup`) instead of just the generic Preferences
-        // landing page a plain "open the full window" banner used to —
-        // and, like every other GTK4 window this file spawns, routed
-        // through _launchExternalPrefsWindow() so it actually renders
-        // above this overlay instead of behind it.
-        backupButton.connect('clicked', () => this._launchExternalPrefsWindow(['--focus=backup']));
-        actionsRow.add_child(backupButton);
-
-        const banner = new St.Button({style_class: 'wc-pref-banner', can_focus: true, reactive: true, x_expand: true});
-        const bannerContent = new St.BoxLayout({style_class: 'wc-pref-banner-content', x_expand: true});
-        bannerContent.add_child(new St.Icon({icon_name: 'send-to-symbolic', icon_size: 18}));
-        const bannerLabel = new St.Label({
-            text: 'Need Import / Export? Open the full Preferences window →',
-            style_class: 'wc-pref-banner-label', x_expand: true,
-        });
-        bannerContent.add_child(bannerLabel);
-        banner.set_child(bannerContent);
-        banner.connect('clicked', () => this._openExtensionPreferences());
-        actionsRow.add_child(banner);
-
-        outer.add_child(actionsRow);
 
         const scroll = new St.ScrollView({style_class: 'wc-overlay-scroll', x_expand: true, y_expand: true});
         try {
@@ -807,12 +763,12 @@ export class WidgetCenterOverlay {
      */
     _buildSortBar(currentMode, onChange) {
         const bar = new St.BoxLayout({style_class: 'wc-overlay-sortbar', x_expand: true});
-        bar.add_child(new St.Label({text: 'Sort by:', style_class: 'wc-overlay-sortbar-label'}));
         for (const mode of SORT_MODES) {
             const button = new St.Button({
                 style_class: mode.id === currentMode ? 'wc-overlay-tab wc-overlay-tab-active' : 'wc-overlay-tab',
-                label: mode.label, can_focus: true, reactive: true,
+                can_focus: true, reactive: true, accessible_name: `Sort by ${mode.label}`,
             });
+            button.set_child(new St.Icon({icon_name: mode.icon, icon_size: 16}));
             button.connect('clicked', () => onChange(mode.id));
             bar.add_child(button);
         }
@@ -1123,6 +1079,16 @@ export class WidgetCenterOverlay {
             onChange(on);
         });
         return button;
+    }
+
+    _buildThemeStatus(enabled) {
+        const status = new St.BoxLayout({style_class: 'wc-overlay-toggle', reactive: false, can_focus: false});
+        status.add_child(new St.Icon({
+            icon_name: enabled ? 'checkbox-checked-symbolic' : 'checkbox-symbolic',
+            icon_size: 20,
+        }));
+        status.add_child(new St.Label({text: enabled ? ' Enabled' : ' Not loaded'}));
+        return status;
     }
 
     _buildIconButton(iconName, callback) {

@@ -40,6 +40,7 @@ import {ThemeService} from './lib/themeService.js';
 import {setForcedTheme} from './lib/widgetVisualKit.js';
 import {WidgetCenterOverlay} from './lib/widgetCenterOverlay.js';
 import {createLogger} from './lib/logger.js';
+import {importGwctDocument} from './lib/exportService.js';
 
 export default class WidgetCenterExtension extends Extension {
     enable() {
@@ -280,9 +281,24 @@ export default class WidgetCenterExtension extends Extension {
             onWidgetSettings: id => this._openWidgetSettings(id),
             onWidgetRemove: id => this._removeWidgetViaEditMode(id),
             onOpenPreferences: () => this.openPreferences(),
-            onApplyThemePack: (manifest, enabled) => {
-                this._logger.debug('widget-center-overlay',
-                    `theme pack "${manifest.id}" ${enabled ? 'applied' : 'removed'}`);
+            onApplyThemePack: entry => {
+                // A flat .gwct pack carries the complete exported desktop,
+                // not just its widget ids. Apply it so Load restores the
+                // appearance, positions and per-widget settings too.
+                if (entry.document) {
+                    try {
+                        const discovered = new Map(this._loader.discover().map(widget => [widget.id, widget]));
+                        importGwctDocument(entry.document, {
+                            storage: this._storage,
+                            theme: this._themeService,
+                            settings: this._settings,
+                            discoveredWidgetsById: discovered,
+                        });
+                    } catch (e) {
+                        console.error(`[widget-center] could not load theme pack "${entry.id}"`, e);
+                    }
+                }
+                this._logger.debug('widget-center-overlay', `theme pack "${entry.id}" loaded`);
             },
         });
         this._widgetCenterOverlay.enable();

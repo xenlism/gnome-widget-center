@@ -45,6 +45,11 @@ export class StWidgetWrapper extends WidgetWrapper {
 
         const margin = Math.max(0, Number(overflowPx) || 0);
         if (margin === 0) {
+            // A widget can have been clipped with an explicit, expanded
+            // rectangle earlier. Remove it before returning to the exact
+            // allocation clip; otherwise long text still escapes through
+            // the stale expanded rectangle.
+            this._widget.remove_clip();
             this._widget.clip_to_allocation = true;
             return this;
         }

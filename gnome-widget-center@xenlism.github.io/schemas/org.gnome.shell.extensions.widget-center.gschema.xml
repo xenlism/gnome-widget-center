@@ -185,5 +185,14 @@
       </description>
     </key>
 
+    <key name="active-theme-pack" type="s">
+      <default>''</default>
+      <summary>Id of the most recently loaded theme pack</summary>
+      <description>
+        Used by the overlay only to display which theme is currently
+        loaded. It is not an enable/disable toggle for theme packs.
+      </description>
+    </key>
+
   </schema>
 </schemalist>

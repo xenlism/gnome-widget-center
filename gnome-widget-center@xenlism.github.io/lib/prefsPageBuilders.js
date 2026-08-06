@@ -225,7 +225,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
 
         group.add(split);
 
-        // Select "General" first so the right pane is never blank.
+        // Select General first so the right pane is never blank.
         listBox.select_row(listBox.get_row_at_index(0));
 
         // Returned so PrefsWindowController.showPreferencesPage() can jump
@@ -964,42 +964,48 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         page.add(shortcutGroup);
 
         const currentAccel = ready ? (settings.getGlobalValue('widget-center-overlay-keybinding')?.[0] ?? '') : '<Super>F12';
-        const shortcutRow = new Adw.EntryRow({
+        const shortcutRow = new Adw.ActionRow({
             title: 'Shortcut',
-            text: currentAccel,
+            subtitle: 'Click Record shortcut, then press the key combination.',
             sensitive: ready,
         });
-        shortcutRow.connect('notify::text', () => {
-            if (!ready) return;
-            const text = shortcutRow.text.trim();
-            if (text.length === 0) {
-                try {
-                    settings.setGlobalValue('widget-center-overlay-keybinding', []);
-                } catch (e) {
-                    logError(e, 'could not clear widget-center-overlay-keybinding');
-                }
-                shortcutRow.remove_css_class('error');
-                return;
+        const recordButton = new Gtk.Button({
+            label: currentAccel || 'Disabled',
+            valign: Gtk.Align.CENTER,
+            sensitive: ready,
+        });
+        let recording = false;
+        recordButton.connect('clicked', () => {
+            recording = true;
+            recordButton.label = 'Press shortcut…';
+            recordButton.grab_focus();
+        });
+        const keyController = new Gtk.EventControllerKey();
+        keyController.connect('key-pressed', (_controller, keyval, _keycode, state) => {
+            if (!recording)
+                return false;
+            if (keyval === Gdk.KEY_Escape) {
+                recording = false;
+                recordButton.label = currentAccel || 'Disabled';
+                return true;
             }
-            const [ok] = Gtk.accelerator_parse(text);
-            if (!ok) {
-                shortcutRow.add_css_class('error');
-                return;
-            }
-            shortcutRow.remove_css_class('error');
+            const accel = Gtk.accelerator_name(keyval, state);
+            // Modifier-only presses do not form a useful shortcut.
+            if (!accel)
+                return true;
+            recording = false;
+            recordButton.label = accel;
             try {
-                settings.setGlobalValue('widget-center-overlay-keybinding', [text]);
+                settings.setGlobalValue('widget-center-overlay-keybinding', [accel]);
             } catch (e) {
                 logError(e, 'could not save widget-center-overlay-keybinding');
             }
+            return true;
         });
+        recordButton.add_controller(keyController);
+        shortcutRow.add_suffix(recordButton);
+        shortcutRow.activatable_widget = recordButton;
         shortcutGroup.add(shortcutRow);
-
-        const shortcutHint = new Adw.ActionRow({
-            title: 'GTK accelerator syntax, e.g. <Super>F12 , or leave empty to disable.',
-        });
-        shortcutHint.add_css_class('dim-label');
-        shortcutGroup.add(shortcutHint);
 
         return page;
     }

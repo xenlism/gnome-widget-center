@@ -213,6 +213,18 @@
     background-color: rgba(255, 255, 255, 0.12);
 }
 
+.wc-overlay-load-button {
+    color: #ffffff;
+    background-color: #3584e4;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-weight: bold;
+}
+
+.wc-overlay-load-button:hover {
+    background-color: #62a0ea;
+}
+
 .wc-overlay-empty {
     color: rgba(255, 255, 255, 0.5);
     padding: 32px;
