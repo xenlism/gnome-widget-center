@@ -37,11 +37,14 @@
 //       (a transient one-shot IPC hint between the Shell and prefs
 //       processes, explicitly documented as "NOT a widget config value"
 //       in the schema itself), `dev-mode` (a developer toggle, not part
-//       of "how this desktop looks"), and `disabled-widgets` itself
+//       of "how this desktop looks"), `disabled-widgets` itself
 //       (redundant now that disabled widgets are simply left out of
 //       `widgets[]` above — re-importing it verbatim could disable
 //       widgets on the target machine that this theme file never even
-//       mentions).
+//       mentions), and `known-widget-ids` (2026-08-08 — pure
+//       first-seen bookkeeping for the "load widget on install" policy,
+//       not a preference; importing it verbatim on another machine
+//       would wrongly mark widgets as "already seen" there).
 //     - the widgets' own files (widget.js, stylesheet.css, icons, ...).
 //       A `.gwct` only ever describes widgets the IMPORTING machine
 //       already has installed; importing one that references a widget
@@ -73,7 +76,7 @@ const GWCT_VERSION = 1;
 const HOST_SETTINGS_KEYS = [
     'prevent-widget-overlap', 'edge-margin', 'widget-spacing', 'language',
     'guide-color', 'snap-enabled', 'snap-distance', 'grid-snap-enabled',
-    'grid-size', 'widget-center-overlay-keybinding',
+    'grid-size', 'widget-center-overlay-keybinding', 'auto-enable-new-widgets',
 ];
 
 /**

@@ -27,18 +27,27 @@
 // (development/docs/WIDGET_API.md §4) — this file, and everything it
 // imports, must NEVER import St/Clutter/Meta/Shell.
 
+// 2026-08-08: import switched from `PrefsWindowController` (v1 —
+// sidebar Preferences) to `PrefsWindowControllerV2` (Overview / Themes /
+// Preferences-as-accordion / About). This is now THE live prefs window
+// GNOME Shell / `gnome-extensions prefs <uuid>` opens — see
+// HANDOVER_PREFS_V2.md for the full v2 changelog. `prefsV2.js`, a
+// second, separate entry point this used to hand off to for isolated
+// testing before this switch, has been deleted as fully redundant now
+// that this file does exactly what it did.
+
 import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
-import {PrefsWindowController} from './lib/prefsWindowController.js';
+import {PrefsWindowControllerV2} from './lib/prefsWindowControllerV2.js';
 
 export default class WidgetCenterPreferences extends ExtensionPreferences {
     async fillPreferencesWindow(window) {
         // Passing `this` (not `this.path`) preserves the official
         // Extension.getSettings() schema-lookup path AND this.metadata —
-        // see PrefsWindowController's constructor doc comment for why
+        // see PrefsWindowControllerV2's constructor doc comment for why
         // that still matters here even though widget-center-prefs-app.js's
         // own, separate PrefsWindowController instance gets by with just
         // a path string instead (reading metadata.json by hand).
-        await new PrefsWindowController(this).build(window);
+        await new PrefsWindowControllerV2(this).build(window);
     }
 }

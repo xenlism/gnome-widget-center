@@ -30,6 +30,90 @@ import {loadTranslations} from '../i18n/index.js';
 
 export const PrefsWidgetManagementMixin = Base => class extends Base {
     /**
+     * @description "Load widget on install" policy (2026-08-08, General
+     * category — `auto-enable-new-widgets`/`known-widget-ids` GSettings
+     * keys, see schemas/*.gschema.xml for the full contract). Called
+     * once near the top of building v2's Overview tab
+     * (`_buildOverviewCardsTab()`, lib/prefsWindowControllerV2.js —
+     * v1's own list-based Overview page,
+     * `_buildOverviewPage()`, was removed once
+     * lib/prefsWindowControllerV2.js became the only window this
+     * project actually builds; see HANDOVER_PREFS_V2.md),
+     * BEFORE either reads disabled-widgets to decide each row/card's
+     * initial switch state — so a widget disabled by this policy shows
+     * up already-off on first paint, not enabled-then-flipped-off.
+     *
+     * Diffs `discoveredIds` against `known-widget-ids` (ids this
+     * install has seen at least once before, regardless of current
+     * enabled state). Any id not yet known is, per
+     * `auto-enable-new-widgets`, either left alone (default - matches
+     * every prior version of this extension, where "discovered and not
+     * in disabled-widgets" already meant enabled) or added to
+     * disabled-widgets (opt-in "don't auto-load new widgets" mode).
+     * Either way the id is added to known-widget-ids so it's never
+     * treated as "new" again - flipping a widget on/off later via
+     * Overview is a completely separate, ordinary disabled-widgets
+     * write and never touches known-widget-ids.
+     *
+     * No-op (returns the plain current disabled set, unchanged) if
+     * `settings` isn't ready - same fail-open convention every other
+     * GSettings read in this mixin/prefsPageBuilders.js already
+     * follows (`sensitive: settings.isReady`, etc).
+     * @param {SettingsService} settings
+     * @param {Array<string>} discoveredIds - every widget id found by
+     *   PrefsWidgetList.list() this run (bundled + user), regardless of
+     *   current enabled state.
+     * @returns {Set<string>} the disabled-widgets set to actually
+     *   render against - already includes anything this call just
+     *   auto-disabled.
+     */
+    applyAutoEnablePolicy(settings, discoveredIds) {
+        if (!settings?.isReady)
+            return new Set();
+
+        let known, disabled;
+        try {
+            known = new Set(settings.getGlobalValue('known-widget-ids'));
+            disabled = new Set(settings.getGlobalValue('disabled-widgets'));
+        } catch (e) {
+            logError(e, '[widget-center] prefs: could not read known-widget-ids/disabled-widgets');
+            return new Set();
+        }
+
+        const autoEnable = !!settings.getGlobalValue('auto-enable-new-widgets');
+        let knownChanged = false;
+        let disabledChanged = false;
+
+        for (const id of discoveredIds) {
+            if (known.has(id))
+                continue;
+            known.add(id);
+            knownChanged = true;
+            if (!autoEnable && !disabled.has(id)) {
+                disabled.add(id);
+                disabledChanged = true;
+            }
+        }
+
+        if (knownChanged) {
+            try {
+                settings.setGlobalValue('known-widget-ids', Array.from(known));
+            } catch (e) {
+                logError(e, '[widget-center] prefs: could not save known-widget-ids');
+            }
+        }
+        if (disabledChanged) {
+            try {
+                settings.setGlobalValue('disabled-widgets', Array.from(disabled));
+            } catch (e) {
+                logError(e, '[widget-center] prefs: could not save disabled-widgets (auto-enable policy)');
+            }
+        }
+
+        return disabled;
+    }
+
+    /**
      * @description Jumps an already-built window straight to one widget's
      * settings subpage - the standalone app's equivalent of writing
      * requested-widget-id and waiting for build()'s dconf plumbing, for

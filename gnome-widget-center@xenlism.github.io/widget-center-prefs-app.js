@@ -54,7 +54,7 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import System from 'system';
 
-import {PrefsWindowController} from './lib/prefsWindowController.js';
+import {PrefsWindowControllerV2} from './lib/prefsWindowControllerV2.js';
 
 // Reverse-DNS'd from this extension's own uuid (metadata.json) rather
 // than picked arbitrarily, so it's obviously "the same project" to
@@ -122,7 +122,7 @@ let buildPromise = null;
 async function presentWindow(requestedWidgetId, focusTarget = null, exportThemeId = null, exportThemeNew = false) {
     if (!controller) {
         window = new Adw.PreferencesWindow({application: app});
-        controller = new PrefsWindowController(EXTENSION_PATH);
+        controller = new PrefsWindowControllerV2(EXTENSION_PATH);
         buildPromise = controller.build(window).catch(e => {
             logError(e, '[widget-center] widget-center-prefs-app: build() failed');
         });

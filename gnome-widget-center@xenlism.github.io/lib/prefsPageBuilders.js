@@ -28,62 +28,37 @@ import {rgbaToHex} from './colorUtils.js';
 import {SUPPORTED_LOCALES} from '../i18n/index.js';
 import {SHADOW_ANGLE_STEPS} from './widgetVisualKit.js';
 
+/**
+ * @private true if `keyval` is a bare modifier key (both L/R variants of
+ * Ctrl/Shift/Alt/Super/Meta/Hyper, plus the lock keys and ISO level-shift
+ * keys) with no "real" key attached yet. Used by the shortcut recorder
+ * below (`_buildGeneralCategory()`) so a combo like `<Control><Shift>a`
+ * can actually be recorded — pressing Ctrl then Shift then `a` must keep
+ * waiting through the first two key-pressed events, only completing on
+ * `a` (by which point `state` already reflects both modifiers being
+ * held). Same keyval list the overlay's own Clutter-based shortcut
+ * recorder already filters (lib/widgetCenterOverlayPreferences.js's
+ * `_shortcutRecorder()`), just GDK keyvals instead of Clutter ones and
+ * with a couple of extras (Meta/Hyper/lock/ISO-level-shift) that the
+ * overlay version's shorter list didn't need to worry about.
+ * @param {number} keyval
+ * @returns {boolean}
+ */
+function isModifierKeyval(keyval) {
+    return [
+        Gdk.KEY_Control_L, Gdk.KEY_Control_R,
+        Gdk.KEY_Shift_L, Gdk.KEY_Shift_R,
+        Gdk.KEY_Alt_L, Gdk.KEY_Alt_R,
+        Gdk.KEY_Super_L, Gdk.KEY_Super_R,
+        Gdk.KEY_Meta_L, Gdk.KEY_Meta_R,
+        Gdk.KEY_Hyper_L, Gdk.KEY_Hyper_R,
+        Gdk.KEY_ISO_Level3_Shift, Gdk.KEY_ISO_Level5_Shift,
+        Gdk.KEY_Caps_Lock, Gdk.KEY_Shift_Lock,
+        Gdk.KEY_Num_Lock, Gdk.KEY_Scroll_Lock,
+    ].includes(keyval);
+}
+
 export const PrefsPageBuildersMixin = Base => class extends Base {
-    /**
-     * @private "Overview" tab — the widget list, unchanged from the old
-     * top-level "Widgets" page other than the title (see
-     * repo/concept/overview.png).
-     * @param {Adw.PreferencesWindow} window
-     * @param {SettingsService} settings
-     * @param {StorageService} storage
-     * @param {Array} ok - discovered widgets, from PrefsWidgetList.list()
-     * @param {Array} errors - widgets that failed to load
-     */
-    _buildOverviewPage(window, settings, storage, ok, errors) {
-        const page = new Adw.PreferencesPage({
-            title: this._tr('tab.overview.label', 'Overview'),
-            icon_name: 'view-grid-symbolic',
-        });
-        window.add(page);
-
-        const group = new Adw.PreferencesGroup({
-            title: this._tr('overview.group.title', 'Installed widgets'),
-            description: this._tr('overview.group.description',
-                'Turn a widget off to remove it from the desktop immediately — no restart needed.'),
-        });
-        page.add(group);
-
-        const disabled = new Set(settings.isReady ? settings.getGlobalValue('disabled-widgets') : []);
-
-        if (ok.length === 0) {
-            group.add(new Adw.ActionRow({
-                title: this._tr('overview.empty', 'No widgets found'),
-                subtitle: 'Nothing was discovered in the bundled or user widget folders.',
-            }));
-        }
-
-        for (const widget of ok)
-            group.add(this._buildWidgetRow(window, settings, storage, widget, disabled.has(widget.id)));
-
-        if (errors.length > 0) {
-            const errorGroup = new Adw.PreferencesGroup({
-                title: 'Widgets that failed to load',
-                description: 'Fix metadata.json for these, then reopen this window to retry.',
-            });
-            page.add(errorGroup);
-
-            for (const err of errors) {
-                const row = new Adw.ActionRow({
-                    title: err.id,
-                    subtitle: err.reason,
-                    css_classes: ['error'],
-                });
-                row.add_prefix(new Gtk.Image({icon_name: 'dialog-warning-symbolic'}));
-                errorGroup.add(row);
-            }
-        }
-    }
-
     /**
      * @private "Store" tab — deliberately blank. There is no widget
      * marketplace/store backend yet (nothing in lib/ fetches or lists
@@ -96,6 +71,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         const page = new Adw.PreferencesPage({
             title: this._tr('tab.store.label', 'Store'),
             icon_name: 'system-search-symbolic',
+            width_request: 800,
         });
         window.add(page);
 
@@ -111,22 +87,42 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
     }
 
     /**
-     * @private "Preferences" tab — a single Adw.PreferencesPage whose
-     * one PreferencesGroup holds a full-height Adw.NavigationSplitView:
-     * a vertical category list on the left (repo/concept/preferences.png),
-     * and that category's content on the right. Each category is built
-     * lazily on first selection (`_categoryBuilders`) rather than all up
-     * front, since most are Adw.StatusPage placeholders that don't need
-     * to exist until looked at, and Appearance/Advanced already do
-     * non-trivial GSettings/ThemeService reads.
+     * @private "Preferences" tab — a single Adw.PreferencesPage whose one
+     * PreferencesGroup holds the category accordion (`_buildCategoryAccordion()`)
+     * — each category (General, Appearance, Desktop, …) is a collapsible
+     * "card" the user opens/closes in place, built lazily on first
+     * expand rather than all up front, since most are non-trivial
+     * GSettings/ThemeService reads that don't need to run until looked
+     * at.
+     *
+     * 2026-08-08: this used to also support a `Adw.NavigationSplitView`
+     * sidebar+stack layout (v1's original design, `{layout: 'sidebar'}`
+     * — a left-hand category list swapping right-hand content, see
+     * repo/concept/preferences.png) selectable via an options flag.
+     * Removed now that lib/prefsWindowControllerV2.js's accordion is the
+     * only window this project actually builds (`prefs.js` and
+     * `widget-center-prefs-app.js` both construct
+     * `PrefsWindowControllerV2` exclusively — see HANDOVER_PREFS_V2.md's
+     * "V2 wasn't actually wired up" addendum) — keeping a second,
+     * unreachable layout path around was just dead weight. If a sidebar
+     * layout is ever wanted again, it's in this file's git history.
      * @param {Adw.PreferencesWindow} window
      * @param {SettingsService} settings
      * @param {StorageService} storage
      * @param {Array} discoveredWidgets - `ok` from PrefsWidgetList.list(),
      *   needed by Backup & Restore / Import-Export below.
      * @param {{bundledWidgetsPath: string, userWidgetsPath: string}} widgetPaths
+     * @param {{includeAbout?: boolean}} [options] - `includeAbout: false`
+     *   drops the "About" row from the category list below without
+     *   touching `_buildAboutCategory()` itself, which
+     *   lib/prefsWindowControllerV2.js still reuses verbatim for its own
+     *   standalone About tab (Overview/Themes/Preferences/About as
+     *   SEPARATE top-level tabs, About not nested in here). Omitted
+     *   default (About included) is unused by any current caller —
+     *   V2 always passes `{includeAbout: false}` — kept only so a
+     *   future caller isn't forced to remember to pass it.
      */
-    _buildPreferencesPage(window, settings, storage, discoveredWidgets, widgetPaths) {
+    _buildPreferencesPage(window, settings, storage, discoveredWidgets, widgetPaths, options = {}) {
         const page = new Adw.PreferencesPage({
             title: this._tr('tab.preferences.label', 'Preferences'),
             icon_name: 'preferences-system-symbolic',
@@ -149,7 +145,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
             {id: 'interactions', title: this._tr('category.interactions', 'Interactions'), subtitle: 'Dragging, animations and actions',
                 icon: 'input-mouse-symbolic',
                 build: () => this._buildInteractionsCategory(settings)},
-            {id: 'backup', title: this._tr('category.backup', 'Backup & Restore'), subtitle: 'Backup and restore widgets',
+            {id: 'backup', title: this._tr('category.backup', 'Backup &amp; Restore'), subtitle: 'Backup and restore widgets',
                 icon: 'cloud-upload-symbolic',
                 build: () => this._buildBackupCategory(window, settings, storage, discoveredWidgets, widgetPaths)},
             {id: 'importexport', title: this._tr('category.importexport', 'Import / Export'), subtitle: 'Import or export widget data',
@@ -158,81 +154,140 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
             {id: 'advanced', title: this._tr('category.advanced', 'Advanced'), subtitle: 'Advanced developer options',
                 icon: 'applications-engineering-symbolic',
                 build: () => this._buildAdvancedCategory(settings)},
-            {id: 'about', title: this._tr('category.about', 'About'), subtitle: 'About GNOME Widget Center',
-                icon: 'help-about-symbolic',
-                build: () => this._buildAboutCategory()},
         ];
 
-        const split = new Adw.NavigationSplitView({
-            min_sidebar_width: 200,
-            max_sidebar_width: 260,
-            sidebar_width_fraction: 0.3,
-            vexpand: true,
-        });
-        split.set_size_request(-1, 560);
-
-        const listBox = new Gtk.ListBox({
-            css_classes: ['navigation-sidebar'],
-            selection_mode: Gtk.SelectionMode.SINGLE,
-        });
-        const contentStack = new Gtk.Stack({
-            transition_type: Gtk.StackTransitionType.CROSSFADE,
-            vexpand: true,
-        });
-
-        // Gtk.ListBoxRow can't hold an arbitrary object ref as a GObject
-        // property without registering one — attach it as a plain JS
-        // expando property instead (safe: GJS keeps JS-side properties
-        // alive alongside the wrapped GObject for as long as the row is
-        // reachable, which here is the whole lifetime of the window).
-        // Stashed on `this` (not just local vars) so a caller outside this
-        // method — showBackupPage()'s "jump straight to Backup & Restore"
-        // for the Widget Center overlay's new Backup button — can select
-        // a specific row after the fact without rebuilding this whole
-        // page. Keyed by category id (see showBackupPage()'s doc comment).
-        this._categoryListBox = listBox;
-        this._categoryRowsById = {};
-
-        for (const category of categories) {
-            const row = new Adw.ActionRow({title: category.title, subtitle: category.subtitle});
-            row.add_prefix(new Gtk.Image({icon_name: category.icon}));
-            row._category = category;
-            listBox.append(row);
-            this._categoryRowsById[category.id] = row;
+        // See this method's `options` doc comment above.
+        if (options.includeAbout !== false) {
+            categories.push({id: 'about', title: this._tr('category.about', 'About'), subtitle: 'About GNOME Widget Center',
+                icon: 'help-about-symbolic',
+                build: () => this._buildAboutCategory()});
         }
 
-        listBox.connect('row-selected', (_box, row) => {
-            if (!row)
-                return;
-            const {id, build} = row._category;
-            if (!contentStack.get_child_by_name(id)) {
-                const built = build();
-                contentStack.add_named(built, id);
-            }
-            contentStack.set_visible_child_name(id);
-        });
-
-        const sidebarPage = new Adw.NavigationPage({
-            title: 'Preferences',
-            child: new Adw.ToolbarView({content: new Gtk.ScrolledWindow({child: listBox, vexpand: true})}),
-        });
-        const contentPage = new Adw.NavigationPage({
-            title: 'Preferences',
-            child: new Adw.ToolbarView({content: contentStack}),
-        });
-        split.sidebar = sidebarPage;
-        split.content = contentPage;
-
-        group.add(split);
-
-        // Select General first so the right pane is never blank.
-        listBox.select_row(listBox.get_row_at_index(0));
+        group.add(this._buildCategoryAccordion(categories));
 
         // Returned so PrefsWindowController.showPreferencesPage() can jump
         // straight to this page (skipping Overview) — see
         // lib/widgetCenterOverlay.js's Preferences tab / widget-center-
         // prefs-app.js's `--focus=preferences` flag.
         return page;
+    }
+
+    /**
+     * @private "Group settings" accordion — the `{layout: 'accordion'}`
+     * alternative to the NavigationSplitView sidebar above. Wrapped in
+     * an `Adw.Clamp` (maximum-size 800) so it lines up with the same
+     * fixed 800px reading width lib/prefsWindowControllerV2.js's
+     * Overview/Themes/About tabs use (`_buildClampedCardPage()`) — this
+     * is the one place in this sidebar-oriented file that needs to know
+     * about that number, since v1's sidebar (unaffected by this option)
+     * has never needed a matching width elsewhere.
+     *
+     * Each category renders as one collapsible "card": a boxed-list
+     * header row (icon + title + subtitle + chevron) toggling a
+     * Gtk.Revealer around that category's own, completely unmodified
+     * `build()` result — same lazy-build-on-first-open behavior the
+     * sidebar's Gtk.Stack already had (a category's Adw.PreferencesPage
+     * is only constructed the first time it's expanded, not up front),
+     * just swapped for "reveal in place" instead of "switch the visible
+     * stack child". The first category starts pre-expanded so the
+     * accordion is never blank on first open (same reasoning the
+     * sidebar's own `listBox.select_row(...)` line above has for
+     * picking General first).
+     *
+     * KNOWN CAVEAT (same "written and node-check-clean, not yet
+     * exercised against a real GNOME Shell prefs process" flag this
+     * project's other 2026-08-08 checkpoints carry): nesting an
+     * Adw.PreferencesPage — which wraps its own content in an internal
+     * Gtk.ScrolledWindow — inside a Gtk.Revealer, itself inside this
+     * page's own outer scrolling, could in principle produce a
+     * scroll-within-scroll. `vexpand: false` is forced on each revealed
+     * category page below to discourage that, but it's worth a visual
+     * check on real hardware before calling this done.
+     * @param {Array<{id: string, title: string, subtitle: string, icon: string, build: () => Adw.PreferencesPage}>} categories
+     * @returns {Adw.Clamp}
+     */
+    _buildCategoryAccordion(categories) {
+        const clamp = new Adw.Clamp({maximum_size: 9999, tightening_threshold: 0});
+            clamp.set_hexpand(true);
+        const list = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL, spacing: 12,
+            margin_top: 12, margin_bottom: 24, margin_start: 12, margin_end: 12,
+        });
+        clamp.set_child(list);
+
+        // 2026-08-08: keyed by category.id (same ids the old sidebar's
+        // `_categoryRowsById` used), so PrefsWindowControllerV2's own
+        // showBackupPage() override can jump straight to a specific
+        // category the same way v1's sidebar-based showBackupPage() did
+        // with `_categoryListBox.select_row(...)` — see that override
+        // in lib/prefsWindowControllerV2.js for why this exists (v1's
+        // implementation reads `this._categoryListBox`/
+        // `_categoryRowsById`, neither of which this accordion layout
+        // builds, so without this map that deep-link silently no-ops).
+        this._accordionCategoriesById = {};
+
+        categories.forEach((category, index) => {
+            const {widget, expand} = this._buildAccordionCategory(category);
+            list.append(widget);
+            this._accordionCategoriesById[category.id] = {widget, expand};
+            if (index === 0)
+                expand();
+        });
+
+        return clamp;
+    }
+
+    /**
+     * @private One collapsible category "card" for `_buildCategoryAccordion()`.
+     * @param {{title: string, subtitle: string, icon: string, build: () => Adw.PreferencesPage}} category
+     * @returns {{widget: Gtk.Box, expand: () => void}}
+     */
+    _buildAccordionCategory(category) {
+        const outer = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            css_classes: ['card'],
+            overflow: Gtk.Overflow.HIDDEN,
+        });
+
+        const headerList = new Gtk.ListBox({
+            selection_mode: Gtk.SelectionMode.NONE,
+            css_classes: ['boxed-list'],
+        });
+        const headerRow = new Adw.ActionRow({
+            title: category.title, subtitle: category.subtitle, activatable: true,
+        });
+        headerRow.add_prefix(new Gtk.Image({icon_name: category.icon}));
+        const chevron = new Gtk.Image({icon_name: 'pan-end-symbolic'});
+        headerRow.add_suffix(chevron);
+        headerList.append(headerRow);
+        outer.append(headerList);
+
+        const revealer = new Gtk.Revealer({
+            transition_type: Gtk.RevealerTransitionType.SLIDE_DOWN,
+            reveal_child: false,
+        });
+        outer.append(revealer);
+
+        let built = false;
+        const setExpanded = expanded => {
+            revealer.reveal_child = expanded;
+            chevron.icon_name = expanded ? 'pan-down-symbolic' : 'pan-end-symbolic';
+            if (expanded && !built) {
+                built = true;
+                const content = category.build();
+
+                content.set_hexpand(true);
+                content.set_vexpand(false);
+
+                revealer.set_hexpand(true);
+                revealer.set_vexpand(false);
+
+                revealer.set_child(content);
+            }
+        };
+        headerList.connect('row-activated', () => setExpanded(!revealer.reveal_child));
+
+        return {widget: outer, expand: () => setExpanded(true)};
     }
 
     /** @private a simple "not built yet" placeholder used by several Preferences categories. */
@@ -793,8 +848,23 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
      * @param {SettingsService} settings
      * @returns {Adw.PreferencesPage}
      */
+    /**
+     * @private "General" category — language override (2026-08-04),
+     * plus (2026-08-08) "load widget on install" and the overlay
+     * keyboard shortcut, both MOVED here from Interactions per this
+     * session's request ("shortcut ย้ายมาอยู่ general" /
+     * "General เพิ่ม settings load widget on install") — General is a
+     * better home for both than Interactions, which is really about
+     * drag/snap behavior specifically. `_buildInteractionsCategory()`
+     * below no longer has its own "Shortcut" group; nothing about the
+     * `widget-center-overlay-keybinding` GSettings key itself changed,
+     * only which category's page the row lives on.
+     * @param {SettingsService} settings
+     * @returns {Adw.PreferencesPage}
+     */
     _buildGeneralCategory(settings) {
         const page = new Adw.PreferencesPage();
+        const ready = settings.isReady;
 
         const group = new Adw.PreferencesGroup({
             title: 'Language',
@@ -815,11 +885,11 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
             title: 'UI language',
             subtitle: 'Applies immediately, no restart needed.',
             model: Gtk.StringList.new(labels),
-            selected: Math.max(0, codes.indexOf(settings.isReady ? (settings.getGlobalValue('language') || '') : '')),
-            sensitive: settings.isReady,
+            selected: Math.max(0, codes.indexOf(ready ? (settings.getGlobalValue('language') || '') : '')),
+            sensitive: ready,
         });
         row.connect('notify::selected', () => {
-            if (!settings.isReady) {
+            if (!ready) {
                 logError(new Error('SettingsService not ready — could not save language'));
                 return;
             }
@@ -831,17 +901,114 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         });
         group.add(row);
 
+        // --- Widgets: "load widget on install" (2026-08-08) -----------
+        const widgetsGroup = new Adw.PreferencesGroup({
+            title: 'Widgets',
+            description: 'What happens the first time a widget is found — installed manually, ' +
+                'dropped in by a theme pack, or newly bundled by an update.',
+        });
+        page.add(widgetsGroup);
+
+        const autoEnableRow = new Adw.SwitchRow({
+            title: 'Load new widgets automatically',
+            subtitle: 'On: a widget is enabled the first time it\'s found (previous behavior). ' +
+                'Off: it appears in Overview but stays off the desktop until you turn it on.',
+            active: ready ? !!settings.getGlobalValue('auto-enable-new-widgets') : true,
+            sensitive: ready,
+        });
+        autoEnableRow.connect('notify::active', () => {
+            if (!ready) {
+                logError(new Error('SettingsService not ready — could not toggle auto-enable-new-widgets'));
+                return;
+            }
+            try {
+                settings.setGlobalValue('auto-enable-new-widgets', autoEnableRow.active);
+            } catch (e) {
+                logError(e, 'could not toggle auto-enable-new-widgets');
+            }
+        });
+        widgetsGroup.add(autoEnableRow);
+
+        // --- Keyboard shortcut (moved here from Interactions, 2026-08-08) ---
+        const shortcutGroup = new Adw.PreferencesGroup({
+            title: 'Keyboard shortcut',
+            description: 'Opens/closes the Widget Center Overlay (lib/widgetCenterOverlay.js). ' +
+                'Also editable live from the overlay\'s own Preferences tab.',
+        });
+        page.add(shortcutGroup);
+
+        const currentAccel = ready ? (settings.getGlobalValue('widget-center-overlay-keybinding')?.[0] ?? '') : '<Super>F12';
+        const shortcutRow = new Adw.ActionRow({
+            title: 'Shortcut',
+            subtitle: 'Click Record shortcut, then press the key combination.',
+            sensitive: ready,
+        });
+        const recordButton = new Gtk.Button({
+            label: currentAccel || 'Disabled',
+            valign: Gtk.Align.CENTER,
+            sensitive: ready,
+        });
+        let recording = false;
+        recordButton.connect('clicked', () => {
+            recording = true;
+            recordButton.label = 'Press shortcut…';
+            recordButton.grab_focus();
+        });
+        const keyController = new Gtk.EventControllerKey();
+        keyController.connect('key-pressed', (_controller, keyval, _keycode, state) => {
+            if (!recording)
+                return false;
+            if (keyval === Gdk.KEY_Escape) {
+                recording = false;
+                recordButton.label = currentAccel || 'Disabled';
+                return true;
+            }
+            // 2026-08-08 bug fix: a bare modifier key (Ctrl, Shift, Alt,
+            // Super…) pressed on its own must NOT end recording — only
+            // wait, so the user can go on to press the actual key while
+            // still holding it, forming a real "2 keys at once" combo
+            // (e.g. <Control><Shift>a). Gtk.accelerator_name() alone
+            // doesn't do this filtering — it happily stringifies a bare
+            // modifier keyval too (e.g. "Control_L" is accepted as a
+            // non-empty, "valid-looking" name), which is why this used
+            // to stop recording after just the FIRST key of any combo,
+            // making a real two-key shortcut impossible to record.
+            if (isModifierKeyval(keyval))
+                return true;
+            // Strip Lock/NumLock/etc noise from `state` the same way
+            // Gtk.accelerator_valid() expects, so e.g. Caps Lock being on
+            // doesn't silently corrupt the recorded combo.
+            const mask = state & Gtk.accelerator_get_default_mod_mask();
+            if (!Gtk.accelerator_valid(keyval, mask))
+                return true;
+            const accel = Gtk.accelerator_name(keyval, mask);
+            recording = false;
+            recordButton.label = accel;
+            try {
+                settings.setGlobalValue('widget-center-overlay-keybinding', [accel]);
+            } catch (e) {
+                logError(e, 'could not save widget-center-overlay-keybinding');
+            }
+            return true;
+        });
+        recordButton.add_controller(keyController);
+        shortcutRow.add_suffix(recordButton);
+        shortcutRow.activatable_widget = recordButton;
+        shortcutGroup.add(shortcutRow);
+
         return page;
     }
 
     /**
      * @private "Interactions" category (2026-08-04) — drag/snap behavior:
      * the alignment-guide color, magnetic snapping's own on/off + pull
-     * distance, the opt-in fixed-grid snap on top of it, and the overlay
-     * keyboard shortcut. See lib/snapManager.js/lib/guideRenderer.js for
-     * where these are actually consumed, and lib/editModeDragController.js
-     * for the live SettingsService.onChanged() wiring that picks up a
-     * change made here immediately, no restart.
+     * distance, and the opt-in fixed-grid snap on top of it. See
+     * lib/snapManager.js/lib/guideRenderer.js for where these are
+     * actually consumed, and lib/editModeDragController.js for the live
+     * SettingsService.onChanged() wiring that picks up a change made
+     * here immediately, no restart. (2026-08-08: the overlay keyboard
+     * shortcut previously lived here too — moved to General, see
+     * `_buildGeneralCategory()`'s doc comment for why.)
      * @param {SettingsService} settings
      * @returns {Adw.PreferencesPage}
      */
@@ -954,58 +1121,6 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
             }
         });
         gridGroup.add(gridSizeRow);
-
-        // --- Shortcut ---
-        const shortcutGroup = new Adw.PreferencesGroup({
-            title: 'Keyboard shortcut',
-            description: 'Opens/closes the Widget Center Overlay (lib/widgetCenterOverlay.js). ' +
-                'Also editable live from the overlay\'s own Preferences tab.',
-        });
-        page.add(shortcutGroup);
-
-        const currentAccel = ready ? (settings.getGlobalValue('widget-center-overlay-keybinding')?.[0] ?? '') : '<Super>F12';
-        const shortcutRow = new Adw.ActionRow({
-            title: 'Shortcut',
-            subtitle: 'Click Record shortcut, then press the key combination.',
-            sensitive: ready,
-        });
-        const recordButton = new Gtk.Button({
-            label: currentAccel || 'Disabled',
-            valign: Gtk.Align.CENTER,
-            sensitive: ready,
-        });
-        let recording = false;
-        recordButton.connect('clicked', () => {
-            recording = true;
-            recordButton.label = 'Press shortcut…';
-            recordButton.grab_focus();
-        });
-        const keyController = new Gtk.EventControllerKey();
-        keyController.connect('key-pressed', (_controller, keyval, _keycode, state) => {
-            if (!recording)
-                return false;
-            if (keyval === Gdk.KEY_Escape) {
-                recording = false;
-                recordButton.label = currentAccel || 'Disabled';
-                return true;
-            }
-            const accel = Gtk.accelerator_name(keyval, state);
-            // Modifier-only presses do not form a useful shortcut.
-            if (!accel)
-                return true;
-            recording = false;
-            recordButton.label = accel;
-            try {
-                settings.setGlobalValue('widget-center-overlay-keybinding', [accel]);
-            } catch (e) {
-                logError(e, 'could not save widget-center-overlay-keybinding');
-            }
-            return true;
-        });
-        recordButton.add_controller(keyController);
-        shortcutRow.add_suffix(recordButton);
-        shortcutRow.activatable_widget = recordButton;
-        shortcutGroup.add(shortcutRow);
 
         return page;
     }

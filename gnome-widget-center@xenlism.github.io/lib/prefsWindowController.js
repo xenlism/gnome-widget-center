@@ -1,11 +1,28 @@
-// products/extension/prefs.js
+// products/extension/lib/prefsWindowController.js
 //
-// Task 05 — Control Center (Prefs GUI) entrypoint. GNOME Shell runs this
-// in its own separate GTK4/libadwaita process, completely apart from
-// extension.js's Shell process (development/docs/WIDGET_API.md §4) — this file, and
-// everything it imports, must NEVER import St/Clutter/Meta/Shell.
+// Shared base for the Control Center (Prefs GUI) window controller:
+// constructor, a few small cross-window helpers (_loadMetadataFromPath,
+// _tr, showPreferencesPage, openExportThemeDialog/
+// openExportThemeDialogForPack), and the two mixins that add every
+// actual page/category/widget-row builder
+// (lib/prefsPageBuilders.js, lib/prefsWidgetManagement.js).
 //
-// Responsibilities (development/tasks/05-prefs-control-center.md):
+// 2026-08-08: this file no longer defines `build()` itself — that used
+// to be the v1 two-tab window (Overview + Preferences-as-sidebar), now
+// removed as dead code once `lib/prefsWindowControllerV2.js`'s
+// `PrefsWindowControllerV2` (which `extends` the class this file
+// exports, and overrides `build()` completely with its own four-tab
+// accordion version) became the ONLY controller `prefs.js` /
+// `widget-center-prefs-app.js` ever construct — see
+// HANDOVER_PREFS_V2.md's "V2 wasn't actually wired up" addendum for the
+// full story of how that happened. GNOME Shell runs the prefs process
+// this ends up running in as its own separate GTK4/libadwaita process,
+// completely apart from extension.js's Shell process
+// (development/docs/WIDGET_API.md §4) — this file, and everything it
+// imports, must NEVER import St/Clutter/Meta/Shell.
+//
+// Responsibilities actually fulfilled by PrefsWindowControllerV2 +
+// these mixins together (development/tasks/05-prefs-control-center.md):
 //   1. List every discovered widget (bundled + user), one Adw.SwitchRow
 //      each, bound to the same `disabled-widgets` GSettings key
 //      extension.js watches (see extension.js's onChanged() wiring) — so
@@ -49,33 +66,16 @@
 // optional `onSettingsChanged()` hook if it has one (development/docs/WIDGET_API.md §3).
 // Nothing in THIS file changes to make that work — it's entirely a Shell-
 // process concern — this comment stays here only because it's the natural
-// place someone reading prefs.js would look for "what happens to the
+// place someone reading this file would look for "what happens to the
 // running widget after I save".
-//
-// This class itself is now just: constructor + build() (the fillPrefer-
-// encesWindow() entrypoint) + a couple of tiny shared helpers
-// (_loadMetadataFromPath, _tr). Everything that actually builds UI is
-// two mixins applied below (2026-08-01 split, ~1600 lines -> three
-// files): prefsPageBuilders.js (whole-page/category builders) and
-// prefsWidgetManagement.js (per-widget row/settings-opening logic). See
-// each mixin file's own header for why a mixin rather than a straight
-// module split — short version: every method on either mixin still
-// reads/writes the exact same `this.xxx` state declared in the
-// constructor below, same as if all three files' methods were still
-// physically in one file.
 
 import GLib from 'gi://GLib';
 
-import {PrefsWidgetList} from './prefsWidgetList.js';
 import {readTextFile} from './fsUtils.js';
 import {pickTranslation} from './i18nUtils.js';
-import {SettingsService} from './settingsService.js';
-import {StorageService} from './storageService.js';
-import {WidgetSettings} from './widgetSettings.js';
 import {ThemeService} from './themeService.js';
 import {ThemePackRegistry} from './themePackRegistry.js';
 import {openThemePackExportDialog} from './themePackExportDialog.js';
-import {loadTranslations} from '../i18n/index.js';
 import {PrefsPageBuildersMixin} from './prefsPageBuilders.js';
 import {PrefsWidgetManagementMixin} from './prefsWidgetManagement.js';
 
@@ -111,9 +111,6 @@ class PrefsWindowControllerBase {
         this._discovered = [];
         /** @private set once build() has run - see showPreferencesPage(). */
         this._preferencesPage = null;
-        /** @private set once build() has run - see showBackupPage(). */
-        this._categoryListBox = null;
-        this._categoryRowsById = null;
     }
 
     /**
@@ -140,35 +137,15 @@ class PrefsWindowControllerBase {
         });
     }
 
-    /**
-     * @description Jumps an already-built window straight to the
-     * "Backup & Restore" category inside the Preferences tab, skipping
-     * both Overview and the General category `_buildPreferencesPage()`
-     * otherwise selects first — added for widget-center-prefs-app.js's
-     * `--focus=backup` flag (used by lib/widgetCenterOverlay.js's new
-     * Settings-tab Backup button, so clicking it doesn't dump the user
-     * on the General page and make them find Backup & Restore
-     * themselves). No-op if build() hasn't run yet, or on a
-     * theoretical Shell-version-driven prefs window that never went
-     * through `_buildPreferencesPage()` at all — both covered by the
-     * same `this._categoryRowsById` presence check. Same idle-loop
-     * deferral as showPreferencesPage()/jumpToWidget() and for the same
-     * reason: row selection needs the window mapped first.
-     * @param {Adw.PreferencesWindow} window
-     */
-    showBackupPage(window) {
-        if (!this._preferencesPage || !this._categoryListBox || !this._categoryRowsById?.backup)
-            return;
-        GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-            try {
-                window.set_visible_page(this._preferencesPage);
-                this._categoryListBox.select_row(this._categoryRowsById.backup);
-            } catch (e) {
-                logError(e, '[widget-center] prefs: showBackupPage() failed');
-            }
-            return GLib.SOURCE_REMOVE;
-        });
-    }
+    // showBackupPage() used to live here too (jump straight to the
+    // "Backup & Restore" category by selecting a sidebar row) but relied
+    // entirely on `_categoryListBox`/`_categoryRowsById`, both removed
+    // 2026-08-08 along with the sidebar layout itself (see
+    // `_buildPreferencesPage()`'s doc comment, lib/prefsPageBuilders.js).
+    // lib/prefsWindowControllerV2.js now defines its own
+    // `showBackupPage()` against the category accordion that replaced
+    // it — the only implementation that exists, since V2 is the only
+    // window this project builds.
 
     /**
      * @description Opens the "Export Theme…" dialog
@@ -248,138 +225,20 @@ class PrefsWindowControllerBase {
         }
     }
 
-    /**
-     * Top-level layout: two Adw.PreferencesPage siblings under `window`,
-     * which makes Adw.PreferencesWindow render its icon tabs —
-     * see repo/concept/preferences.png / overview.png for the reference
-     * mockups this maps to.
-     *   1. Overview  — the widget list (previously the only/default page,
-     *      titled "Widgets"; renamed, content unchanged).
-     *   2. Preferences — everything that used to be its own top-level
-     *      page (Appearance, Advanced) plus new placeholder categories
-     *      from the concept mockup, now behind a single vertical sidebar
-     *      list (`_buildPreferencesPage()`) instead of separate pill
-     *      tabs, since 8 categories in the pill switcher would be far too
-     *      cramped.
-     *
-     * 2026-07-30 extraction: this used to be `fillPreferencesWindow()`,
-     * called directly by GNOME Shell on a class extending
-     * ExtensionPreferences. Renamed to `build()` and moved to this plain
-     * class so widget-center-prefs-app.js's standalone process can call
-     * it too — see this file's header and that file's own header for
-     * why. Safe to call exactly once per window; call jumpToWidget()
-     * afterwards for any subsequent "open this widget's settings" request
-     * against the same window.
-     */
-    async build(window) {
-        // Bug fix (2026-07-26): a widget-settings edit made right before
-        // closing the Preferences window could be silently lost. Every
-        // write goes through WidgetSettings' ~300ms debounce (see that
-        // file's header) — closing the settings subpage via the plain
-        // "Close" button never flushed it (only "Save & Close" did, see
-        // _presentPrefsPage()), and even that only covers ONE widget's
-        // pending write, not any other subpage the user had touched and
-        // already navigated away from. Closing the whole window (X
-        // button, Esc, Ctrl+W, or the process just exiting) raced that
-        // timer with no guarantee it won. flushAll() here is the same
-        // safety net extension.js's WidgetLoader.unloadAll() already uses
-        // for the Shell-side equivalent of this problem — belt-and-
-        // suspenders alongside _presentPrefsPage()'s per-subpage flush,
-        // not a replacement for it.
-        window.connect('close-request', () => {
-            WidgetSettings.flushAll();
-            return false; // still allow the window to close normally.
-        });
-
-        const settings = new SettingsService(
-            this._extensionObject ?? GLib.build_filenamev([this.path, 'schemas'])
-        );
-        try {
-            settings.init();
-        } catch (e) {
-            logError(e, '[widget-center] prefs: SettingsService.init() failed');
-        }
-
-        // Extension-level UI strings (tab titles, category names, etc —
-        // see gen/generate_i18n.py's EXTENSION_KEYS). GNOME Shell awaits
-        // fillPreferencesWindow() if it returns a Promise (has since
-        // GNOME 44), so it's safe to resolve this before building
-        // anything rather than translating progressively like the
-        // per-widget Overview rows do (_applyWidgetI18n()) — there's
-        // only 15 short strings here, the wait is imperceptible, and it
-        // means every tab is correctly labeled from the very first frame
-        // instead of visibly relabeling itself a moment later.
-        // 2026-08-04: settings is now built BEFORE this (used to be
-        // after) specifically so the `language` override below can be
-        // read in time for this very first load, rather than only
-        // taking effect on the next widget subpage opened afterwards.
-        const languageOverride = settings.isReady ? (settings.getGlobalValue('language') || undefined) : undefined;
-        this._i18n = await loadTranslations(GLib.build_filenamev([this.path, 'i18n']), languageOverride).catch(() => ({}));
-
-        // Same StorageService file layer extension.js uses — plain
-        // Gio/GLib file I/O, so it's just as safe to use from this
-        // process as from the Shell's.
-        const storage = new StorageService();
-        storage.init();
-
-        const bundledWidgetsPath = GLib.build_filenamev([this.path, 'widgets']);
-        const userWidgetsPath = GLib.build_filenamev([
-            GLib.get_user_data_dir(), 'gnome-widget-center', 'widgets',
-        ]);
-        const {ok, errors} = new PrefsWidgetList([bundledWidgetsPath, userWidgetsPath]).list();
-
-        this._settings = settings;
-        this._storage = storage;
-        this._discovered = ok;
-
-        this._buildOverviewPage(window, settings, storage, ok, errors);
-        this._preferencesPage = this._buildPreferencesPage(window, settings, storage, ok, {bundledWidgetsPath, userWidgetsPath});
-
-        // 2026-07-20 fix ("click settings opens the extension prefs, not
-        // the widget prefs"): extension.js's Edit Mode "Settings" action
-        // writes the widget id here (requested-widget-id) right before
-        // calling openPreferences() — see extension.js's
-        // _openWidgetSettings() for the other half of this. Read it back
-        // and jump straight to that widget's settings sub-page instead of
-        // leaving the user on the top-level list. Cleared right after
-        // reading so a later manually-opened Control Center window (e.g.
-        // from GNOME's Extensions app) doesn't jump anywhere unexpected.
-        this._openRequestedWidgetPrefs(window, settings, storage, ok);
-
-        // 2026-07-30 fix ("click Settings on a widget while Preferences
-        // is already open does nothing, and logs an error"): the one-shot
-        // read above only ever runs once, right when fillPreferencesWindow()
-        // is called - fine the first time GNOME Shell creates a new prefs
-        // window, but if that window is still open and the user clicks
-        // Settings on a *different* widget, extension.js's
-        // openExtensionPrefs() call doesn't spawn a second window (either
-        // it re-focuses the existing one, or its returned promise just
-        // rejects — see extension.js's _openWidgetSettings() for that
-        // side), so fillPreferencesWindow() never runs again and nothing
-        // re-reads requested-widget-id. The write still lands in dconf
-        // correctly either way — nothing in *this* already-running prefs
-        // process was listening for it anymore, so the click appeared to
-        // do nothing.
-        //
-        // Fixed by keeping a live subscription for as long as this
-        // specific window stays open, on top of the one-shot check above.
-        // SettingsService.onChanged() wraps a plain dconf-backed
-        // Gio.Settings 'changed' signal, which fires here in the prefs
-        // process just as reliably as it does back in the Shell process
-        // (see that method's own doc comment) — so every subsequent
-        // Settings click, not just the one that happened to open this
-        // window, now jumps straight to the right widget's sub-page
-        // instead of requiring the user to close and reopen Preferences.
-        if (settings.isReady) {
-            const requestedIdHandlerId = settings.onChanged('requested-widget-id', value => {
-                this._jumpToWidgetPrefs(window, settings, storage, ok, value);
-            });
-            window.connect('close-request', () => {
-                settings.disconnect(requestedIdHandlerId);
-                return false;
-            });
-        }
-    }
+    // build() used to live here too — the v1 two-tab window (Overview +
+    // Preferences-as-sidebar, see repo/concept/preferences.png /
+    // overview.png). Removed 2026-08-08: PrefsWindowControllerV2
+    // (lib/prefsWindowControllerV2.js) completely overrides build() with
+    // its own four-tab version and is the only class this project ever
+    // constructs and calls .build() on (`prefs.js`,
+    // `widget-center-prefs-app.js`) — this base implementation was dead
+    // code the moment that switch happened. `PrefsWindowControllerBase`
+    // below is now just: constructor + shared helpers
+    // (_loadMetadataFromPath, _tr, showPreferencesPage,
+    // openExportThemeDialog/openExportThemeDialogForPack) + whatever the
+    // two mixins add — every actual `build()` lives on
+    // `PrefsWindowControllerV2` alone. If a v1-style window is ever
+    // wanted again, it's in this file's git history.
 
     /** @private this._i18n[key] if present, else `fallback` — see fillPreferencesWindow()'s doc comment. */
     _tr(key, fallback) {
@@ -389,10 +248,10 @@ class PrefsWindowControllerBase {
 
 /**
  * The two mixins are applied in this order so a page-builder method
- * (e.g. `_buildOverviewPage`) can call a widget-management method (e.g.
- * `_buildWidgetRow`) on `this` — both end up on the same prototype
- * chain either way (mixin order doesn't affect method visibility, only
- * matters if the two ever defined the SAME method name, which they
- * don't — see each mixin file for its method list).
+ * (e.g. `_buildGeneralCategory`) can call a widget-management method
+ * (e.g. `_buildWidgetRow`) on `this` — both end up on the same
+ * prototype chain either way (mixin order doesn't affect method
+ * visibility, only matters if the two ever defined the SAME method
+ * name, which they don't — see each mixin file for its method list).
  */
 export class PrefsWindowController extends PrefsWidgetManagementMixin(PrefsPageBuildersMixin(PrefsWindowControllerBase)) {}

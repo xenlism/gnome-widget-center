@@ -75,7 +75,7 @@ import {hmacSha256} from './crypto/hmacSha256.js';
 export const GWCBAK_EXTENSION = '.gwcbak';
 const GWCBAK_FORMAT = 'gwcbak';
 const GWCBAK_VERSION = 2;
-const BACKUP_GSCHEMA_KEYS = ['disabled-widgets', 'dev-mode'];
+const BACKUP_GSCHEMA_KEYS = ['disabled-widgets', 'dev-mode', 'auto-enable-new-widgets', 'known-widget-ids'];
 
 const MAGIC = new TextEncoder().encode('GWCBAK2'); // 7 bytes
 const SALT_LEN = 16;
