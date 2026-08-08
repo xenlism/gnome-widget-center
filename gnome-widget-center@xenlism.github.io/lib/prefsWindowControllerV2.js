@@ -178,7 +178,6 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
         // file's header), so there's nothing left that needs the whole
         // screen to avoid clipping. A normal, modest default size that
         // comfortably fits the 800px content plus window chrome/sidebar.
-
         const display = Gdk.Display.get_default();
         const monitor = display.get_monitors().get_item(0);
         const geometry = monitor.get_geometry();

@@ -71,7 +71,6 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         const page = new Adw.PreferencesPage({
             title: this._tr('tab.store.label', 'Store'),
             icon_name: 'system-search-symbolic',
-            width_request: 800,
         });
         window.add(page);
 
@@ -145,8 +144,8 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
             {id: 'interactions', title: this._tr('category.interactions', 'Interactions'), subtitle: 'Dragging, animations and actions',
                 icon: 'input-mouse-symbolic',
                 build: () => this._buildInteractionsCategory(settings)},
-            {id: 'backup', title: this._tr('category.backup', 'Backup &amp; Restore'), subtitle: 'Backup and restore widgets',
-                icon: 'cloud-upload-symbolic',
+            {id: 'backup', title: this._tr('category.backup', 'Backup and Restore'), subtitle: 'Backup and restore widgets',
+                icon: 'drive-multidisk-symbolic',
                 build: () => this._buildBackupCategory(window, settings, storage, discoveredWidgets, widgetPaths)},
             {id: 'importexport', title: this._tr('category.importexport', 'Import / Export'), subtitle: 'Import or export widget data',
                 icon: 'send-to-symbolic',
@@ -207,8 +206,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
      * @returns {Adw.Clamp}
      */
     _buildCategoryAccordion(categories) {
-        const clamp = new Adw.Clamp({maximum_size: 9999, tightening_threshold: 0});
-            clamp.set_hexpand(true);
+        const clamp = new Adw.Clamp({maximum_size: 800, tightening_threshold: 800});
         const list = new Gtk.Box({
             orientation: Gtk.Orientation.VERTICAL, spacing: 12,
             margin_top: 12, margin_bottom: 24, margin_start: 12, margin_end: 12,
@@ -275,13 +273,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
             if (expanded && !built) {
                 built = true;
                 const content = category.build();
-
-                content.set_hexpand(true);
-                content.set_vexpand(false);
-
-                revealer.set_hexpand(true);
-                revealer.set_vexpand(false);
-
+                content.vexpand = false;
                 revealer.set_child(content);
             }
         };
@@ -467,7 +459,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         page.add(group);
 
         const backupRow = new Adw.ActionRow({title: this._tr('backup.create.title', 'Create backup…'), activatable: true});
-        backupRow.add_suffix(new Gtk.Image({icon_name: 'cloud-upload-symbolic'}));
+        backupRow.add_suffix(new Gtk.Image({icon_name: 'drive-multidisk-symbolic'}));
         backupRow.connect('activated', async () => {
             const password = await promptPassword(window, this._tr('backup.password_prompt.heading', 'Backup password'),
                 this._tr('backup.password_prompt.create_body', 'Choose a password to protect this backup file. You\'ll need it to restore.'));
@@ -495,7 +487,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         group.add(backupRow);
 
         const restoreRow = new Adw.ActionRow({title: this._tr('backup.restore.title', 'Restore backup…'), activatable: true});
-        restoreRow.add_suffix(new Gtk.Image({icon_name: 'cloud-download-symbolic'}));
+        restoreRow.add_suffix(new Gtk.Image({icon_name: 'snapshots-alt-symbolic'}));
         restoreRow.connect('activated', async () => {
             const path = await chooseFile(window, {
                 action: 'open', title: this._tr('backup.restore.filechooser_title', 'Restore backup'), pattern: '*.gwcbak',

@@ -15,7 +15,7 @@ export default {
     "category.appearance": "Appearance",
     "category.desktop": "Desktop",
     "category.interactions": "Interactions",
-    "category.backup": "Backup & Restore",
+    "category.backup": "Backup and Restore",
     "category.importexport": "Import / Export",
     "category.advanced": "Advanced",
     "category.about": "About",
