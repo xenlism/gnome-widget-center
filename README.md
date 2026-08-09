@@ -4,47 +4,56 @@
 [![Toolkit](https://img.shields.io/badge/Toolkit-GTK%204.0-blue)](https://www.gtk.org/)
 [![License](https://img.shields.io/badge/License-GPL%203.0-blue.svg)](LICENSE)
 
-A desktop widget platform for GNOME Shell, built with GJS, GTK4, and Libadwaita.
+A desktop widget platform for GNOME Shell, built with GJS, GTK4, and
+Libadwaita.
 
-> **Status:** Alpha — feature-complete for a first preview, pending a full
-> real-hardware sign-off (see [Current Status](#current-status)).
+> **Status:** Alpha / preview. The current codebase is feature-rich and
+> has passed static JavaScript checks, but a complete clean-session
+> real-hardware GNOME Shell sign-off is still pending.
 
----
+------------------------------------------------------------------------
 
 ## Overview
 
-GNOME Widget Center brings desktop widgets to GNOME Shell in the spirit of
-KDE Plasma Widgets, while following the GNOME Human Interface Guidelines
-(HIG). Today the whole project is a single GNOME Shell extension —
-`gnome-widget-center@xenlism.github.io/` — that:
+GNOME Widget Center brings desktop widgets to GNOME Shell in the spirit
+of KDE Plasma Widgets while following GNOME Human Interface Guidelines
+(HIG).
 
-- discovers and loads widgets from a folder (bundled, or user-installed
-  under `~/.local/share/gnome-widget-center/widgets/`);
-- renders them on the desktop with free, pixel-precise placement and
-  collision-aware Edit Mode drag-and-drop;
-- gives every widget its own settings page, generated automatically from a
-  declarative `config.json` (or a hand-written GTK4/libadwaita `prefs.js`
-  for anything more custom);
-- ships a Control Center (Overview / Themes / Preferences) for managing,
-  theming, and configuring widgets, plus theme export/import as portable
-  `.gwct` files.
+The current project is a GNOME Shell extension:
 
-A widget never touches GNOME Shell internals directly — it talks only to
-the `WidgetAPI` object the host passes into it. See
-[`gnome-widget-center@xenlism.github.io/WIDGET_API.md`](gnome-widget-center@xenlism.github.io/WIDGET_API.md)
-for the full widget-author contract, or
-[`SKILL.md`](gnome-widget-center@xenlism.github.io/SKILL.md) in
-the same folder for the condensed, build-one-now version.
+`gnome-widget-center@xenlism.github.io/`
 
----
+It provides:
+
+-   Widget discovery from bundled and user-installed widget folders.
+-   Desktop rendering with fixed block sizes and free pixel placement.
+-   Edit Mode drag-and-drop with magnetic snapping and collision-aware
+    placement.
+-   Per-widget settings generated from declarative `config.json`, with a
+    custom `prefs.js` escape hatch.
+-   A Control Center with Overview, Themes, and Preferences.
+-   Widget screenshots shown in Overview cards when `metadata.json`
+    declares a `screenshot`.
+-   Appearance and theme management.
+-   `.gwct` theme export/import.
+-   Password-protected `.gwcbak` full backup and restore.
+
+A widget communicates with the host through the `WidgetAPI` rather than
+accessing GNOME Shell internals directly. See
+`gnome-widget-center@xenlism.github.io/WIDGET_API.md` and
+`gnome-widget-center@xenlism.github.io/SKILL.md`.
+
+------------------------------------------------------------------------
 
 ## ❤️ Support Development
 
-If you find **GNOME Widget Center** useful, please consider supporting its development.
+If GNOME Widget Center is useful to you, please consider supporting
+development.
 
 ### Ko-fi
 
-[![Support on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/xenlism)
+[![Support on
+Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/xenlism)
 
 ### PayPal
 
@@ -54,144 +63,389 @@ If you find **GNOME Widget Center** useful, please consider supporting its devel
 
 [USDT TRC20 QR Code](assets/usdt.jpg)
 
-Every contribution helps support development, maintenance, bug fixes, and new features.
+Every contribution helps support development, maintenance, bug fixes,
+and new features.
 
----
+------------------------------------------------------------------------
+
 ## Screenshots
-
-### Edit Mode ( Settings Reset Move By Right Click Toggle)
-**▶️ [Edit Mode](assets/editmode.mp4)**
-<video src="assets/editmode.mp4" controls width="1920"></video>
-![editmode](assets/editmode.png)
-
-
 
 ### Desktop
 
 ![Desktop](assets/desktop.png)
 
----
+### Edit Mode
 
-## Current Status
+![Edit Mode](assets/editmode.png)
 
-The project is currently a **single GNOME Shell extension** — there is no
-separate standalone GTK4 application or installable Widget SDK package yet
-(see [Vision](#vision) below for where that's headed).
+[▶️ Edit Mode video](assets/editmode.mp4)
 
-| Area | Status |
-|---|---|
-| Widget Loader (discover/load, hot-reload dev mode) | ✅ Working |
-| Widget Layer (desktop rendering, multi-monitor) | ✅ Working |
-| Settings (per-widget JSON, `config.json` schema UI, live cross-process reload) | ✅ Working |
-| Control Center (Overview / Store / Preferences, sidebar navigation) | ✅ Working |
-| Edit Mode (floating toolbar overlay, free pixel placement, collision avoidance) | ✅ Working |
-| Appearance / Theme system (`theme.json`, live `Gio.FileMonitor` reload, per-widget override + global Force) | ✅ Working |
-| Theme export/import (`.gwct`, with secret-field redaction and a dependency report) | ✅ Working |
-| System dependency checker (`GLib.find_program_in_path()`) | ✅ Working |
-| i18n — 6 locales (en, zh, es, th, de, ja) | ✅ Working |
-| Bundled widgets (~30, including clock, calendar, weather, system monitors, media player) | ✅ Working |
-| Debug logging / dev mode (Advanced prefs tab) | ✅ Working |
-| Full real-GNOME-Shell hardware sign-off | 🚧 Spot-tested; no full clean-run confirmation yet |
-| Standalone GTK4 application / installable Widget SDK / online widget repository | ⏳ Not started |
+### Widget Overview Cards
 
-"Working" means the code is written, `node --check`-verified, and
-exercised in development — not the same as a formal, end-to-end sign-off
-on a clean real GNOME Shell session. See
-[`gnome-widget-center@xenlism.github.io/PROJECT_STATUS.md`](gnome-widget-center@xenlism.github.io/PROJECT_STATUS.md)
-for a running log of recent changes.
+The Overview UI can use each widget's own screenshot:
 
----
+``` json
+{
+  "id": "weather-dark",
+  "name": "Weather (Dark)",
+  "description": "Wide dark weather card...",
+  "screenshot": "screenshot.webp"
+}
+```
 
-## Vision
+The image is resolved relative to the widget directory, so the example
+above loads:
 
-Longer-term, GNOME Widget Center aims to grow beyond a single extension
-into:
+`widgets/weather-dark/screenshot.webp`
 
-- A stable, documented Widget SDK third-party developers can build against
-- A standalone GTK4 companion application
-- A theme/widget repository with install, update, search, and ratings
-- Broader SDK surface area (network, notifications, storage, AI) beyond
-  what a widget can already do today via `WidgetAPI`
+This screenshot metadata is used by both the overlay Overview and the
+extension Preferences Overview.
 
----
+------------------------------------------------------------------------
+
+## Current Project Status
+
+  -----------------------------------------------------------------------
+  Area                                Status
+  ----------------------------------- -----------------------------------
+  Widget discovery and loading        ✅ Implemented
+
+  Bundled + user widget paths         ✅ Implemented
+
+  Desktop widget rendering            ✅ Implemented
+
+  Multi-monitor support               ✅ Implemented
+
+  Per-widget settings and JSON        ✅ Implemented
+  storage                             
+
+  Declarative `config.json` settings  ✅ Implemented
+  UI                                  
+
+  Custom widget `prefs.js`            ✅ Implemented
+
+  Live cross-process settings updates ✅ Implemented
+
+  Control Center / Preferences        ✅ Implemented
+  navigation                          
+
+  Overview cards with metadata        ✅ Implemented
+  screenshots                         
+
+  Edit Mode                           ✅ Implemented
+
+  Magnetic snapping / alignment       ✅ Implemented
+  guides                              
+
+  Appearance and theme service        ✅ Implemented
+
+  `.gwct` theme export/import         ✅ Implemented
+
+  `.gwcbak` full backup/restore       ✅ Implemented in code; runtime
+                                      clean-machine test still pending
+
+  Password-protected backup format    ✅ Implemented
+
+  Backup archive path-traversal       ✅ Implemented
+  validation                          
+
+  Widget dependency checking          ✅ Implemented
+
+  Internationalization                ✅ Implemented
+
+  Bundled widget collection           ✅ Included
+
+  Standalone GTK4 companion           ⏳ Not started
+  application                         
+
+  Installable Widget SDK / online     ⏳ Not started
+  repository                          
+
+  Full clean real-GNOME-Shell         🚧 Pending
+  hardware sign-off                   
+  -----------------------------------------------------------------------
+
+### Verification note
+
+The supplied project archive currently passes `node --check` across its
+JavaScript files and contains the complete backup/restore
+implementation.
+
+The backup implementation checks for `tar`, creates a `.gwcbak` archive
+containing host settings, widget settings, appearance data, and
+user-installed widget files, then encrypts the archive using AES-256-CTR
+with PBKDF2-HMAC-SHA256 key derivation and authenticates it with
+HMAC-SHA256.
+
+Restore verifies the backup header and authentication tag before
+extraction, validates tar entry paths against traversal, restores
+GSettings and widget files, then restores widget settings and themes.
+
+A real GJS/GTK runtime test on a clean GNOME Shell session is still
+required before describing backup/restore as fully hardware-verified.
+
+------------------------------------------------------------------------
+
+## Backup & Restore
+
+### `.gwct` Theme Pack
+
+`.gwct` is intended for theme/layout sharing.
+
+It contains:
+
+-   Desktop/widget positions.
+-   Widget settings.
+-   Appearance/theme configuration.
+
+Sensitive fields are redacted during theme export.
+
+### `.gwcbak` Full Backup
+
+`.gwcbak` is intended as a personal "move house" backup rather than a
+shareable theme.
+
+A full backup includes:
+
+-   Host extension settings.
+-   Widget settings, including values that may contain passwords or API
+    keys.
+-   Appearance/theme state.
+-   User-installed widget files.
+-   A manifest describing the saved widget state.
+
+Bundled widgets are not copied because they are supplied by the
+extension itself.
+
+Backups are password-protected and use:
+
+-   AES-256-CTR for encryption.
+-   PBKDF2-HMAC-SHA256 for key derivation.
+-   HMAC-SHA256 for authentication/integrity checking.
+-   A random salt and IV for each backup.
+
+The backup format also validates archive paths before extraction to
+prevent path traversal.
+
+> **Security note:** the cryptographic primitives are implemented inside
+> the project and have not received an independent security audit. Treat
+> `.gwcbak` as protected application backup data, not as independently
+> audited cryptographic software.
+
+------------------------------------------------------------------------
 
 ## Features
 
-### Desktop widgets
+### Desktop Widgets
 
-- Fixed-size widgets on a 16px grid, from a closed set of 10 block sizes
-  (`1x1` up to `4x4`)
-- Free, pixel-precise placement with collision avoidance in Edit Mode
-- Drag & drop (Super+drag in normal mode; a floating toolbar overlay in
-  Edit Mode)
-- Right-click context menu (Settings / Reset / Remove / Uninstall)
-- Multi-monitor aware
+-   Fixed-size widget blocks.
+-   16px grid-based placement.
+-   Free pixel positioning.
+-   Magnetic snapping.
+-   Alignment guides during drag.
+-   Collision-aware placement.
+-   Multi-monitor support.
+-   Right-click widget actions.
+-   Edit Mode overlay toolbar.
+-   Per-widget appearance overrides.
 
-### Widget authoring
+### Widget Authoring
 
-- Drop a folder in and go — no compiled schema, no install step
-- Settings UI generated for free from a declarative `config.json`
-  (text, location with IP auto-detect, color/font/icon pickers, file/folder
-  pickers, installed-app pickers, lists, conditional visibility, and more)
-- A hand-written `prefs.js` escape hatch for anything more bespoke
-- A reusable MPRIS2 media-player client (`lib/mediaApi.js`) and
-  CPU/RAM/network sampler (`lib/systemMetricsApi.js`) for bundled widgets
-- A cross-widget event bus, and per-widget/global appearance theming
-- Full i18n support across all widgets
+A widget can be added as a folder without a compiled schema.
 
-### Themes
+Typical widget structure:
 
-`.gwct` files export/import a full snapshot — desktop layout, installed
-widget settings, and appearance/theme configuration — as a single JSON
-file, with sensitive fields (API keys, tokens) automatically redacted on
-export.
+``` text
+my-widget/
+├── metadata.json
+├── widget.js
+├── screenshot.webp
+├── config.json
+├── prefs.js
+└── ...
+```
 
----
+`metadata.json` describes the widget identity, entry point, block type,
+default position, and optional screenshot.
+
+Example:
+
+``` json
+{
+  "id": "my-widget",
+  "name": "My Widget",
+  "description": "Example widget",
+  "version": "1.0.0",
+  "author": "Developer",
+  "api-version": 1,
+  "entry": "widget.js",
+  "block-type": "1x1",
+  "screenshot": "screenshot.webp"
+}
+```
+
+Settings can be generated from `config.json`, while a custom `prefs.js`
+can be used for more complex interfaces.
+
+### Settings
+
+The project supports declarative settings and custom settings pages,
+including fields such as:
+
+-   Text and textarea.
+-   Boolean switches and checkboxes.
+-   Dropdowns and radio choices.
+-   Numeric controls.
+-   Sliders.
+-   Colors, fonts, and icons.
+-   Files and folders.
+-   Lists and object editors.
+-   Location-related controls.
+-   Conditional UI.
+
+------------------------------------------------------------------------
+
+## Themes
+
+Theme state is handled by the theme service and can be applied globally
+or per widget.
+
+Theme packs use `.gwct` and can capture:
+
+-   Appearance.
+-   Widget layout.
+-   Widget theme configuration.
+-   Widget settings needed by the theme.
+
+------------------------------------------------------------------------
+
+## Widget Paths
+
+Bundled widgets are shipped inside:
+
+``` text
+gnome-widget-center@xenlism.github.io/widgets/
+```
+
+User-installed widgets are loaded from:
+
+``` text
+~/.local/share/gnome-widget-center/widgets/
+```
+
+The backup system copies user-installed widget directories, while
+bundled widgets are restored by reinstalling the extension.
+
+------------------------------------------------------------------------
 
 ## Project Structure
 
-```text
+``` text
 development/
-├── architecture/     # specs, contracts, architecture docs
-├── docs/              # WIDGET_API, SETTINGS_SPEC, THEME_SYSTEM, etc.
-├── tasks/             # task briefs + ROADMAP.md
-└── tests/             # e2e checklist
+├── architecture/     # Architecture, contracts, and design notes
+├── docs/             # Specifications and documentation
+├── tasks/            # Task briefs and roadmap
+└── tests/             # Test/e2e documentation
 
+assets/                # Project screenshots and media
 
-assets/                                  # screenshots, etc.
-gnome-widget-center@xenlism.github.io/   # the extension itself
-  ├── lib/           # host services (loader, theme, settings, drag, ...)
-  ├── widgets/       # bundled widgets
-  ├── i18n/          # locale files
-  ├── WIDGET_API.md  # widget author contract (full spec)
-  └── SKILL.md       # condensed widget-building guide
+gnome-widget-center@xenlism.github.io/
+├── lib/               # Host services and UI controllers
+│   ├── crypto/        # Backup cryptographic primitives
+│   ├── gjskit/        # GJS framework helpers
+│   ├── backupService.js
+│   ├── exportService.js
+│   ├── themeService.js
+│   ├── widgetLoader.js
+│   ├── layoutEngine.js
+│   ├── snapManager.js
+│   ├── guideRenderer.js
+│   ├── editModeDragController.js
+│   └── ...
+├── widgets/           # Bundled widgets
+├── i18n/              # Translation data
+├── schemas/           # GSettings schema
+├── themepacks/        # Bundled .gwct theme packs
+├── WIDGET_API.md      # Widget author contract
+├── SKILL.md           # Condensed widget development guide
+├── PROJECT_STATUS.md  # Project status and handover notes
+├── extension.js       # GNOME Shell extension entry point
+└── prefs.js           # Extension Preferences entry point
 ```
 
----
+------------------------------------------------------------------------
 
 ## Technology
 
-- GJS (GNOME JavaScript)
-- GTK4 + Libadwaita
-- GObject / GSettings
-- Meson (packaging)
-- GjsKit (Xenlism GJS Framework)
+-   GJS / JavaScript
+-   GNOME Shell
+-   GTK4
+-   Libadwaita
+-   GObject / GSettings
+-   Gio / GLib
+-   Meson
+-   GjsKit
 
----
+------------------------------------------------------------------------
+
+## Documentation
+
+Start here when developing widgets:
+
+-   `gnome-widget-center@xenlism.github.io/WIDGET_API.md`
+-   `gnome-widget-center@xenlism.github.io/SKILL.md`
+-   `gnome-widget-center@xenlism.github.io/PROJECT_STATUS.md`
+-   `gnome-widget-center@xenlism.github.io/checklist.md`
+
+------------------------------------------------------------------------
+
+## Development Notes
+
+The project currently contains both the main Preferences implementation
+and the newer Preferences V2 controller. V2 provides the current
+sidebar/accordion-style Preferences structure while preserving
+compatibility with existing focus/navigation entry points.
+
+The Overview card implementation is shared conceptually across the
+overlay and Preferences surfaces: widget metadata is the source of the
+card identity, description, and optional screenshot.
+
+When adding a screenshot to a widget, keep the image inside the widget
+directory and reference it from `metadata.json` using a relative path.
+
+------------------------------------------------------------------------
+
+## Vision
+
+Longer term, GNOME Widget Center aims to grow beyond a single extension
+into:
+
+-   A stable documented Widget SDK.
+-   A standalone GTK4 companion application.
+-   A widget/theme repository with search, installation, updates, and
+    ratings.
+-   A broader host API for network, notifications, storage, and other
+    services.
+
+------------------------------------------------------------------------
 
 ## Contributing
 
-Development documentation lives under `development/`. Widget authors
-should start with
-[`WIDGET_API.md`](gnome-widget-center@xenlism.github.io/WIDGET_API.md).
-Contributions, bug reports, and feature suggestions are welcome.
+Contributions, bug reports, testing reports, and feature suggestions are
+welcome.
 
----
+Before submitting changes, run JavaScript syntax checks and test the
+affected functionality in a real GNOME Shell session when possible.
+
+
+------------------------------------------------------------------------
 
 ## License
 
 GNU General Public License v3.0
 
+------------------------------------------------------------------------
 
 ## 👥 Visitor
+
 ![](https://github-visitor-counter-tau.vercel.app/api?username=xenlism&repo=gnome-widget-center&displayMode=topCountries&theme=transparent&showlabels=true&text=949494)
