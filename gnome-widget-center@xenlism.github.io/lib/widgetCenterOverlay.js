@@ -596,18 +596,19 @@ export class WidgetCenterOverlay {
 
         const bar = this._buildSortBar(
             this._themeSort, mode => { this._themeSort = mode; this._refreshThemesGrid(gridBin); });
-        bar.add_child(this._buildSearchEntry(
-            'Search themes…', this._themeSearch,
-            text => { this._themeSearch = text; this._refreshThemesGrid(gridBin); }));
+        
         // "Export current desktop…" — blank-form export (no prefill),
         // the tab-level counterpart to each card's own Export button
         // above. Routed through the same --export-theme-new flag
         // themePackExportDialog.js's own header comment already
         // documents as one of its two entry points; this button, not
         // the dialog or the flag, was the missing piece.
-        // bar.add_child(this._buildIconTextButton(
-        //    'emblem-shared-symbolic', 'Export current desktop…',
-        //    () => this._launchExternalPrefsWindow(['--export-theme-new'])));
+         bar.add_child(this._buildIconTextButton(
+            'emblem-shared-symbolic', 'Share desktop',
+            () => this._launchExternalPrefsWindow(['--export-theme-new'])));
+        bar.add_child(this._buildSearchEntry(
+            'Search themes…', this._themeSearch,
+            text => { this._themeSearch = text; this._refreshThemesGrid(gridBin); }));
         outer.add_child(bar);
         outer.add_child(gridBin);
 
@@ -688,8 +689,7 @@ export class WidgetCenterOverlay {
             reactive: true,
             accessible_name: `Apply theme ${manifest.name ?? id}`,
         });
-        loadButton.connect('clicked', () => this._loadThemePack(entry));
-        controls.add_child(loadButton);
+        
         // Export re-opens this pack's own themePackExportDialog.js
         // prefilled with its manifest (name/description/author/url/
         // widgets) via the --export-theme-id= flag — see
@@ -712,7 +712,8 @@ export class WidgetCenterOverlay {
                 'user-trash-symbolic', 'Uninstall', () => this._removeThemePack(entry)));
         }
         card.add_child(controls);
-
+        loadButton.connect('clicked', () => this._loadThemePack(entry));
+        controls.add_child(loadButton);
         return card;
     }
 
