@@ -21,7 +21,7 @@
 //     window is a separate spawned process).
 //
 // GTK4/libadwaita only — never import St/Clutter/Meta/Shell here, same
-// rule as every other file under prefsWindowController.js's dependency
+// rule as every other file under prefsWindowControllerBase.js's dependency
 // tree (see that file's header).
 
 import Adw from 'gi://Adw';
@@ -87,6 +87,10 @@ export function openThemePackExportDialog(parentWindow, services, prefill = {}) 
     authorRow.text = prefill.author ?? '';
     group.add(authorRow);
 
+    const emailRow = new Adw.EntryRow({title: 'Email'});
+    emailRow.text = prefill.email ?? '';
+    group.add(emailRow);
+
     const urlRow = new Adw.EntryRow({title: 'URL'});
     urlRow.text = prefill.url ?? '';
     group.add(urlRow);
@@ -117,46 +121,46 @@ export function openThemePackExportDialog(parentWindow, services, prefill = {}) 
     screenshotRow.add_suffix(screenshotButton);
     group.add(screenshotRow);
 
-    // --- Save location: browse button, same chooseFile() pattern every
-    // other export/backup flow in this codebase already uses.
-    const saveGroup = new Adw.PreferencesGroup({title: 'Save location'});
-    page.add(saveGroup);
-
-    let savePath = null;
-    const saveRow = new Adw.ActionRow({title: 'Save to…', subtitle: 'Not chosen yet'});
-    const saveButton = new Gtk.Button({label: 'Browse…', valign: Gtk.Align.CENTER});
-    saveButton.connect('clicked', async () => {
-        const suggestedName = `${(nameRow.text || 'theme-pack').replace(/[^\w.-]+/g, '-')}.gwct`;
-        const path = await chooseFile(window, {
-            action: 'save', title: 'Save theme pack', initialName: suggestedName, pattern: '*.gwct',
-        });
-        if (!path)
-            return;
-        savePath = ensureGwctExtension(path);
-        saveRow.subtitle = savePath;
+    // --- Bottom bar: Close / Export. Export itself pops the native
+    // GNOME "Save File" dialog (Gtk.FileChooserNative, via chooseFile()'s
+    // 'save' action) so the user picks the destination folder + filename
+    // at export time, rather than this dialog carrying its own separate
+    // Folder path/Filename fields (removed per the 2026-08-09
+    // export-dialog simplification ask).
+    const bottomBar = new Gtk.Box({
+        orientation: Gtk.Orientation.HORIZONTAL,
+        spacing: 8,
+        halign: Gtk.Align.END,
+        margin_top: 8,
+        margin_bottom: 12,
+        margin_start: 12,
+        margin_end: 12,
     });
-    saveRow.add_suffix(saveButton);
-    saveGroup.add(saveRow);
 
-    // --- Actions ---------------------------------------------------
-    const actionGroup = new Adw.PreferencesGroup();
-    page.add(actionGroup);
+    const closeButton = new Gtk.Button({label: 'Close'});
+    closeButton.connect('clicked', () => window.close());
+    bottomBar.append(closeButton);
 
     const exportButton = new Gtk.Button({
         label: 'Export',
-        css_classes: ['suggested-action', 'pill'],
-        halign: Gtk.Align.END,
-        margin_top: 8,
+        css_classes: ['suggested-action'],
     });
-    exportButton.connect('clicked', () => {
-        if (!savePath) {
-            showReportDialog(window, 'Choose a save location first', 'Use the Browse… button under "Save location".');
-            return;
-        }
+    exportButton.connect('clicked', async () => {
         if (!nameRow.text.trim()) {
             showReportDialog(window, 'Give this theme pack a name', 'The Name field can\'t be empty.');
             return;
         }
+
+        const defaultName = ensureGwctExtension(nameRow.text.trim().replace(/[^\w.-]+/g, '-') || 'theme-pack');
+        const savePath = await chooseFile(window, {
+            action: 'save',
+            title: 'Save theme pack',
+            initialName: defaultName,
+            initialFolder: GLib.get_home_dir(),
+            pattern: '*.gwct',
+        });
+        if (!savePath)
+            return; // user cancelled the save dialog
 
         try {
             // buildGwctDocument() already gathers exactly the
@@ -177,6 +181,7 @@ export function openThemePackExportDialog(parentWindow, services, prefill = {}) 
                 name: nameRow.text.trim(),
                 description: descRow.text.trim(),
                 author: authorRow.text.trim(),
+                email: emailRow.text.trim(),
                 url: urlRow.text.trim(),
             };
             if (screenshotPick) {
@@ -186,7 +191,7 @@ export function openThemePackExportDialog(parentWindow, services, prefill = {}) 
                 };
             }
 
-            const finalPath = writeGwctFile(savePath, document);
+            const finalPath = writeGwctFile(ensureGwctExtension(savePath), document);
             showReportDialog(window, 'Theme pack exported',
                 `Saved to ${finalPath}\nWidgets included: ${document.widgets.length}`);
             window.close();
@@ -195,8 +200,9 @@ export function openThemePackExportDialog(parentWindow, services, prefill = {}) 
             showReportDialog(window, 'Export failed', e.message);
         }
     });
-    actionGroup.add(exportButton);
+    bottomBar.append(exportButton);
 
+    toolbarView.add_bottom_bar(bottomBar);
     toolbarView.set_content(new Gtk.ScrolledWindow({child: page, vexpand: true}));
     window.set_content(toolbarView);
     window.present();

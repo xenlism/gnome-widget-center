@@ -26,11 +26,43 @@
 //     A widget can override its own background (`config.background`,
 //     e.g. `{color, transparent}`) and/or corner radius
 //     (`config.cornerRadius`, e.g. `{value}`) — see
-//     getEffectiveWidgetTheme() below. `global.background.force` /
-//     `global.cornerRadius.force` (2026-07-25) let the user pin EVERY
-//     themeable widget to the global value regardless of what any widget
-//     asked for — when force is on, the per-widget override for that one
-//     property is ignored entirely (not merged, not blended).
+//     getEffectiveWidgetTheme() below, always merged with the global
+//     theme now (no force flag on this side any more — see 2026-08-09
+//     note below).
+//
+//     2026-08-09: background/cornerRadius/dropShadow's `force` flags
+//     (originally 2026-07-25/2026-08-03) were RETIRED from this file —
+//     Force for those three properties now lives entirely in
+//     lib/forceSettingsHelper.js's GSettings-backed 4-switch model (see
+//     that file's header), which every widget that calls
+//     lib/widgetVisualKit.js's cardStyleCss()/blurCss()/
+//     shadowBoxShadowCss() already consults instead of these. Kept
+//     UNCHANGED here: `global.border.force` / `global.opacity.force` —
+//     border/opacity were a deliberate product decision to keep on this
+//     older per-property mechanism (see getEffectiveWidgetTheme()'s own
+//     comment) and are out of scope for this retirement.
+//
+//     MIGRATION NOTE: an existing theme.json written before this date
+//     may still contain `"force": true/false` under `global.background`/
+//     `global.cornerRadius`/`global.dropShadow`. That's harmless —
+//     save()/reload() round-trip whatever's in the file verbatim, so the
+//     key isn't stripped — but getEffectiveWidgetTheme() no longer reads
+//     it, so it's dead data. Anyone who had e.g.
+//     `global.background.force: true` set will see NO functional change
+//     from that flag any more.
+//
+//     2026-08-09 (later same day): `themeable: true` widgets — the ones
+//     routed through ThemeService.applyWidgetStyle() rather than
+//     widgetVisualKit.js, see extension.js's `_reapplyTheme()` — were
+//     briefly a real gap here (no equivalent Force mechanism at all, see
+//     applyWidgetStyle()'s own doc comment for the full history).
+//     Closed: applyWidgetStyle() now also consults ForceSettingsHelper,
+//     via the new setForceSettingsHelper() below, once extension.js
+//     wires one in — same GSettings-backed 4-switch model
+//     widgetVisualKit.js's cardStyleCss()/blurCss()/shadowBoxShadowCss()
+//     already use. Border/Opacity are unaffected either way — they stay
+//     on this file's own older per-property mechanism regardless of
+//     themeable/non-themeable.
 //
 // File format (`theme.json`):
 //
@@ -93,7 +125,7 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import {ensureDirectory, readTextFile, writeTextFile} from './fsUtils.js';
-import {angleDistanceToOffset} from './widgetVisualKit.js';
+import {angleDistanceToOffset, boxShadowCss, toCssColor, withAlphaHex} from './widgetVisualKit.js';
 
 const THEME_FILE_NAME = 'theme.json';
 
@@ -121,25 +153,26 @@ const DEFAULT_GLOBAL_THEME = Object.freeze({
         transparent: true,
         color: '#1e1e2e',
         blur: 0,
-        // 2026-07-25: when true, every themeable widget uses THIS
-        // background (transparent/color/blur) verbatim — any per-widget
-        // `config.background` override (see getEffectiveWidgetTheme())
-        // is ignored while this is on. blur here is the Function Helper
-        // task's "Blur" appearance category (2026-08-04) - kept as a
-        // background sub-property rather than its own top-level entry
-        // since it was already modeled that way before this task and
-        // there's no independent use for blur without a background to
-        // blur - see lib/widgetVisualKit.js's BLUR_DEFAULTS/
-        // applyCardBlur() for the per-widget settings-field equivalent.
-        force: false,
+        // 2026-07-25: used to carry its own `force: false` here — RETIRED
+        // 2026-08-09, see this file's header comment. Force for
+        // background is now GSettings-backed (lib/forceSettingsHelper.js)
+        // for non-themeable widgets; this object stays the plain
+        // per-widget default merge target it always was for everything
+        // else. blur here is the Function Helper task's "Blur" appearance
+        // category (2026-08-04) - kept as a background sub-property
+        // rather than its own top-level entry since it was already
+        // modeled that way before this task and there's no independent
+        // use for blur without a background to blur - see
+        // lib/widgetVisualKit.js's BLUR_DEFAULTS/applyCardBlur() for the
+        // per-widget settings-field equivalent.
     }),
     // 2026-07-25: widget card corner radius — separate from `background`
     // (a widget can want a square, opaque card, or a rounded transparent
-    // one; radius and fill are independent choices) but with the same
-    // "force" pattern as background above.
+    // one; radius and fill are independent choices). Used to carry its
+    // own `force: false` here too — retired 2026-08-09, same as
+    // background above.
     cornerRadius: Object.freeze({
         value: 12,
-        force: false,
     }),
     dropShadow: Object.freeze({
         enabled: true,
@@ -156,13 +189,9 @@ const DEFAULT_GLOBAL_THEME = Object.freeze({
         distance: 4,    // px
         blurRadius: 12,
         spread: 0,
-        // 2026-08-03: same "force" pattern as background/cornerRadius
-        // above - added later because it was missed in the 2026-07-25
-        // change, not because shadow is a lesser property. Before this,
-        // there was no way to pin every widget to the global shadow: a
-        // widget's `config.dropShadow` override was ALWAYS merged in
-        // (see getEffectiveWidgetTheme() below), unconditionally.
-        force: false,
+        // 2026-08-03: used to carry its own `force: false` here too,
+        // added later because it was missed in the 2026-07-25 change -
+        // retired 2026-08-09, same as background/cornerRadius above.
     }),
 });
 
@@ -205,6 +234,41 @@ export class ThemeService {
         this._isInitialized = false;
         /** @private {object|null} in-memory cache, reloaded on save()/reload() */
         this._cache = null;
+        /** @private {import('./forceSettingsHelper.js').ForceSettingsHelper|null}
+         * wired in by extension.js via setForceSettingsHelper() below
+         * (2026-08-09, HANDOVER_FORCE_SETTINGS.md next-steps item 1) -
+         * null until then, in which case applyWidgetStyle() keeps its
+         * pre-2026-08-09 behavior unchanged. */
+        this._forceSettingsHelper = null;
+    }
+
+    /**
+     * @method setForceSettingsHelper
+     * @description Wires this service to lib/forceSettingsHelper.js's
+     * GSettings-backed 4-switch Force model, so `applyWidgetStyle()` —
+     * the ONLY render path for `themeable: true` widgets (see that
+     * method's own doc comment and extension.js's `_reapplyTheme()`) —
+     * can also honor Background Color / Corner Radius / Background Blur /
+     * Shadow forcing, same as lib/widgetVisualKit.js's cardStyleCss()/
+     * blurCss()/shadowBoxShadowCss() already do for every non-themeable
+     * widget via that file's own setForceSettingsHelper(). Border/Opacity
+     * are NOT affected by this — they stay on this file's OLDER
+     * `global.border.force`/`global.opacity.force` mechanism unchanged,
+     * per the standing product decision documented at this file's header
+     * (getEffectiveWidgetTheme() still short-circuits those two the same
+     * way it always has).
+     *
+     * Called once by extension.js, right after constructing its
+     * ForceSettingsHelper — mirrors the "seed immediately, don't wait for
+     * the first change signal" pattern `setForcedTheme()`/
+     * widgetVisualKit.js's own `setForceSettingsHelper()` already use, so
+     * a themeable widget that opens with a Force switch already on
+     * renders forced on its very first paint. Call with `null` on
+     * teardown (extension.js's `disable()`).
+     * @param {import('./forceSettingsHelper.js').ForceSettingsHelper|null} helper
+     */
+    setForceSettingsHelper(helper) {
+        this._forceSettingsHelper = helper ?? null;
     }
 
     /**
@@ -304,7 +368,7 @@ export class ThemeService {
      * DEFAULT_GLOBAL_THEME so a partially-specified `theme.json` (e.g.
      * only `background.color` set) never leaves the other fields
      * `undefined` for a CSS generator to choke on.
-     * @returns {{background: object, dropShadow: object}}
+     * @returns {{background: object, cornerRadius: object, dropShadow: object, border: object, opacity: object}}
      */
     getGlobalTheme() {
         if (!this._isInitialized) this.init();
@@ -313,6 +377,8 @@ export class ThemeService {
             background: {...DEFAULT_GLOBAL_THEME.background, ...(g.background ?? {})},
             cornerRadius: {...DEFAULT_GLOBAL_THEME.cornerRadius, ...(g.cornerRadius ?? {})},
             dropShadow: {...DEFAULT_GLOBAL_THEME.dropShadow, ...(g.dropShadow ?? {})},
+            border: {...DEFAULT_GLOBAL_THEME.border, ...(g.border ?? {})},
+            opacity: {...DEFAULT_GLOBAL_THEME.opacity, ...(g.opacity ?? {})},
         };
     }
 
@@ -469,15 +535,18 @@ export class ThemeService {
      * every other global field. Widgets that set nothing there just get
      * the global theme unchanged.
      *
-     * `global.background.force` / `global.cornerRadius.force` /
-     * `global.dropShadow.force` / `global.border.force` /
-     * `global.opacity.force` (border/opacity added 2026-08-04, same
-     * pattern) short-circuit this per-widget merge entirely for that one
-     * property — while force is on, `config.background` /
-     * `config.cornerRadius` / `config.dropShadow` / `config.border` /
-     * `config.opacity` is not read at all, so a widget can't even
-     * partially override a forced property (e.g. keep the global color
-     * but change its own blur radius).
+     * `global.border.force` / `global.opacity.force` still short-circuit
+     * this per-widget merge entirely for those two properties — while
+     * force is on, `config.border` / `config.opacity` is not read at
+     * all, so a widget can't even partially override a forced property
+     * (e.g. keep the global color but change its own width).
+     *
+     * background/cornerRadius/dropShadow no longer have a force flag on
+     * this side as of 2026-08-09 — they always merge with the per-widget
+     * config below now (Force for those three lives in
+     * lib/forceSettingsHelper.js instead; see this file's header
+     * comment for the migration note and the known themeable-widget
+     * gap).
      * @param {string} widgetId
      * @returns {{background: object, cornerRadius: object, dropShadow: object, border: object, opacity: object}}
      */
@@ -485,17 +554,9 @@ export class ThemeService {
         const base = this.getGlobalTheme();
         const {config} = this.getWidgetTheme(widgetId);
 
-        const background = base.background.force
-            ? {...base.background}
-            : {...base.background, ...(config?.background ?? {})};
-
-        const cornerRadius = base.cornerRadius.force
-            ? {...base.cornerRadius}
-            : {...base.cornerRadius, ...(config?.cornerRadius ?? {})};
-
-        const dropShadow = base.dropShadow.force
-            ? {...base.dropShadow}
-            : {...base.dropShadow, ...(config?.dropShadow ?? {})};
+        const background = {...base.background, ...(config?.background ?? {})};
+        const cornerRadius = {...base.cornerRadius, ...(config?.cornerRadius ?? {})};
+        const dropShadow = {...base.dropShadow, ...(config?.dropShadow ?? {})};
 
         const border = base.border.force
             ? {...base.border}
@@ -518,29 +579,119 @@ export class ThemeService {
      * development/docs/WIDGET_API.md) get styled this way, so an existing
      * widget that already paints its own background (e.g. macos-clock)
      * isn't silently overridden by a host-wide default it never asked for.
+     *
+     * Force Settings (2026-08-09, HANDOVER_FORCE_SETTINGS.md next-steps
+     * item 1): this is the ONLY render path `themeable: true` widgets go
+     * through, so — unlike every other widget, which paints via
+     * lib/widgetVisualKit.js's cardStyleCss()/blurCss()/
+     * shadowBoxShadowCss() and already consults
+     * lib/forceSettingsHelper.js there — this method used to have no
+     * equivalent at all: a themeable widget simply couldn't be forced for
+     * Background Color/Corner Radius/Background Blur/Shadow, even with
+     * every other widget on the desktop obeying those switches. Closed by
+     * bridging this widget's effective background/cornerRadius/dropShadow
+     * into the same `{background, shadow}` shape and calling
+     * `this._forceSettingsHelper.resolve()`, once `setForceSettingsHelper()`
+     * has wired an instance in — inert (falls through to the unchanged
+     * pre-2026-08-09 rendering) until then. Border/Opacity are untouched —
+     * they still only ever come from this file's own
+     * `global.border.force`/`global.opacity.force`, same as before.
      * @param {St.Widget} actor
      * @param {string} widgetId
      */
     applyWidgetStyle(actor, widgetId) {
         if (!actor)
             return;
-        const {background, cornerRadius, dropShadow} = this.getEffectiveWidgetTheme(widgetId);
-        const alpha = background.transparent ? 0 : 1;
-        const parts = [`background-color: ${hexToRgba(background.color, alpha)};`];
-        if (Number.isFinite(background.blur) && background.blur > 0)
-            parts.push(`-st-background-blur: ${Math.round(background.blur)}px;`);
-        if (Number.isFinite(cornerRadius.value))
-            parts.push(`border-radius: ${Math.round(Math.max(0, cornerRadius.value))}px;`);
+        const {background, cornerRadius, dropShadow, border} = this.getEffectiveWidgetTheme(widgetId);
 
-        if (dropShadow.enabled && !dropShadow.transparent) {
-            const shadowAlpha = clampUnit(dropShadow.opacity, DEFAULT_GLOBAL_THEME.dropShadow.opacity);
-            const color = hexToRgba(dropShadow.color, shadowAlpha);
-            const angle = Number.isFinite(dropShadow.angle) ? dropShadow.angle : DEFAULT_GLOBAL_THEME.dropShadow.angle;
-            const distance = Number.isFinite(dropShadow.distance) ? dropShadow.distance : DEFAULT_GLOBAL_THEME.dropShadow.distance;
-            const blur = Number.isFinite(dropShadow.blurRadius) ? Math.max(0, dropShadow.blurRadius) : 12;
-            const spread = Number.isFinite(dropShadow.spread) ? dropShadow.spread : 0;
-            const {offsetX, offsetY} = angleDistanceToOffset(angle, distance);
-            parts.push(`box-shadow: ${offsetX}px ${offsetY}px ${blur}px ${spread}px ${color};`);
+        // Force Settings (2026-08-09, HANDOVER_FORCE_SETTINGS.md
+        // next-steps item 1) — bridge this widget's own effective
+        // background/cornerRadius/dropShadow (already merged with the
+        // global theme above) into the same {background, shadow} shape
+        // lib/widgetVisualKit.js's cardStyleCss()/shadowBoxShadowCss()
+        // feed lib/forceSettingsHelper.js's resolve(), so a themeable
+        // widget resolves Force identically to every other widget.
+        // `resolved` stays `null` (falling through to the exact
+        // pre-2026-08-09 rendering below, unchanged) until extension.js
+        // calls setForceSettingsHelper() — same "inert until wired"
+        // contract widgetVisualKit.js's own copy of this already has.
+        const resolved = this._forceSettingsHelper
+            ? this._forceSettingsHelper.resolve({
+                background: {
+                    color: withAlphaHex(background.color ?? '#1e1e2e', background.transparent ? 0 : 1),
+                    cornerRadius: cornerRadius.value,
+                    blur: background.blur,
+                },
+                shadow: {
+                    // `transparent` folded into `enabled` here since
+                    // resolve() only has one on/off flag for the whole
+                    // group — matches this method's own pre-existing
+                    // `dropShadow.enabled && !dropShadow.transparent`
+                    // gate below, just evaluated once up front instead
+                    // of at render time.
+                    enabled: dropShadow.enabled && !dropShadow.transparent,
+                    color: dropShadow.color,
+                    opacity: Math.round(clampUnit(dropShadow.opacity, DEFAULT_GLOBAL_THEME.dropShadow.opacity) * 100),
+                    spread: dropShadow.spread,
+                    blur: dropShadow.blurRadius,
+                },
+            })
+            : null;
+
+        const parts = [];
+
+        if (resolved) {
+            parts.push(`background-color: ${toCssColor(resolved.background.color, '#000000F5')};`);
+            if (Number.isFinite(resolved.background.blur) && resolved.background.blur > 0)
+                parts.push(`-st-background-blur: ${Math.round(resolved.background.blur)}px;`);
+            if (Number.isFinite(resolved.background.cornerRadius))
+                parts.push(`border-radius: ${Math.round(Math.max(0, resolved.background.cornerRadius))}px;`);
+            if (resolved.shadow.enabled) {
+                parts.push(boxShadowCss({
+                    color: resolved.shadow.color,
+                    opacityPercent: resolved.shadow.opacity,
+                    angleDeg: resolved.shadow.angle,
+                    distance: resolved.shadow.distance,
+                    blur: resolved.shadow.blur,
+                    spread: resolved.shadow.spread,
+                }));
+            }
+        } else {
+            const alpha = background.transparent ? 0 : 1;
+            parts.push(`background-color: ${hexToRgba(background.color, alpha)};`);
+            if (Number.isFinite(background.blur) && background.blur > 0)
+                parts.push(`-st-background-blur: ${Math.round(background.blur)}px;`);
+            if (Number.isFinite(cornerRadius.value))
+                parts.push(`border-radius: ${Math.round(Math.max(0, cornerRadius.value))}px;`);
+
+            if (dropShadow.enabled && !dropShadow.transparent) {
+                const shadowAlpha = clampUnit(dropShadow.opacity, DEFAULT_GLOBAL_THEME.dropShadow.opacity);
+                const color = hexToRgba(dropShadow.color, shadowAlpha);
+                const angle = Number.isFinite(dropShadow.angle) ? dropShadow.angle : DEFAULT_GLOBAL_THEME.dropShadow.angle;
+                const distance = Number.isFinite(dropShadow.distance) ? dropShadow.distance : DEFAULT_GLOBAL_THEME.dropShadow.distance;
+                const blur = Number.isFinite(dropShadow.blurRadius) ? Math.max(0, dropShadow.blurRadius) : 12;
+                const spread = Number.isFinite(dropShadow.spread) ? dropShadow.spread : 0;
+                const {offsetX, offsetY} = angleDistanceToOffset(angle, distance);
+                parts.push(`box-shadow: ${offsetX}px ${offsetY}px ${blur}px ${spread}px ${color};`);
+            }
+        }
+
+        // Border (2026-08-09 bug fix, HANDOVER item 1): unlike
+        // Background/Corner Radius/Shadow above, Border stays on the
+        // OLDER `global.border.force` mechanism regardless of whether a
+        // ForceSettingsHelper is wired in (see this method's own doc
+        // comment / getEffectiveWidgetTheme()'s header) - `border` above
+        // is already fully force-resolved by getEffectiveWidgetTheme()
+        // itself, so this is a plain, unconditional emit, same shape
+        // lib/widgetVisualKit.js's borderCss() builds for every other
+        // (non-themeable) widget. Previously this method never emitted a
+        // `border:` declaration at all, so `themeable: true` widgets
+        // (clock, calendar-minimal) had no way to show a border, forced
+        // or otherwise.
+        if (border?.enabled) {
+            const width = Number.isFinite(border.width) ? Math.max(0, border.width) : DEFAULT_GLOBAL_THEME.border.width;
+            const color = toCssColor(border.color ?? DEFAULT_GLOBAL_THEME.border.color, DEFAULT_GLOBAL_THEME.border.color);
+            parts.push(`border: ${width}px solid ${color};`);
         }
 
         actor.set_style(parts.join(' '));

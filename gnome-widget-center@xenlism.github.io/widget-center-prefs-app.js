@@ -33,7 +33,7 @@
 // subscribed-to across two independent processes.
 //
 // All the actual window content is unchanged — this file and prefs.js
-// both just call the SAME lib/prefsWindowController.js, so there is
+// both just call the SAME lib/prefsWindowControllerBase.js, so there is
 // exactly one implementation of "what the Settings window looks like",
 // not two to keep in sync. This checkpoint's PrefsWindowController.build()
 // is `async` (it awaits i18n strings before building anything - see that
@@ -54,7 +54,7 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import System from 'system';
 
-import {PrefsWindowControllerV2} from './lib/prefsWindowControllerV2.js';
+import {PrefsWindowControllerV2} from './lib/prefsWindowController.js';
 
 // Reverse-DNS'd from this extension's own uuid (metadata.json) rather
 // than picked arbitrarily, so it's obviously "the same project" to

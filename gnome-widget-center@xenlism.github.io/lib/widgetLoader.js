@@ -626,7 +626,7 @@ export class WidgetLoader {
             const {StWidgetWrapper} = await import('./gjskit/st/StWidget.js');
             new StWidgetWrapper(actor)
                 .size(cols * BLOCK_CELL_SIZE, rows * BLOCK_CELL_SIZE)
-                .clip(true);
+                .clip(true, this._shadowOverflowMargin);
         } catch (e) {
             this._recordError(widgetInfo, `failed to enforce block-type size: ${e.message}`);
         }

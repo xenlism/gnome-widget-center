@@ -85,7 +85,7 @@ export default class MediaPlayerSquareWidget {
             width: SIZE,
             height: SIZE,
             reactive: true,
-            clip_to_allocation: true,
+            clip_to_allocation: false, // Allow shadow to render outside bounds
         });
 
         // --- Cover frame (padded inset, centered by BinLayout) ---

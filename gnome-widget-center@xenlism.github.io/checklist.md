@@ -10,18 +10,83 @@ That suite proves the underlying logic (secret redaction, dependency
 checks, AES/PBKDF2 round-trips) against real file I/O and a real `tar`.
 It can't click through GTK dialogs — that's what this checklist is for.
 
-## 1. Force (background-color / corner-radius)
+## 1. Force Settings — 4 independent switches (+ Border/Opacity, older mechanism)
 
-- [ ] Preferences → Appearance → set a background color, turn its
-      **Force** switch on.
-- [ ] Open qa-test-widget's own appearance settings — the background
-      row should be disabled/greyed and show the global color, not
-      whatever was there before.
-- [ ] Turn Force off — qa-test-widget's own background row becomes
-      editable again and keeps its own value.
-- [ ] Repeat both steps for **corner radius**.
-- [ ] Confirm the widget on the desktop visually reflects whichever is
-      in effect (forced global vs per-widget).
+Preferences → Appearance now has 6 groups: **Force: Background Color**,
+**Force: Corner Radius**, **Force: Background Blur**, **Force: Shadow**,
+**Shadow Distance & Angle** (no switch — always global), and
+**Widget border / Widget opacity** (older `theme.json` mechanism, its
+own separate Force switches). Test with qa-test-widget (a
+non-themeable widget) **and** a themeable widget like `clock` or
+`calendar-minimal` — as of 2026-08-09 both should behave identically.
+
+### 1a. Background Color
+
+- [ ] Preferences → Appearance → **Force: Background Color** → pick a
+      color, turn the switch on.
+- [ ] qa-test-widget's own background-color row becomes
+      disabled/greyed; the widget on the desktop shows the forced
+      color.
+- [ ] Turn the switch off — qa-test-widget's row is editable again and
+      keeps its own value; the widget reverts to it on the desktop.
+- [ ] Repeat with `clock` or `calendar-minimal` (themeable widget) —
+      same forced-color result on the desktop (2026-08-09: this is the
+      part that was previously a no-op for themeable widgets — most
+      important thing to verify actually works now).
+
+### 1b. Corner Radius
+
+- [ ] Same on/off check as 1a, using **Force: Corner Radius**'s spin
+      row (0–32px).
+- [ ] With Background Color **still forced** from 1a, confirm Corner
+      Radius can be toggled independently — forcing/unforcing radius
+      must not change whether the color is forced, and vice versa.
+- [ ] Repeat on a themeable widget.
+
+### 1c. Background Blur
+
+- [ ] Same on/off check, using **Force: Background Blur**'s spin row
+      (0–60px).
+- [ ] Per Addendum 6/4 of `HANDOVER_FORCE_SETTINGS.md`: blur here is
+      rendered via `Clutter.BlurEffect`, which has **no strength
+      control** — confirm the visible behavior is ON/OFF only (any
+      value > 0 looks the same), not a gradually stronger blur as the
+      spin value increases. If it visibly scales with the number,
+      that's a discrepancy worth flagging.
+- [ ] Repeat on a themeable widget.
+
+### 1d. Shadow
+
+- [ ] Turn **Force: Shadow** on — set its color/opacity/spread/blur
+      rows to something obviously different from qa-test-widget's own
+      shadow.
+- [ ] Confirm all 5 sub-fields (enabled/color/opacity/spread/blur) move
+      together as one group — there's no way to force only the shadow
+      color while leaving opacity per-widget; that's by design, confirm
+      it matches, not a bug.
+- [ ] Turn the switch off — qa-test-widget's own shadow settings apply
+      again, editable.
+- [ ] Repeat on a themeable widget.
+
+### 1e. Shadow Distance & Angle (always global, no switch)
+
+- [ ] With **Force: Shadow off**, change **Shadow Distance & Angle**'s
+      values in Preferences.
+- [ ] Confirm every widget's shadow offset updates to match — even
+      though Force: Shadow itself is off and each widget's own
+      color/opacity/spread/blur stay per-widget. This is the one part
+      of the spec with no on/off branch at all; it should never be
+      possible to make a widget ignore the global distance/angle.
+
+### 1f. Border / Opacity (older `theme.json` mechanism, unrelated switches)
+
+- [ ] Preferences → Appearance → **Widget border** → turn its Force
+      switch on, set width/color — confirm qa-test-widget's own border
+      row greys out and the desktop widget shows the forced border.
+- [ ] Same for **Widget opacity**.
+- [ ] Confirm toggling Border/Opacity Force has no effect on any of the
+      4 switches in 1a–1d, and vice versa — the two mechanisms are
+      independent by design.
 
 ## 2. Dependency checking (qa-test-widget)
 

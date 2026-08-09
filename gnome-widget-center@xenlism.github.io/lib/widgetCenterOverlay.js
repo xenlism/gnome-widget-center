@@ -50,7 +50,6 @@ import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import {ThemePackRegistry} from './themePackRegistry.js';
-import {buildOverlayPreferencesContent} from './widgetCenterOverlayPreferences.js';
 
 const SCHEMA_ID = 'org.gnome.shell.extensions.widget-center';
 const KEYBINDING_KEY = 'widget-center-overlay-keybinding';
@@ -133,6 +132,12 @@ export class WidgetCenterOverlay {
         // both tabs, see SORT_MODES above.
         this._widgetSort = 'name';
         this._themeSort = 'name';
+
+        // Live-search text for the Overview/Themes tabs' search boxes
+        // (see _buildSearchEntry()) — same in-memory-only lifetime as
+        // the sort state above. Empty string means "show everything".
+        this._widgetSearch = '';
+        this._themeSearch = '';
 
         // Watcher bookkeeping for _launchExternalPrefsWindow()'s "hide
         // the overlay while a GTK4 prefs window is up, show it again
@@ -338,7 +343,7 @@ export class WidgetCenterOverlay {
         // bg-alpha-media-fix.md item 4).
         const leftSpacer = new St.Widget({x_expand: true});
         const tabsBox = new St.BoxLayout({style_class: 'wc-overlay-tabs'});
-        for (const [id, label] of [['overview', 'Overview'], ['themes', 'Themes'], ['settings', 'Preferences']]) {
+        for (const [id, label] of [['overview', 'Overview'], ['themes', 'Themes']]) {
             const button = new St.Button({
                 style_class: 'wc-overlay-tab',
                 label,
@@ -349,6 +354,23 @@ export class WidgetCenterOverlay {
             this._tabButtons[id] = button;
             tabsBox.add_child(button);
         }
+        // "Preferences" is no longer an in-overlay tab that renders
+        // content into _contentBin — it's a plain click-to-open button
+        // that hands straight off to the real extension Preferences
+        // window (prefs.js), same launch path _openExtensionPreferences()
+        // already used for the old tab's own banner/back-out link. Never
+        // added to this._tabButtons (nothing to ever mark "active" for a
+        // button that doesn't switch _contentBin's content), and
+        // _renderTab() below no longer has a 'settings' case for the
+        // same reason.
+        const preferencesButton = new St.Button({
+            style_class: 'wc-overlay-tab',
+            label: 'Preferences',
+            can_focus: true,
+            reactive: true,
+        });
+        preferencesButton.connect('clicked', () => this._openExtensionPreferences());
+        tabsBox.add_child(preferencesButton);
         const rightSpacer = new St.Widget({x_expand: true});
         header.add_child(leftSpacer);
         header.add_child(tabsBox);
@@ -371,9 +393,6 @@ export class WidgetCenterOverlay {
         case 'themes':
             content = this._buildThemesTab();
             break;
-        case 'settings':
-            content = this._buildSettingsTab();
-            break;
         case 'overview':
         default:
             content = this._buildOverviewTab();
@@ -385,18 +404,44 @@ export class WidgetCenterOverlay {
     // --- Tab 1: Overview (widgets) ---------------------------------------
 
     _buildOverviewTab() {
-        const disabled = new Set(this._getDisabledWidgets());
         const outer = new St.BoxLayout({vertical: true, x_expand: true, y_expand: true});
-        outer.add_child(this._buildSortBar(
-            this._widgetSort, mode => { this._widgetSort = mode; this._renderTab('overview'); }));
 
-        const entries = this._sortEntries(this._discoverWidgets(), this._widgetSort, {
+        // The grid lives in its own St.Bin below the toolbar so a
+        // search keystroke or sort-mode click only ever swaps THIS
+        // bin's child (_refreshOverviewGrid()) rather than going
+        // through _renderTab('overview') and rebuilding the whole tab
+        // (toolbar included) from scratch — see _buildSearchEntry()'s
+        // doc comment for why that distinction matters for a live
+        // "type and it filters immediately" search box specifically.
+        const gridBin = new St.Bin({x_expand: true, y_expand: true});
+
+        const bar = this._buildSortBar(
+            this._widgetSort, mode => { this._widgetSort = mode; this._refreshOverviewGrid(gridBin); });
+        bar.add_child(this._buildSearchEntry(
+            'Search widgets…', this._widgetSearch,
+            text => { this._widgetSearch = text; this._refreshOverviewGrid(gridBin); }));
+        outer.add_child(bar);
+        outer.add_child(gridBin);
+
+        this._refreshOverviewGrid(gridBin);
+        return outer;
+    }
+
+    /** @private (re)builds just the Overview tab's card grid into
+     * `gridBin` — the sort-mode/search-text change handlers above call
+     * this directly instead of _renderTab('overview') so the toolbar
+     * (and, critically, the live St.Entry the user may be mid-keystroke
+     * in) is never torn down and rebuilt. */
+    _refreshOverviewGrid(gridBin) {
+        const disabled = new Set(this._getDisabledWidgets());
+        let entries = this._sortEntries(this._discoverWidgets(), this._widgetSort, {
             name: e => e.metadata?.name ?? e.id,
             size: e => this._blockSizeCells(e.metadata?.['block-type']),
             mtime: e => e.mtimeUnix ?? 0,
         });
-        outer.add_child(this._buildGrid(entries, entry => this._buildWidgetCard(entry, disabled)));
-        return outer;
+        entries = this._filterEntries(entries, this._widgetSearch,
+            e => [e.metadata?.name, e.id, e.metadata?.description]);
+        gridBin.set_child(this._buildGrid(entries, entry => this._buildWidgetCard(entry, disabled)));
     }
 
     /** @private "2x1" -> 2 (cell count) for the Overview tab's "Widget
@@ -429,15 +474,18 @@ export class WidgetCenterOverlay {
             card.add_child(new St.Label({text: `by ${metadata.author}`, style_class: 'wc-overlay-card-author'}));
 
         const controls = new St.BoxLayout({style_class: 'wc-overlay-card-controls'});
-        controls.add_child(this._buildToggleButton(
+        controls.add_child(this._buildSwitch(
             !disabledSet.has(id), enabled => this._setWidgetEnabled(id, enabled)));
         controls.add_child(new St.Widget({x_expand: true}));
-        controls.add_child(this._buildIconButton('emblem-system-symbolic', () => this._openWidgetSettings(id)));
+        controls.add_child(this._buildIconTextButton(
+            'emblem-system-symbolic', 'Settings', () => this._openWidgetSettings(id)));
         // Remove button only for a widget installed under the user's own
         // folder(s) — a built-in widget bundled with the extension itself
         // has no Remove button at all, see entry.source/_discoverWidgets().
-        if (entry.source === 'user')
-            controls.add_child(this._buildIconButton('window-close-symbolic', () => this._removeWidget(id)));
+        if (entry.source === 'user') {
+            controls.add_child(this._buildIconTextButton(
+                'window-close-symbolic', 'Uninstall', () => this._removeWidget(id)));
+        }
         card.add_child(controls);
 
         return card;
@@ -542,17 +590,42 @@ export class WidgetCenterOverlay {
     _buildThemesTab() {
         const outer = new St.BoxLayout({vertical: true, x_expand: true, y_expand: true});
 
-        const bar = this._buildSortBar(
-            this._themeSort, mode => { this._themeSort = mode; this._renderTab('themes'); });
-        outer.add_child(bar);
+        // Same "grid gets its own bin so search/sort don't rebuild the
+        // toolbar" reasoning as _buildOverviewTab()'s gridBin above.
+        const gridBin = new St.Bin({x_expand: true, y_expand: true});
 
-        const entries = this._sortEntries(this._discoverThemePacks(), this._themeSort, {
+        const bar = this._buildSortBar(
+            this._themeSort, mode => { this._themeSort = mode; this._refreshThemesGrid(gridBin); });
+        bar.add_child(this._buildSearchEntry(
+            'Search themes…', this._themeSearch,
+            text => { this._themeSearch = text; this._refreshThemesGrid(gridBin); }));
+        // "Export current desktop…" — blank-form export (no prefill),
+        // the tab-level counterpart to each card's own Export button
+        // above. Routed through the same --export-theme-new flag
+        // themePackExportDialog.js's own header comment already
+        // documents as one of its two entry points; this button, not
+        // the dialog or the flag, was the missing piece.
+        // bar.add_child(this._buildIconTextButton(
+        //    'emblem-shared-symbolic', 'Export current desktop…',
+        //    () => this._launchExternalPrefsWindow(['--export-theme-new'])));
+        outer.add_child(bar);
+        outer.add_child(gridBin);
+
+        this._refreshThemesGrid(gridBin);
+        return outer;
+    }
+
+    /** @private (re)builds just the Themes tab's card grid into
+     * `gridBin` — see _refreshOverviewGrid()'s matching doc comment. */
+    _refreshThemesGrid(gridBin) {
+        let entries = this._sortEntries(this._discoverThemePacks(), this._themeSort, {
             name: e => e.manifest?.name ?? e.id,
             size: e => e.widgetCount ?? (e.manifest?.widgets?.length ?? 0),
             mtime: e => e.mtimeUnix ?? 0,
         });
-        outer.add_child(this._buildGrid(entries, entry => this._buildThemePackCard(entry)));
-        return outer;
+        entries = this._filterEntries(entries, this._themeSearch,
+            e => [e.manifest?.name, e.id, e.manifest?.description]);
+        gridBin.set_child(this._buildGrid(entries, entry => this._buildThemePackCard(entry)));
     }
 
     /** @private every directory a theme pack is considered "the user's
@@ -610,18 +683,34 @@ export class WidgetCenterOverlay {
         // missed, especially on cards without screenshots.
         const loadButton = new St.Button({
             style_class: 'wc-overlay-load-button',
-            label: 'Load',
+            label: 'Apply',
             can_focus: true,
             reactive: true,
-            accessible_name: `Load theme ${manifest.name ?? id}`,
+            accessible_name: `Apply theme ${manifest.name ?? id}`,
         });
         loadButton.connect('clicked', () => this._loadThemePack(entry));
         controls.add_child(loadButton);
+        // Export re-opens this pack's own themePackExportDialog.js
+        // prefilled with its manifest (name/description/author/url/
+        // widgets) via the --export-theme-id= flag — see
+        // widget-center-prefs-app.js's own doc comment for why this has
+        // to be a spawned GTK4 process rather than an in-overlay dialog
+        // (this file is St/Clutter-only). The dialog itself, and this
+        // CLI flag, both already existed — this button, the only thing
+        // that was actually missing, is the 2026-08-09 fix.
+        controls.add_child(this._buildIconTextButton(
+            'emblem-shared-symbolic', 'Share', () => this._exportThemePack(entry)));
         // Remove button only for a pack under the user's own themepacks
         // folder(s) — a pack bundled with the extension itself has no
         // Remove button at all, see entry.source/_discoverThemePacks().
-        if (entry.source === 'user')
-            controls.add_child(this._buildIconButton('window-close-symbolic', () => this._removeThemePack(entry)));
+        // Icon + "Uninstall" text (2026-08-08 ask) rather than icon-only,
+        // since this deletes the pack's files off disk (see
+        // _removeThemePack()'s own doc comment) and deserves a clearer
+        // label than a bare X.
+        if (entry.source === 'user') {
+            controls.add_child(this._buildIconTextButton(
+                'user-trash-symbolic', 'Uninstall', () => this._removeThemePack(entry)));
+        }
         card.add_child(controls);
 
         return card;
@@ -650,6 +739,17 @@ export class WidgetCenterOverlay {
         }
         this._services.onApplyThemePack?.(entry);
         this._renderTab('themes');
+    }
+
+    /** @private Opens themePackExportDialog.js (GTK4/libadwaita, a
+     * separate spawned process — see _launchExternalPrefsWindow()'s doc
+     * comment for why) prefilled with this pack's own manifest, via the
+     * `--export-theme-id=` flag widget-center-prefs-app.js already
+     * parses and prefsWindowControllerBase.js already routes to
+     * openThemePackExportDialog() with. This is the entry point that
+     * was missing — the dialog and the flag both already existed. */
+    _exportThemePack(entry) {
+        this._launchExternalPrefsWindow([`--export-theme-id=${entry.id}`]);
     }
 
     _openThemePackSettings(id) {
@@ -711,28 +811,12 @@ export class WidgetCenterOverlay {
         file.delete(null);
     }
 
-    // --- Tab 3: Settings --------------------------------------------------
+    // --- Preferences ---------------------------------------------------
 
-    // The overlay hosts the same live settings as the main Preferences
-    // window. It intentionally contains no backup or export shortcuts.
-    _buildSettingsTab() {
-        const outer = new St.BoxLayout({vertical: true, x_expand: true, y_expand: true, style_class: 'wc-pref-outer'});
-
-        const scroll = new St.ScrollView({style_class: 'wc-overlay-scroll', x_expand: true, y_expand: true});
-        try {
-            scroll.add_child(buildOverlayPreferencesContent(this._extension));
-        } catch (e) {
-            console.error('[widget-center] overlay: could not build the Preferences tab content', e);
-            const err = new St.BoxLayout({vertical: true, x_expand: true, y_expand: true,
-                x_align: Clutter.ActorAlign.CENTER, y_align: Clutter.ActorAlign.CENTER});
-            err.add_child(new St.Label({text: 'Preferences could not be loaded.', style_class: 'wc-overlay-empty'}));
-            scroll.add_child(err);
-        }
-        outer.add_child(scroll);
-
-        return outer;
-    }
-
+    // 2026-08-08: the overlay no longer hosts a reimplemented Preferences
+    // tab in-place (see _buildHeader()'s doc comment on the Preferences
+    // button) — clicking "Preferences" now always hands off to the real
+    // extension Preferences window below instead.
     _openExtensionPreferences() {
         if (this._services.onOpenPreferences) {
             this._services.onOpenPreferences();
@@ -752,8 +836,7 @@ export class WidgetCenterOverlay {
     /** @private a small St row of buttons, one per SORT_MODES entry,
      * highlighting whichever is `currentMode` — deliberately plain
      * buttons rather than a dropdown/combo (St has no native dropdown
-     * widget, same constraint noted in widgetCenterOverlayPreferences.js's
-     * `_cycleButton` helper) so this stays a simple, obviously-correct
+     * widget) so this stays a simple, obviously-correct
      * St.Button loop instead of hand-rolling a popup menu for something
      * with only three options.
      * @param {string} currentMode - one of SORT_MODES' `id`s.
@@ -800,6 +883,59 @@ export class WidgetCenterOverlay {
             return mode === 'mtime' ? kb - ka : ka - kb;
         });
         return sorted;
+    }
+
+    // --- Search (shared by the Overview and Themes tabs) ------------------
+
+    /** @private A single-line St.Entry styled/behaving like GNOME
+     * Shell's own search boxes (hint text shown when empty+unfocused,
+     * filters live via 'text-changed' — applying on every keystroke,
+     * rather than only on 'key-focus-out'/Enter, since "พิมพ์แล้วแสดงผลเลย" (results
+     * update as you type) was the explicit ask this was built for).
+     * Deliberately a small fixed width, not x_expand — this is meant to
+     * sit at the right-hand end of a _buildSortBar() row (which already
+     * ends in its own x_expand spacer pushing everything after it all
+     * the way right), not stretch to fill the whole row itself.
+     * @param {string} hintText
+     * @param {string} initialText - seeds the entry so a tab that gets
+     *   rebuilt for an unrelated reason (e.g. a widget Remove) doesn't
+     *   silently lose whatever the user had already typed.
+     * @param {(text: string) => void} onChange
+     * @returns {St.Entry}
+     */
+    _buildSearchEntry(hintText, initialText, onChange) {
+        const entry = new St.Entry({
+            style_class: 'wc-overlay-search',
+            hint_text: hintText,
+            can_focus: true,
+            reactive: true,
+            x_expand: false,
+            width: 220,
+        });
+        entry.set_primary_icon(new St.Icon({icon_name: 'edit-find-symbolic', icon_size: 14}));
+        if (initialText)
+            entry.set_text(initialText);
+        entry.clutter_text.connect('text-changed', () => onChange(entry.get_text()));
+        return entry;
+    }
+
+    /** @private Case-insensitive substring filter shared by the
+     * Overview/Themes search boxes. `fieldsFn(entry)` returns the
+     * fields to match against (name/id/description, ...) — any one
+     * matching is enough. A blank/whitespace-only query matches
+     * everything (same "empty search box = no filtering" convention
+     * every search box in this project's own config-field lists
+     * follows).
+     * @param {Array} entries
+     * @param {string} query
+     * @param {(entry) => Array<string>} fieldsFn
+     */
+    _filterEntries(entries, query, fieldsFn) {
+        const q = (query ?? '').trim().toLowerCase();
+        if (!q)
+            return entries;
+        return entries.filter(entry =>
+            fieldsFn(entry).some(field => String(field ?? '').toLowerCase().includes(q)));
     }
 
     // --- External GTK4 windows: z-index-over-overlay fix -------------------
@@ -1012,8 +1148,17 @@ export class WidgetCenterOverlay {
         const bin = new St.Bin({style_class: 'wc-overlay-card-screenshot', x_expand: true});
 
         if (shotPath) {
+            // St's CSS parser only accepts numeric/percentage <length>
+            // values for background-size/background-position - it doesn't
+            // understand the "cover"/"center" keywords (they get silently
+            // dropped with a "Ignoring length property that isn't a
+            // number" warning, which also meant the image was never sized
+            // into the bin). .wc-overlay-card is a fixed 480px wide with
+            // 12px padding each side, and .wc-overlay-card-screenshot is a
+            // fixed 160px tall, so use those exact pixel dimensions
+            // instead of "cover" for the same fill effect.
             const uri = Gio.File.new_for_path(shotPath).get_uri();
-            bin.set_style(`background-image: url("${uri}"); background-size: cover; background-position: center;`);
+            bin.set_style(`background-image: url("${uri}"); background-size: 456px 160px; background-position: 0px 0px;`);
         } else {
             bin.set_child(new St.Icon({
                 icon_name: 'image-x-generic-symbolic',
@@ -1065,35 +1210,72 @@ export class WidgetCenterOverlay {
         }
     }
 
-    _buildToggleButton(initialOn, onChange) {
-        let on = initialOn;
-        const icon = new St.Icon({
-            icon_name: on ? 'checkbox-checked-symbolic' : 'checkbox-symbolic',
-            icon_size: 20,
+    /**
+     * Shared on/off switch — St.Button(toggle_mode:true) + a "knob"
+     * child, reused (rather than duplicated) so the widget-enable control
+     * (Overview tab) and the theme-active indicator (Themes tab) render
+     * as the exact same visual switch. Pass `onChange: null` for a
+     * read-only/informational switch (see `_buildThemeStatus()` below) —
+     * `sensitive: false` then blocks both the click and the `:hover`/
+     * `:active` CSS states, matching a genuinely disabled control rather
+     * than a clickable-looking one that silently does nothing.
+     * @param {boolean} initialOn
+     * @param {?function(boolean):void} onChange - null for a read-only switch
+     */
+    _buildSwitch(initialOn, onChange) {
+        const readOnly = !onChange;
+        const button = new St.Button({
+            style_class: 'wc-pref-switch',
+            toggle_mode: !readOnly,
+            checked: !!initialOn,
+            can_focus: !readOnly,
+            reactive: !readOnly,
+            opacity: readOnly ? 200 : 255,
         });
-        const button = new St.Button({style_class: 'wc-overlay-toggle', can_focus: true, reactive: true});
-        button.set_child(icon);
-        button.connect('clicked', () => {
-            on = !on;
-            icon.icon_name = on ? 'checkbox-checked-symbolic' : 'checkbox-symbolic';
-            onChange(on);
-        });
+        button.add_child(new St.Widget({style_class: 'wc-pref-switch-knob'}));
+        if (!readOnly)
+            button.connect('notify::checked', () => onChange(button.checked));
         return button;
     }
 
+    /** @private read-only switch showing whether a theme pack is the
+     * currently active one. No text caption alongside it (removed
+     * 2026-08-08 — the switch's own on/off position already says
+     * "active" or not; a redundant word next to it was just noise). Kept
+     * as a non-interactive switch rather than a real toggle for the same
+     * reason `_buildThemeStatus()` always has: only one theme pack is
+     * ever active at a time, so clicking a card's own switch on/off
+     * doesn't map onto a meaningful action the way it does for a widget's
+     * independent enable/disable switch. */
     _buildThemeStatus(enabled) {
-        const status = new St.BoxLayout({style_class: 'wc-overlay-toggle', reactive: false, can_focus: false});
-        status.add_child(new St.Icon({
-            icon_name: enabled ? 'checkbox-checked-symbolic' : 'checkbox-symbolic',
-            icon_size: 20,
-        }));
-        status.add_child(new St.Label({text: enabled ? ' Enabled' : ' Not loaded'}));
+        const status = this._buildSwitch(enabled, null);
+        status.accessible_name = enabled ? 'Active' : 'Not loaded';
         return status;
     }
 
     _buildIconButton(iconName, callback) {
         const button = new St.Button({style_class: 'wc-overlay-icon-button', can_focus: true, reactive: true});
         button.set_child(new St.Icon({icon_name: iconName, icon_size: 16}));
+        button.connect('clicked', callback);
+        return button;
+    }
+
+    /** @private icon + text button — used where an icon-only button
+     * (`_buildIconButton()` above) isn't clear enough on its own, e.g.
+     * a destructive "Uninstall" action that should say so, not just show
+     * an X. Same `wc-overlay-icon-button` base style plus a label, so it
+     * still matches the rest of this card's chrome. */
+    _buildIconTextButton(iconName, text, callback) {
+        const button = new St.Button({
+            style_class: 'wc-overlay-icon-button wc-overlay-icon-text-button',
+            can_focus: true,
+            reactive: true,
+            accessible_name: text,
+        });
+        const box = new St.BoxLayout();
+        box.add_child(new St.Icon({icon_name: iconName, icon_size: 16}));
+        box.add_child(new St.Label({text}));
+        button.set_child(box);
         button.connect('clicked', callback);
         return button;
     }

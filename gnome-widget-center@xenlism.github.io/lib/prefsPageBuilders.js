@@ -1,10 +1,10 @@
 // products/extension/lib/prefsPageBuilders.js
 //
-// Split out of prefsWindowController.js (2026-08-01 lib/ cleanup pass) —
+// Split out of prefsWindowControllerBase.js (2026-08-01 lib/ cleanup pass) —
 // the "build one Adw.PreferencesPage/category" methods (Overview, Store,
 // Preferences shell, Import/Export, Backup/Restore, About, Appearance,
 // Advanced, Desktop). Applied as a mixin onto PrefsWindowControllerBase
-// (see prefsWindowController.js) rather than moved into a standalone
+// (see prefsWindowControllerBase.js) rather than moved into a standalone
 // class, so every `this.xxx` reference below keeps meaning exactly what
 // it meant before the split — `this` is still the one
 // PrefsWindowController instance, same prototype-chain method lookup as
@@ -26,7 +26,25 @@ import {createBackup, restoreBackup} from './backupService.js';
 import {openThemePackExportDialog} from './themePackExportDialog.js';
 import {rgbaToHex} from './colorUtils.js';
 import {SUPPORTED_LOCALES} from '../i18n/index.js';
-import {SHADOW_ANGLE_STEPS} from './widgetVisualKit.js';
+import {SHADOW_ANGLE_STEPS} from './forceSettingsHelper.js';
+
+/**
+ * @private Gdk.RGBA -> `#rrggbbaa` (alpha INCLUDED, unlike
+ * colorUtils.js's `rgbaToHex()` which deliberately drops it - that one's
+ * for theme.json's border/dropShadow/background colors, which encode
+ * transparency via a separate boolean `transparent` field instead. The
+ * Force Settings GSettings keys (force-background-color/
+ * force-shadow-color) store an 8-digit hex with alpha baked in directly
+ * (see their schema defaults, e.g. `'#1e1e2eff'`), so they need alpha
+ * kept - this is a local variant just for those two fields, not a
+ * replacement for the shared one.
+ * @param {Gdk.RGBA} rgba
+ * @returns {string}
+ */
+function rgbaToHex8(rgba) {
+    const toHex = c => Math.round(Math.min(1, Math.max(0, c)) * 255).toString(16).padStart(2, '0');
+    return `#${toHex(rgba.red)}${toHex(rgba.green)}${toHex(rgba.blue)}${toHex(rgba.alpha)}`;
+}
 
 /**
  * @private true if `keyval` is a bare modifier key (both L/R variants of
@@ -36,11 +54,9 @@ import {SHADOW_ANGLE_STEPS} from './widgetVisualKit.js';
  * can actually be recorded — pressing Ctrl then Shift then `a` must keep
  * waiting through the first two key-pressed events, only completing on
  * `a` (by which point `state` already reflects both modifiers being
- * held). Same keyval list the overlay's own Clutter-based shortcut
- * recorder already filters (lib/widgetCenterOverlayPreferences.js's
- * `_shortcutRecorder()`), just GDK keyvals instead of Clutter ones and
- * with a couple of extras (Meta/Hyper/lock/ISO-level-shift) that the
- * overlay version's shorter list didn't need to worry about.
+ * held). GDK keyvals, plus a couple of extras (Meta/Hyper/lock/
+ * ISO-level-shift) a plain Ctrl/Shift/Alt/Super filter wouldn't
+ * otherwise need to worry about.
  * @param {number} keyval
  * @returns {boolean}
  */
@@ -98,7 +114,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
      * sidebar+stack layout (v1's original design, `{layout: 'sidebar'}`
      * — a left-hand category list swapping right-hand content, see
      * repo/concept/preferences.png) selectable via an options flag.
-     * Removed now that lib/prefsWindowControllerV2.js's accordion is the
+     * Removed now that lib/prefsWindowController.js's accordion is the
      * only window this project actually builds (`prefs.js` and
      * `widget-center-prefs-app.js` both construct
      * `PrefsWindowControllerV2` exclusively — see HANDOVER_PREFS_V2.md's
@@ -114,7 +130,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
      * @param {{includeAbout?: boolean}} [options] - `includeAbout: false`
      *   drops the "About" row from the category list below without
      *   touching `_buildAboutCategory()` itself, which
-     *   lib/prefsWindowControllerV2.js still reuses verbatim for its own
+     *   lib/prefsWindowController.js still reuses verbatim for its own
      *   standalone About tab (Overview/Themes/Preferences/About as
      *   SEPARATE top-level tabs, About not nested in here). Omitted
      *   default (About included) is unused by any current caller —
@@ -137,7 +153,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
                 build: () => this._buildGeneralCategory(settings)},
             {id: 'appearance', title: this._tr('category.appearance', 'Appearance'), subtitle: 'Theme, colors and layout',
                 icon: 'applications-graphics-symbolic',
-                build: () => this._buildAppearanceCategory()},
+                build: () => this._buildAppearanceCategory(settings)},
             {id: 'desktop', title: this._tr('category.desktop', 'Desktop'), subtitle: 'Margins, spacing and position',
                 icon: 'video-display-symbolic',
                 build: () => this._buildDesktopCategory(settings)},
@@ -175,7 +191,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
      * @private "Group settings" accordion — the `{layout: 'accordion'}`
      * alternative to the NavigationSplitView sidebar above. Wrapped in
      * an `Adw.Clamp` (maximum-size 800) so it lines up with the same
-     * fixed 800px reading width lib/prefsWindowControllerV2.js's
+     * fixed 800px reading width lib/prefsWindowController.js's
      * Overview/Themes/About tabs use (`_buildClampedCardPage()`) — this
      * is the one place in this sidebar-oriented file that needs to know
      * about that number, since v1's sidebar (unaffected by this option)
@@ -218,7 +234,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         // showBackupPage() override can jump straight to a specific
         // category the same way v1's sidebar-based showBackupPage() did
         // with `_categoryListBox.select_row(...)` — see that override
-        // in lib/prefsWindowControllerV2.js for why this exists (v1's
+        // in lib/prefsWindowController.js for why this exists (v1's
         // implementation reads `this._categoryListBox`/
         // `_categoryRowsById`, neither of which this accordion layout
         // builds, so without this map that deep-link silently no-ops).
@@ -576,51 +592,68 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
     }
 
     /**
-     * @private Theme system (2026-07-21, corner radius + force flags
-     * 2026-07-25) — an Appearance page for editing `theme.json`'s GLOBAL
-     * background/corner-radius/drop-shadow settings (see
-     * development/docs/THEME_SYSTEM.md and lib/themeService.js). This
-     * page only ever calls `ThemeService.setGlobalTheme()`; per-widget
-     * overrides are exposed on each themeable widget's own settings
-     * subpage instead (see `_appendWidgetAppearanceGroup()` below), and
-     * the "Force" switches here (`background.force`/`cornerRadius.force`)
-     * make those per-widget overrides get ignored entirely while on.
+     * @private Appearance page. Rewritten 2026-08-09 for the Force
+     * Settings spec (see HANDOVER_FORCE_SETTINGS.md): Background Color /
+     * Corner Radius / Background Blur / Shadow now write straight to the
+     * extension's own GSettings (`this._settings`) via 4 INDEPENDENT
+     * Force switches (`force-background-color-enabled` /
+     * `force-corner-radius-enabled` / `force-background-blur-enabled` /
+     * `force-shadow-appearance-enabled`) instead of the older
+     * `theme.json`-based single-switch-per-property model. Each switch
+     * can be on/off independently of the other 3 - e.g. Corner Radius
+     * forced while Background Color/Blur/Shadow stay per-widget.
+     * Shadow Distance/Angle have NO Force switch at all - they're always
+     * read from GSettings regardless (per spec), so their rows here are
+     * unconditional.
      *
-     * Every row writes straight through on change (same "no separate Save
-     * step" convention settingsSchemaUI.js's rows already use) —
-     * ThemeService.save() is a single small atomic file write, cheap
-     * enough to do on every toggle/color-pick/spin-value change with no
-     * debounce needed (unlike widgetSettings.js's per-keystroke text
-     * fields).
+     * Border and Opacity are NOT part of this spec and deliberately stay
+     * on the OLDER theme.json mechanism (`ThemeService`/`current.border`/
+     * `current.opacity`) — this pass just adds the Force switch rows for
+     * them that were previously missing from the UI (backend `.force`
+     * support already existed in themeService.js).
+     *
+     * No "Transparent" toggle here anymore for Background Color/Shadow -
+     * the new GSettings color keys store alpha directly in an 8-digit
+     * hex (`rgbaToHex8()` below), so transparency is just "pick a color
+     * with lower alpha" rather than a separate boolean, unlike the older
+     * theme.json model.
+     *
+     * GSettings rows write straight through via `settings.set_*()` on
+     * change - no separate save step needed, same immediate-write feel
+     * as the theme.json rows below (`ThemeService.save()` is likewise a
+     * cheap atomic write done per keystroke/toggle).
+     * @param {SettingsService} settings - same instance every sibling
+     *   category builder in this file receives (`_buildGeneralCategory()`
+     *   etc) - passed explicitly by `_buildPreferencesPage()` rather than
+     *   read off `this._settings`, matching that existing convention.
      * @returns {Adw.PreferencesPage} content only — caller (now
      *   `_buildPreferencesPage()`'s "Appearance" category) decides where
      *   this ends up; it's no longer added to `window` directly.
      */
-    _buildAppearanceCategory() {
+    _buildAppearanceCategory(settings) {
         const theme = new ThemeService();
         theme.init();
         const current = theme.getGlobalTheme();
+        // Same "not ready yet" guard the rest of this file's GSettings-backed
+        // rows already use (e.g. _buildGeneralCategory()'s language/keybinding
+        // rows below) - falls back to the schema's own defaults so the page
+        // still renders sane values if build() is called before `settings`
+        // finished initializing.
+        const ready = settings?.isReady;
 
         const page = new Adw.PreferencesPage();
 
-        // --- Background -------------------------------------------------
-        const bgGroup = new Adw.PreferencesGroup({
-            title: 'Widget background',
-            description: 'Applies to any widget that opts in via metadata.json\'s ' +
-                '"themeable": true, plus every widget\'s Edit Mode card.',
+        // --- Force: Background Color (independent switch) ---------------
+        const bgColorGroup = new Adw.PreferencesGroup({
+            title: 'Force: Background Color',
+            description: 'Independent of the other 3 Force switches below. When off, ' +
+                'each widget keeps its own background color from its Appearance settings.',
         });
-        page.add(bgGroup);
-
-        const bgTransparentRow = new Adw.SwitchRow({
-            title: 'Transparent',
-            subtitle: 'When on, the background color below is fully see-through.',
-            active: !!current.background.transparent,
-        });
-        bgGroup.add(bgTransparentRow);
+        page.add(bgColorGroup);
 
         const bgColorRow = new Adw.ActionRow({title: 'Background color'});
         const bgRgba = new Gdk.RGBA();
-        bgRgba.parse(current.background.color ?? '#1e1e2e');
+        bgRgba.parse((ready && settings.getGlobalValue('force-background-color')) || '#1e1e2eff');
         const bgColorButton = new Gtk.ColorDialogButton({
             dialog: new Gtk.ColorDialog({with_alpha: true}),
             rgba: bgRgba,
@@ -628,122 +661,188 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         });
         bgColorRow.add_suffix(bgColorButton);
         bgColorRow.set_activatable_widget(bgColorButton);
-        bgGroup.add(bgColorRow);
-
-        const bgBlurAdjustment = new Gtk.Adjustment({
-            lower: 0,
-            upper: 64,
-            step_increment: 1,
-            value: current.background.blur ?? 0,
+        bgColorGroup.add(bgColorRow);
+        bgColorButton.connect('notify::rgba', () => {
+            settings.setGlobalValue('force-background-color', rgbaToHex8(bgColorButton.rgba));
         });
-        const bgBlurRow = new Adw.SpinRow({
-            title: 'Background blur',
-            subtitle: '0\u201364 px',
-            adjustment: bgBlurAdjustment,
-        });
-        bgGroup.add(bgBlurRow);
 
-        const bgForceRow = new Adw.SwitchRow({
-            title: 'Force this background on every widget',
-            subtitle: 'Overrides any background color/transparency a widget sets for itself ' +
+        const bgColorForceRow = new Adw.SwitchRow({
+            title: 'Force this background color on every widget',
+            subtitle: 'Overrides any background color a widget sets for itself ' +
                 'in its own Appearance settings.',
-            active: !!current.background.force,
+            active: ready ? !!settings.getGlobalValue('force-background-color-enabled') : false,
         });
-        bgGroup.add(bgForceRow);
+        bgColorGroup.add(bgColorForceRow);
+        bgColorForceRow.connect('notify::active', () => {
+            settings.setGlobalValue('force-background-color-enabled', bgColorForceRow.active);
+        });
 
-        const saveBackground = () => {
-            theme.setGlobalTheme({
-                background: {
-                    transparent: bgTransparentRow.active,
-                    color: rgbaToHex(bgColorButton.rgba),
-                    blur: bgBlurRow.value,
-                    force: bgForceRow.active,
-                },
-            });
-        };
-        bgTransparentRow.connect('notify::active', saveBackground);
-        bgColorButton.connect('notify::rgba', saveBackground);
-        bgBlurRow.connect('notify::value', saveBackground);
-        bgForceRow.connect('notify::active', saveBackground);
-
-        // --- Corner radius --------------------------------------------
+        // --- Force: Corner Radius (independent switch) -------------------
         const radiusGroup = new Adw.PreferencesGroup({
-            title: 'Widget corner radius',
-            description: 'Same opt-in rule as the background above.',
+            title: 'Force: Corner Radius',
+            description: 'Independent of the other 3 Force switches above/below.',
         });
         page.add(radiusGroup);
 
         const radiusRow = new Adw.SpinRow({
             title: 'Corner radius',
-            subtitle: '0\u201364 px',
+            subtitle: '0\u201332 px',
             adjustment: new Gtk.Adjustment({
-                lower: 0, upper: 64, step_increment: 1,
-                value: current.cornerRadius.value ?? 12,
+                lower: 0, upper: 32, step_increment: 1,
+                value: ready ? settings.getGlobalValue('force-corner-radius') : 12,
             }),
         });
         radiusGroup.add(radiusRow);
+        radiusRow.connect('notify::value', () => {
+            settings.setGlobalValue('force-corner-radius', Math.round(radiusRow.value));
+        });
 
         const radiusForceRow = new Adw.SwitchRow({
             title: 'Force this corner radius on every widget',
             subtitle: 'Overrides any corner radius a widget sets for itself ' +
                 'in its own Appearance settings.',
-            active: !!current.cornerRadius.force,
+            active: ready ? !!settings.getGlobalValue('force-corner-radius-enabled') : false,
         });
         radiusGroup.add(radiusForceRow);
+        radiusForceRow.connect('notify::active', () => {
+            settings.setGlobalValue('force-corner-radius-enabled', radiusForceRow.active);
+        });
 
-        const saveCornerRadius = () => {
-            theme.setGlobalTheme({
-                cornerRadius: {
-                    value: radiusRow.value,
-                    force: radiusForceRow.active,
-                },
-            });
-        };
-        radiusRow.connect('notify::value', saveCornerRadius);
-        radiusForceRow.connect('notify::active', saveCornerRadius);
+        // --- Force: Background Blur (independent switch) -----------------
+        const blurGroup = new Adw.PreferencesGroup({
+            title: 'Force: Background Blur',
+            description: 'Independent of the other 3 Force switches above/below.',
+        });
+        page.add(blurGroup);
 
-        // --- Drop shadow --------------------------------------------------
+        const blurRow = new Adw.SpinRow({
+            title: 'Background blur',
+            subtitle: '0\u201360 px',
+            adjustment: new Gtk.Adjustment({
+                lower: 0, upper: 60, step_increment: 1,
+                value: ready ? settings.getGlobalValue('force-background-blur') : 0,
+            }),
+        });
+        blurGroup.add(blurRow);
+        blurRow.connect('notify::value', () => {
+            settings.setGlobalValue('force-background-blur', Math.round(blurRow.value));
+        });
+
+        const blurForceRow = new Adw.SwitchRow({
+            title: 'Force this background blur on every widget',
+            subtitle: 'Overrides any background blur a widget sets for itself ' +
+                'in its own Appearance settings.',
+            active: ready ? !!settings.getGlobalValue('force-background-blur-enabled') : false,
+        });
+        blurGroup.add(blurForceRow);
+        blurForceRow.connect('notify::active', () => {
+            settings.setGlobalValue('force-background-blur-enabled', blurForceRow.active);
+        });
+
+        // --- Force: Shadow (independent switch, 5 fields move together) --
         const shadowGroup = new Adw.PreferencesGroup({
-            title: 'Widget drop shadow',
-            description: 'Same opt-in rule as the background above.',
+            title: 'Force: Shadow',
+            description: 'Independent of the other 3 Force switches above. All 5 fields below ' +
+                'move together as one group when this switch is on - Shadow isn\'t split ' +
+                'further. Distance/Angle live in the section below and are always global, ' +
+                'unaffected by this switch.',
         });
         page.add(shadowGroup);
 
         const shadowEnabledRow = new Adw.SwitchRow({
             title: 'Enabled',
-            active: !!current.dropShadow.enabled,
+            active: ready ? !!settings.getGlobalValue('force-shadow-enabled') : true,
         });
         shadowGroup.add(shadowEnabledRow);
-
-        const shadowTransparentRow = new Adw.SwitchRow({
-            title: 'Transparent',
-            subtitle: 'Overrides Enabled above — a fully transparent shadow is drawn as none at all.',
-            active: !!current.dropShadow.transparent,
+        shadowEnabledRow.connect('notify::active', () => {
+            settings.setGlobalValue('force-shadow-enabled', shadowEnabledRow.active);
         });
-        shadowGroup.add(shadowTransparentRow);
 
         const shadowColorRow = new Adw.ActionRow({title: 'Shadow color'});
         const shadowRgba = new Gdk.RGBA();
-        shadowRgba.parse(current.dropShadow.color ?? '#000000');
+        shadowRgba.parse((ready && settings.getGlobalValue('force-shadow-color')) || '#000000ff');
         const shadowColorButton = new Gtk.ColorDialogButton({
-            dialog: new Gtk.ColorDialog(),
+            dialog: new Gtk.ColorDialog({with_alpha: true}),
             rgba: shadowRgba,
             valign: Gtk.Align.CENTER,
         });
         shadowColorRow.add_suffix(shadowColorButton);
         shadowColorRow.set_activatable_widget(shadowColorButton);
         shadowGroup.add(shadowColorRow);
+        shadowColorButton.connect('notify::rgba', () => {
+            settings.setGlobalValue('force-shadow-color', rgbaToHex8(shadowColorButton.rgba));
+        });
 
         const shadowOpacityRow = new Adw.SpinRow({
             title: 'Opacity',
-            subtitle: '0.0\u20131.0',
+            subtitle: '0\u2013100 %',
             adjustment: new Gtk.Adjustment({
-                lower: 0, upper: 1, step_increment: 0.05,
-                value: current.dropShadow.opacity ?? 0.45,
+                lower: 0, upper: 100, step_increment: 1,
+                value: ready ? settings.getGlobalValue('force-shadow-opacity') : 45,
             }),
-            digits: 2,
         });
         shadowGroup.add(shadowOpacityRow);
+        shadowOpacityRow.connect('notify::value', () => {
+            settings.setGlobalValue('force-shadow-opacity', Math.round(shadowOpacityRow.value));
+        });
+
+        const shadowSpreadRow = new Adw.SpinRow({
+            title: 'Spread',
+            subtitle: '0\u201320 px',
+            adjustment: new Gtk.Adjustment({
+                lower: 0, upper: 20, step_increment: 1,
+                value: ready ? settings.getGlobalValue('force-shadow-spread') : 0,
+            }),
+        });
+        shadowGroup.add(shadowSpreadRow);
+        shadowSpreadRow.connect('notify::value', () => {
+            settings.setGlobalValue('force-shadow-spread', Math.round(shadowSpreadRow.value));
+        });
+
+        const shadowBlurRow = new Adw.SpinRow({
+            title: 'Blur radius',
+            subtitle: '0\u201360 px',
+            adjustment: new Gtk.Adjustment({
+                lower: 0, upper: 60, step_increment: 1,
+                value: ready ? settings.getGlobalValue('force-shadow-blur') : 12,
+            }),
+        });
+        shadowGroup.add(shadowBlurRow);
+        shadowBlurRow.connect('notify::value', () => {
+            settings.setGlobalValue('force-shadow-blur', Math.round(shadowBlurRow.value));
+        });
+
+        const shadowForceRow = new Adw.SwitchRow({
+            title: 'Force this drop shadow on every widget',
+            subtitle: 'Overrides any drop shadow a widget sets for itself in its own ' +
+                'Appearance settings. Distance/Angle below are excluded - always global.',
+            active: ready ? !!settings.getGlobalValue('force-shadow-appearance-enabled') : false,
+        });
+        shadowGroup.add(shadowForceRow);
+        shadowForceRow.connect('notify::active', () => {
+            settings.setGlobalValue('force-shadow-appearance-enabled', shadowForceRow.active);
+        });
+
+        // --- Shadow Distance/Angle — always global, NO Force switch ------
+        const shadowGlobalGroup = new Adw.PreferencesGroup({
+            title: 'Shadow distance &amp; angle',
+            description: 'Always applied to every widget\'s shadow - no Force switch needed, ' +
+                'these two fields have no per-widget alternative to override.',
+        });
+        page.add(shadowGlobalGroup);
+
+        const shadowDistanceRow = new Adw.SpinRow({
+            title: 'Distance',
+            subtitle: '0\u201330 px',
+            adjustment: new Gtk.Adjustment({
+                lower: 0, upper: 30, step_increment: 1,
+                value: ready ? settings.getGlobalValue('shadow-distance') : 4,
+            }),
+        });
+        shadowGlobalGroup.add(shadowDistanceRow);
+        shadowDistanceRow.connect('notify::value', () => {
+            settings.setGlobalValue('shadow-distance', Math.round(shadowDistanceRow.value));
+        });
 
         const shadowAngleModel = new Gtk.StringList({strings: SHADOW_ANGLE_STEPS.map(deg => `${deg}\u00b0`)});
         const shadowAngleRow = new Adw.ComboRow({
@@ -751,69 +850,112 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
             subtitle: 'Direction the shadow is cast in.',
             model: shadowAngleModel,
         });
-        const shadowAngleIndex = SHADOW_ANGLE_STEPS.indexOf(current.dropShadow.angle ?? 90);
+        const shadowAngleIndex = SHADOW_ANGLE_STEPS.indexOf(ready ? settings.getGlobalValue('shadow-angle') : 90);
         shadowAngleRow.selected = shadowAngleIndex >= 0 ? shadowAngleIndex : SHADOW_ANGLE_STEPS.indexOf(90);
-        shadowGroup.add(shadowAngleRow);
+        shadowGlobalGroup.add(shadowAngleRow);
+        shadowAngleRow.connect('notify::selected', () => {
+            settings.setGlobalValue('shadow-angle', SHADOW_ANGLE_STEPS[shadowAngleRow.selected] ?? 90);
+        });
 
-        const shadowDistanceRow = new Adw.SpinRow({
-            title: 'Distance',
+        // --- Border (OLDER theme.json mechanism) --------------------------
+        // Not part of the Force Settings spec - stays on ThemeService by
+        // product decision. This pass adds the Force switch row that was
+        // previously missing (backend `.force` support already existed).
+        const borderGroup = new Adw.PreferencesGroup({
+            title: 'Widget border',
+            description: 'Applies to any widget that opts in via metadata.json\'s ' +
+                '"themeable": true. Uses the older theme.json mechanism, not the 4 ' +
+                'GSettings Force switches above.',
+        });
+        page.add(borderGroup);
+
+        const borderEnabledRow = new Adw.SwitchRow({
+            title: 'Enabled',
+            active: !!current.border.enabled,
+        });
+        borderGroup.add(borderEnabledRow);
+
+        const borderColorRow = new Adw.ActionRow({title: 'Border color'});
+        const borderRgba = new Gdk.RGBA();
+        borderRgba.parse(current.border.color ?? '#FFFFFF33');
+        const borderColorButton = new Gtk.ColorDialogButton({
+            dialog: new Gtk.ColorDialog({with_alpha: true}),
+            rgba: borderRgba,
+            valign: Gtk.Align.CENTER,
+        });
+        borderColorRow.add_suffix(borderColorButton);
+        borderColorRow.set_activatable_widget(borderColorButton);
+        borderGroup.add(borderColorRow);
+
+        const borderWidthRow = new Adw.SpinRow({
+            title: 'Width',
             subtitle: 'px',
             adjustment: new Gtk.Adjustment({
-                lower: 0, upper: 64, step_increment: 1,
-                value: current.dropShadow.distance ?? 4,
+                lower: 0, upper: 16, step_increment: 1,
+                value: current.border.width ?? 1,
             }),
         });
-        shadowGroup.add(shadowDistanceRow);
+        borderGroup.add(borderWidthRow);
 
-        const shadowBlurRow = new Adw.SpinRow({
-            title: 'Blur radius',
-            subtitle: 'px',
-            adjustment: new Gtk.Adjustment({
-                lower: 0, upper: 128, step_increment: 1,
-                value: current.dropShadow.blurRadius ?? 12,
-            }),
+        const borderForceRow = new Adw.SwitchRow({
+            title: 'Force this border on every widget',
+            subtitle: 'Overrides any border a widget sets for itself in its own Appearance settings.',
+            active: !!current.border.force,
         });
-        shadowGroup.add(shadowBlurRow);
+        borderGroup.add(borderForceRow);
 
-        const shadowSpreadRow = new Adw.SpinRow({
-            title: 'Spread',
-            subtitle: 'px',
-            adjustment: new Gtk.Adjustment({
-                lower: -64, upper: 64, step_increment: 1,
-                value: current.dropShadow.spread ?? 0,
-            }),
-        });
-        shadowGroup.add(shadowSpreadRow);
-
-        const shadowForceRow = new Adw.SwitchRow({
-            title: 'Force this drop shadow on every widget',
-            subtitle: 'Overrides any drop shadow a widget sets for itself ' +
-                'in its own Appearance settings.',
-            active: !!current.dropShadow.force,
-        });
-        shadowGroup.add(shadowForceRow);
-
-        const saveShadow = () => {
+        const saveBorder = () => {
             theme.setGlobalTheme({
-                dropShadow: {
-                    enabled: shadowEnabledRow.active,
-                    transparent: shadowTransparentRow.active,
-                    color: rgbaToHex(shadowColorButton.rgba),
-                    opacity: shadowOpacityRow.value,
-                    angle: SHADOW_ANGLE_STEPS[shadowAngleRow.selected] ?? 90,
-                    distance: shadowDistanceRow.value,
-                    blurRadius: shadowBlurRow.value,
-                    spread: shadowSpreadRow.value,
-                    force: shadowForceRow.active,
+                border: {
+                    enabled: borderEnabledRow.active,
+                    width: borderWidthRow.value,
+                    color: rgbaToHex8(borderColorButton.rgba),
+                    force: borderForceRow.active,
                 },
             });
         };
-        for (const row of [shadowEnabledRow, shadowTransparentRow, shadowOpacityRow,
-            shadowDistanceRow, shadowBlurRow, shadowSpreadRow, shadowForceRow]) {
-            row.connect(row instanceof Adw.SwitchRow ? 'notify::active' : 'notify::value', saveShadow);
-        }
-        shadowAngleRow.connect('notify::selected', saveShadow);
-        shadowColorButton.connect('notify::rgba', saveShadow);
+        borderEnabledRow.connect('notify::active', saveBorder);
+        borderColorButton.connect('notify::rgba', saveBorder);
+        borderWidthRow.connect('notify::value', saveBorder);
+        borderForceRow.connect('notify::active', saveBorder);
+
+        // --- Opacity (OLDER theme.json mechanism) --------------------------
+        // Same story as Border above - stays on ThemeService, this pass
+        // just adds the previously-missing Force switch row.
+        const opacityGroup = new Adw.PreferencesGroup({
+            title: 'Widget opacity',
+            description: 'Fades the entire widget, not just the background fill. Uses the ' +
+                'older theme.json mechanism, not the 4 GSettings Force switches above.',
+        });
+        page.add(opacityGroup);
+
+        const opacityRow = new Adw.SpinRow({
+            title: 'Opacity',
+            subtitle: '0\u2013100 %',
+            adjustment: new Gtk.Adjustment({
+                lower: 0, upper: 100, step_increment: 1,
+                value: current.opacity.value ?? 100,
+            }),
+        });
+        opacityGroup.add(opacityRow);
+
+        const opacityForceRow = new Adw.SwitchRow({
+            title: 'Force this opacity on every widget',
+            subtitle: 'Overrides any opacity a widget sets for itself in its own Appearance settings.',
+            active: !!current.opacity.force,
+        });
+        opacityGroup.add(opacityForceRow);
+
+        const saveOpacity = () => {
+            theme.setGlobalTheme({
+                opacity: {
+                    value: opacityRow.value,
+                    force: opacityForceRow.active,
+                },
+            });
+        };
+        opacityRow.connect('notify::value', saveOpacity);
+        opacityForceRow.connect('notify::active', saveOpacity);
 
         return page;
     }

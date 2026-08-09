@@ -1,7 +1,7 @@
 // products/extension/lib/colorUtils.js
 //
 // Tiny shared helper used by prefsPageBuilders.js and
-// prefsWidgetManagement.js (both split out of prefsWindowController.js,
+// prefsWidgetManagement.js (both split out of prefsWindowControllerBase.js,
 // 2026-08-01 cleanup pass) for the color-picker fields in the Appearance
 // category and per-widget appearance overrides.
 

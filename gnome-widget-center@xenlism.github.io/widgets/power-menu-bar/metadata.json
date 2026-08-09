@@ -1,7 +1,7 @@
 {
   "id": "power-menu-bar",
   "name": "Power Menu (Bar)",
-  "description": "Wide `barx2` card (23\u00d75 grid cells): the same Suspend/Restart/Power Off/Log Out icon buttons as the Power Menu card, evenly spaced in a single row instead of a 2x2 grid.",
+  "description": "Wide `barx2` card (23×5 grid cells): the same Suspend/Restart/Power Off/Log Out icon buttons as the Power Menu card, evenly spaced in a single row instead of a 2x2 grid.",
   "version": "1.0.0",
   "author": "GNOME Widget Center",
   "api-version": 1,
@@ -11,5 +11,6 @@
     "x": 40,
     "y": 40,
     "monitor": 0
-  }
+  },
+  "screenshot": "screenshot.png"
 }

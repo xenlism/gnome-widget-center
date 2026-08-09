@@ -1,12 +1,12 @@
 // products/extension/lib/prefsWidgetManagement.js
 //
-// Split out of prefsWindowController.js (2026-08-01 lib/ cleanup pass) —
+// Split out of prefsWindowControllerBase.js (2026-08-01 lib/ cleanup pass) —
 // per-widget logic: jumping the window to one widget's settings subpage,
 // building its Overview row, enabling/disabling it, and opening whichever
 // of the four settings UIs it has (config.json / settings.js / hand-
 // written prefs.js / legacy `settings` schema — see this file's sibling
-// prefsWindowController.js header for the priority order). Applied as a
-// mixin onto PrefsWindowControllerBase (see prefsWindowController.js),
+// prefsWindowControllerBase.js header for the priority order). Applied as a
+// mixin onto PrefsWindowControllerBase (see prefsWindowControllerBase.js),
 // same as the sibling prefsPageBuilders.js mixin — every `this.xxx`
 // reference below still means exactly what it meant before the split.
 
@@ -34,10 +34,10 @@ export const PrefsWidgetManagementMixin = Base => class extends Base {
      * category — `auto-enable-new-widgets`/`known-widget-ids` GSettings
      * keys, see schemas/*.gschema.xml for the full contract). Called
      * once near the top of building v2's Overview tab
-     * (`_buildOverviewCardsTab()`, lib/prefsWindowControllerV2.js —
+     * (`_buildOverviewCardsTab()`, lib/prefsWindowController.js —
      * v1's own list-based Overview page,
      * `_buildOverviewPage()`, was removed once
-     * lib/prefsWindowControllerV2.js became the only window this
+     * lib/prefsWindowController.js became the only window this
      * project actually builds; see HANDOVER_PREFS_V2.md),
      * BEFORE either reads disabled-widgets to decide each row/card's
      * initial switch state — so a widget disabled by this policy shows
@@ -279,7 +279,7 @@ export const PrefsWidgetManagementMixin = Base => class extends Base {
      */
     _loadWidgetI18n(widget) {
         // 2026-08-04: same `language` override as everywhere else - see
-        // prefsWindowController.js's build() for the identical read
+        // prefsWindowControllerBase.js's build() for the identical read
         // against this._settings for the main window's own chrome
         // strings. this._settings is already set by the time any widget
         // subpage can be opened (build() runs first).

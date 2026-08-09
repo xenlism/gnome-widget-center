@@ -302,7 +302,7 @@ export default class GeekArcheySystechBayWidget {
             // lib/widgetVisualKit.js's TEXT_SHADOW_DEFAULTS. 90deg/0px/5px
             // is a plain soft drop straight down.
             ...TEXT_SHADOW_DEFAULTS,
-            textShadowEnabled: true,
+            textShadowEnabled: false,
             distro: 'linux',
             // Set true once _detectLinuxDistro() has run and written its
             // guess into `distro` - keeps first-run auto-detection from
@@ -461,7 +461,7 @@ export default class GeekArcheySystechBayWidget {
         const textShadow = _textShadowCss(this._settings);
 
         this._headerLabel.set_style(
-            `font-family: monospace; font-size: 13px; font-weight: bold; color: #ffffff;${textShadow}`
+            `font-family: monospace; font-size: 13px; font-weight: bold; color: #ffffff;`
         );
         this._headerLabel.text = `${user}@${host}`;
 
@@ -470,7 +470,7 @@ export default class GeekArcheySystechBayWidget {
 
         for (const [key, {bullet, value, label, color}] of Object.entries(this._rows)) {
             bullet.set_style(`font-family: monospace; font-size: 11px; color: ${color}; margin-right: 6px;`);
-            value.set_style(`font-family: monospace; font-size: 11px; color: #e5e5e5;${textShadow}`);
+            value.set_style(`font-family: monospace; font-size: 11px; color: #e5e5e5;`);
             value.text = `${label}: ${this._info[key] ?? '\u2026'}`;
         }
 

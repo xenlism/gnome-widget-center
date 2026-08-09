@@ -6,5 +6,6 @@
   "author": "user",
   "api-version": 1,
   "entry": "widget.js",
-  "block-type": "1x1"
+  "block-type": "1x1",
+  "screenshot": "screenshot.png"
 }

@@ -1,7 +1,7 @@
 // products/extension/lib/i18nUtils.js
 //
 // One tiny shared helper for a pattern that showed up independently in
-// three places (prefsWindowController.js's `_tr`/`_t`,
+// three places (prefsWindowControllerBase.js's `_tr`/`_t`,
 // widgetConfigUI.js's `tr` closure): look up `key` in a translations
 // table, fall back to the untranslated string if the table doesn't
 // have it (missing key, not a string, or an empty string — an empty

@@ -1,7 +1,7 @@
 {
   "id": "geek-archey-systech-squre",
   "name": "Geek Archey Sysfetch (Square)",
-  "description": "archey4-style card: ASCII distro logo plus OS, host, kernel, uptime, packages, shell, resolution, desktop, CPU, GPU, memory, and a 16-color palette strip. Square layout.",
+  "description": "archey4-style system info card: OS, host, kernel, uptime, packages, shell, resolution, DE, CPU, GPU, memory. Text only, square layout - no logo, no color palette.",
   "version": "1.0.0",
   "author": "GNOME Widget Center",
   "api-version": 1,
@@ -11,5 +11,6 @@
     "x": 40,
     "y": 40,
     "monitor": 0
-  }
+  },
+  "screenshot": "screenshot.png"
 }

@@ -39,6 +39,7 @@ import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import { getAppInfoFromFilename } from '../../lib/utils.js';
 import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor} from '../../lib/widgetVisualKit.js';
 
 const GRID_COLS = 2;
@@ -205,7 +206,7 @@ export default class LauncherSquare {
             let gicon = null;
             let tooltipText = null;
             try {
-                const appInfo = Gio.DesktopAppInfo.new_from_filename(path);
+                const appInfo = getAppInfoFromFilename(path);
                 if (appInfo) {
                     gicon = appInfo.get_icon();
                     // The .desktop file's Name= value - same field GNOME's
@@ -343,7 +344,7 @@ export default class LauncherSquare {
             return;
 
         try {
-            const appInfo = Gio.DesktopAppInfo.new_from_filename(path);
+            const appInfo = getAppInfoFromFilename(path);
             if (!appInfo) {
                 this._api.logger.info(`launcher-square: could not read .desktop file at ${path}`);
                 return;

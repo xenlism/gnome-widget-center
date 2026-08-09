@@ -131,6 +131,30 @@
     padding: 8px 4px;
 }
 
+/* Search box (Overview + Themes tabs) — sits at the right-hand end of
+ * .wc-overlay-sortbar (see widgetCenterOverlay.js's _buildSearchEntry()).
+ * Same rounded-pill language as the sort buttons next to it, just an
+ * input instead of a toggle. */
+.wc-overlay-search {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    padding: 6px 14px;
+    caret-color: #ffffff;
+}
+
+.wc-overlay-search:focus {
+    border-color: rgba(255, 255, 255, 0.35);
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.wc-overlay-search StIcon {
+    icon-size: 14px;
+    color: rgba(255, 255, 255, 0.5);
+    padding: 0 4px;
+}
+
 .wc-overlay-close {
     color: #ffffff;
     padding: 8px;
@@ -259,108 +283,26 @@
 }
 
 /* ==========================================================
- * Overlay "Preferences" tab (lib/widgetCenterOverlayPreferences.js)
- * Native St reimplementation of the real Preferences window's
- * categories (minus Backup & Restore / Import-Export - see that file's
- * header for why).
- * ========================================================== */
-
-.wc-pref-outer {
-    spacing: 12px;
-}
-
-.wc-pref-banner {
-    background-color: rgba(53, 132, 228, 0.16);
-    border: 1px solid rgba(53, 132, 228, 0.5);
-    border-radius: 10px;
-    padding: 10px 14px;
-}
-
-.wc-pref-banner:hover {
-    background-color: rgba(53, 132, 228, 0.26);
-}
-
-.wc-pref-banner-content {
-    spacing: 10px;
-}
-
-.wc-pref-banner-content StIcon {
-    color: #ffffff;
-}
-
-.wc-pref-banner-label {
-    color: #ffffff;
-    font-size: 13px;
-}
-
-.wc-pref-column {
-    spacing: 4px;
-    padding-bottom: 24px;
-}
-
-.wc-pref-category-heading {
-    color: #ffffff;
-    font-size: 18px;
-    font-weight: bold;
-    padding: 20px 0 4px 0;
-}
-
-.wc-pref-category {
-    spacing: 2px;
-}
-
-.wc-pref-section {
-    spacing: 2px;
-    padding: 14px 0 6px 0;
-}
-
-.wc-pref-section-title {
-    color: rgba(255, 255, 255, 0.92);
-    font-size: 14px;
-    font-weight: bold;
-}
-
-.wc-pref-section-desc {
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 11px;
-}
-
-.wc-pref-row {
-    background-color: rgba(255, 255, 255, 0.04);
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-bottom: 4px;
-    spacing: 12px;
-}
-
-.wc-pref-row-text {
-    spacing: 2px;
-}
-
-.wc-pref-row-title {
-    color: #ffffff;
-    font-size: 13px;
-}
-
-.wc-pref-row-subtitle {
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 11px;
-}
-
-.wc-pref-dim-label {
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 12px;
-}
-
-.wc-pref-warning {
-    color: #f66151;
-    font-size: 11px;
-    padding: 4px 0;
-}
-
-/* Switch: St.Button(toggle_mode:true) + one child "knob" widget, moved
+ * Shared on/off switch (lib/widgetCenterOverlay.js)
+ * St.Button(toggle_mode:true) + one child "knob" widget, moved
  * left/right and recolored purely via the :checked pseudo-class - no JS
- * state machine needed, St tracks `checked` natively. */
+ * state machine needed, St tracks `checked` natively. Used by the
+ * Overview tab's widget-enable control and the Themes tab's
+ * theme-active indicator.
+ *
+ * 2026-08-09: this block used to be a much larger "Overlay Preferences
+ * tab" section (lib/widgetCenterOverlayPreferences.js's own
+ * wc-pref-outer/banner/column/section/row/status/cycle-button/slider/
+ * color-swatch rules, plus a global bare `StSlider {...}` rule) — that
+ * file was a St/Clutter reimplementation of the real Preferences
+ * window, made obsolete once the overlay's "Preferences" button started
+ * handing off to the real window instead (see widgetCenterOverlay.js's
+ * own 2026-08-08 comment on `_openExtensionPreferences()`) and was
+ * never actually imported by anything since. Deleted the file itself
+ * and every one of those now-dead CSS classes (grepped every
+ * `wc-pref-*` name across lib/*.js first — only wc-pref-switch/
+ * wc-pref-switch-knob had a live caller) — kept only those two below,
+ * still used for the shared toggle above. */
 .wc-pref-switch {
     width: 44px;
     height: 24px;
@@ -382,77 +324,4 @@
 
 .wc-pref-switch:checked .wc-pref-switch-knob {
     margin-left: 23px;
-}
-
-.wc-pref-slider-box {
-    spacing: 10px;
-    width: 220px;
-}
-
-.wc-pref-slider-value {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 11px;
-    width: 48px;
-}
-
-StSlider {
-    height: 16px;
-    -barlevel-active-background-color: #3584e4;
-    -barlevel-background-color: rgba(255, 255, 255, 0.18);
-    -barlevel-height: 4px;
-    -slider-handle-radius: 8px;
-    -slider-handle-color: #ffffff;
-}
-
-.wc-pref-color-box {
-    spacing: 8px;
-}
-
-.wc-pref-color-swatch {
-    width: 24px;
-    height: 24px;
-    border-radius: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-.wc-pref-color-entry {
-    color: #ffffff;
-    background-color: rgba(255, 255, 255, 0.08);
-    border-radius: 6px;
-    padding: 4px 8px;
-    width: 110px;
-    font-family: monospace;
-    font-size: 12px;
-}
-
-.wc-pref-status {
-    spacing: 8px;
-    padding: 24px 8px;
-}
-
-.wc-pref-status-icon {
-    color: rgba(255, 255, 255, 0.4);
-}
-
-.wc-pref-status-title {
-    color: #ffffff;
-    font-size: 16px;
-    font-weight: bold;
-}
-
-.wc-pref-status-desc {
-    color: rgba(255, 255, 255, 0.55);
-    font-size: 12px;
-}
-
-.wc-pref-cycle-button {
-    background-color: rgba(255, 255, 255, 0.08);
-    border-radius: 6px;
-    padding: 6px 14px;
-    color: #ffffff;
-    font-size: 12px;
-}
-
-.wc-pref-cycle-button:hover {
-    background-color: rgba(255, 255, 255, 0.14);
 }

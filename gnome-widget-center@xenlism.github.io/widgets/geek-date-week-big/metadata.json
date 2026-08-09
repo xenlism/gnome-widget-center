@@ -1,7 +1,7 @@
 {
   "id": "geek-date-week-big",
   "name": "Geek Date/Week (Big)",
-  "description": "Large `4x1` card (47\u00d711 grid cells): big centered date line on top, week line centered underneath.",
+  "description": "Large `4x1` card (47×11 grid cells): big centered date line on top, week line centered underneath.",
   "version": "1.0.0",
   "author": "GNOME Widget Center",
   "api-version": 1,
@@ -11,5 +11,6 @@
     "x": 60,
     "y": 60,
     "monitor": 0
-  }
+  },
+  "screenshot": "screenshot.png"
 }

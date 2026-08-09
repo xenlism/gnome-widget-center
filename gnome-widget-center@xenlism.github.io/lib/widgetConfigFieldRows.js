@@ -16,6 +16,7 @@ import Gtk from 'gi://Gtk';
 import Gdk from 'gi://Gdk';
 import Pango from 'gi://Pango';
 import Gio from 'gi://Gio';
+import GioUnix from 'gi://GioUnix';
 import GLib from 'gi://GLib';
 import Soup from 'gi://Soup?version=3.0';
 
@@ -879,6 +880,15 @@ export function _listRow(field, current, set) {
 
     let items = Array.isArray(current) ? [...current] : [];
     const isApplicationList = field.item?.dataType !== 'object' && field.item?.format === 'app';
+    // `item.format: "folder"` - same "item stays a plain dataType:
+    // 'string', format is just a hint" pattern as the "app" list above,
+    // for a list of directory paths (e.g. widgets/launcher-folder-big's
+    // "folders" field) rather than .desktop files - each row shows a
+    // folder icon + basename + full path, and "+" opens a folder-only
+    // Gtk.FileDialog (select_folder()) instead of the app one's
+    // *.desktop file picker. See _folderItemRow()/_folderAddWidget()
+    // below.
+    const isFolderList = field.item?.dataType !== 'object' && field.item?.format === 'folder';
 
     const withinBounds = (delta => {
         const next = items.length + delta;
@@ -911,8 +921,12 @@ export function _listRow(field, current, set) {
         });
 
         _clearBox(addContainer);
-        if (field.addable !== false)
-            addContainer.append(isApplicationList ? _applicationAddWidget() : _staticAddWidget());
+        if (field.addable !== false) {
+            addContainer.append(
+                isApplicationList ? _applicationAddWidget()
+                    : isFolderList ? _folderAddWidget()
+                        : _staticAddWidget());
+        }
     };
 
     /** @private one delete button, wired the same way for every item
@@ -938,6 +952,9 @@ export function _listRow(field, current, set) {
 
         if (itemSchema.format === 'app')
             return _applicationItemRow(item, index);
+
+        if (itemSchema.format === 'folder')
+            return _folderItemRow(item, index);
 
         if (itemSchema.dataType === 'object') {
             const objField = {...itemSchema, id: `item-${index}`, label: `Item ${index + 1}`, fieldType: 'object'};
@@ -979,7 +996,7 @@ export function _listRow(field, current, set) {
         let gicon = null;
         try {
             if (path.endsWith('.desktop')) {
-                const appInfo = Gio.DesktopAppInfo.new_from_filename(path);
+                const appInfo = GioUnix.DesktopAppInfo.new_from_filename(path);
                 if (appInfo) {
                     displayName = appInfo.get_display_name();
                     gicon = appInfo.get_icon();
@@ -1044,6 +1061,59 @@ export function _listRow(field, current, set) {
             dialog.open(addButton.get_root(), null, (_dialog, result) => {
                 try {
                     const file = dialog.open_finish(result);
+                    const path = file?.get_path();
+                    if (path && !items.includes(path)) {
+                        items = [...items, path];
+                        set([...items]);
+                        rerender();
+                    }
+                } catch (e) {
+                    // User cancelled the dialog - nothing to add.
+                }
+            });
+        });
+
+        box.append(addButton);
+        return box;
+    }
+
+    // Folder-path item -> folder icon + basename + full path, same
+    // shape as _applicationItemRow() above just for a directory instead
+    // of a .desktop file (no Gio.DesktopAppInfo to read a display
+    // name/icon from, so the basename IS the title).
+    function _folderItemRow(path, index) {
+        const itemRow = new Adw.ActionRow();
+        itemRow.title = GLib.path_get_basename(path) || path;
+        itemRow.subtitle = path;
+
+        const icon = new Gtk.Image({icon_name: 'folder-symbolic', pixel_size: 24, valign: Gtk.Align.CENTER});
+        itemRow.add_prefix(icon);
+
+        if (field.removable !== false)
+            itemRow.add_suffix(_makeRemoveButton(index, 'error'));
+
+        return itemRow;
+    }
+
+    // "+" (browse for one folder) - a plain Gtk.Box, appended directly
+    // below the ListBox, mirroring _applicationAddWidget()'s shape but
+    // with select_folder() instead of a *.desktop open() dialog.
+    function _folderAddWidget() {
+        const box = new Gtk.Box({orientation: Gtk.Orientation.HORIZONTAL, spacing: 6, valign: Gtk.Align.CENTER});
+
+        const addButton = new Gtk.Button({
+            icon_name: 'list-add-symbolic', valign: Gtk.Align.CENTER, css_classes: ['flat'],
+            tooltip_text: 'Browse for a folder',
+            sensitive: withinBounds(1),
+        });
+        addButton.connect('clicked', () => {
+            const dialog = new Gtk.FileDialog({title: field.label ?? 'Add folder'});
+            if (field.item.scanDirectory)
+                dialog.set_initial_folder(Gio.File.new_for_path(field.item.scanDirectory));
+
+            dialog.select_folder(addButton.get_root(), null, (_dialog, result) => {
+                try {
+                    const file = dialog.select_folder_finish(result);
                     const path = file?.get_path();
                     if (path && !items.includes(path)) {
                         items = [...items, path];

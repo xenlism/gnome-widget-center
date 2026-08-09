@@ -63,13 +63,110 @@ function _isForced(category) {
     return !!_forcedTheme?.[category]?.force;
 }
 
+// --- ForceSettingsHelper wiring (2026-08-09, HANDOVER_FORCE_SETTINGS.md
+// "not done yet" step 1) --------------------------------------------
+//
+// Background Color / Corner Radius / Background Blur / Shadow now
+// resolve through lib/forceSettingsHelper.js's GSettings-backed
+// ForceSettingsHelper instead of the OLDER _forcedTheme state above.
+// Border and Opacity are UNCHANGED — by product decision they stay on
+// the older theme.json _forcedTheme mechanism (see borderCss() below,
+// untouched by this wiring), so _forcedTheme/_isForced()/setForcedTheme()
+// are still very much alive, just no longer consulted for the three
+// properties this helper now owns.
+//
+// Same injection pattern as setForcedTheme() above: plain module state,
+// set once by extension.js (HANDOVER's "not done yet" step 2, not yet
+// wired as of this commit) so every widget's existing
+// `cardStyleCss(this._settings, {...})` call site starts respecting the
+// new 4 switches with zero widget.js changes, the moment extension.js
+// calls setForceSettingsHelper() at startup - identical zero-call-site-
+// change contract to setForcedTheme()'s own doc comment above.
+//
+// Until extension.js wiring lands, `_forceSettingsHelper` stays `null`
+// and every function below transparently falls back to its pre-existing
+// behavior (old _forcedTheme consultation for background/cornerRadius/
+// dropShadow, or the widget's own settings if nothing is forced) - so
+// this commit changes no runtime behavior by itself.
+let _forceSettingsHelper = null;
+
+/**
+ * Sets (or clears, with `null`) the process-wide ForceSettingsHelper
+ * instance that cardStyleCss()/shadowBoxShadowCss()/blurCss() below
+ * consult for Background Color/Corner Radius/Background Blur/Shadow.
+ * Called by extension.js, never by a widget itself.
+ * @param {import('./forceSettingsHelper.js').ForceSettingsHelper|null} helper
+ */
+export function setForceSettingsHelper(helper) {
+    _forceSettingsHelper = helper ?? null;
+}
+
+/** @private Maps this file's flat widget-settings field names (a
+ * widget's own config.json/settings object) into the
+ * `{background, shadow}` shape lib/forceSettingsHelper.js's resolve()
+ * expects, and returns its resolved result - or `null` when no helper
+ * has been wired in yet (setForceSettingsHelper() never called), so
+ * callers can fall back to the older _forcedTheme path.
+ *
+ * Field-shape differences bridged here:
+ *  - blur: this file models it as `blurEnabled` (bool) + `blurRadius`
+ *    (px), the helper just wants a single `blur` px number where 0
+ *    means off - `blurEnabled ? blurRadius : 0` bridges that.
+ *  - shadow spread: widgets bundled in this codebase have no per-widget
+ *    spread field (shadowBoxShadowCss() has always hardcoded 0 for it,
+ *    see below) - passed through as 0 here too, unchanged behavior.
+ *  - shadow distance/angle: deliberately NOT read from `settings` here
+ *    at all - the helper always returns GSettings' shadow-distance/
+ *    shadow-angle regardless of what's passed in, per
+ *    ForceSettingsSpecification.md's "Distance and Angle are always
+ *    stored in GSettings" rule, so there's nothing to bridge for them.
+ * @param {object} settings - widget's own settings object
+ * @param {{backgroundColorKey?: string, cornerRadiusKey?: string}} [keys]
+ * @returns {{background: {color: string, cornerRadius: number, blur: number},
+ *   shadow: {enabled: boolean, color: string, opacity: number, spread: number,
+ *   blur: number, distance: number, angle: number}}|null}
+ */
+function _resolveForceSettings(settings, {backgroundColorKey = 'backgroundColor', cornerRadiusKey = 'cornerRadius'} = {}) {
+    if (!_forceSettingsHelper)
+        return null;
+
+    const s = settings ?? {};
+    return _forceSettingsHelper.resolve({
+        background: {
+            color: s[backgroundColorKey],
+            cornerRadius: s[cornerRadiusKey],
+            blur: (s.blurEnabled ?? BLUR_DEFAULTS.blurEnabled) ? s.blurRadius : 0,
+        },
+        shadow: {
+            enabled: s.shadowEnabled,
+            color: s.shadowColor,
+            opacity: s.shadowOpacity,
+            spread: 0,
+            blur: s.shadowBlur,
+        },
+    });
+}
+
 /** Allowed shadow-angle steps, shared by every "Shadow angle" dropdown in
  * the codebase (a widget's own Appearance settings, the Control Center's
  * global Appearance page, and its St-overlay twin) so they can never drift
  * out of sync with each other. Degrees: 0 = right, 90 = down, 180 = left,
  * 270 = up - same convention SHADOW_DEFAULTS/TEXT_SHADOW_DEFAULTS below
  * already documented before this became a fixed-step dropdown. */
-export const SHADOW_ANGLE_STEPS = [45, 90, 135, 180, 225, 275];
+// 2026-08-09 fix: was `[45, 90, 135, 180, 225, 275]` — 275 was a typo
+// for 270, and 315 was missing entirely (breaks the otherwise-even
+// 45-degree spacing). lib/forceSettingsHelper.js used to keep its own
+// separate, already-correct copy of this array specifically because
+// this one had the bug (see that file's own comment, now stale —
+// updated alongside this fix to import from here instead of
+// duplicating). A stored `theme.json`/GSettings angle value of 275 that
+// predates this fix will no longer match any entry here — anything that
+// validates against this array before falling back to 90° (e.g.
+// forceSettingsHelper.js's own coerceAngle()) already treats an
+// unrecognized value as "reset to default", so this degrades to the
+// default angle rather than crashing, but IS a behavior change for
+// anyone who had explicitly picked the old (nonstandard) 275° option.
+export const SHADOW_ANGLE_STEPS = [45, 90, 135, 180, 225, 270, 315];
 
 /** Degrees + px distance -> `{offsetX, offsetY}` px, the one trig
  * conversion every box-shadow/text-shadow builder in this file (and
@@ -95,17 +192,28 @@ export const SHADOW_DEFAULTS = {
     shadowBlur: 16,    // px
 };
 
-/** @private shared by shadowBoxShadowCss()/_forcedShadowBoxShadowCss()
- * below so the two "which shape of shadow settings am I reading" code
- * paths (a widget's own angle+distance settings vs. lib/themeService.js's
- * global angle+distance theme) still funnel through exactly one
- * "build the box-shadow string" implementation, instead of two copies
- * that could quietly drift apart.
+/** Shared by shadowBoxShadowCss()/_forcedShadowBoxShadowCss() below so
+ * the "which shape of shadow settings am I reading" code paths (a
+ * widget's own angle+distance settings vs. lib/themeService.js's global
+ * angle+distance theme) still funnel through exactly one "build the
+ * box-shadow string" implementation, instead of two copies that could
+ * quietly drift apart. Exported (2026-08-09, HANDOVER_FORCE_SETTINGS.md
+ * next-steps item 1) so lib/themeService.js's applyWidgetStyle() — the
+ * themeable-widget render path, entirely separate from this file's own
+ * cardStyleCss()/shadowBoxShadowCss() — can build an identical
+ * `box-shadow:` string from its own ForceSettingsHelper.resolve() result,
+ * rather than hand-rolling a third copy of this logic.
+ *
+ * NOTE: `color` is validated as a plain 6-hex-digit string (post
+ * `#`-stripping) — an 8-digit alpha-baked hex (as ForceSettingsHelper's
+ * forced shadow color is stored) will fail that check and fall back to
+ * black, with `opacityPercent` supplying the alpha instead. Pre-existing
+ * behavior, unchanged by this export.
  * @param {{color: string, opacityPercent: number, angleDeg: number,
  *   distance: number, blur: number, spread: number}} shadow
  * @returns {string}
  */
-function _boxShadowCss({color, opacityPercent, angleDeg, distance, blur, spread}) {
+export function boxShadowCss({color, opacityPercent, angleDeg, distance, blur, spread}) {
     const {offsetX, offsetY} = angleDistanceToOffset(angleDeg, distance);
 
     let hex = (color ?? SHADOW_DEFAULTS.shadowColor).trim().replace(/^#/, '');
@@ -121,21 +229,70 @@ function _boxShadowCss({color, opacityPercent, angleDeg, distance, blur, spread}
     return `box-shadow: ${offsetX}px ${offsetY}px ${Math.max(0, blur)}px ${spread}px rgba(${r}, ${g}, ${b}, ${a});`;
 }
 
+/**
+ * Force-aware blur decision helper for cardLayers.js's applyCardBlur().
+ * Returns {enabled, radius} based on force state or widget settings.
+ * @param {object} settings
+ * @returns {{enabled: boolean, radius: number}}
+ */
+export function getForceAwareBlurSettings(settings) {
+    const resolved = _resolveForceSettings(settings);
+    if (resolved) {
+        const radius = resolved.background.blur;
+        return {
+            enabled: Number.isFinite(radius) && radius > 0,
+            radius: Math.max(0, radius ?? BLUR_DEFAULTS.blurRadius),
+        };
+    }
+
+    if (_isForced('background')) {
+        const radius = _forcedTheme.background?.blur;
+        return {
+            enabled: Number.isFinite(radius) && radius > 0,
+            radius: Math.max(0, radius ?? BLUR_DEFAULTS.blurRadius),
+        };
+    }
+
+    const s = settings ?? {};
+    return {
+        enabled: s.blurEnabled ?? BLUR_DEFAULTS.blurEnabled,
+        radius: Number.isFinite(s.blurRadius) ? Math.max(0, s.blurRadius) : BLUR_DEFAULTS.blurRadius,
+    };
+}
+
 /** Builds a `box-shadow: ...;` CSS declaration (St supports the standard
  * CSS box-shadow syntax) from a widget's shadow settings, or '' when the
  * shadow is off - always safe to splice directly into a set_style()
  * template literal.
  *
- * When the global "Force this drop shadow on every widget" switch is on
- * (see the module-level Force state note above `setForcedTheme()`), the
- * forced dropShadow settings are used instead of `settings` entirely -
- * same "can't even partially override" contract
- * lib/themeService.js's getEffectiveWidgetTheme() documents.
+ * Force-aware via lib/forceSettingsHelper.js's "Shadow" switch (see
+ * setForceSettingsHelper() above) once extension.js has wired a helper
+ * in - Shadow's 5 sub-fields (enabled/color/opacity/spread/blur) move
+ * together as one group when forced, and Distance/Angle are ALWAYS the
+ * GSettings values regardless of the switch, per spec. Falls back to
+ * the OLDER `_forcedTheme` "Force this drop shadow" switch when no
+ * helper has been wired in yet (same "can't even partially override"
+ * contract lib/themeService.js's getEffectiveWidgetTheme() documents).
  * @param {object} settings - widget settings object; only the
  *   shadow* fields are read, missing ones fall back to SHADOW_DEFAULTS.
  * @returns {string}
  */
 export function shadowBoxShadowCss(settings) {
+    const resolved = _resolveForceSettings(settings);
+    if (resolved) {
+        const {shadow} = resolved;
+        if (!shadow.enabled)
+            return '';
+        return boxShadowCss({
+            color: shadow.color,
+            opacityPercent: shadow.opacity,
+            angleDeg: shadow.angle,
+            distance: shadow.distance,
+            blur: shadow.blur,
+            spread: shadow.spread,
+        });
+    }
+
     if (_isForced('dropShadow'))
         return _forcedShadowBoxShadowCss(_forcedTheme.dropShadow);
 
@@ -143,7 +300,7 @@ export function shadowBoxShadowCss(settings) {
     if (!(s.shadowEnabled ?? SHADOW_DEFAULTS.shadowEnabled))
         return '';
 
-    return _boxShadowCss({
+    return boxShadowCss({
         color: s.shadowColor ?? SHADOW_DEFAULTS.shadowColor,
         opacityPercent: Number.isFinite(s.shadowOpacity) ? s.shadowOpacity : SHADOW_DEFAULTS.shadowOpacity,
         angleDeg: Number.isFinite(s.shadowAngle) ? s.shadowAngle : SHADOW_DEFAULTS.shadowAngle,
@@ -157,7 +314,7 @@ export function shadowBoxShadowCss(settings) {
  * (`{enabled, transparent, color, opacity: 0-1, angle, distance,
  * blurRadius, spread}` - notably a flat 0-1 opacity float rather than
  * shadowBoxShadowCss()'s own 0-100 percent) into the same
- * `box-shadow: ...;` string shape, through the SAME `_boxShadowCss()`
+ * `box-shadow: ...;` string shape, through the SAME `boxShadowCss()`
  * helper shadowBoxShadowCss() itself uses above - mirroring
  * lib/themeService.js's applyWidgetStyle()'s identical angle+distance
  * conversion so every code path produces the same visual result for the
@@ -166,7 +323,7 @@ function _forcedShadowBoxShadowCss(dropShadow) {
     if (!dropShadow?.enabled || dropShadow?.transparent)
         return '';
     const opacity = Number.isFinite(dropShadow.opacity) ? Math.min(1, Math.max(0, dropShadow.opacity)) : 0.45;
-    return _boxShadowCss({
+    return boxShadowCss({
         color: dropShadow.color ?? '#000000',
         opacityPercent: opacity * 100,
         angleDeg: Number.isFinite(dropShadow.angle) ? dropShadow.angle : 90,
@@ -176,12 +333,16 @@ function _forcedShadowBoxShadowCss(dropShadow) {
     });
 }
 
-/** @private "#rrggbb" + a 0-1 alpha float -> "#rrggbbaa", so it can be
- * run back through toCssColor() the same way every other color in this
- * file is - keeps the hex-alpha-encoding convention in exactly one
- * place (toCssColor()) instead of building an rgba() string by hand
- * here too. */
-function _withAlphaHex(hex6, alpha01) {
+/** "#rrggbb" + a 0-1 alpha float -> "#rrggbbaa", so it can be run back
+ * through toCssColor() the same way every other color in this file is -
+ * keeps the hex-alpha-encoding convention in exactly one place
+ * (toCssColor()) instead of building an rgba() string by hand here too.
+ * Exported (2026-08-09, HANDOVER_FORCE_SETTINGS.md next-steps item 1) so
+ * lib/themeService.js's applyWidgetStyle() can bake its own separate
+ * `background.transparent` boolean into the same alpha-in-hex shape
+ * before handing it to ForceSettingsHelper.resolve() - same bridging
+ * this file already does for `_forcedTheme.background` just above. */
+export function withAlphaHex(hex6, alpha01) {
     const m = /^#([0-9a-fA-F]{6})$/.exec((hex6 ?? '').trim());
     if (!m)
         return '#000000' + Math.round(Math.min(1, Math.max(0, alpha01)) * 255).toString(16).padStart(2, '0');
@@ -290,6 +451,14 @@ export const OPACITY_DEFAULTS = {
  * @returns {number} 0-255
  */
 export function opacityValue(settings) {
+    // Force-aware: if opacity.force is on (from theme.json via _forcedTheme),
+    // use the forced value, otherwise read from widget's settings.
+    if (_isForced('opacity')) {
+        const forced = _forcedTheme.opacity;
+        const percent = Number.isFinite(forced?.value) ? Math.min(100, Math.max(0, forced.value)) : OPACITY_DEFAULTS.opacity;
+        return Math.round((percent / 100) * 255);
+    }
+
     const s = settings ?? {};
     const percent = Number.isFinite(s.opacity) ? Math.min(100, Math.max(0, s.opacity)) : OPACITY_DEFAULTS.opacity;
     return Math.round((percent / 100) * 255);
@@ -320,15 +489,25 @@ export const BLUR_DEFAULTS = {
  * applyWidgetStyle() for the identical property used by the global-theme
  * force system.
  *
- * Force-aware, governed by the "Force this background on every widget"
- * switch specifically (not a separate blur switch) - blur is modeled as
- * a background sub-property throughout this codebase (see
- * lib/themeService.js's DEFAULT_GLOBAL_THEME.background.blur), so it
- * follows background's force flag rather than having its own.
+ * Force-aware via lib/forceSettingsHelper.js's OWN independent
+ * "Background Blur" switch (see setForceSettingsHelper() above) once
+ * extension.js has wired a helper in - unlike the OLDER _forcedTheme
+ * mechanism this falls back to below, the new 4-switch model gives blur
+ * its own switch, fully independent of Background Color/Corner Radius
+ * (per HANDOVER_FORCE_SETTINGS.md's addendum, confirmed with the user).
+ * Falls back to the OLDER "Force this background on every widget"
+ * switch (which bundled blur in with background color/corner-radius)
+ * when no helper has been wired in yet.
  * @param {object} settings
  * @returns {string}
  */
 export function blurCss(settings) {
+    const resolved = _resolveForceSettings(settings);
+    if (resolved) {
+        const radius = resolved.background.blur;
+        return Number.isFinite(radius) && radius > 0 ? `-st-background-blur: ${Math.round(radius)}px;` : '';
+    }
+
     if (_isForced('background')) {
         const radius = _forcedTheme.background?.blur;
         return Number.isFinite(radius) && radius > 0 ? `-st-background-blur: ${Math.round(radius)}px;` : '';
@@ -380,21 +559,34 @@ export function cardStyleCss(settings, options = {}) {
         includeBlur = true,
     } = options;
 
-    // background.force and cornerRadius.force are independent switches
-    // (see lib/themeService.js's getEffectiveWidgetTheme()) - either,
-    // both, or neither can be on, so they're checked separately here
-    // rather than as one combined "is anything forced" branch.
+    // Background Color and Corner Radius each resolve through their OWN
+    // independent lib/forceSettingsHelper.js switch (once wired in via
+    // setForceSettingsHelper()) - see that helper's resolve(), which
+    // already does the "either, both, or neither can be on" per-property
+    // resolution internally, so there's just one _resolveForceSettings()
+    // call here rather than two separate _isForced() branches.
+    //
+    // Falls back to the OLDER _forcedTheme background.force/
+    // cornerRadius.force switches (still genuinely independent of each
+    // other, per lib/themeService.js's getEffectiveWidgetTheme()) when
+    // no helper has been wired in yet.
+    const resolved = _resolveForceSettings(settings, {backgroundColorKey, cornerRadiusKey});
+
     let backgroundColor;
-    if (_isForced('background')) {
+    if (resolved) {
+        backgroundColor = toCssColor(resolved.background.color, backgroundColorFallback);
+    } else if (_isForced('background')) {
         const forced = _forcedTheme.background;
         const alpha = forced.transparent ? 0 : 1;
-        backgroundColor = toCssColor(_withAlphaHex(forced.color ?? '#1e1e2e', alpha), backgroundColorFallback);
+        backgroundColor = toCssColor(withAlphaHex(forced.color ?? '#1e1e2e', alpha), backgroundColorFallback);
     } else {
         backgroundColor = toCssColor(settings?.[backgroundColorKey], backgroundColorFallback);
     }
 
     let cornerRadius;
-    if (_isForced('cornerRadius')) {
+    if (resolved) {
+        cornerRadius = Number.isFinite(resolved.background.cornerRadius) ? Math.max(0, resolved.background.cornerRadius) : cornerRadiusFallback;
+    } else if (_isForced('cornerRadius')) {
         const forcedRadius = _forcedTheme.cornerRadius?.value;
         cornerRadius = Number.isFinite(forcedRadius) ? Math.max(0, forcedRadius) : cornerRadiusFallback;
     } else {

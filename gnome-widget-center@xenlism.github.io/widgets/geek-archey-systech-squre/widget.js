@@ -65,10 +65,13 @@ import {
 const REFRESH_INTERVAL_SECONDS = 30;
 const CARD_PADDING = 16;
 
-// Every distro key that has a matching ./logos/<key>.js module (kept in
-// sync with config.json's dropdown options and the logos/ directory).
-// Used by _detectLinuxDistro() to validate a /etc/os-release guess
-// before trusting it, and as the ultimate "linux" fallback.
+// Every distro key this card knows how to detect (kept in sync with
+// config.json's dropdown options). This card is text-only and no longer
+// loads any logo module itself - see widgets/geek-archey-systech-logo
+// for that - these keys now only drive _packageCommand()'s package-
+// manager lookup for the Packages row. Used by _detectLinuxDistro() to
+// validate a /etc/os-release guess before trusting it, and as the
+// ultimate "linux" fallback.
 const DISTRO_KEYS = [
     'alpine', 'android', 'arch', 'armbian', 'buildroot', 'bunsenlabs',
     'centos', 'crunchbang', 'darwin', 'debian', 'devuan', 'elementary',
@@ -110,79 +113,12 @@ const ROW_DEFS = [
     ['memory', 'Memory', '#7aa2f7'],
 ];
 
-// The little "16 color swatches" row every real neofetch/archey4
-// screenshot ends with (normal 0-7 then bright 8-15) - not read from the
-// actual terminal's palette (this widget doesn't run inside one), just a
-// fixed reference palette picked to match the accent colors ROW_DEFS
-// above already uses (Tokyo Night), same spirit as GENERIC_ART's
-// hardcoded placeholder color.
-const PALETTE_COLORS = [
-    '#1a1b26', '#f7768e', '#9ece6a', '#e0af68',
-    '#7aa2f7', '#bb9af7', '#7dcfff', '#a9b1d6',
-    '#414868', '#f7768e', '#9ece6a', '#e0af68',
-    '#7aa2f7', '#bb9af7', '#7dcfff', '#c0caf5',
-];
-
-// Fallback mark shown before a logo module has finished loading (or if
-// loading one ever fails) - NOT copied from archey4's own logo files,
-// just a same-spirit placeholder glyph. Real per-distro logos now live
-// one-file-per-distro under ./logos/ (converted from archey4's own
-// `archey/logos/*.py`) and are lazily `import()`-ed by _loadLogo() below,
-// so only the currently-selected distro's logo module is ever loaded -
-// see that method's comment for why.
+// This card is text-only now (see buildActor()'s 2026-08-09 note) - no
+// ASCII logo, so just the one accent color used to be GENERIC_ART's
+// placeholder-mark color is kept here, for the separator line.
 const GENERIC_ART = {
     color: '#8be9fd',
-    art: [
-        '     .--.',
-        '    ( oo )',
-        '     |==|',
-        '    /|  |\\',
-        '   ^ \'--\' ^',
-        '',
-        '   L I N U X',
-    ],
 };
-
-/** @private Escapes text for safe embedding inside Pango markup (used
- * when turning a logo module's `{c[N]}`-templated LOGO lines into
- * per-glyph colored <span> runs below). */
-function _markupEscape(text) {
-    return text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-}
-
-/** @private Turns one archey4-style LOGO line (containing '{c[N]}' color
- * placeholders, as produced by the Python->JS logo conversion) into a
- * Pango markup string, wrapping each colored run in its own <span
- * foreground="..."> using the matching entry of `colors`. Mirrors what
- * archey4's own `str.format(c=...)` does for a terminal, just emitting
- * markup instead of ANSI escapes since St.Label renders via Pango. */
-function _logoLineToMarkup(line, colors) {
-    let markup = '';
-    let currentColor = null;
-    let openSpan = false;
-    const re = /\{c\[(\d+)\]\}|([^{]+)/g;
-    let match;
-    while ((match = re.exec(line)) !== null) {
-        if (match[1] !== undefined) {
-            const color = colors[Number(match[1])] ?? colors[0] ?? '#ffffff';
-            if (color !== currentColor) {
-                if (openSpan)
-                    markup += '</span>';
-                markup += `<span foreground="${color}">`;
-                currentColor = color;
-                openSpan = true;
-            }
-        } else {
-            markup += _markupEscape(match[2]);
-        }
-    }
-    if (openSpan)
-        markup += '</span>';
-    return markup;
-}
 
 export default class GeekArcheySystechSqureWidget {
     /**
@@ -196,13 +132,6 @@ export default class GeekArcheySystechSqureWidget {
         this._timerId = null;
         this._cancellable = null;
 
-        // Logo state for _loadLogo() below: only ever holds the ONE
-        // currently-selected distro's logo module (never a cache of all
-        // of them) plus which distro key + variant it belongs to, so a
-        // stale in-flight import() can't clobber a newer selection.
-        this._logoDistroKey = null;
-        this._logoModule = null;
-        this._logoLoadToken = 0;
     }
 
     // Must never throw, even with empty settings, and must not depend on
@@ -211,6 +140,16 @@ export default class GeekArcheySystechSqureWidget {
     // land, same "never assume enable() already ran" rule
     // widgets/power-menu/widget.js's buildActor() follows for its DBus
     // proxies.
+    // 2026-08-09: this square (2x2) card is now TEXT-ONLY - the ASCII
+    // distro logo moved to the dedicated 1x1 "logo only" Archey widget
+    // (widgets/geek-archey-systech-logo), and the trailing 16-swatch
+    // color-palette strip was removed outright (not just toggled off -
+    // see getDefaultSettings()) since it was the single biggest cause of
+    // this card overflowing its fixed 2x2 block: 11 stat rows already
+    // fill nearly all of a 2x2 block's usable height on their own once
+    // the header/separator are counted, so the "logo | text" side-by-side
+    // layout is gone too - infoBox is now the ONLY child, centered in the
+    // block instead of pushed right of a logo that no longer exists here.
     buildActor() {
         this._actor = new St.Bin({
             style_class: 'geek-archey-systech-squre-root',
@@ -218,15 +157,8 @@ export default class GeekArcheySystechSqureWidget {
             y_align: Clutter.ActorAlign.CENTER,
         });
 
-        const content = new St.BoxLayout({vertical: false});
-
-        this._asciiLabel = new St.Label({style_class: 'geek-archey-systech-squre-ascii'});
-        this._asciiLabel.clutter_text.set_use_markup(true);
-        this._asciiLabel.clutter_text.set_line_wrap(false);
-        content.add_child(this._asciiLabel);
-
         const infoBox = new St.BoxLayout({vertical: true, style_class: 'geek-archey-systech-squre-info'});
-        infoBox.set_style('margin-left: 18px;');
+        infoBox.set_style('spacing: 2px;');
 
         this._headerLabel = new St.Label({style_class: 'geek-archey-systech-squre-header'});
         infoBox.add_child(this._headerLabel);
@@ -245,25 +177,7 @@ export default class GeekArcheySystechSqureWidget {
             this._rows[key] = {bullet, value, label, color};
         }
 
-        // Color-palette swatch row, e.g. neofetch's/archey4's trailing
-        // strip of 16 little colored squares - built once here (fixed
-        // count/order, only each square's own style_class-independent
-        // background-color ever changes) and shown/hidden per the
-        // showColorPalette setting in _render(). Own St.Widget squares
-        // rather than St.Label so nothing needs a glyph/font to render a
-        // solid color block.
-        this._paletteRow = new St.BoxLayout({vertical: false, style_class: 'geek-archey-systech-squre-palette'});
-        this._paletteRow.set_style('margin-top: 6px;');
-        this._paletteSwatches = PALETTE_COLORS.map(() => {
-            const swatch = new St.Widget({style_class: 'geek-archey-systech-squre-swatch'});
-            swatch.set_style('width: 12px; height: 12px; margin-right: 3px; border-radius: 2px;');
-            this._paletteRow.add_child(swatch);
-            return swatch;
-        });
-        infoBox.add_child(this._paletteRow);
-
-        content.add_child(infoBox);
-        this._actor.set_child(content);
+        this._actor.set_child(infoBox);
 
         this._render();
         return this._actor;
@@ -272,7 +186,6 @@ export default class GeekArcheySystechSqureWidget {
     enable() {
         this._cancellable = new Gio.Cancellable();
         this._ensureDistroDetected();
-        this._loadLogo(this._settings.distro ?? 'linux');
         this._fetchStaticInfo();
         this._updateDynamicInfo();
         this._timerId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, REFRESH_INTERVAL_SECONDS, () => {
@@ -310,13 +223,6 @@ export default class GeekArcheySystechSqureWidget {
             distroDetected: false,
             backgroundColor: '#FFFFFF00',
             cornerRadius: 18,
-            // On by default - there's spare vertical space in this
-            // widget's fixed block-type height most of the time (see
-            // ROW_DEFS's row count vs. the block-type's row budget), but
-            // it's still a plain switch so it can be turned off by hand
-            // if a particular block-type/font-size combination ever
-            // leaves too little room for it.
-            showColorPalette: true,
         };
     }
 
@@ -327,9 +233,6 @@ export default class GeekArcheySystechSqureWidget {
     // info too rather than leaving a stale count from the previous
     // distro on screen.
     onSettingsChanged() {
-        const distroKey = this._settings.distro ?? 'linux';
-        if (distroKey !== this._logoDistroKey)
-            this._loadLogo(distroKey);
         this._render();
         this._fetchStaticInfo();
     }
@@ -385,44 +288,6 @@ export default class GeekArcheySystechSqureWidget {
         }
     }
 
-    /** @private Loads exactly one logo module - `./logos/${distroKey}.js`
-     * - via a dynamic import(), and only that one: nothing under
-     * ./logos/ is imported eagerly or preloaded for other options in the
-     * dropdown, and the previous selection's module reference (if any)
-     * is dropped as soon as this resolves, so at most one logo's worth
-     * of ASCII/color data is ever held in memory regardless of how many
-     * distros config.json lists. Re-entrant-safe via `token`: if the
-     * user flips through several distros quickly, only the *last*
-     * import() to resolve is allowed to update this._logoModule/_render(). */
-    _loadLogo(distroKey) {
-        const token = ++this._logoLoadToken;
-        const key = distroKey === 'generic' ? null : distroKey;
-
-        const applyFallback = () => {
-            if (token !== this._logoLoadToken)
-                return;
-            this._logoDistroKey = distroKey;
-            this._logoModule = null; // _render() falls back to GENERIC_ART
-            this._render();
-        };
-
-        if (!key) {
-            applyFallback();
-            return;
-        }
-
-        import(`./logos/${key}.js`).then(module => {
-            if (token !== this._logoLoadToken)
-                return; // a newer selection already superseded this load
-            this._logoDistroKey = distroKey;
-            this._logoModule = module;
-            this._render();
-        }).catch(e => {
-            logError(e, `geek-archey-systech-squre: failed to load logo for "${distroKey}"`);
-            applyFallback();
-        });
-    }
-
     /** @private repaints the card and every label from this._settings /
      * this._info - never touches the network or spawns anything, so it's
      * safe to call as often as needed (every info fetch above calls this
@@ -436,51 +301,30 @@ export default class GeekArcheySystechSqureWidget {
             _shadowBoxShadowCss(this._settings)
         );
 
-        // this._logoModule is whatever _loadLogo() last resolved for the
-        // *current* this._settings.distro (or still null/stale while a
-        // load is in flight) - fall back to the plain placeholder mark
-        // rather than blocking render on the import() settling.
-        let accent = GENERIC_ART.color;
-        let markup;
-        if (this._logoModule) {
-            const variant = this._logoModule.default; // {colors, logo}
-            accent = variant.colors[0] ?? GENERIC_ART.color;
-            markup = variant.logo.map(line => _logoLineToMarkup(line, variant.colors)).join('\n');
-        } else {
-            accent = GENERIC_ART.color;
-            markup = _markupEscape(GENERIC_ART.art.join('\n'));
-        }
-
-        this._asciiLabel.set_style(
-            `font-family: monospace; font-size: 9px; line-height: 1.2; color: ${accent}; white-space: pre;`
-        );
-        this._asciiLabel.clutter_text.set_markup(markup);
-
+        const accent = GENERIC_ART.color;
         const user = GLib.get_user_name();
         const host = GLib.get_host_name();
         const textShadow = _textShadowCss(this._settings);
 
+        // Sized to fit ALL 11 rows + header + separator inside a fixed
+        // 2x2 block (23x23 cells * 16px = 368x368px, minus 2*CARD_PADDING
+        // = ~336px of usable height) without overflowing it - the
+        // overflow this card used to hit was the ASCII logo (now gone,
+        // see buildActor()) plus the 13/11px fonts below being sized for
+        // a wider 4x1/4x2 card, not this square one. 10px/8px here still
+        // leaves comfortable headroom in that budget.
         this._headerLabel.set_style(
-            `font-family: monospace; font-size: 13px; font-weight: bold; color: #ffffff;${textShadow}`
+            `font-family: monospace; font-size: 10px; font-weight: bold; color: #ffffff;${textShadow}`
         );
         this._headerLabel.text = `${user}@${host}`;
 
-        this._sepLabel.set_style(`font-family: monospace; font-size: 11px; color: ${accent}; margin-bottom: 4px;`);
+        this._sepLabel.set_style(`font-family: monospace; font-size: 8px; color: ${accent}; margin-bottom: 2px;`);
         this._sepLabel.text = '\u2500'.repeat(Math.max(user.length + host.length + 1, 10));
 
         for (const [key, {bullet, value, label, color}] of Object.entries(this._rows)) {
-            bullet.set_style(`font-family: monospace; font-size: 11px; color: ${color}; margin-right: 6px;`);
-            value.set_style(`font-family: monospace; font-size: 11px; color: #e5e5e5;${textShadow}`);
+            bullet.set_style(`font-family: monospace; font-size: 8px; color: ${color}; margin-right: 5px;`);
+            value.set_style(`font-family: monospace; font-size: 8px; color: #e5e5e5;${textShadow}`);
             value.text = `${label}: ${this._info[key] ?? '\u2026'}`;
-        }
-
-        const showColorPalette = this._settings.showColorPalette ?? true;
-        this._paletteRow.visible = showColorPalette;
-        if (showColorPalette) {
-            this._paletteSwatches.forEach((swatch, i) => {
-                const hex = PALETTE_COLORS[i] ?? '#000000';
-                swatch.set_style(`background-color: ${hex}; width: 12px; height: 12px; margin-right: 3px; border-radius: 2px;`);
-            });
         }
     }
 

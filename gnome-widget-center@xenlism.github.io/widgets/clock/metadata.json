@@ -12,5 +12,6 @@
     "x": 300,
     "y": 400,
     "monitor": 0
-  }
+  },
+  "screenshot": "screenshot.png"
 }

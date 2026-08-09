@@ -4,9 +4,8 @@
 // (no GTK) - see this repo's "Handover: Widget Overlay Color Picker" doc
 // for why: GTK widgets/dialogs (Gtk.ColorDialogButton etc.) can't be
 // hosted inside the GNOME Shell process, so anywhere the Widget Center
-// Overlay (lib/widgetCenterOverlay.js / lib/widgetCenterOverlayPreferences.js)
-// needs an actual color-picking UI instead of a plain hex text field, this
-// is that picker. Same St.DrawingArea + Cairo 'repaint' convention every
+// Overlay (lib/widgetCenterOverlay.js) needs an actual color-picking UI
+// instead of a plain hex text field, this is that picker. Same St.DrawingArea + Cairo 'repaint' convention every
 // circles-* widget already uses (see e.g. widgets/circles-battery/widget.js)
 // rather than driving a raw Clutter.Canvas by hand.
 //

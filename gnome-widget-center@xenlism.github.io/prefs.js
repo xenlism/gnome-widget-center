@@ -4,7 +4,7 @@
 // GNOME's extension-prefs flow"): this file used to contain the ENTIRE
 // Control Center implementation (~1,600 lines - Overview/Store/
 // Preferences pages, backup/restore, per-widget settings subpages, the
-// works). All of that moved to lib/prefsWindowController.js's
+// works). All of that moved to lib/prefsWindowControllerBase.js's
 // `PrefsWindowController` class, which only needed `this.path` and
 // `this.metadata` from this class and never anything else
 // ExtensionPreferences-specific — so it was already, structurally, a
@@ -38,7 +38,7 @@
 
 import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
-import {PrefsWindowControllerV2} from './lib/prefsWindowControllerV2.js';
+import {PrefsWindowControllerV2} from './lib/prefsWindowController.js';
 
 export default class WidgetCenterPreferences extends ExtensionPreferences {
     async fillPreferencesWindow(window) {

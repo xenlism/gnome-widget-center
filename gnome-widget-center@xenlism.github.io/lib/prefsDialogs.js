@@ -1,16 +1,17 @@
 // products/extension/lib/prefsDialogs.js
 //
-// Split out of prefsWindowController.js (2026-08-01 lib/ cleanup pass) —
+// Split out of prefsWindowControllerBase.js (2026-08-01 lib/ cleanup pass) —
 // small, stateless GTK4/Adwaita dialog helpers (password prompt, yes/no
 // confirmation, report dialog, native file chooser) that never touched
 // `this` on PrefsWindowController — they only ever needed the `window`
 // (and other plain arguments) passed in, so moving them out and calling
 // them as plain functions changes nothing about behavior, only where
 // the code lives. Used by the Import/Export and Backup/Restore category
-// builders in prefsWindowController.js.
+// builders in prefsWindowControllerBase.js.
 
 import Adw from 'gi://Adw';
 import Gtk from 'gi://Gtk';
+import Gio from 'gi://Gio';
 
 export function showReportDialog(window, title, bodyText) {
     const dialog = new Adw.MessageDialog({
@@ -90,15 +91,28 @@ export function confirmOverwrite(window, heading, body, confirmLabel = 'Overwrit
  */
 export function chooseFile(window, opts) {
     return new Promise(resolve => {
+        const action = opts.action === 'save'
+            ? Gtk.FileChooserAction.SAVE
+            : opts.action === 'select_folder'
+                ? Gtk.FileChooserAction.SELECT_FOLDER
+                : Gtk.FileChooserAction.OPEN;
         const chooser = new Gtk.FileChooserNative({
             title: opts.title,
-            action: opts.action === 'save' ? Gtk.FileChooserAction.SAVE : Gtk.FileChooserAction.OPEN,
+            action,
             transient_for: window,
             modal: true,
-            accept_label: opts.action === 'save' ? '_Save' : '_Open',
+            accept_label: opts.action === 'save' ? '_Save' : opts.action === 'select_folder' ? '_Select' : '_Open',
         });
         if (opts.initialName)
             chooser.set_current_name(opts.initialName);
+        if (opts.initialFolder) {
+            try {
+                chooser.set_current_folder(Gio.File.new_for_path(opts.initialFolder));
+            } catch (e) {
+                // best-effort — an invalid/missing folder just leaves the
+                // chooser at its own default starting location.
+            }
+        }
         if (opts.pattern) {
             const filter = new Gtk.FileFilter();
             filter.add_pattern(opts.pattern);

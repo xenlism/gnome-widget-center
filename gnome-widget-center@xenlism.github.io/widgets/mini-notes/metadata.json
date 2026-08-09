@@ -73,5 +73,6 @@
       "max": 100,
       "step": 1
     }
-  ]
+  ],
+  "screenshot": "screenshot.png"
 }

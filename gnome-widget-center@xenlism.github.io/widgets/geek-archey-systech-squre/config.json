@@ -4,13 +4,13 @@
     {
       "id": "general",
       "label": "Geek Archey Sysfetch (Square)",
-      "description": "neofetch-style system info card - square layout",
+      "description": "neofetch-style system info card - text only, square layout",
       "icon": "utilities-terminal-symbolic",
       "groups": [
         {
           "id": "distro",
           "label": "Distro",
-          "description": "Auto-detected from /etc/os-release on first run (falls back to the generic Linux logo if detection fails). Picks which ASCII logo file is loaded (only the selected logo is ever loaded) and which package manager is queried for the Packages row.",
+          "description": "Auto-detected from /etc/os-release on first run (falls back to generic Linux if detection fails). Picks which package manager is queried for the Packages row. (This card is text-only - for the ASCII logo, use the companion Archey Logo widget.)",
           "fields": [
             {
               "id": "distro",
@@ -210,14 +210,6 @@
               "max": 64,
               "step": 1,
               "suffix": "px"
-            },
-            {
-              "id": "showColorPalette",
-              "label": "Show color palette",
-              "description": "Row of 16 small color swatches under Memory, like neofetch/archey4's trailing color-block strip. Turn off if it doesn't fit your chosen block-type/font size.",
-              "dataType": "boolean",
-              "fieldType": "switch",
-              "default": true
             }
           ]
         }
@@ -273,7 +265,7 @@
               "min": 0,
               "max": 360,
               "step": 1,
-              "suffix": "\u00b0",
+              "suffix": "°",
               "visibleIf": "shadowEnabled"
             },
             {

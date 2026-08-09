@@ -174,11 +174,14 @@
         Read by lib/widgetCenterOverlay.js via Main.wm.addKeybinding().
         Array-of-strings type is required by that API's GSettings contract
         even though only the first entry is ever used here.
-        User-customizable both from the overlay's own Preferences tab
-        (lib/widgetCenterOverlayPreferences.js, captured live via a
-        Clutter key-press grab) and from this extension's real
-        Preferences window's Interactions category
-        (lib/prefsPageBuilders.js). 2026-08-04: this key replaces an
+        User-customizable from this extension's real Preferences window's
+        Interactions category (lib/prefsPageBuilders.js) - the overlay
+        itself no longer hosts its own separate Preferences tab (see
+        lib/widgetCenterOverlay.js's 2026-08-08 comment on
+        _openExtensionPreferences(); lib/widgetCenterOverlayPreferences.js,
+        which used to offer a second, Clutter-key-press-grab-based way to
+        set this same key, was deleted 2026-08-09 as dead code once
+        nothing imported it anymore). 2026-08-04: this key replaces an
         earlier, unmerged draft called "overlay-shortcut" that duplicated
         this same feature before the overlay's own already-working
         keybinding code was found - never shipped, no migration needed.
@@ -224,6 +227,141 @@
         discovered, so a later Control Center open doesn't mistake an
         already-known, user-disabled widget for a brand new one and
         re-apply auto-enable-new-widgets to it again.
+      </description>
+    </key>
+
+    <!-- ==================================================================
+      Force Settings (2026-08-09, ForceSettingsSpecification.md;
+      switches split 2026-08-09 per user request into 4 independent
+      toggles instead of 1). FOUR independent on/off switches, each
+      covering its own slice of Background + Shadow appearance - see
+      lib/forceSettingsHelper.js for the resolution logic that reads
+      these keys. Deliberately separate from the OLDER, still-live
+      per-property force flags (background.force/cornerRadius.force/
+      dropShadow.force/border.force/opacity.force, lib/themeService.js's
+      theme.json) - by product decision, border/opacity keep using that
+      older mechanism unchanged; only background/cornerRadius/dropShadow
+      migrate to this GSettings model. See HANDOVER_FORCE_SETTINGS.md for
+      the full writeup.
+    -->
+
+    <key name="force-background-color-enabled" type="b">
+      <default>false</default>
+      <summary>Force Background Color on every widget (independent switch)</summary>
+      <description>
+        When true, every widget's background color comes from
+        force-background-color below instead of the widget's own
+        config.json. Independent of the other 3 force switches -
+        resolved by lib/forceSettingsHelper.js; widgets never read this
+        key directly.
+      </description>
+    </key>
+
+    <key name="force-corner-radius-enabled" type="b">
+      <default>false</default>
+      <summary>Force Corner Radius on every widget (independent switch)</summary>
+      <description>
+        When true, every widget's corner radius comes from
+        force-corner-radius below instead of the widget's own
+        config.json. Independent of the other 3 force switches -
+        resolved by lib/forceSettingsHelper.js; widgets never read this
+        key directly.
+      </description>
+    </key>
+
+    <key name="force-background-blur-enabled" type="b">
+      <default>false</default>
+      <summary>Force Background Blur on every widget (independent switch)</summary>
+      <description>
+        When true, every widget's background blur comes from
+        force-background-blur below instead of the widget's own
+        config.json. Independent of the other 3 force switches -
+        resolved by lib/forceSettingsHelper.js; widgets never read this
+        key directly.
+      </description>
+    </key>
+
+    <key name="force-shadow-appearance-enabled" type="b">
+      <default>false</default>
+      <summary>Force Shadow appearance on every widget (independent switch)</summary>
+      <description>
+        When true, every widget's shadow (enabled/color/opacity/spread/
+        blur) comes from the force-shadow-* value keys below instead of
+        the widget's own config.json. shadow-distance/shadow-angle are
+        NOT gated by this key, or by any of the 4 force switches - they
+        are always read from GSettings regardless (see those keys' own
+        description). Independent of the other 3 force switches -
+        resolved by lib/forceSettingsHelper.js; widgets never read this
+        key directly.
+      </description>
+    </key>
+
+    <key name="force-background-color" type="s">
+      <default>'#1e1e2eff'</default>
+      <summary>Global Background Color (#HEX + alpha) - used when force-background-color-enabled is on</summary>
+    </key>
+
+    <key name="force-corner-radius" type="i">
+      <range min="0" max="32"/>
+      <default>12</default>
+      <summary>Global Corner Radius (px, 0-32) - used when force-corner-radius-enabled is on</summary>
+    </key>
+
+    <key name="force-background-blur" type="i">
+      <range min="0" max="60"/>
+      <default>0</default>
+      <summary>Global Background Blur (px, 0-60) - used when force-background-blur-enabled is on</summary>
+    </key>
+
+    <key name="force-shadow-enabled" type="b">
+      <default>true</default>
+      <summary>Global Shadow Enable - used when force-shadow-appearance-enabled is on</summary>
+    </key>
+
+    <key name="force-shadow-color" type="s">
+      <default>'#000000ff'</default>
+      <summary>Global Shadow Color (#HEX + alpha) - used when force-shadow-appearance-enabled is on</summary>
+    </key>
+
+    <key name="force-shadow-opacity" type="i">
+      <range min="0" max="100"/>
+      <default>45</default>
+      <summary>Global Shadow Opacity (%, 0-100) - used when force-shadow-appearance-enabled is on</summary>
+    </key>
+
+    <key name="force-shadow-spread" type="i">
+      <range min="0" max="20"/>
+      <default>0</default>
+      <summary>Global Shadow Spread (px, 0-20) - used when force-shadow-appearance-enabled is on</summary>
+    </key>
+
+    <key name="force-shadow-blur" type="i">
+      <range min="0" max="60"/>
+      <default>12</default>
+      <summary>Global Shadow Blur (px, 0-60) - used when force-shadow-appearance-enabled is on</summary>
+    </key>
+
+    <key name="shadow-distance" type="i">
+      <range min="0" max="30"/>
+      <default>4</default>
+      <summary>Shadow Distance (px, 0-30) - ALWAYS read from GSettings</summary>
+      <description>
+        Per ForceSettingsSpecification.md: unlike every other
+        Background/Shadow field, Distance is stored in GSettings and used
+        by every widget regardless of any of the 4 force switches, so a
+        widget's own config.json never carries a shadowDistance value
+        under this model.
+      </description>
+    </key>
+
+    <key name="shadow-angle" type="i">
+      <default>90</default>
+      <summary>Shadow Angle (degrees, one of 45/90/135/180/225/270/315) - ALWAYS read from GSettings</summary>
+      <description>
+        Same "always global" rule as shadow-distance above. Value should
+        be one of the 45-degree steps in
+        lib/forceSettingsHelper.js's SHADOW_ANGLE_STEPS; anything else
+        falls back to 90 when resolved.
       </description>
     </key>
 

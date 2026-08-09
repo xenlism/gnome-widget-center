@@ -1,7 +1,7 @@
 {
   "id": "geek-week-stat-bar",
   "name": "Geek Week/Stat (Bar)",
-  "description": "Wide `barx2` card (23\u00d75 grid cells): big centered week line on top, stat line centered underneath.",
+  "description": "Wide `barx2` card (23×5 grid cells): big centered week line on top, stat line centered underneath.",
   "version": "1.0.0",
   "author": "GNOME Widget Center",
   "api-version": 1,
@@ -11,5 +11,6 @@
     "x": 60,
     "y": 60,
     "monitor": 0
-  }
+  },
+  "screenshot": "screenshot.png"
 }

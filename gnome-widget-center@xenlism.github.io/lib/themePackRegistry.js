@@ -181,6 +181,7 @@ export class ThemePackRegistry {
             name: packMeta.name || baseName,
             description: packMeta.description ?? '',
             author: packMeta.author ?? '',
+            email: packMeta.email ?? '',
             url: packMeta.url ?? '',
             screenshotBase64: raw.screenshot?.base64 ?? null,
             screenshotMime: raw.screenshot?.mimeType ?? null,

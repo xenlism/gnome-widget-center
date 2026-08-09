@@ -83,7 +83,7 @@ export default class MediaPlayerCircleWidget {
             width: SIZE,
             height: SIZE,
             reactive: true,
-            clip_to_allocation: true,
+            clip_to_allocation: false, // Allow shadow to render outside bounds
         });
 
         this._ringArea = new St.DrawingArea({

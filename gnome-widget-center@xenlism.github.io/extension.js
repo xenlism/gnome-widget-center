@@ -37,7 +37,9 @@ import {WidgetEditMode} from './lib/widgetEditMode.js';
 import {EditModeDragController} from './lib/editModeDragController.js';
 import {BlockSizeManager} from './lib/blockSizeManager.js';
 import {ThemeService} from './lib/themeService.js';
-import {setForcedTheme} from './lib/widgetVisualKit.js';
+import {setForcedTheme, setForceSettingsHelper, applyCardOpacity} from './lib/widgetVisualKit.js';
+import {applyCardBlur} from './lib/cardLayers.js';
+import {ForceSettingsHelper} from './lib/forceSettingsHelper.js';
 import {WidgetCenterOverlay} from './lib/widgetCenterOverlay.js';
 import {createLogger} from './lib/logger.js';
 import {importGwctDocument} from './lib/exportService.js';
@@ -72,6 +74,60 @@ export default class WidgetCenterExtension extends Extension {
             setForcedTheme(this._themeService.getGlobalTheme());
             this._reapplyTheme();
         });
+
+        // Force Settings (2026-08-09, HANDOVER_FORCE_SETTINGS.md next-
+        // steps item 2) — the NEWER single-GSettings-switch-per-property
+        // mechanism (Background Color / Corner Radius / Background Blur /
+        // Shadow) that widgetVisualKit.js's cardStyleCss()/blurCss()/
+        // shadowBoxShadowCss() already know how to consult via
+        // setForceSettingsHelper() (see that file — Addendum 3 wired the
+        // consult-side in, this is the construct-and-call-it side).
+        // Separate from ThemeService/ theme.json above, which still owns
+        // Border/Opacity's OLDER per-property force flags unchanged — see
+        // forceSettingsHelper.js's file header for the product decision.
+        //
+        // ForceSettingsHelper needs a raw Gio.Settings (get_boolean()/
+        // get_int()/get_string()/connect('changed', ...)), not the
+        // SettingsService wrapper built just below (whose only public
+        // surface is getGlobalValue()/setGlobalValue() — see
+        // HANDOVER_FORCE_SETTINGS.md's "API mismatch caught" note from the
+        // Prefs UI pass for why that wrapper was deliberately not
+        // widened). This calls Extension.getSettings() directly, exactly
+        // like SettingsService.init() does one line further down for its
+        // own copy — two independent Gio.Settings objects on the same
+        // schema/backing dconf keys is the same pattern ThemeService/
+        // SettingsService already use side by side, not a new one.
+        try {
+            const forceGSettings = this.getSettings('org.gnome.shell.extensions.widget-center');
+            this._forceSettingsHelper = new ForceSettingsHelper(forceGSettings);
+            // Seed it immediately, same "don't wait for the first change
+            // signal" reasoning as setForcedTheme() above — a widget that
+            // opens with a Force switch already on must render forced on
+            // the very first paint, not just from the next GSettings change.
+            setForceSettingsHelper(this._forceSettingsHelper);
+            // 2026-08-09 (HANDOVER_FORCE_SETTINGS.md next-steps item 1):
+            // also seed lib/themeService.js's own copy, so `themeable:
+            // true` widgets (clock, calendar-minimal, etc. — routed
+            // through ThemeService.applyWidgetStyle() instead of
+            // widgetVisualKit.js's cardStyleCss()/blurCss()/
+            // shadowBoxShadowCss(), see _reapplyTheme() below) resolve
+            // Force identically to every other widget instead of having
+            // no equivalent at all. Same instance, same "seed before
+            // first paint" timing as the setForceSettingsHelper() call
+            // just above — ThemeService is already constructed/init'd
+            // earlier in this method, so this is safe to call now.
+            this._themeService.setForceSettingsHelper(this._forceSettingsHelper);
+            this._forceSettingsChangedId = this._forceSettingsHelper.watch(() => {
+                this._reapplyTheme();
+            });
+        } catch (e) {
+            // Same non-essential-degrade-gracefully treatment as
+            // SettingsService below — a Force Settings failure should
+            // never block widgets from rendering at all (they simply keep
+            // using their own per-widget config.json values).
+            console.error('[widget-center] ForceSettingsHelper setup failed', e);
+            this._forceSettingsHelper = null;
+        }
 
         this._settings = new SettingsService(this);
         try {
@@ -280,7 +336,10 @@ export default class WidgetCenterExtension extends Extension {
             logger: this._logger,
             onWidgetSettings: id => this._openWidgetSettings(id),
             onWidgetRemove: id => this._removeWidgetViaEditMode(id),
-            onOpenPreferences: () => this.openPreferences(),
+            onOpenPreferences: () => {
+                this.openPreferences()?.catch(e =>
+                    console.error("[widget-center] openPreferences() failed", e));
+            },
             onApplyThemePack: entry => {
                 // A flat .gwct pack carries the complete exported desktop,
                 // not just its widget ids. Apply it so Load restores the
@@ -318,10 +377,27 @@ export default class WidgetCenterExtension extends Extension {
 
         // Stop watching theme.json for external changes before anything
         // below tears down the actors _reapplyTheme() would otherwise
-        // touch on a stray in-flight debounced callback.
+        // touch on a stray in-flight debounced callback. Clear its
+        // ForceSettingsHelper reference (2026-08-09, HANDOVER_FORCE_
+        // SETTINGS.md next-steps item 1) before nulling the instance
+        // itself, same "stop consulting a helper whose Gio.Settings is
+        // about to go away" reasoning as widgetVisualKit.js's own
+        // setForceSettingsHelper(null) just below.
         this._themeService?.unwatch();
+        this._themeService?.setForceSettingsHelper(null);
         this._themeService = null;
         setForcedTheme(null);
+
+        // Force Settings — same ordering reasoning as ThemeService right
+        // above: stop watching before anything _reapplyTheme() would touch
+        // is torn down below, then clear the module-level helper reference
+        // so widgetVisualKit.js falls back to its OLDER _forcedTheme path
+        // (already null'd above) rather than calling into a helper whose
+        // Gio.Settings is about to go away too.
+        this._forceSettingsHelper?.unwatch(this._forceSettingsChangedId);
+        this._forceSettingsChangedId = null;
+        this._forceSettingsHelper = null;
+        setForceSettingsHelper(null);
 
         if (this._settings && this._disabledChangedId != null)
             this._settings.disconnect(this._disabledChangedId);
@@ -450,10 +526,45 @@ export default class WidgetCenterExtension extends Extension {
                 } catch (e) {
                     console.error(`[widget-center] Failed to reapply theme for "${entry.id}"`, e);
                 }
+                // Opacity/Blur - see _placeEntry()'s matching call for why
+                // this runs unconditionally, outside the themeable branch
+                // above: neither property is part of applyWidgetStyle()'s
+                // or _render()'s own CSS output.
+                this._applyCardEffects(entry);
             }
         }
 
         this._editMode?.reapplyTheme();
+    }
+
+    /**
+     * @private Applies the two per-widget visual properties that are
+     * NOT expressible as a `set_style()` CSS string - Opacity (a plain
+     * Clutter.Actor property) and Blur (a real Clutter.BlurEffect, since
+     * the CSS `-st-background-blur` declaration widgetVisualKit.js's
+     * cardStyleCss()/applyWidgetStyle() still also emit does not
+     * actually render in the target environment - see
+     * HANDOVER_FORCE_SETTINGS.md Addendum 6/4). Both helpers are
+     * already fully Force-aware on their own (widgetVisualKit.js's
+     * opacityValue() for the older theme.json border/opacity mechanism,
+     * cardLayers.js's applyCardBlur() for the newer GSettings 4-switch
+     * model) - this method's only job is to actually call them, on
+     * every widget's own root actor, which nothing did before this fix.
+     * @param {object} entry - a WidgetLoader entry: {actor, settings, ...}
+     */
+    _applyCardEffects(entry) {
+        if (!entry?.actor)
+            return;
+        try {
+            applyCardOpacity(entry.actor, entry.settings);
+        } catch (e) {
+            console.error(`[widget-center] Failed to apply opacity for "${entry.id}"`, e);
+        }
+        try {
+            applyCardBlur(entry.actor, entry.settings);
+        } catch (e) {
+            console.error(`[widget-center] Failed to apply blur for "${entry.id}"`, e);
+        }
     }
 
     /**
@@ -493,6 +604,21 @@ export default class WidgetCenterExtension extends Extension {
                 console.error(`[widget-center] Failed to apply theme for "${entry.id}"`, e);
             }
         }
+
+        // Opacity/Blur (2026-08-09 bug fix, HANDOVER item 1): neither of
+        // these is expressible as a `set_style()` CSS string - opacity is
+        // a plain Clutter.Actor property, blur needs a real
+        // Clutter.BlurEffect - so no widget.js call site or ThemeService
+        // path was ever applying either one, even though
+        // widgetVisualKit.js's opacityValue()/applyCardOpacity() and
+        // cardLayers.js's applyCardBlur() were already fully
+        // Force-aware and correct in isolation. Applied here, once,
+        // centrally, on every widget's own root `entry.actor` -
+        // regardless of `themeable` - since this is the one place in the
+        // codebase that already has both the actor and its settings on
+        // hand for every widget. See _reapplyTheme() for the matching
+        // call that keeps this live when a Force switch changes.
+        this._applyCardEffects(entry);
 
         try {
             this._layer.addWidgetActor(entry.id, entry.actor, position);
