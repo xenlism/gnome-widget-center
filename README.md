@@ -89,14 +89,14 @@ The Overview UI can use each widget's own screenshot:
   "id": "weather-dark",
   "name": "Weather (Dark)",
   "description": "Wide dark weather card...",
-  "screenshot": "screenshot.webp"
+  "screenshot": "screenshot.png"
 }
 ```
 
 The image is resolved relative to the widget directory, so the example
 above loads:
 
-`widgets/weather-dark/screenshot.webp`
+`widgets/weather-dark/screenshot.png`
 
 This screenshot metadata is used by both the overlay Overview and the
 extension Preferences Overview.
@@ -259,7 +259,7 @@ Typical widget structure:
 my-widget/
 ├── metadata.json
 ├── widget.js
-├── screenshot.webp
+├── screenshot.png
 ├── config.json
 ├── prefs.js
 └── ...
@@ -280,7 +280,7 @@ Example:
   "api-version": 1,
   "entry": "widget.js",
   "block-type": "1x1",
-  "screenshot": "screenshot.webp"
+  "screenshot": "screenshot.png"
 }
 ```
 
