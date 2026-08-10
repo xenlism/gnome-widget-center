@@ -1,6 +1,6 @@
 {
   "id": "circles-system-nested",
-  "name": "System Monitor Mini",
+  "name": "System Monitor Nested",
   "description": "1x1 card: a single circle with three concentric ring gauges - CPU (outer), Memory (middle), Disk (inner) - each its own color, like Activity rings.",
   "version": "1.0.0",
   "author": "GNOME Widget Center",
