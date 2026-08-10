@@ -27,9 +27,23 @@ function _getLocationSearchSession() {
     return _locationSearchSession;
 }
 
+// 2026-08-09 (handover v3 crash fix): every Adw.ActionRow/ExpanderRow/
+// EntryRow/PasswordEntryRow `title`/`subtitle` below is parsed as Pango
+// markup by libadwaita - a raw "&" or "<" in a widget's own
+// config.json field label/description (e.g. "Low battery color (<
+// 20%)") throws a markup parse error and, per the user's journalctl
+// capture, can take the whole Shell process down with it. `field.label`/
+// `field.description` themselves are left un-escaped (still used
+// as-is for `tooltip_text()` calls and plain `Gtk.Label` headers just
+// below, neither of which parse markup) - only wrap them in `_esc()`
+// at the specific call sites that hand them to a markup title/subtitle.
+function _esc(text) {
+    return GLib.markup_escape_text(String(text ?? ''), -1);
+}
+
 export function _textRow(field, current, set) {
     const row = new Adw.EntryRow({
-        title: field.label,
+        title: _esc(field.label),
         text: String(current ?? ''),
         show_apply_button: Boolean(field.pattern || field.minLength || field.maxLength),
     });
@@ -84,7 +98,7 @@ export function _textRow(field, current, set) {
 // address and fills them straight into the entry.
 export function _locationRow(field, current, set) {
     const row = new Adw.EntryRow({
-        title: field.label,
+        title: _esc(field.label),
         text: String(current ?? ''),
         show_apply_button: Boolean(field.pattern || field.minLength || field.maxLength),
     });
@@ -356,7 +370,7 @@ async function _fetchIpLocationForPrefs() {
 // this becomes a problem for less self-describing values.
 export function _autocompleteRow(field, current, set, ctx) {
     const row = new Adw.EntryRow({
-        title: field.label,
+        title: _esc(field.label),
         text: String(current ?? ''),
     });
     if (field.description)
@@ -533,7 +547,7 @@ export function _textareaRow(field, current, set) {
 }
 
 export function _passwordRow(field, current, set) {
-    const row = new Adw.PasswordEntryRow({title: field.label, text: String(current ?? '')});
+    const row = new Adw.PasswordEntryRow({title: _esc(field.label), text: String(current ?? '')});
     if (field.description)
         row.set_tooltip_text(field.description);
     row.connect('notify::text', () => set(row.text));
@@ -542,8 +556,8 @@ export function _passwordRow(field, current, set) {
 
 export function _switchRow(field, current, set) {
     const row = new Adw.SwitchRow({
-        title: field.label,
-        subtitle: field.description || '',
+        title: _esc(field.label),
+        subtitle: _esc(field.description || ''),
         active: Boolean(current),
     });
     row.connect('notify::active', () => set(row.active));
@@ -555,7 +569,7 @@ export function _switchRow(field, current, set) {
 // authors who specifically want checkbox styling (e.g. inside a group of
 // otherwise unrelated toggles) rather than an iOS-style switch.
 export function _checkboxRow(field, current, set) {
-    const row = new Adw.ActionRow({title: field.label, subtitle: field.description || ''});
+    const row = new Adw.ActionRow({title: _esc(field.label), subtitle: _esc(field.description || '')});
     const check = new Gtk.CheckButton({active: Boolean(current), valign: Gtk.Align.CENTER});
     check.connect('notify::active', () => set(check.active));
     row.add_suffix(check);
@@ -571,8 +585,8 @@ export function _dropdownRow(field, current, set) {
 
     const model = new Gtk.StringList({strings: options.map(opt => opt.label)});
     const row = new Adw.ComboRow({
-        title: field.label,
-        subtitle: field.description || '',
+        title: _esc(field.label),
+        subtitle: _esc(field.description || ''),
         model,
         enable_search: Boolean(field.searchable),
     });
@@ -595,8 +609,8 @@ export function _spinRow(field, current, set) {
         value: current,
     });
     const row = new Adw.SpinRow({
-        title: field.label,
-        subtitle: field.description || (hasBounds ? `${field.min}\u2013${field.max}${field.unit ?? ''}` : ''),
+        title: _esc(field.label),
+        subtitle: _esc(field.description || (hasBounds ? `${field.min}\u2013${field.max}${field.unit ?? ''}` : '')),
         adjustment,
         digits: field.decimals ?? (Number.isInteger(step) ? 0 : 2),
     });
@@ -607,7 +621,7 @@ export function _spinRow(field, current, set) {
 export function _sliderRow(field, current, set) {
     const min = field.min ?? 0;
     const max = field.max ?? 100;
-    const row = new Adw.ActionRow({title: field.label, subtitle: field.description || ''});
+    const row = new Adw.ActionRow({title: _esc(field.label), subtitle: _esc(field.description || '')});
 
     const scale = new Gtk.Scale({
         orientation: Gtk.Orientation.HORIZONTAL,
@@ -630,7 +644,7 @@ export function _sliderRow(field, current, set) {
 }
 
 export function _colorRow(field, current, set) {
-    const row = new Adw.ActionRow({title: field.label, subtitle: field.description || ''});
+    const row = new Adw.ActionRow({title: _esc(field.label), subtitle: _esc(field.description || '')});
 
     const rgba = new Gdk.RGBA();
     rgba.parse(typeof current === 'string' ? current : String(field.default));
@@ -683,7 +697,7 @@ function _rgbaToHex(rgba) {
 //      on that null was the actual crash. Now just skipped: no selection
 //      means nothing new to persist.
 export function _fontRow(field, current, set) {
-    const row = new Adw.ActionRow({title: field.label, subtitle: field.description || ''});
+    const row = new Adw.ActionRow({title: _esc(field.label), subtitle: _esc(field.description || '')});
 
     const button = new Gtk.FontDialogButton({dialog: new Gtk.FontDialog(), valign: Gtk.Align.CENTER});
 
@@ -713,7 +727,7 @@ export function _fontRow(field, current, set) {
 // live preview suffix — good enough for "type/paste a
 // `something-symbolic` name", not a browsable icon grid.
 export function _iconRow(field, current, set) {
-    const row = new Adw.EntryRow({title: field.label, text: String(current ?? '')});
+    const row = new Adw.EntryRow({title: _esc(field.label), text: String(current ?? '')});
     if (field.description)
         row.set_tooltip_text(field.description);
 
@@ -731,7 +745,7 @@ export function _iconRow(field, current, set) {
 // for its .desktop-file row (see WIDGET_API.md §6.2).
 export function _pathRow(field, current, set, {folder}) {
     const row = new Adw.ActionRow({
-        title: field.label,
+        title: _esc(field.label),
         subtitle: current || field.placeholder || 'Not set',
     });
 
@@ -785,7 +799,7 @@ export function _pathRow(field, current, set, {folder}) {
 // on a top-level property SET (see widgetSettings.js) — mutating a
 // nested object's own property silently wouldn't persist.
 export function _objectRow(field, current, set) {
-    const row = new Adw.ExpanderRow({title: field.label, subtitle: field.description || ''});
+    const row = new Adw.ExpanderRow({title: _esc(field.label), subtitle: _esc(field.description || '')});
     const base = current && typeof current === 'object' ? current : {};
 
     // Each property is built against its own one-key live Proxy so that

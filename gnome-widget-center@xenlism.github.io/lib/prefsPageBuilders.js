@@ -863,14 +863,16 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         // previously missing (backend `.force` support already existed).
         const borderGroup = new Adw.PreferencesGroup({
             title: 'Widget border',
-            description: 'Applies to any widget that opts in via metadata.json\'s ' +
-                '"themeable": true. Uses the older theme.json mechanism, not the 4 ' +
-                'GSettings Force switches above.',
+            description: 'Uses the older theme.json mechanism, not the 4 GSettings Force ' +
+                'switches above. "Enabled" below must be ON for "Force" to actually draw ' +
+                'anything - Force only decides whether this group\'s values OVERRIDE a ' +
+                'widget\'s own border, it does not turn the border on by itself.',
         });
         page.add(borderGroup);
 
         const borderEnabledRow = new Adw.SwitchRow({
             title: 'Enabled',
+            subtitle: 'Turning this off hides the border everywhere, even with Force on below.',
             active: !!current.border.enabled,
         });
         borderGroup.add(borderEnabledRow);
@@ -914,10 +916,24 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
                 },
             });
         };
+        // 2026-08-09 bug fix: turning Force ON while Enabled is still OFF
+        // used to silently produce no visible border at all (borderCss()
+        // checks `forced.enabled` first, before `forced.force`) - the
+        // most common way this whole feature looked "broken" in user
+        // reports. Force now implies Enabled, same direction a user
+        // flipping "Force this border on" already expects it to work.
+        // Not the reverse: turning Enabled off should still be able to
+        // turn everything off even with Force staying on, so that path
+        // is left alone.
+        borderForceRow.connect('notify::active', () => {
+            if (borderForceRow.active && !borderEnabledRow.active)
+                borderEnabledRow.active = true; // triggers saveBorder() via its own notify::active below
+            else
+                saveBorder();
+        });
         borderEnabledRow.connect('notify::active', saveBorder);
         borderColorButton.connect('notify::rgba', saveBorder);
         borderWidthRow.connect('notify::value', saveBorder);
-        borderForceRow.connect('notify::active', saveBorder);
 
         // --- Opacity (OLDER theme.json mechanism) --------------------------
         // Same story as Border above - stays on ThemeService, this pass
@@ -931,7 +947,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
 
         const opacityRow = new Adw.SpinRow({
             title: 'Opacity',
-            subtitle: '0\u2013100 %',
+            subtitle: '0\u2013100 %. 100% = fully opaque, no visible change - lower this to actually see the fade.',
             adjustment: new Gtk.Adjustment({
                 lower: 0, upper: 100, step_increment: 1,
                 value: current.opacity.value ?? 100,

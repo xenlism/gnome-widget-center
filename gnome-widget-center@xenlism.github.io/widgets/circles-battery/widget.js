@@ -11,8 +11,17 @@
 //   >= 50%              -> ringColorHigh (green by default)
 //   charging (any %)    -> ringColorCharging (blue by default)
 //
-// This full-circle variant is deliberately ring-only: it does not
-// overlay a percentage, caption, or charging glyph in the center.
+// 2026-08-09 (handover v3): this full-circle variant used to be
+// deliberately ring-only. Per user request it now ALSO centers a
+// caption + percentage label inside the ring - same
+// Clutter.BinLayout stack-on-top-of-the-ring-DrawingArea trick
+// widgets/circles-cpu already uses for its own centered label, added
+// here as `this._textBox` alongside the existing `this._ringArea`
+// inside `this._stack`. While charging, the percentage is replaced by
+// a bolt glyph in the charging color, matching
+// widgets/circles-battery-half's existing convention. Both are
+// user-togglable via `showLabel` (default true) so anyone who liked
+// the old ring-only look can turn it back off.
 //
 // Data source: org.freedesktop.UPower's DisplayDevice - the same
 // aggregate battery object GNOME Shell's own battery indicator reads,
@@ -36,7 +45,8 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Cairo from 'cairo';
 
-import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor} from '../../lib/widgetVisualKit.js';
+import {SHADOW_DEFAULTS, hexToRgba as _hexToRgba, toCssColor as _toCssColor, parseFontDescription as _parseFontDescription, BORDER_DEFAULTS, OPACITY_DEFAULTS,} from '../../lib/widgetVisualKit.js';
+import {createLayeredCard, applyLayeredCardStyle} from '../../lib/cardLayers.js';
 
 const RING_SIZE = 128; // 1x1 block-type is 11x11 cells = 176px; matches widgets/circles-cpu's own sizing note.
 
@@ -64,14 +74,18 @@ export default class CirclesBatteryWidget {
     }
 
     buildActor() {
-        this._actor = new St.Bin({
-            style_class: 'circles-battery-root',
-            x_expand: true,
-            y_expand: true,
-        });
+        // 2026-08-09 blur fix: createLayeredCard() gives this widget a
+        // dedicated background actor to style/blur/fade, separate from
+        // the content (ring + label) below - see lib/cardLayers.js's
+        // header comment. Previously this._actor was a single St.Bin
+        // that was both the styled/blurred card AND the parent of the
+        // ring drawing area, so turning on Blur blurred the ring itself
+        // too, not just the card fill behind it.
+        this._layers = createLayeredCard({contentStyleClass: 'circles-battery-root'});
+        this._actor = this._layers.root;
 
         const outerBox = new St.BoxLayout({vertical: true, x_expand: true, y_expand: true});
-        this._actor.set_child(outerBox);
+        this._layers.content.add_child(outerBox);
         outerBox.set_style('padding: 14px;');
 
         this._stack = new St.Widget({
@@ -88,6 +102,19 @@ export default class CirclesBatteryWidget {
         this._ringArea = new St.DrawingArea({width: RING_SIZE, height: RING_SIZE});
         this._stack.add_child(this._ringArea);
         this._repaintId = this._ringArea.connect('repaint', () => this._onRepaint());
+
+        this._textBox = new St.BoxLayout({
+            vertical: true,
+            x_align: Clutter.ActorAlign.CENTER,
+            y_align: Clutter.ActorAlign.CENTER,
+            x_expand: true,
+            y_expand: true,
+        });
+        this._captionLabel = new St.Label({text: 'BATTERY', x_align: Clutter.ActorAlign.CENTER});
+        this._valueLabel = new St.Label({text: '0%', x_align: Clutter.ActorAlign.CENTER});
+        this._textBox.add_child(this._captionLabel);
+        this._textBox.add_child(this._valueLabel);
+        this._stack.add_child(this._textBox);
 
         this._render();
         return this._actor;
@@ -120,6 +147,8 @@ export default class CirclesBatteryWidget {
     getDefaultSettings() {
         return {
             ...SHADOW_DEFAULTS,
+            ...BORDER_DEFAULTS,
+            ...OPACITY_DEFAULTS,
             backgroundColor: '#FFFFFF00',
             cornerRadius: 18,
 
@@ -129,6 +158,13 @@ export default class CirclesBatteryWidget {
             ringColorHigh: '#33D17AFF',
             ringColorCharging: '#3584E4FF',
             ringThickness: 10,
+
+            showLabel: true,
+            captionText: 'BATTERY',
+            captionFont: 'Sans 10',
+            captionColor: '#FFFFFFB3',
+            percentFont: 'Sans Bold 22',
+            percentColor: '#FFFFFFFF',
 
             refreshRateSeconds: 5,
         };
@@ -205,7 +241,22 @@ export default class CirclesBatteryWidget {
 
     /** @private */
     _render() {
-        this._actor.set_style(_cardStyleCss(this._settings, {backgroundColorFallback: '#FFFFFF00', cornerRadiusFallback: 18}));
+        // applyLayeredCardStyle() covers background-color/border/corner-
+        // radius/shadow (CSS on this._layers.background) PLUS blur
+        // (Clutter.BlurEffect) and opacity - all three now correctly
+        // isolated to the background layer, never touching the ring/
+        // label content above it. Opacity here is only the background's
+        // own fade for symmetry with blur; the widget's overall opacity
+        // setting is still also applied to the whole card by
+        // extension.js's _applyCardEffects() on entry.actor, same as
+        // every other widget - see that method's doc comment for why
+        // both exist (root opacity = "fade the whole card the same way
+        // dragging a window's opacity slider does", the more common
+        // reading of an "opacity" setting; this background-only call
+        // is layered belt-and-braces so background fades even if a
+        // caller wants ONLY that in the future - harmless no-op overlap
+        // today since both read the exact same settings.opacity value).
+        applyLayeredCardStyle(this._layers, this._settings, {backgroundColorFallback: '#FFFFFF00', cornerRadiusFallback: 18});
 
         const ringColorKey = this._currentRingColorSetting();
         const ringColorDefault = {
@@ -213,6 +264,40 @@ export default class CirclesBatteryWidget {
             ringColorHigh: '#33D17AFF', ringColorCharging: '#3584E4FF',
         }[ringColorKey];
         const ringColorCss = _toCssColor(this._settings[ringColorKey], ringColorDefault);
+
+        if (this._textBox)
+            this._textBox.visible = this._settings.showLabel ?? true;
+
+        if (this._captionLabel) {
+            const captionColor = _toCssColor(this._settings.captionColor, '#FFFFFFB3');
+            const captionFont = _parseFontDescription(this._settings.captionFont ?? 'Sans 10', 'Sans', 10);
+            this._captionLabel.set_text(this._settings.captionText ?? 'BATTERY');
+            this._captionLabel.set_style(
+                `color: ${captionColor}; font-family: ${captionFont.family}; ` +
+                `font-size: ${captionFont.size}px; text-align: center;`
+            );
+        }
+
+        if (this._valueLabel) {
+            const font = _parseFontDescription(this._settings.percentFont ?? 'Sans Bold 22', 'Sans Bold', 22);
+            if (this._charging) {
+                // Bolt glyph instead of a percentage while charging, in
+                // the ring's own (charging) color - same convention as
+                // widgets/circles-battery-half.
+                this._valueLabel.set_text('\u26A1'); // ⚡
+                this._valueLabel.set_style(
+                    `color: ${ringColorCss}; font-family: ${font.family}; ` +
+                    `font-size: ${font.size}px; text-align: center;`
+                );
+            } else {
+                const percentColor = _toCssColor(this._settings.percentColor, '#FFFFFFFF');
+                this._valueLabel.set_text(`${Math.round(this._fraction * 100)}%`);
+                this._valueLabel.set_style(
+                    `color: ${percentColor}; font-family: ${font.family}; ` +
+                    `font-size: ${font.size}px; font-weight: bold; text-align: center;`
+                );
+            }
+        }
 
         if (this._ringArea)
             this._ringArea.queue_repaint();

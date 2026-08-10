@@ -52,6 +52,8 @@
 import Adw from 'gi://Adw';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import Gtk from 'gi://Gtk';
+import Gdk from 'gi://Gdk';
 import System from 'system';
 
 import {PrefsWindowControllerV2} from './lib/prefsWindowController.js';
@@ -132,6 +134,25 @@ async function presentWindow(requestedWidgetId, focusTarget = null, exportThemeI
             buildPromise = null;
             return false;
         });
+
+        // 2026-08-09 (handover v5) - Adw.PreferencesWindow's built-in
+        // Escape handling only pops a subpage/search, it does not close
+        // the window at the top level (user report: "Escape doesn't
+        // close the window"). Bubble phase + Escape-only, so it never
+        // intercepts Escape a subpage/search/dialog wants for itself -
+        // GTK dispatches key events to the deepest focused widget first,
+        // so this only fires once nothing closer up the tree has already
+        // consumed it (a search entry clearing itself, a subpage
+        // popping, an open color-picker popover closing, etc.).
+        const escController = new Gtk.EventControllerKey({propagation_phase: Gtk.PropagationPhase.BUBBLE});
+        escController.connect('key-pressed', (_ctrl, keyval) => {
+            if (keyval === Gdk.KEY_Escape) {
+                window.close();
+                return true;
+            }
+            return false;
+        });
+        window.add_controller(escController);
     }
 
     await buildPromise;

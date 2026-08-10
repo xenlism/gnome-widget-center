@@ -53,7 +53,7 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Gvc from 'gi://Gvc';
 import Cairo from 'cairo';
-import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba} from '../../lib/widgetVisualKit.js';
+import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, BORDER_DEFAULTS, OPACITY_DEFAULTS,} from '../../lib/widgetVisualKit.js';
 
 const BUTTON_WIDTH = 64;
 const BUTTON_HEIGHT = 140;
@@ -370,6 +370,8 @@ export default class SwitchesWidget {
     getDefaultSettings() {
         return {
             ...SHADOW_DEFAULTS,
+            ...BORDER_DEFAULTS,
+            ...OPACITY_DEFAULTS,
             backgroundColor: '#FFFFFF00',
             cornerRadius: 18,
             baseColor: '#9a9996',

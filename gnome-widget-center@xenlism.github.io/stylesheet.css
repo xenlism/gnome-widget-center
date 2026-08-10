@@ -122,7 +122,7 @@
  * tighter row since it sits above a content grid rather than in the
  * header. */
 .wc-overlay-sortbar {
-    padding: 8px 24px;
+    padding: 8px 0;
     spacing: 8px;
 }
 

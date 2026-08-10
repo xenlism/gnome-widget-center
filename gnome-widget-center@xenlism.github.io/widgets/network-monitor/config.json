@@ -40,7 +40,7 @@
             {
               "id": "downloadLineColor",
               "label": "Download line color",
-              "description": "Color of the download (\u2193) number and its sparkline",
+              "description": "Color of the download (↓) number and its sparkline",
               "dataType": "string",
               "fieldType": "colorpicker",
               "format": "color",
@@ -50,7 +50,7 @@
             {
               "id": "uploadLineColor",
               "label": "Upload line color",
-              "description": "Color of the upload (\u2191) number and its sparkline",
+              "description": "Color of the upload (↑) number and its sparkline",
               "dataType": "string",
               "fieldType": "colorpicker",
               "format": "color",
@@ -95,6 +95,57 @@
               "max": 64,
               "step": 1,
               "suffix": "px"
+            }
+          ]
+        },
+        {
+          "id": "borderOpacity",
+          "label": "Border & Opacity",
+          "description": "",
+          "fields": [
+            {
+              "id": "borderEnabled",
+              "label": "Enable border",
+              "description": "Draw a border around this widget's card",
+              "dataType": "boolean",
+              "fieldType": "switch",
+              "default": false
+            },
+            {
+              "id": "borderColor",
+              "label": "Border color",
+              "description": "",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#FFFFFF33",
+              "visibleIf": "borderEnabled"
+            },
+            {
+              "id": "borderWidth",
+              "label": "Border width",
+              "description": "",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 1,
+              "min": 0,
+              "max": 16,
+              "step": 1,
+              "suffix": "px",
+              "visibleIf": "borderEnabled"
+            },
+            {
+              "id": "opacity",
+              "label": "Opacity",
+              "description": "Fades the entire widget - background, text, icons, everything.",
+              "dataType": "integer",
+              "fieldType": "slider",
+              "default": 100,
+              "min": 0,
+              "max": 100,
+              "step": 1,
+              "suffix": "%"
             }
           ]
         },
@@ -180,7 +231,7 @@
               "min": 0,
               "max": 360,
               "step": 1,
-              "suffix": "\u00b0",
+              "suffix": "°",
               "visibleIf": "shadowEnabled"
             },
             {

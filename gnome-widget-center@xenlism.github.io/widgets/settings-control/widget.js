@@ -51,7 +51,7 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
-import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss} from '../../lib/widgetVisualKit.js';
+import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, borderCss as _borderCss, BORDER_DEFAULTS, OPACITY_DEFAULTS} from '../../lib/widgetVisualKit.js';
 
 const TOOLTIP_SHOW_DELAY_MS = 400;
 const ICON_SIZE = 22;
@@ -252,6 +252,8 @@ export default class SettingsControlWidget {
             iconOffColor: '#9a9996',
             cornerRadius: 18,
             ...SHADOW_DEFAULTS,
+            ...BORDER_DEFAULTS,
+            ...OPACITY_DEFAULTS,
         };
     }
 
@@ -587,6 +589,7 @@ export default class SettingsControlWidget {
     _cardStyle(hexColor, cornerRadius) {
         const {r, g, b, a} = this._hexToRgba(hexColor);
         return `background-color: rgba(${r}, ${g}, ${b}, ${a}); border-radius: ${cornerRadius}px; ` +
+            _borderCss(this._settings) +
             _shadowBoxShadowCss(this._settings);
     }
 

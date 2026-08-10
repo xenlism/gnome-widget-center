@@ -52,7 +52,7 @@ import Gio from 'gi://Gio';
 import Soup from 'gi://Soup?version=3.0';
 
 import {loadTranslations} from './i18n/index.js';
-import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, parseFontDescription as _parseFontDescription} from '../../lib/widgetVisualKit.js';
+import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, parseFontDescription as _parseFontDescription, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS} from '../../lib/widgetVisualKit.js';
 
 const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
 
@@ -239,6 +239,8 @@ export default class WeatherPanelWidget {
     getDefaultSettings() {
         return {
             ...SHADOW_DEFAULTS,
+            ...BORDER_DEFAULTS,
+            ...OPACITY_DEFAULTS,
             location: '13.756331,100.501762',
             locationAutoDetected: false,
 
@@ -476,8 +478,6 @@ export default class WeatherPanelWidget {
 
     /** @private */
     _render() {
-        const cardColor = this._settings.cardColor ?? '#000000ff';
-        const cornerRadius = this._settings.cornerRadius ?? 18;
         const iconColor = this._settings.iconColor ?? '#ffffff';
         const iconSize = this._settings.iconSize ?? 48;
         const conditionColor = this._settings.conditionColor ?? '#e6e6e6';
@@ -490,11 +490,9 @@ export default class WeatherPanelWidget {
             _parseFontDescription(this._settings.tempFont ?? 'Sans Bold 32', 'Sans Bold', 32);
 
         this._actor.set_style(
-            `background-color: ${cardColor}; ` +
-            `border-radius: ${cornerRadius}px; ` +
+            _cardStyleCss(this._settings, {backgroundColorKey: 'cardColor', cornerRadiusFallback: 18}) +
             'padding: 10px 14px; ' +
-            'spacing: 4px;' +
-            _shadowBoxShadowCss(this._settings)
+            'spacing: 4px;'
         );
 
         const iconKey = this._weather?.icon ?? 'weather-cloud';

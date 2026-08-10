@@ -555,6 +555,24 @@ export default class WidgetCenterExtension extends Extension {
     _applyCardEffects(entry) {
         if (!entry?.actor)
             return;
+
+        // 2026-08-09 blur-isolation fix: a widget that has migrated to
+        // lib/cardLayers.js's createLayeredCard() exposes its layers as
+        // `this._layers` (convention: {root, background, content}) and
+        // already calls applyLayeredCardStyle(this._layers, settings, ...)
+        // from its own _render() - which applies BOTH blur and opacity
+        // to `layers.background` only, never touching `layers.content`
+        // (the widget's own labels/icons/drawing areas). If this method
+        // ALSO applied blur/opacity to `entry.actor` (== `layers.root`,
+        // the parent of both background AND content) that would still
+        // blur/fade everything - a Clutter effect on a parent actor
+        // paints its whole subtree, background and content alike - which
+        // defeats the entire point of the background/content split.
+        // Skip entirely for layered widgets; their own render path is
+        // already the single source of truth for both properties.
+        if (entry.instance?._layers)
+            return;
+
         try {
             applyCardOpacity(entry.actor, entry.settings);
         } catch (e) {

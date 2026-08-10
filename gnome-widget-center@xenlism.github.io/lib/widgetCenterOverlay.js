@@ -845,8 +845,32 @@ export class WidgetCenterOverlay {
      * @returns {St.BoxLayout} - callers may add_child() more controls
      *   onto this same row (see _buildThemesTab()'s Export button).
      */
+    /** @private the exact pixel width of the card grid's own content
+     * (not the wider scroll viewport it's centered in) - `N` columns of
+     * `.wc-overlay-card`'s fixed 480px width plus `(N-1)` lots of the
+     * grid row's 16px spacing, matching `.wc-overlay-row`'s actual laid-
+     * out width exactly (see `_gridColumns()`'s doc comment for the same
+     * 480/16/columns numbers). Used to size the sort/search bar above
+     * the grid to the SAME width, instead of it stretching edge-to-edge
+     * across the whole overlay - see `_buildSortBar()`. */
+    _gridContentWidth() {
+        const columns = this._gridColumns();
+        return columns * 480 + (columns - 1) * 16;
+    }
+
     _buildSortBar(currentMode, onChange) {
-        const bar = new St.BoxLayout({style_class: 'wc-overlay-sortbar', x_expand: true});
+        // 2026-08-09 (handover v3): fixed to `_gridContentWidth()` and
+        // centered, rather than `x_expand: true` - the grid below it is
+        // centered at a fixed columns*480+gaps width too (see
+        // `_buildGrid()`), so an edge-to-edge bar no longer sat flush
+        // with the actual card area on any monitor wider than that
+        // (user report: "bar width vs card area width mismatch").
+        const bar = new St.BoxLayout({
+            style_class: 'wc-overlay-sortbar',
+            width: this._gridContentWidth(),
+            x_expand: false,
+            x_align: Clutter.ActorAlign.CENTER,
+        });
         for (const mode of SORT_MODES) {
             const button = new St.Button({
                 style_class: mode.id === currentMode ? 'wc-overlay-tab wc-overlay-tab-active' : 'wc-overlay-tab',
@@ -978,7 +1002,16 @@ export class WidgetCenterOverlay {
             console.error('[widget-center] overlay: could not launch the external prefs window', e);
             return;
         }
-        this._overlay?.hide();
+        // 2026-08-09 (handover v5): closes the overlay outright now,
+        // instead of hide()-ing it and re-show()-ing it once the spawned
+        // prefs window closes again - user ask ("close the overlay when
+        // clicking Preferences", not "hide it and bring it back later").
+        // _watchForExternalPrefsWindow() below still runs, purely for its
+        // make_above()/activate() half (still needed - see that
+        // method's own doc comment on why a spawned window can render
+        // hidden behind Shell chrome without it); it just has nothing to
+        // re-show anymore since `close()` already tore the overlay down.
+        this.close();
         this._watchForExternalPrefsWindow();
     }
 

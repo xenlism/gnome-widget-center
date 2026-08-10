@@ -49,6 +49,57 @@
               "default": "#1a1a1a"
             }
           ]
+        },
+        {
+          "id": "borderOpacity",
+          "label": "Border & Opacity",
+          "description": "Border wraps the whole card (header + body); opacity fades the entire widget.",
+          "fields": [
+            {
+              "id": "borderEnabled",
+              "label": "Enable border",
+              "description": "Draw a border around this widget's card",
+              "dataType": "boolean",
+              "fieldType": "switch",
+              "default": false
+            },
+            {
+              "id": "borderColor",
+              "label": "Border color",
+              "description": "",
+              "dataType": "string",
+              "fieldType": "colorpicker",
+              "format": "color",
+              "alpha": true,
+              "default": "#FFFFFF33",
+              "visibleIf": "borderEnabled"
+            },
+            {
+              "id": "borderWidth",
+              "label": "Border width",
+              "description": "",
+              "dataType": "integer",
+              "fieldType": "spinbutton",
+              "default": 1,
+              "min": 0,
+              "max": 16,
+              "step": 1,
+              "suffix": "px",
+              "visibleIf": "borderEnabled"
+            },
+            {
+              "id": "opacity",
+              "label": "Opacity",
+              "description": "Fades the entire widget - background, text, icons, everything.",
+              "dataType": "integer",
+              "fieldType": "slider",
+              "default": 100,
+              "min": 0,
+              "max": 100,
+              "step": 1,
+              "suffix": "%"
+            }
+          ]
         }
       ]
     },

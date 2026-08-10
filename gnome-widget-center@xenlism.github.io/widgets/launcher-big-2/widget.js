@@ -39,7 +39,7 @@ import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
-import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor} from '../../lib/widgetVisualKit.js';
+import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS} from '../../lib/widgetVisualKit.js';
 
 const GRID_COLS = 3;
 const GRID_ROWS = 3;
@@ -149,6 +149,8 @@ export default class LauncherBig {
     getDefaultSettings() {
         return {
             ...SHADOW_DEFAULTS,
+            ...BORDER_DEFAULTS,
+            ...OPACITY_DEFAULTS,
             apps: [],
             backgroundColor: '#FFFFFF00',
             cornerRadius: 18,
@@ -177,14 +179,10 @@ export default class LauncherBig {
     /** @private */
     _render() {
         const apps = (this._settings.apps ?? []).slice(0, MAX_APPS);
-        const backgroundColor = _toCssColor(this._settings.backgroundColor, '#FFFFFF00');
-        const cornerRadius = this._settings.cornerRadius ?? 18;
 
         this._content.set_style(
-            `background-color: ${backgroundColor}; ` +
-            `border-radius: ${cornerRadius}px; ` +
-            `padding: ${CARD_PADDING}px;` +
-            _shadowBoxShadowCss(this._settings)
+            _cardStyleCss(this._settings, {cornerRadiusFallback: 18}) +
+            `padding: ${CARD_PADDING}px;`
         );
 
         for (let i = 0; i < this._cells.length; i++) {

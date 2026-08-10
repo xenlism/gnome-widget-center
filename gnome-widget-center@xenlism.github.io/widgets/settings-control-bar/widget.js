@@ -61,7 +61,7 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
-import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba} from '../../lib/widgetVisualKit.js';
+import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, BORDER_DEFAULTS, OPACITY_DEFAULTS,} from '../../lib/widgetVisualKit.js';
 
 const TOOLTIP_SHOW_DELAY_MS = 400;
 const ICON_SIZE = 22;
@@ -293,6 +293,8 @@ export default class SettingsControlBarWidget {
             iconOffColor: '#9a9996',
             cornerRadius: 18,
             ...SHADOW_DEFAULTS,
+            ...BORDER_DEFAULTS,
+            ...OPACITY_DEFAULTS,
         };
     }
 

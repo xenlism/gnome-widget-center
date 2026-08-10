@@ -21,13 +21,13 @@
 // content, never a PARENT of it, so the two never share a single paint
 // pass.
 //
-// SHELL-PROCESS ONLY — this file imports St/Clutter directly, so never
+// SHELL-PROCESS ONLY — this file imports St/Clutter/Shell directly, so never
 // import it from prefs.js/widget-center-prefs-app.js or anything under
 // prefsWindowControllerBase.js's dependency tree (development/docs/
 // WIDGET_API.md §4). That's also exactly why applyCardBlur() (below)
 // lives in THIS file rather than in widgetVisualKit.js — widgetVisualKit.js
 // IS loaded by the Prefs process too (prefsPageBuilders.js imports
-// SHADOW_ANGLE_STEPS from it) and has no Clutter typelib there. A
+// SHADOW_ANGLE_STEPS from it) and has no Clutter/Shell typelib there. A
 // widget.js file itself is Shell-only already (never dynamically
 // imported by the Prefs process — only a widget's optional settings.js/
 // autocomplete.js are), so importing this file from a widget.js is
@@ -35,39 +35,33 @@
 
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
+import Shell from 'gi://Shell'; // เพิ่มการ import Shell เข้ามา
 import {cardStyleCss, applyCardOpacity, BLUR_DEFAULTS, getForceAwareBlurSettings} from './widgetVisualKit.js';
 
-// --- applyCardBlur() (2026-08-09 bug fix, 2026-08-09 force-aware update) ---
+// --- applyCardBlur() (2026-08-09 bug fix, 2026-08-10 GNOME 50 Shell.BlurEffect update) ---
 //
 // Defined HERE in cardLayers.js (not in widgetVisualKit.js) because it needs
-// a real `Clutter.BlurEffect` (gi://Clutter) - and widgetVisualKit.js is loaded
+// a real `Shell.BlurEffect` (gi://Shell) - and widgetVisualKit.js is loaded
 // by the Prefs process too (see this file's own header comment above),
-// which has no Clutter typelib. cardLayers.js is already SHELL-PROCESS
-// ONLY and already imports Clutter directly, so this is the correct
+// which has no Clutter/Shell typelib. cardLayers.js is already SHELL-PROCESS
+// ONLY and already imports Clutter/Shell directly, so this is the correct
 // home for it. Now uses getForceAwareBlurSettings() to respect force blur
 // state, so blur force settings now work correctly.
 //
-// IMPORTANT CAVEAT, confirmed against Mutter's own API reference for
-// Clutter.BlurEffect: it exposes NO properties of its own beyond the
-// enabled/name/actor ones it inherits from ClutterActorMeta - no
-// sigma/radius/strength knob exists on this class at all;
-// `clutter_blur_effect_new()` is a single fixed-strength blur. That
-// means a widget's `blurRadius` setting (and the Force system's
-// `force-background-blur` GSettings value once wired in) can only ever
-// be treated as ON/OFF here (radius > 0 vs not) - there is no way to
-// make this particular blur stronger/weaker, because the effect has no
-// property to carry that number to. If a variable-strength blur is
-// actually wanted, GNOME Shell's own private `Shell.BlurEffect` (gi://Shell)
-// does expose a `radius` property and would be the one to use instead -
-// flagging this clearly rather than silently having the "Blur radius"
-// spin row in Prefs quietly stop mattering.
+// 2026-08-10 UPDATE (GNOME 50): Switched from `Clutter.BlurEffect` to 
+// `Shell.BlurEffect`. `Clutter.BlurEffect` only blurs the actor's own paint 
+// (itself + children) and has no radius property. `Shell.BlurEffect` with 
+// `mode: Shell.BlurMode.BACKGROUND` correctly blurs what is *behind* the actor 
+// (true background blur) and exposes a `radius` property (or `set_radius` in 
+// older GNOME 40-44), allowing the widget's `blurRadius` setting to actually 
+// control the blur strength.
 //
 // RESOLVED 2026-08-09 (confirmed with user): Clutter.BlurEffect wins,
 // CSS `-st-background-blur` does not actually render in the target
 // environment. applyLayeredCardStyle() below now passes
 // `includeBlur: false` to cardStyleCss() so that CSS declaration is
 // never emitted on the layered-card path — this file's applyCardBlur()
-// (Clutter.BlurEffect) is the ONLY blur mechanism for any widget using
+// (now Shell.BlurEffect) is the ONLY blur mechanism for any widget using
 // createLayeredCard()/applyLayeredCardStyle().
 //
 // Scope note: this only fixes the layered-card path — no widget
@@ -79,7 +73,7 @@ import {cardStyleCss, applyCardOpacity, BLUR_DEFAULTS, getForceAwareBlurSettings
 // actor (not through this file at all) and rely solely on that same CSS
 // `-st-background-blur` declaration for their blur setting — if it
 // doesn't render, those widgets' blur is currently a no-op too, but
-// switching them to Clutter.BlurEffect isn't a one-line fix: their
+// switching them to Shell.BlurEffect isn't a one-line fix: their
 // content (labels/icons) is a CHILD of that same root actor, so adding
 // applyCardBlur() to it directly would blur their own readout as well —
 // the exact bug this file's own header comment describes migrating
@@ -90,10 +84,8 @@ import {cardStyleCss, applyCardOpacity, BLUR_DEFAULTS, getForceAwareBlurSettings
 const BLUR_EFFECT_NAME = 'wc-card-blur';
 
 /**
- * Adds (or removes) a `Clutter.BlurEffect` on `actor`, driven by a
- * widget's own `blurEnabled`/`blurRadius` settings - see the caveat
- * above about `radius` only ever being ON/OFF for this specific effect
- * class.
+ * Adds (or removes) a `Shell.BlurEffect` on `actor`, driven by a
+ * widget's own `blurEnabled`/`blurRadius` settings.
  * @param {Clutter.Actor} actor
  * @param {object} settings
  */
@@ -106,8 +98,22 @@ export function applyCardBlur(actor, settings) {
 
     const existing = actor.get_effect(BLUR_EFFECT_NAME);
     if (shouldBlur) {
-        if (!existing)
-            actor.add_effect_with_name(BLUR_EFFECT_NAME, new Clutter.BlurEffect());
+        let effect = existing;
+        if (!effect) {
+            // สร้าง Shell.BlurEffect แบบโหมดเบลอพื้นหลังด้านหลัง
+            effect = new Shell.BlurEffect({
+                mode: Shell.BlurMode.BACKGROUND,
+                brightness: 1.0,
+            });
+            actor.add_effect_with_name(BLUR_EFFECT_NAME, effect);
+        }
+        
+        // ตั้งค่ารัศมีการเบลอ (รองรับทั้ง GNOME 40-44 ที่ใช้ set_radius และ GNOME 46+ ที่ใช้ property)
+        if (effect.set_radius) {
+            effect.set_radius(radius);
+        } else if (effect.radius !== undefined) {
+            effect.radius = radius;
+        }
     } else if (existing) {
         actor.remove_effect(existing);
     }
@@ -152,18 +158,34 @@ export function createLayeredCard(options = {}) {
         clip_to_allocation: false,  // Allow shadow to render outside card bounds
     });
 
-    // Full-size, no style_class of its own by default — cardStyleCss()'s
-    // output is applied straight via set_style() in
-    // applyLayeredCardStyle() below, same as the old single-actor
-    // pattern did, just aimed at this actor instead of `root`.
-    const background = new St.Widget({x_expand: true, y_expand: true});
+    // Full-size — cardStyleCss()'s output is applied straight via
+    // set_style() in applyLayeredCardStyle() below, same as the old
+    // single-actor pattern did, just aimed at this actor instead of
+    // `root`. ALSO carries the fixed `gwc-blur` style_class (2026-08-09,
+    // handover v3) alongside any per-widget class this actor may pick up
+    // later — this is a marker class only, no stylesheet.css rule needed
+    // for it: it exists purely so the system's `blur-my-shell` GNOME
+    // Shell extension (which lets a user list CSS class names to blur in
+    // ITS OWN settings) has something stable to target on every card's
+    // background layer, independent of this extension's own
+    // Shell.BlurEffect-based blur (applyCardBlur() below). The two are
+    // unrelated mechanisms that both happen to affect this same actor.
+    const background = new St.Widget({x_expand: true, y_expand: true, style_class: 'gwc-blur'});
     root.add_child(background);
 
+    // clip_to_allocation: true (2026-08-09, handover v3 overflow fix) —
+    // content (ring/label/icon actors) must never paint past the card's
+    // own rectangle: unlike `root` (left unclipped above so a shadow can
+    // bleed outside the card on purpose), anything drawn here escaping
+    // the card reads as a rendering bug, not a design choice - see
+    // widgets/circles-battery-half/widget.js's header note on the
+    // ring-column translation this was clipping against.
     const content = new St.Widget({
         style_class: options.contentStyleClass,
         layout_manager: new Clutter.BinLayout(),
         x_expand: true,
         y_expand: true,
+        clip_to_allocation: true,
     });
     root.add_child(content);
 
@@ -189,7 +211,7 @@ export function createLayeredCard(options = {}) {
  *
  * `cardStyleOptions.includeBlur` is forced to `false` regardless of what
  * the caller passes — see this file's header comment (2026-08-09):
- * `applyCardBlur()` just below (Clutter.BlurEffect) is this path's ONE
+ * `applyCardBlur()` just below (Shell.BlurEffect) is this path's ONE
  * blur mechanism, so cardStyleCss()'s own CSS `-st-background-blur`
  * declaration is deliberately never emitted here, to avoid stacking
  * both on the same actor.

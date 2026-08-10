@@ -34,8 +34,7 @@ import {MprisMediaService} from '../../lib/mediaApi.js';
 // note in media-player-square/widget.js for why this replaced a local
 // per-file copy of these helpers.
 import {
-    SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor,
-} from '../../lib/widgetVisualKit.js';
+    SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor, BORDER_DEFAULTS, OPACITY_DEFAULTS,} from '../../lib/widgetVisualKit.js';
 
 // 1x1 block-type is 176px, not 160px - see the identical note in
 // media-player-square/widget.js. Scaled by 176/160 = 1.1.
@@ -219,6 +218,8 @@ export default class MediaPlayerCircleWidget {
     getDefaultSettings() {
         return {
             ...SHADOW_DEFAULTS,
+            ...BORDER_DEFAULTS,
+            ...OPACITY_DEFAULTS,
             backgroundColor: '#FFFFFF00',
             ringColor: '#F5A623FF',
             infoFont: 'Sans Bold 11',

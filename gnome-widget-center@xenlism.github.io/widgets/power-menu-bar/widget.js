@@ -38,7 +38,7 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
-import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss} from '../../lib/widgetVisualKit.js';
+import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS,} from '../../lib/widgetVisualKit.js';
 
 const TOOLTIP_SHOW_DELAY_MS = 400;
 const ICON_SIZE = 22;
@@ -183,6 +183,8 @@ export default class PowerMenuBarWidget {
             cornerRadius: 18,
             iconColor: '#2e2e2e',
             ...SHADOW_DEFAULTS,
+            ...BORDER_DEFAULTS,
+            ...OPACITY_DEFAULTS,
         };
     }
 

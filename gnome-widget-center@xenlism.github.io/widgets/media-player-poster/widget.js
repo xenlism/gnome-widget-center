@@ -25,8 +25,7 @@ import {MprisMediaService} from '../../lib/mediaApi.js';
 // note in media-player-square/widget.js for why this replaced a local
 // per-file copy of these helpers.
 import {
-    SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor,
-} from '../../lib/widgetVisualKit.js';
+    SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor, BORDER_DEFAULTS, OPACITY_DEFAULTS,} from '../../lib/widgetVisualKit.js';
 
 // 2x2 block-type is 23x23 cells x 16px = 368px, not 336px - see the
 // identical note in media-player-square/widget.js. PADDING kept fixed
@@ -173,6 +172,8 @@ export default class MediaPlayerPosterWidget {
     getDefaultSettings() {
         return {
             ...SHADOW_DEFAULTS,
+            ...BORDER_DEFAULTS,
+            ...OPACITY_DEFAULTS,
             backgroundColor: '#FFFFFF00',
             widgetCornerRadius: 18,
             coverCornerRadius: 18,

@@ -426,9 +426,24 @@ export class ThemeService {
 
     /**
      * @method setGlobalTheme
-     * @description Merges `patch` (partial `{background, dropShadow}`)
-     * into the global theme and persists the whole file.
-     * @param {{background?: object, dropShadow?: object}} patch
+     * @description Merges `patch` (partial `{background, cornerRadius,
+     * dropShadow, border, opacity}`) into the global theme and persists
+     * the whole file.
+     *
+     * BUG FIX (2026-08-09, handover v3): this used to only merge/save
+     * `background`/`cornerRadius`/`dropShadow` - `border` and `opacity`
+     * were silently dropped from `patch` and never written to
+     * `theme.json` at all, even though `getGlobalTheme()` (above) has
+     * always read them back out. That's why `lib/prefsPageBuilders.js`'s
+     * "Force this border/opacity on every widget" switches looked
+     * completely inert: `saveBorder()`/`saveOpacity()` called this
+     * method correctly, `Gio.FileMonitor` fired, `setForcedTheme()` ran
+     * with fresh data - but that fresh data never actually contained the
+     * border/opacity edit the user just made, because it was never
+     * persisted in the first place. Root cause of the user-reported
+     * "force border opacity ยังไม่มีผลกับ widget" (Force border/opacity
+     * has no effect on widgets).
+     * @param {{background?: object, cornerRadius?: object, dropShadow?: object, border?: object, opacity?: object}} patch
      */
     setGlobalTheme(patch) {
         if (!this._isInitialized) this.init();
@@ -438,6 +453,8 @@ export class ThemeService {
                 background: {...current.background, ...(patch.background ?? {})},
                 cornerRadius: {...current.cornerRadius, ...(patch.cornerRadius ?? {})},
                 dropShadow: {...current.dropShadow, ...(patch.dropShadow ?? {})},
+                border: {...current.border, ...(patch.border ?? {})},
+                opacity: {...current.opacity, ...(patch.opacity ?? {})},
             },
             widgets: this._cache.widgets,
         });

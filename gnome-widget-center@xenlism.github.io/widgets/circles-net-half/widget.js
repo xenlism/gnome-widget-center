@@ -33,7 +33,7 @@ import GLib from 'gi://GLib';
 import Cairo from 'cairo';
 
 import {SystemMetricsService} from '../../lib/systemMetricsApi.js';
-import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor, parseFontDescription as _parseFontDescription} from '../../lib/widgetVisualKit.js';
+import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor, parseFontDescription as _parseFontDescription, BORDER_DEFAULTS, OPACITY_DEFAULTS,} from '../../lib/widgetVisualKit.js';
 
 // 1x1 block-type is 11x11 cells (176x176px); 14px card padding leaves a
 // ~148x148 content area, split into a ring column and a text column -
@@ -144,6 +144,8 @@ export default class CirclesNetHalfWidget {
     getDefaultSettings() {
         return {
             ...SHADOW_DEFAULTS,
+            ...BORDER_DEFAULTS,
+            ...OPACITY_DEFAULTS,
             backgroundColor: '#FFFFFF00',
             cornerRadius: 18,
 

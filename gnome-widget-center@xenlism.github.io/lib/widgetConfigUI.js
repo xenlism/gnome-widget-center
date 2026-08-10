@@ -115,12 +115,22 @@ export function buildConfigPage(config, settingsProxy, title, widgetPath, transl
         },
     };
 
+    // GLib.markup_escape_text() every user/config-supplied string that
+    // ends up as an Adw widget `title`/`description` below - libadwaita
+    // parses those as Pango markup, so a raw "&" or "<" in a widget's
+    // own config.json label/description (e.g. "Border & Opacity", "Low
+    // battery color (< 20%)") throws a markup parse error at render
+    // time instead of just displaying literally (2026-08-09, handover
+    // v3 crash report - `journalctl` showed exactly these two strings
+    // failing, with "Lost connection to Wayland compositor" alongside).
+    const escapeMarkup = text => GLib.markup_escape_text(String(text ?? ''), -1);
+
     for (const tab of config.tabs) {
-        const tabLabel = tr(`tab.${tab.id}.label`, tab.label);
+        const tabLabel = escapeMarkup(tr(`tab.${tab.id}.label`, tab.label));
 
         for (const group of tab.groups) {
-            const groupLabel = tr(`group.${group.id}.label`, group.label);
-            const groupDescription = tr(`group.${group.id}.description`, group.description || '');
+            const groupLabel = escapeMarkup(tr(`group.${group.id}.label`, group.label));
+            const groupDescription = escapeMarkup(tr(`group.${group.id}.description`, group.description || ''));
 
             const adwGroup = new Adw.PreferencesGroup({
                 title: multiTab ? `${tabLabel} — ${groupLabel}` : groupLabel,
@@ -139,7 +149,20 @@ export function buildConfigPage(config, settingsProxy, title, widgetPath, transl
                     })),
                 };
 
-                const row = _buildRow(translatedField, settingsProxy, notifyChange, autocompleteCtx);
+                let row;
+                try {
+                    row = _buildRow(translatedField, settingsProxy, notifyChange, autocompleteCtx);
+                } catch (e) {
+                    // Defense in depth (2026-08-09, handover v4): a bad
+                    // field (unescaped markup, a future new fieldType bug,
+                    // ...) should degrade to a disabled placeholder row,
+                    // never take the whole Preferences window down with it.
+                    console.error(`[widget-center] failed to build row for field "${field.id}"`, e);
+                    row = new Adw.ActionRow({
+                        title: GLib.markup_escape_text(String(field.id ?? 'field'), -1),
+                        subtitle: 'Could not display this setting - see logs.',
+                    });
+                }
                 adwGroup.add(row);
 
                 if (field.visibleIf || field.enabledIf || field.dependsOn) {
@@ -286,7 +309,7 @@ function _buildRow(field, settingsProxy, notifyChange, autocompleteCtx) {
         // header) — a disabled placeholder instead of throwing, so one
         // bad field can't blank a whole page.
         return new Adw.ActionRow({
-            title: field.label ?? field.id,
+            title: GLib.markup_escape_text(String(field.label ?? field.id ?? ''), -1),
             subtitle: `Unknown fieldType "${field.fieldType}"`,
             sensitive: false,
         });

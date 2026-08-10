@@ -34,8 +34,7 @@ import {MprisMediaService} from '../../lib/mediaApi.js';
 // widgets' folders, not on lib/, so this was always allowed, just never
 // done here.
 import {
-    SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor,
-} from '../../lib/widgetVisualKit.js';
+    SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor, BORDER_DEFAULTS, OPACITY_DEFAULTS,} from '../../lib/widgetVisualKit.js';
 
 // 1x1 block-type is 11x11 cells x BLOCK_CELL_SIZE(16px) = 176px, not
 // 160px (that was the old 10x10-cell table, replaced 2026-07-27 - see
@@ -231,6 +230,8 @@ export default class MediaPlayerSquareWidget {
     getDefaultSettings() {
         return {
             ...SHADOW_DEFAULTS,
+            ...BORDER_DEFAULTS,
+            ...OPACITY_DEFAULTS,
             backgroundColor: '#FFFFFF00',
             cornerRadius: 18,
             infoFont: 'Sans Bold 13',

@@ -36,6 +36,23 @@
 // Devices with no battery at all (desktop, most VMs) leave
 // DisplayDevice's IsPresent false - handled defensively: the ring shows
 // empty/0% rather than throwing.
+//
+// 2026-08-09 (handover v3): migrated to lib/cardLayers.js's
+// createLayeredCard()/applyLayeredCardStyle() - same §C blur-isolation
+// treatment widgets/circles-battery got in the prior session, so
+// turning on Blur now only blurs this card's background fill, not the
+// ring/caption/percentage content drawn on top of it. This also fixed a
+// real overflow bug that came along for the ride: the old single
+// `St.Bin` root had no `clip_to_allocation`, and `_layoutChildren()`'s
+// `set_translation()` on `this._ringArea` (shifting it by
+// `CARD_PADDING` so the ring's flat edge lines up with the card edge)
+// was pushing the ring's drawn pixels past the card's own rounded-rect
+// bounds with nothing to clip them - visible in the user's screenshot
+// as the ring bleeding out past the card into the desktop background.
+// createLayeredCard()'s `content` layer now has `clip_to_allocation:
+// true` (see that file), so the same translation still gets the flat
+// edge flush with the card edge, but anything that pokes past it is now
+// clipped to the card rectangle instead of escaping it.
 
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
@@ -43,7 +60,8 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Cairo from 'cairo';
 
-import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor, parseFontDescription as _parseFontDescription} from '../../lib/widgetVisualKit.js';
+import {SHADOW_DEFAULTS, hexToRgba as _hexToRgba, toCssColor as _toCssColor, parseFontDescription as _parseFontDescription, BORDER_DEFAULTS, OPACITY_DEFAULTS,} from '../../lib/widgetVisualKit.js';
+import {createLayeredCard, applyLayeredCardStyle} from '../../lib/cardLayers.js';
 
 // 1x1 block-type is 11x11 cells (176x176px); 14px card padding leaves a
 // ~148x148 content area, split into a ring column and a text column -
@@ -84,14 +102,11 @@ export default class CirclesBatteryHalfWidget {
     }
 
     buildActor() {
-        this._actor = new St.Bin({
-            style_class: 'circles-battery-half-root',
-            x_expand: true,
-            y_expand: true,
-        });
+        this._layers = createLayeredCard({contentStyleClass: 'circles-battery-half-root'});
+        this._actor = this._layers.root;
 
         const outerBox = new St.BoxLayout({vertical: true, x_expand: true, y_expand: true});
-        this._actor.set_child(outerBox);
+        this._layers.content.add_child(outerBox);
         outerBox.set_style(`padding: ${CARD_PADDING}px;`);
 
         const centerBin = new St.Bin({x_expand: true, y_expand: true, x_align: Clutter.ActorAlign.CENTER, y_align: Clutter.ActorAlign.CENTER});
@@ -100,7 +115,7 @@ export default class CirclesBatteryHalfWidget {
         this._row = new St.BoxLayout({vertical: false, y_align: Clutter.ActorAlign.CENTER});
         centerBin.set_child(this._row);
 
-        this._ringArea = new St.DrawingArea({width: RING_COLUMN_WIDTH, height: CONTENT_HEIGHT});
+        this._ringArea = new St.DrawingArea({width: RING_COLUMN_WIDTH, height: CONTENT_HEIGHT, clip_to_allocation: true});
         this._repaintId = this._ringArea.connect('repaint', () => this._onRepaint());
 
         this._textBox = new St.BoxLayout({
@@ -152,6 +167,8 @@ export default class CirclesBatteryHalfWidget {
     getDefaultSettings() {
         return {
             ...SHADOW_DEFAULTS,
+            ...BORDER_DEFAULTS,
+            ...OPACITY_DEFAULTS,
             backgroundColor: '#FFFFFF00',
             cornerRadius: 18,
 
@@ -182,9 +199,20 @@ export default class CirclesBatteryHalfWidget {
      * ring column first. */
     _layoutChildren() {
         const side = this._settings.ringSide === 'left' ? 'left' : 'right';
-        // Let the ring's flat endpoints meet the selected card edge while
-        // preserving the text column's normal padding.
-        this._ringArea.set_translation(side === 'left' ? -CARD_PADDING : CARD_PADDING, 0, 0);
+        // 2026-08-09 (handover v5): dropped the `set_translation()` that
+        // used to sit here. It shifted the ring's DrawingArea outward by
+        // `CARD_PADDING` on top of a layout that already placed the
+        // ring flush with the padded content edge, so the ring's own
+        // curve/stroke ended up `CARD_PADDING` px past the card's actual
+        // border - visible in the user's screenshot as the ring bulging
+        // out past the card into whatever sits behind it. Simplest
+        // robust fix: the ring column now just respects the same
+        // `CARD_PADDING` inset every other element in this card already
+        // does, same as it would if it were plain content instead of a
+        // hand-translated DrawingArea - trades a few px of "flush with
+        // the border" snugness for never being able to escape the card
+        // again, independent of whatever clip/paint-order subtleties
+        // were or weren't at play.
         this._row.remove_all_children();
         if (side === 'left') {
             this._row.add_child(this._ringArea);
@@ -263,7 +291,7 @@ export default class CirclesBatteryHalfWidget {
 
     /** @private */
     _render() {
-        this._actor.set_style(_cardStyleCss(this._settings, {backgroundColorFallback: '#FFFFFF00', cornerRadiusFallback: 18}));
+        applyLayeredCardStyle(this._layers, this._settings, {backgroundColorFallback: '#FFFFFF00', cornerRadiusFallback: 18});
 
         const captionColor = _toCssColor(this._settings.captionColor, '#FFFFFFB3');
         const captionFont = _parseFontDescription(this._settings.captionFont ?? 'Sans 10', 'Sans', 10);

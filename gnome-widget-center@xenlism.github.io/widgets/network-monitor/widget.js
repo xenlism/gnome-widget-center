@@ -26,7 +26,7 @@ import Pango from 'gi://Pango';
 import Cairo from 'cairo';
 
 import {SystemMetricsService} from '../../lib/systemMetricsApi.js';
-import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor} from '../../lib/widgetVisualKit.js';
+import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS} from '../../lib/widgetVisualKit.js';
 
 const MAX_HISTORY = 40;
 const GRAPH_HEIGHT = 46;
@@ -133,6 +133,8 @@ export default class NetworkMonitorWidget {
     getDefaultSettings() {
         return {
             ...SHADOW_DEFAULTS,
+            ...BORDER_DEFAULTS,
+            ...OPACITY_DEFAULTS,
             fontDesc: 'Sans Bold 20',
             fontColor: '#FFFFFFFF',
             downloadLineColor: '#5AC8FAFF',
@@ -236,8 +238,6 @@ export default class NetworkMonitorWidget {
 
     /** @private */
     _render() {
-        const backgroundColor = _toCssColor(this._settings.backgroundColor, '#FFFFFF00');
-        const cornerRadius = this._settings.cornerRadius ?? 18;
         const fontColor = _toCssColor(this._settings.fontColor, '#FFFFFFFF');
         const downloadColor = _toCssColor(this._settings.downloadLineColor, '#5AC8FAFF');
         const uploadColor = _toCssColor(this._settings.uploadLineColor, '#FF9F0AFF');
@@ -245,9 +245,7 @@ export default class NetworkMonitorWidget {
         const font = _splitFontDescription(this._settings.fontDesc ?? 'Sans Bold 20', 'Sans', 20);
 
         this._actor.set_style(
-            `background-color: ${backgroundColor}; ` +
-            `border-radius: ${cornerRadius}px;` +
-            _shadowBoxShadowCss(this._settings)
+            _cardStyleCss(this._settings, {cornerRadiusFallback: 18})
         );
 
         this._textBox.set_style(`padding: ${CARD_PADDING}px ${CARD_PADDING}px 4px ${CARD_PADDING}px; spacing: 2px;`);

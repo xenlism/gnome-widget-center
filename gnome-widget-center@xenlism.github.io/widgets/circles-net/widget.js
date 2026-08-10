@@ -26,8 +26,7 @@ import Cairo from 'cairo';
 import {SystemMetricsService} from '../../lib/systemMetricsApi.js';
 import {
     SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba,
-    toCssColor as _toCssColor, parseFontDescription as _parseFontDescription,
-} from '../../lib/widgetVisualKit.js';
+    toCssColor as _toCssColor, parseFontDescription as _parseFontDescription, BORDER_DEFAULTS, OPACITY_DEFAULTS,} from '../../lib/widgetVisualKit.js';
 
 const RING_SIZE = 128; // 1x1 block-type is now 11x11 cells (176px) not 10x10 (160px); scaled 116 * (176/160) = 127.6 -> 128
 const RING_GAP = 4; // px between the download (outer) and upload (inner) bands
@@ -139,6 +138,8 @@ export default class CirclesNetWidget {
     getDefaultSettings() {
         return {
             ...SHADOW_DEFAULTS,
+            ...BORDER_DEFAULTS,
+            ...OPACITY_DEFAULTS,
             backgroundColor: '#FFFFFF00',
             cornerRadius: 18,
 

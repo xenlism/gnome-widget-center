@@ -60,6 +60,7 @@ import {SystemMetricsService} from '../../lib/systemMetricsApi.js';
 import {
     SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor,
     TEXT_SHADOW_DEFAULTS, textShadowCss as _textShadowCss,
+    cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS,
 } from '../../lib/widgetVisualKit.js';
 
 const REFRESH_INTERVAL_SECONDS = 30;
@@ -298,6 +299,8 @@ export default class GeekArcheySystechBayWidget {
     getDefaultSettings() {
         return {
             ...SHADOW_DEFAULTS,
+            ...BORDER_DEFAULTS,
+            ...OPACITY_DEFAULTS,
             // On by default, matching every other 'geek' widget - see
             // lib/widgetVisualKit.js's TEXT_SHADOW_DEFAULTS. 90deg/0px/5px
             // is a plain soft drop straight down.
@@ -428,12 +431,9 @@ export default class GeekArcheySystechBayWidget {
      * safe to call as often as needed (every info fetch above calls this
      * once it resolves, rather than hand-updating one label at a time). */
     _render() {
-        const backgroundColor = _toCssColor(this._settings.backgroundColor ?? '#FFFFFF00', '#FFFFFF00');
-        const cornerRadius = this._settings.cornerRadius ?? 18;
-
         this._actor.set_style(
-            `background-color: ${backgroundColor}; border-radius: ${cornerRadius}px; padding: ${CARD_PADDING}px;` +
-            _shadowBoxShadowCss(this._settings)
+            _cardStyleCss(this._settings, {cornerRadiusFallback: 18}) +
+            `padding: ${CARD_PADDING}px;`
         );
 
         // this._logoModule is whatever _loadLogo() last resolved for the

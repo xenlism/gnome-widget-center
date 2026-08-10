@@ -30,10 +30,19 @@ import Adw from 'gi://Adw';
 import GLib from 'gi://GLib';
 import Pango from 'gi://Pango';
 
+// 2026-08-09 (handover v4 crash fix) - same rationale as
+// lib/widgetConfigFieldRows.js's own _esc(): Adw.ActionRow/ExpanderRow/
+// SwitchRow/etc `title`/`subtitle` are Pango markup, `field.label` is
+// arbitrary widget-author text - escape before handing it to a
+// markup-parsed property, everywhere in this file.
+function _esc(text) {
+    return GLib.markup_escape_text(String(text ?? ''), -1);
+}
+
 function _makeActionRow(field) {
     const row = new Adw.ActionRow({
-        title: field.label,
-        subtitle: field.hint || null,
+        title: _esc(field.label),
+        subtitle: _esc(field.hint || ''),
     });
     return row;
 }
@@ -43,7 +52,7 @@ function _buildFontRow(field, store) {
     const row = _makeActionRow(field);
 
     const button = new Gtk.FontDialogButton({
-        dialog: new Gtk.FontDialog({ title: `Choose font — ${field.label}` }),
+        dialog: new Gtk.FontDialog({ title: `Choose font — ${_esc(field.label)}` }),
         valign: Gtk.Align.CENTER,
     });
 
@@ -65,7 +74,7 @@ function _buildColorRow(field, store) {
     const row = _makeActionRow(field);
 
     const dialog = new Gtk.ColorDialog({
-        title: `Choose color — ${field.label}`,
+        title: `Choose color — ${_esc(field.label)}`,
         with_alpha: !!field.useAlpha,
     });
     const button = new Gtk.ColorDialogButton({
@@ -144,8 +153,8 @@ function _formatIsoDate(iso) {
 /** number: setNumber() — precise input with steppers */
 function _buildNumberRow(field, store) {
     const row = new Adw.SpinRow({
-        title: field.label,
-        subtitle: field.hint || null,
+        title: _esc(field.label),
+        subtitle: _esc(field.hint || ''),
         digits: field.digits ?? 0,
         adjustment: new Gtk.Adjustment({
             lower: field.min,
@@ -193,7 +202,7 @@ function _buildRangeRow(field, store) {
 /** text: setText() */
 function _buildTextRow(field, store) {
     const row = new Adw.EntryRow({
-        title: field.label,
+        title: _esc(field.label),
         text: store.get(field.key) ?? field.default ?? '',
     });
     if (field.hint) {
@@ -233,7 +242,7 @@ function _buildIconRow(field, store) {
     const initial = store.get(field.key) || field.default;
 
     const row = new Adw.EntryRow({
-        title: field.label,
+        title: _esc(field.label),
         text: initial,
     });
     if (field.hint) {
@@ -261,12 +270,12 @@ function _buildMultiOptionRow(field, store) {
     const selected = new Set(store.get(field.key) || field.default || []);
 
     const expander = new Adw.ExpanderRow({
-        title: field.label,
-        subtitle: field.hint || _summarizeSelection(selected, field.choices),
+        title: _esc(field.label),
+        subtitle: _esc(field.hint || _summarizeSelection(selected, field.choices)),
     });
 
     for (const choiceKey of Object.keys(field.choices)) {
-        const checkRow = new Adw.ActionRow({ title: field.choices[choiceKey] });
+        const checkRow = new Adw.ActionRow({ title: _esc(field.choices[choiceKey]) });
         const check = new Gtk.CheckButton({
             active: selected.has(choiceKey),
             valign: Gtk.Align.CENTER,
@@ -300,8 +309,8 @@ function _summarizeSelection(selectedSet, choices) {
 /** boolean: setBoolean() */
 function _buildBooleanRow(field, store) {
     const row = new Adw.SwitchRow({
-        title: field.label,
-        subtitle: field.hint || null,
+        title: _esc(field.label),
+        subtitle: _esc(field.hint || ''),
         active: !!store.get(field.key),
     });
 
@@ -318,8 +327,8 @@ function _buildOptionRow(field, store) {
     const labels = keys.map((k) => field.choices[k]);
 
     const row = new Adw.ComboRow({
-        title: field.label,
-        subtitle: field.hint || null,
+        title: _esc(field.label),
+        subtitle: _esc(field.hint || ''),
         model: Gtk.StringList.new(labels),
     });
 
@@ -388,7 +397,7 @@ export function buildGroup(schema, store, opts = {}) {
 
         if (!groupsByTitle.has(groupTitle)) {
             const adwGroup = new Adw.PreferencesGroup({
-                title: groupTitle,
+                title: _esc(groupTitle),
                 // Only show the top-level description on the fallback
                 // group, so it doesn't repeat under every custom section.
                 description: field.group ? null : (opts.description || null),

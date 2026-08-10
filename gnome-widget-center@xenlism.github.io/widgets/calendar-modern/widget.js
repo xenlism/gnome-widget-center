@@ -25,7 +25,7 @@
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 import GLib from 'gi://GLib';
-import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss} from '../../lib/widgetVisualKit.js';
+import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS,} from '../../lib/widgetVisualKit.js';
 
 export default class CalendarModernWidget {
     /**
@@ -78,6 +78,8 @@ export default class CalendarModernWidget {
     getDefaultSettings() {
         return {
             ...SHADOW_DEFAULTS,
+            ...BORDER_DEFAULTS,
+            ...OPACITY_DEFAULTS,
             cardColor: '#ffffff',
             accentColor: '#d81f26',
             textColor: '#1a1a1a',

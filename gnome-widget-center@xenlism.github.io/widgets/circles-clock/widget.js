@@ -23,8 +23,7 @@ import Gio from 'gi://Gio';
 import Cairo from 'cairo';
 import {
     SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba,
-    toCssColor as _toCssColor, parseFontDescription as _parseFontDescription,
-} from '../../lib/widgetVisualKit.js';
+    toCssColor as _toCssColor, parseFontDescription as _parseFontDescription, BORDER_DEFAULTS, OPACITY_DEFAULTS,} from '../../lib/widgetVisualKit.js';
 
 const STACK_SIZE = 148; // 1x1 block-type is now 11x11 cells (176px) not 10x10 (160px); previously exactly filled the padded card (132 = 160 - 2*14), so keep that: 176 - 2*14 = 148
 const RING_GAP = 4; // px between adjacent ring bands
@@ -97,6 +96,8 @@ export default class CirclesClockWidget {
     getDefaultSettings() {
         return {
             ...SHADOW_DEFAULTS,
+            ...BORDER_DEFAULTS,
+            ...OPACITY_DEFAULTS,
             backgroundColor: '#FFFFFF00',
             cornerRadius: 18,
 

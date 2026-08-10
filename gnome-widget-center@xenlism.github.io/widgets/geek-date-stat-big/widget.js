@@ -36,6 +36,7 @@ import {SystemMetricsService} from '../../lib/systemMetricsApi.js';
 import {
     SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor,
     parseFontDescription as _parseFontDescription, TEXT_SHADOW_DEFAULTS, textShadowCss as _textShadowCss,
+    cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS,
 } from '../../lib/widgetVisualKit.js';
 
 export default class GeekDateStatBigWidget {
@@ -104,6 +105,8 @@ export default class GeekDateStatBigWidget {
             backgroundColor: '#FFFFFF00',
             textAlign: 'center',
             cornerRadius: 18,
+            ...BORDER_DEFAULTS,
+            ...OPACITY_DEFAULTS,
         };
     }
 
@@ -163,17 +166,13 @@ export default class GeekDateStatBigWidget {
 
         const dateColor = this._settings.dateColor ?? '#ffffff';
         const systemColor = this._settings.systemColor ?? '#e6e6e6';
-        const backgroundColor = _toCssColor(this._settings.backgroundColor ?? '#FFFFFF00', '#FFFFFF00');
-        const cornerRadius = this._settings.cornerRadius ?? 18;
         const textAlign = ['left', 'center', 'right'].includes(this._settings.textAlign) ? this._settings.textAlign : 'center';
         const textShadowCss = _textShadowCss(this._settings);
 
         this._actor.set_style(
-            `background-color: ${backgroundColor}; ` +
-            `border-radius: ${cornerRadius}px; ` +
+            _cardStyleCss(this._settings, {cornerRadiusFallback: 18}) +
             'padding: 20px 28px; ' +
-            'spacing: 8px;' +
-            _shadowBoxShadowCss(this._settings)
+            'spacing: 8px;'
         );
 
         // Date line, e.g. "02 AUGUST 2026" - locale day/month/year,
