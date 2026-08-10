@@ -845,36 +845,44 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
             label: metaBits.join(' · '), xalign: 0, css_classes: ['dim-label', 'caption'],
         }));
 
-        // --- controls: Apply button + read-only "active" switch -------
+        // --- controls: on/off switch (2026-08-10 ask: replaces the old
+        // separate Apply button + read-only status switch with one
+        // interactive control) -------------------------------------
         const controls = new Gtk.Box({
             spacing: 8, margin_top: 8, margin_bottom: 14, margin_start: 14, margin_end: 14,
         });
         card.append(controls);
 
-        const applyButton = new Gtk.Button({
-            label: this._tr('themes.card.apply', 'Apply'),
-            css_classes: ['suggested-action'],
-        });
-        applyButton.connect('clicked', () => {
-            this._applyThemePack(settings, entry);
-            statusSwitch.active = true;
-        });
-        controls.append(applyButton);
-
-        controls.append(new Gtk.Box({hexpand: true})); // spacer
+        controls.append(new Gtk.Box({hexpand: true})); // spacer - switch sits at the right, same as before
 
         // No "Active" caption next to the switch — the switch's own
         // on/off state already communicates this, and a redundant label
         // just adds noise to the card (2026-08-08 ask). The switch keeps
-        // an accessible name for screen readers even without the visible
-        // label.
+        // an accessible name/tooltip for screen readers even without the
+        // visible label. Turning it ON calls `_applyThemePack()` (now
+        // just a one-line GSettings write — see that method's own doc
+        // comment for why the actual apply logic moved to the Shell
+        // process). Turning it OFF only clears `active-theme-pack` when
+        // THIS card was the active one (a re-render setting `.active`
+        // programmatically shouldn't itself count as the user asking to
+        // unload the current theme).
         const statusSwitch = new Gtk.Switch({
             active: this._isThemePackActive(entry.id),
-            sensitive: false, // read-only status indicator, not a toggle - see this file's header
             valign: Gtk.Align.CENTER,
             tooltip_text: this._isThemePackActive(entry.id)
                 ? this._tr('themes.card.active', 'Active')
                 : this._tr('themes.card.inactive', 'Not loaded'),
+        });
+        statusSwitch.connect('notify::active', () => {
+            if (statusSwitch.active) {
+                this._applyThemePack(settings, entry);
+            } else if (this._isThemePackActive(entry.id)) {
+                try {
+                    settings.setGlobalValue('active-theme-pack', '');
+                } catch (e) {
+                    logError(e, `[widget-center] prefsV2: could not clear active theme pack`);
+                }
+            }
         });
         controls.append(statusSwitch);
 
@@ -935,23 +943,25 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
     }
 
     /**
-     * @private Applies a theme pack: enables every widget id it lists
-     * (without disabling anything NOT in the pack — same "additive"
-     * behavior lib/widgetCenterOverlay.js's `_loadThemePack()` already
-     * documents choosing, for the same reason) and records it as the
-     * active pack. Live widgets pick this up the same way any other
-     * `disabled-widgets`/GSettings change does — extension.js's own
-     * `onChanged` watcher in the Shell process, no direct coupling
-     * needed from this GTK4 process.
+     * @private Marks a theme pack as the active one by writing
+     * `active-theme-pack` GSettings key. 2026-08-10 fix ("theme apply
+     * doesn't load position"): this used to ALSO hand-toggle
+     * `disabled-widgets` for the pack's own widget list right here —
+     * which only ever enabled/disabled widgets, never touched a flat
+     * `.gwct` pack's saved position/settings/appearance at all, since
+     * this (separate, GTK4) process never had a WidgetLoader to
+     * unload/reload anything with anyway. That whole sequence — unload
+     * every running widget, re-import the pack's document (position
+     * included), reload — now happens once, in the Shell process, from
+     * extension.js's own `active-theme-pack` watcher
+     * (`_applyActiveThemePack()`), triggered by this same GSettings
+     * write landing on the SAME dconf-backed key that process is also
+     * watching. This method's only job now is to fire that write.
      */
     _applyThemePack(settings, entry) {
         if (!settings.isReady)
             return;
         try {
-            const current = new Set(settings.getGlobalValue('disabled-widgets'));
-            for (const widgetId of entry.manifest.widgets ?? [])
-                current.delete(widgetId);
-            settings.setGlobalValue('disabled-widgets', Array.from(current));
             settings.setGlobalValue('active-theme-pack', entry.id);
         } catch (e) {
             logError(e, `[widget-center] prefsV2: could not apply theme pack "${entry.id}"`);

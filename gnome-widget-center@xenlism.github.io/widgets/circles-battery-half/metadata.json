@@ -1,6 +1,6 @@
 {
-  "id": "circles-battery-half",
-  "name": "Battery (Half Ring)",
+  "id": "xenlism.github.io.circles-battery-half",
+  "name": "xenlism's Battery (Half Ring)",
   "description": "1x1 card: battery charge as a half-circle (semicircle) ring next to a percentage label, instead of a full circle. Ring color bands by charge level and switches to a charging color (with a bolt glyph) while plugged in. The ring side can be flipped to hug the left or right edge of the card.",
   "version": "1.0.0",
   "author": "GNOME Widget Center",

@@ -1,6 +1,6 @@
 {
-  "id": "geek-date-week-big",
-  "name": "Geek Date/Week (Big)",
+  "id": "xenlism.github.io.geek-date-week-big",
+  "name": "xenlism's Geek Date/Week (Big)",
   "description": "Large `4x1` card (47×11 grid cells): big centered date line on top, week line centered underneath.",
   "version": "1.0.0",
   "author": "GNOME Widget Center",

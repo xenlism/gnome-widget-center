@@ -1,6 +1,6 @@
 {
-  "id": "circles-cpu",
-  "name": "Circles CPU",
+  "id": "xenlism.github.io.circles-cpu",
+  "name": "xenlism's Circles CPU",
   "description": "1x1 ring gauge showing live CPU usage percent, centered inside a single progress ring.",
   "version": "1.0.0",
   "author": "GNOME Widget Center",

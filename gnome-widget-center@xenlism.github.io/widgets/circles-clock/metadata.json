@@ -1,6 +1,6 @@
 {
-  "id": "circles-clock",
-  "name": "Circles Clock",
+  "id": "xenlism.github.io.circles-clock",
+  "name": "xenlism's Circles Clock",
   "description": "1x1 concentric-ring clock: HH (outer) / MM (middle) / SS (inner) sweep rings with HH:MM:SS floating on top.",
   "version": "1.0.0",
   "author": "GNOME Widget Center",

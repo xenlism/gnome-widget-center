@@ -1,6 +1,6 @@
 {
-  "id": "media-player-square",
-  "name": "Media Player (Square)",
+  "id": "xenlism.github.io.media-player-square",
+  "name": "xenlism's Media Player (Square)",
   "description": "1x1 square Now Playing card: full-bleed album cover with a visible frame, track info overlaid on the cover, and Play/Previous/Next controls that appear on hover.",
   "version": "1.0.0",
   "author": "gnome-widget-center",

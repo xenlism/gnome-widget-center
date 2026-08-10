@@ -22,8 +22,9 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import Cairo from 'cairo';
 import {
-    SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba,
+    SHADOW_DEFAULTS, hexToRgba as _hexToRgba,
     toCssColor as _toCssColor, parseFontDescription as _parseFontDescription, BORDER_DEFAULTS, OPACITY_DEFAULTS,} from '../../lib/widgetVisualKit.js';
+import {createLayeredCard, applyLayeredCardStyle} from '../../lib/cardLayers.js';
 
 const STACK_SIZE = 148; // 1x1 block-type is now 11x11 cells (176px) not 10x10 (160px); previously exactly filled the padded card (132 = 160 - 2*14), so keep that: 176 - 2*14 = 148
 const RING_GAP = 4; // px between adjacent ring bands
@@ -40,14 +41,11 @@ export default class CirclesClockWidget {
 
     // Must never throw, even with empty settings.
     buildActor() {
-        this._actor = new St.Bin({
-            style_class: 'circles-clock-root',
-            x_align: Clutter.ActorAlign.CENTER,
-            y_align: Clutter.ActorAlign.CENTER,
-        });
+        this._layers = createLayeredCard({contentStyleClass: 'circles-clock-root'});
+        this._actor = this._layers.root;
 
         const outerBox = new St.BoxLayout({vertical: true, x_expand: true, y_expand: true});
-        this._actor.set_child(outerBox);
+        this._layers.content.add_child(outerBox);
 
         this._stack = new St.Widget({
             layout_manager: new Clutter.BinLayout(),
@@ -221,7 +219,7 @@ export default class CirclesClockWidget {
     _render() {
         const backgroundColor = _toCssColor(this._settings.backgroundColor, '#FFFFFF00');
         const cornerRadius = this._settings.cornerRadius ?? 18;
-        this._actor.set_style(_cardStyleCss(this._settings, {cornerRadiusFallback: 18}));
+        applyLayeredCardStyle(this._layers, this._settings, {backgroundColorFallback: '#FFFFFF00', cornerRadiusFallback: 18});
 
         const timeColor = _toCssColor(this._settings.timeColor, '#FFFFFFFF');
         const {family, size} = _parseFontDescription(this._settings.timeFont ?? 'Sans Bold 20', 'Sans Bold', 20);

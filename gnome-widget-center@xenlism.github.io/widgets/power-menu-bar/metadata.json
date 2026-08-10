@@ -1,6 +1,6 @@
 {
-  "id": "power-menu-bar",
-  "name": "Power Menu (Bar)",
+  "id": "xenlism.github.io.power-menu-bar",
+  "name": "xenlism's Power Menu (Bar)",
   "description": "Wide `barx2` card (23×5 grid cells): the same Suspend/Restart/Power Off/Log Out icon buttons as the Power Menu card, evenly spaced in a single row instead of a 2x2 grid.",
   "version": "1.0.0",
   "author": "GNOME Widget Center",

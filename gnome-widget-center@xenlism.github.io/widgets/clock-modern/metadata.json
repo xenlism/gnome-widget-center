@@ -1,6 +1,6 @@
 {
-  "id": "clock-modern",
-  "name": "Clock (Modern)",
+  "id": "xenlism.github.io.clock-modern",
+  "name": "xenlism's Clock (Modern)",
   "description": "Vertical stacked-digit clock card - AM/PM, hour, minute and second each on their own line.",
   "version": "1.0.0",
   "author": "GNOME Widget Center",

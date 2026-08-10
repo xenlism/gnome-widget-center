@@ -24,6 +24,7 @@
 
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import {WidgetLoader} from './lib/widgetLoader.js';
 import {WidgetLayer} from './lib/widgetLayer.js';
@@ -41,6 +42,7 @@ import {setForcedTheme, setForceSettingsHelper, applyCardOpacity} from './lib/wi
 import {applyCardBlur} from './lib/cardLayers.js';
 import {ForceSettingsHelper} from './lib/forceSettingsHelper.js';
 import {WidgetCenterOverlay} from './lib/widgetCenterOverlay.js';
+import {ThemePackRegistry} from './lib/themePackRegistry.js';
 import {createLogger} from './lib/logger.js';
 import {importGwctDocument} from './lib/exportService.js';
 
@@ -290,6 +292,16 @@ export default class WidgetCenterExtension extends Extension {
                 ids => this._applyDisabledWidgets(new Set(ids)));
             this._languageChangedId = this._settings.onChanged('language',
                 lang => loader.notifyHostLanguageChanged(lang ?? ''));
+            // 2026-08-10 fix (theme apply doesn't load position): both the
+            // overlay's Themes-tab switch AND the separate prefs process's
+            // theme card switch (lib/prefsWindowController.js) now just
+            // write this one key - see _applyActiveThemePack()'s own doc
+            // comment for the full unload/reimport/reload sequence this
+            // triggers, and why the old per-caller logic never actually
+            // repositioned an already-running widget.
+            this._activeThemePackChangedId = this._settings.onChanged('active-theme-pack',
+                id => this._applyActiveThemePack(id).catch(e =>
+                    console.error(`[widget-center] failed to apply theme pack "${id}"`, e)));
         }
 
         let cancelled = false;
@@ -340,25 +352,17 @@ export default class WidgetCenterExtension extends Extension {
                 this.openPreferences()?.catch(e =>
                     console.error("[widget-center] openPreferences() failed", e));
             },
-            onApplyThemePack: entry => {
-                // A flat .gwct pack carries the complete exported desktop,
-                // not just its widget ids. Apply it so Load restores the
-                // appearance, positions and per-widget settings too.
-                if (entry.document) {
-                    try {
-                        const discovered = new Map(this._loader.discover().map(widget => [widget.id, widget]));
-                        importGwctDocument(entry.document, {
-                            storage: this._storage,
-                            theme: this._themeService,
-                            settings: this._settings,
-                            discoveredWidgetsById: discovered,
-                        });
-                    } catch (e) {
-                        console.error(`[widget-center] could not load theme pack "${entry.id}"`, e);
-                    }
-                }
-                this._logger.debug('widget-center-overlay', `theme pack "${entry.id}" loaded`);
-            },
+            // onApplyThemePack removed 2026-08-10: the overlay's Themes tab
+            // now only ever writes the `active-theme-pack` GSettings key
+            // (lib/widgetCenterOverlay.js's `_loadThemePack()`) - the actual
+            // apply (unload → reimport the pack's document → reload +
+            // notify) happens once, uniformly, from this same process's own
+            // `active-theme-pack` watcher above (`_applyActiveThemePack()`),
+            // whether the key was set by this overlay or by the separate
+            // prefs process's own theme card switch. Doing it here too, as
+            // this callback used to, duplicated that work and - for a flat
+            // .gwct pack with saved positions - never actually moved an
+            // already-running widget, which is the bug this removal fixes.
         });
         this._widgetCenterOverlay.enable();
     }
@@ -406,6 +410,11 @@ export default class WidgetCenterExtension extends Extension {
         if (this._settings && this._languageChangedId != null)
             this._settings.disconnect(this._languageChangedId);
         this._languageChangedId = null;
+
+        if (this._settings && this._activeThemePackChangedId != null)
+            this._settings.disconnect(this._activeThemePackChangedId);
+        this._activeThemePackChangedId = null;
+        this._applyingThemePack = false;
 
         if (this._settings && this._devChangedId != null)
             this._settings.disconnect(this._devChangedId);
@@ -982,6 +991,8 @@ export default class WidgetCenterExtension extends Extension {
     _applyDisabledWidgets(disabledIds) {
         if (!this._loader || !this._layer)
             return; // enable()/disable() mid-flight - the in-progress pass already reads the current value directly
+        if (this._applyingThemePack)
+            return; // _applyActiveThemePack() is already reconciling this exact write - see its own doc comment
 
         const loadedIds = new Set(this._loader.instances.map(e => e.id));
 
@@ -1008,6 +1019,151 @@ export default class WidgetCenterExtension extends Extension {
             this._loader.loadOne(widgetInfo)
                 .then(entry => entry && this._placeEntry(entry))
                 .catch(e => console.error(`[widget-center] "${widgetInfo.id}" failed to load`, e));
+        }
+    }
+
+    /** @private same bundled+user themepacks/ search paths
+     * lib/widgetCenterOverlay.js's `_userThemepacksRoots()`/
+     * `_discoverThemePacks()` and lib/prefsWindowController.js's
+     * `_discoverThemePacks()` already use - a third, Shell-process-only
+     * copy rather than a shared import, matching this codebase's
+     * existing convention for cheap, stateless per-process discovery
+     * helpers (e.g. each process has its own `_pathMtimeUnix()`/
+     * `_resolveScreenshotPath()` already). */
+    _discoverThemePackById(id) {
+        const bundledPath = GLib.build_filenamev([this.path, 'themepacks']);
+        const userPath = GLib.build_filenamev([
+            GLib.get_user_config_dir(), 'gnome-widget-center', 'themepacks',
+        ]);
+        const registry = new ThemePackRegistry([
+            {path: bundledPath, source: 'bundled'},
+            {path: userPath, source: 'user'},
+        ]);
+        return registry.discover().find(entry => entry.id === id) ?? null;
+    }
+
+    /**
+     * @private Reacts to a live change of the `active-theme-pack`
+     * GSettings key - fired from either this same process (the Widget
+     * Center overlay's Themes tab switch, lib/widgetCenterOverlay.js's
+     * `_loadThemePack()`) or the separate prefs process (lib/
+     * prefsWindowController.js's own theme card switch), the same
+     * cross-process GSettings-watch pattern `_applyDisabledWidgets()`
+     * above already uses for `disabled-widgets`.
+     *
+     * 2026-08-10 fix ("theme apply doesn't load position"): this used to
+     * be the overlay's own `onApplyThemePack` callback, reachable ONLY
+     * from the overlay (never from the separate prefs process's own
+     * Apply button - the actual bug report this addresses), and even
+     * there it only ever wrote the imported settings/position/
+     * appearance to disk via importGwctDocument() - it never unloaded/
+     * reloaded the already-running widget instances, so a widget
+     * already placed on the desktop never picked up its new
+     * theme-supplied position; only a widget freshly enabled by the
+     * theme (which loadAll() naturally places at its now-current saved
+     * position) ever looked right.
+     *
+     * Fixed by doing the full sequence every time, from the one place
+     * both processes' UI now funnels through by simply setting this
+     * key:
+     *   1. unload every currently-running widget (WidgetLoader.
+     *      unloadAll(), same call disable() itself uses, after
+     *      detaching each actor from the layer first - same ordering
+     *      disable() uses, see that method).
+     *   2. write the theme pack's document to disk (importGwctDocument()
+     *      - global appearance, host settings, and per-widget settings/
+     *      position/theme, batched into layout.json/theme.json/
+     *      widgets/<id>.json/disabled-widgets).
+     *   3. reload from those now-updated files (loader.loadAll() + the
+     *      same `_placeEntry()` every widget gets at startup) - this is
+     *      the step that actually makes a widget's new position/
+     *      appearance take effect, since loadAll()/_placeEntry() always
+     *      reads a widget's CURRENT saved position/settings, never a
+     *      stale in-memory copy an already-running instance might still
+     *      be holding.
+     *   4. a Shell notification, so switching a theme on gives feedback
+     *      beyond the switch itself flipping (per user ask).
+     *
+     * A legacy folder-form pack (`theme.json` with no embedded `.gwct`
+     * document - see themePackRegistry.js's file header) has no
+     * position/settings/appearance to restore at all, only a widget id
+     * list - falls back to the pre-existing "just enable these ids"
+     * behavior for that case, same as this method's predecessor did.
+     *
+     * `this._applyingThemePack` guards `_applyDisabledWidgets()` against
+     * redundantly reconciling the SAME `disabled-widgets` write this
+     * method's own importGwctDocument()/loadAll() call already fully
+     * accounts for - without it, the `changed::disabled-widgets` signal
+     * importGwctDocument() fires as a side effect would race this
+     * method's own in-flight unload/reload with a second, partially
+     * overlapping one.
+     * @param {string} id - the new `active-theme-pack` value; '' means
+     *   "no active pack" (e.g. a card's switch turned off) - nothing to
+     *   apply, the switch turning off never undoes what a theme placed.
+     */
+    async _applyActiveThemePack(id) {
+        if (!id || !this._loader || !this._layer || !this._storage || !this._themeService)
+            return; // '' (switched off), or enable()/disable() still mid-flight
+
+        const entry = this._discoverThemePackById(id);
+        if (!entry) {
+            console.warn(`[widget-center] active theme pack "${id}" not found on disk`);
+            return;
+        }
+
+        this._applyingThemePack = true;
+        try {
+            if (entry.document) {
+                // Same per-widget detach sequence _applyDisabledWidgets()
+                // uses right above, and for the same reason: DragController/
+                // EditModeDragController/WidgetEditMode/DevWatcher each key
+                // their own tracking by widget id and treat attach()/
+                // watchWidget() as a no-op once that id is already present.
+                // Without detaching here first, loadAll()/_placeEntry()
+                // below re-attach()es these same ids against freshly
+                // reloaded actors, but every one of those calls is silently
+                // swallowed as "already attached" against the OLD entry -
+                // which still points at the actor unloadAll() is about to
+                // destroy() - so every widget touched by a theme apply
+                // would silently lose Super+drag, right-click edit mode,
+                // edit-mode drag, and dev-mode watching until the next full
+                // disable()/enable().
+                for (const loadedEntry of this._loader.instances) {
+                    this._devWatcher?.unwatchWidget(loadedEntry.id);
+                    this._drag?.detach(loadedEntry.id);
+                    this._editDrag?.detach(loadedEntry.id);
+                    this._editMode?.detach(loadedEntry.id);
+                    this._layer.removeWidgetActor(loadedEntry.id);
+                }
+                this._loader.unloadAll();
+
+                const discovered = new Map(this._loader.discover().map(w => [w.id, w]));
+                importGwctDocument(entry.document, {
+                    storage: this._storage,
+                    theme: this._themeService,
+                    settings: this._settings,
+                    discoveredWidgetsById: discovered,
+                });
+
+                const disabled = this._settings?.isReady
+                    ? new Set(this._settings.getGlobalValue('disabled-widgets'))
+                    : new Set();
+                const started = await this._loader.loadAll(disabled);
+                for (const startedEntry of started)
+                    this._placeEntry(startedEntry);
+            } else {
+                const current = this._settings?.isReady
+                    ? new Set(this._settings.getGlobalValue('disabled-widgets'))
+                    : new Set();
+                for (const widgetId of entry.manifest?.widgets ?? [])
+                    current.delete(widgetId);
+                if (this._settings?.isReady)
+                    this._settings.setGlobalValue('disabled-widgets', Array.from(current));
+            }
+
+            Main.notify('GNOME Widget Center', `Theme "${entry.manifest?.name ?? id}" applied.`);
+        } finally {
+            this._applyingThemePack = false;
         }
     }
 }

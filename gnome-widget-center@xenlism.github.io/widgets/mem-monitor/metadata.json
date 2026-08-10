@@ -1,6 +1,6 @@
 {
-  "id": "mem-monitor",
-  "name": "Memory Monitor",
+  "id": "xenlism.github.io.mem-monitor",
+  "name": "xenlism's Memory Monitor",
   "description": "1x1 card showing live RAM usage percent with a scrolling sparkline history graph.",
   "version": "1.0.0",
   "author": "GNOME Widget Center",

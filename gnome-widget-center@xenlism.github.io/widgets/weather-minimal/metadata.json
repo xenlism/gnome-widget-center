@@ -1,6 +1,6 @@
 {
-  "id": "weather-minimal",
-  "name": "Weather (Minimal)",
+  "id": "xenlism.github.io.weather-minimal",
+  "name": "xenlism's Weather (Minimal)",
   "description": "Minimal weather card - icon, condition and temperature, powered by Open-Meteo (no API key required).",
   "version": "1.0.0",
   "author": "GNOME Widget Center",

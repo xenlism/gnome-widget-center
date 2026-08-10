@@ -1,6 +1,6 @@
 {
-  "id": "launcher-square-1",
-  "name": "Launcher (Square) 1",
+  "id": "xenlism.github.io.launcher-square-1",
+  "name": "xenlism's Launcher (Square) 1",
   "description": "Android-style launcher shortcut: 4 app icons in a 2x2 grid, no labels, click launches each app's .desktop entry.",
   "version": "1.0.0",
   "author": "GNOME Widget Center",

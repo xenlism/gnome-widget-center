@@ -1,6 +1,6 @@
 {
-  "id": "circles-battery",
-  "name": "Circles Battery",
+  "id": "xenlism.github.io.circles-battery",
+  "name": "xenlism's Circles Battery",
   "description": "1x1 ring gauge showing battery percentage, with the ring color changing by charge level (or a charging color + bolt icon while plugged in).",
   "version": "1.0.0",
   "author": "GNOME Widget Center",

@@ -30,6 +30,7 @@
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 import GLib from 'gi://GLib';
+import Meta from 'gi://Meta';
 import Cairo from 'cairo';
 
 import {SystemMetricsService} from '../../lib/systemMetricsApi.js';
@@ -73,6 +74,12 @@ function _adaptiveFraction(bytesPerSec, previousScale) {
     return {scale, fraction: Math.min(1, rate / scale)};
 }
 
+// Auto edge-snap: when the card's own on-screen position puts it
+// within this many pixels of a monitor's left or right edge, the ring
+// hugs that edge automatically (overriding the manual `ringSide`
+// setting) - see _effectiveRingSide() below.
+const EDGE_SNAP_DISTANCE = 250;
+
 export default class CirclesNetHalfWidget {
     /** @param {WidgetAPI} api - see WIDGET_API.md §5. */
     constructor(api) {
@@ -92,6 +99,7 @@ export default class CirclesNetHalfWidget {
             x_expand: true,
             y_expand: true,
         });
+
 
         const outerBox = new St.BoxLayout({vertical: true, x_expand: true, y_expand: true});
         this._actor.set_child(outerBox);
@@ -139,6 +147,7 @@ export default class CirclesNetHalfWidget {
             this._ringArea.disconnect(this._repaintId);
             this._repaintId = null;
         }
+
     }
 
     getDefaultSettings() {
@@ -170,12 +179,63 @@ export default class CirclesNetHalfWidget {
         this._startTimer(); // picks up a changed refreshRateSeconds too
     }
 
+    /** @private looks at the card's actual on-screen position and
+     * returns 'left'/'right' only when it currently sits within
+     * EDGE_SNAP_DISTANCE of that monitor edge (closest edge if somehow
+     * within range of both). Returns null when not near either edge, or
+     * when position/monitor info isn't available yet (e.g. not mapped to
+     * the stage) - callers fall back to the manual `ringSide` setting in
+     * that case, they never fall back inside this method. */
+    _detectEdgeSide() {
+        try {
+            if (!this._actor || !this._actor.get_stage())
+                return null;
+
+            const [x] = this._actor.get_transformed_position();
+            const [width] = this._actor.get_transformed_size();
+            if (!Number.isFinite(x) || !Number.isFinite(width) || width <= 0)
+                return null;
+
+            const monitorIndex = global.display.get_monitor_index_for_rect(
+                new Meta.Rectangle({x: Math.round(x), y: 0, width: Math.max(1, Math.round(width)), height: 1})
+            );
+            const geometry = global.display.get_monitor_geometry(monitorIndex);
+            if (!geometry)
+                return null;
+
+            const distLeft = x - geometry.x;
+            const distRight = (geometry.x + geometry.width) - (x + width);
+
+            if (distLeft <= EDGE_SNAP_DISTANCE && distLeft <= distRight)
+                return 'left';
+            if (distRight <= EDGE_SNAP_DISTANCE)
+                return 'right';
+        } catch (e) {
+            // Monitor/stage info not available - treat as "not near an edge".
+        }
+        return null;
+    }
+
     /** @private puts the ring column and text column in the order
-     * `ringSide` calls for - "right" means ring column last (visually
-     * right, since this is a plain horizontal BoxLayout), "left" means
-     * ring column first. */
+     * `_effectiveRingSide()` calls for - "right" means ring column last
+     * (visually right, since this is a plain horizontal BoxLayout),
+     * "left" means ring column first. Also re-evaluates the edge-snap
+     * side every time this runs, so dragging the card near a screen
+     * edge updates the layout live. */
     _layoutChildren() {
-        const side = this._settings.ringSide === 'left' ? 'left' : 'right';
+        const manual = this._settings.ringSide === 'left' ? 'left' : 'right';
+        const detected = this._detectEdgeSide();
+
+        // Position wins over a stale manual setting: if the card is
+        // actually sitting within EDGE_SNAP_DISTANCE of an edge that
+        // disagrees with the stored `ringSide`, correct the setting
+        // itself (not just this frame's layout) so it stays in sync -
+        // e.g. dragged to the right edge while ringSide was still
+        // 'left' gets written back to 'right'.
+        if (detected !== null && detected !== manual)
+            this._settings.ringSide = detected;
+
+        const side = detected ?? manual;
         // Let the rings' flat endpoints meet the selected card edge while
         // preserving the text column's normal padding.
         this._ringArea.set_translation(side === 'left' ? -CARD_PADDING : CARD_PADDING, 0, 0);
@@ -189,6 +249,11 @@ export default class CirclesNetHalfWidget {
             this._row.add_child(new St.Widget({width: COLUMN_GAP, height: 1}));
             this._row.add_child(this._ringArea);
         }
+   
+        // Side flips change the ring's arc geometry too - repaint so a
+        // live edge-snap change is reflected immediately.
+        if (this._ringArea)
+            this._ringArea.queue_repaint();
     }
 
     /** @private */
@@ -212,6 +277,11 @@ export default class CirclesNetHalfWidget {
 
     /** @private */
     _tick() {
+        // Re-check the edge-snap side on every periodic refresh, so a
+        // card dragged near a monitor edge picks up the flip within one
+        // refresh interval (there's no reliably-available cross-version
+        // St/Clutter signal to react to a drag the instant it happens).
+        this._layoutChildren();
         const {totalRxBytesPerSec, totalTxBytesPerSec} = this._metrics.getNetworkUsage();
 
         const download = _adaptiveFraction(totalRxBytesPerSec, this._downloadScale);

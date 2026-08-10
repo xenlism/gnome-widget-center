@@ -1,6 +1,6 @@
 {
-  "id": "geek-clock-date-bar",
-  "name": "Geek Clock Date (Bar)",
+  "id": "xenlism.github.io.geek-clock-date-bar",
+  "name": "xenlism's Geek Clock Date (Bar)",
   "description": "Wide `barx3` card (35×5 grid cells): big centered clock on top, date line centered underneath.",
   "version": "1.0.0",
   "author": "GNOME Widget Center",

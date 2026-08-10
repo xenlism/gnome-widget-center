@@ -1,6 +1,6 @@
 {
-  "id": "launcher-big-1",
-  "name": "Launcher (Big) 1",
+  "id": "xenlism.github.io.launcher-big-1",
+  "name": "xenlism's Launcher (Big) 1",
   "description": "Android-style launcher shortcut: 9 app icons in a 3x3 grid, no labels, click launches each app's .desktop entry.",
   "version": "1.0.0",
   "author": "GNOME Widget Center",

@@ -1,6 +1,6 @@
 {
-  "id": "geek-archey-systech-squre",
-  "name": "Geek Archey Sysfetch (Square)",
+  "id": "xenlism.github.io.geek-archey-systech-squre",
+  "name": "xenlism's Geek Archey Sysfetch (Square)",
   "description": "archey4-style system info card: OS, host, kernel, uptime, packages, shell, resolution, DE, CPU, GPU, memory. Text only, square layout - no logo, no color palette.",
   "version": "1.0.0",
   "author": "GNOME Widget Center",

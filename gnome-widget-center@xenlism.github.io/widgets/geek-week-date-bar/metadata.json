@@ -1,6 +1,6 @@
 {
-  "id": "geek-week-date-bar",
-  "name": "Geek Date/Week (Bar)",
+  "id": "xenlism.github.io.geek-week-date-bar",
+  "name": "xenlism's Geek Date/Week (Bar)",
   "description": "Wide `barx2` card (23×5 grid cells): big centered week line on top, date line centered underneath.",
   "version": "1.0.0",
   "author": "GNOME Widget Center",

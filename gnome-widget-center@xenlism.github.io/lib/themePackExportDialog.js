@@ -40,6 +40,19 @@ const MIME_BY_EXTENSION = {
     '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp',
 };
 
+// 2026-08-10 ask: Email/URL are free-text Adw.EntryRow fields with no
+// built-in format checking of their own (unlike e.g. a GtkSpinButton's
+// numeric range) — a typo here silently ships in the exported .gwct and
+// only surfaces much later, to whoever opens the pack, as a dead mailto/
+// broken link. Deliberately permissive patterns (not a full RFC 5322/
+// RFC 3986 validator — this is a "does this look like a plausible email/
+// URL" sanity check, not a strict parser) so a legitimate-but-unusual
+// address/URL isn't blocked. Both fields stay OPTIONAL — empty is valid,
+// only a non-empty value that doesn't look like the thing it claims to be
+// is rejected.
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const URL_PATTERN = /^https?:\/\/[^\s]+\.[^\s]+$/i;
+
 /**
  * @param {Adw.PreferencesWindow|Adw.Window} parentWindow - transient_for.
  * @param {object} services - {storage, theme, settings, discoveredWidgets}
@@ -95,6 +108,22 @@ export function openThemePackExportDialog(parentWindow, services, prefill = {}) 
     urlRow.text = prefill.url ?? '';
     group.add(urlRow);
 
+    // Live feedback as the user types/leaves the field — Adw.EntryRow
+    // doesn't have a built-in "invalid" visual state, so this leans on
+    // the same 'error' CSS class GTK4/libadwaita's own validated widgets
+    // (e.g. Adw.PasswordEntryRow's strength indicator) already use for
+    // this. Only ever flags a genuinely non-empty-and-wrong value — an
+    // empty field is never marked invalid, since both fields are
+    // optional (see EMAIL_PATTERN/URL_PATTERN's own comment).
+    const markValidity = (row, pattern) => {
+        const text = row.text.trim();
+        const invalid = text.length > 0 && !pattern.test(text);
+        row.set_css_classes(invalid ? ['error'] : []);
+        return !invalid;
+    };
+    emailRow.connect('notify::text', () => markValidity(emailRow, EMAIL_PATTERN));
+    urlRow.connect('notify::text', () => markValidity(urlRow, URL_PATTERN));
+
     // --- Screenshot picker: browse for an image file, read+base64 it
     // right away (kept in memory as {path, bytes, mime} until Save) so
     // the preview label can show a filename without re-reading on save.
@@ -148,6 +177,22 @@ export function openThemePackExportDialog(parentWindow, services, prefill = {}) 
     exportButton.connect('clicked', async () => {
         if (!nameRow.text.trim()) {
             showReportDialog(window, 'Give this theme pack a name', 'The Name field can\'t be empty.');
+            return;
+        }
+
+        // Hard gate (2026-08-10 ask), not just the live 'error' class
+        // above — the live feedback is easy to miss (no shake/toast,
+        // just a border color change), so Export itself re-checks both
+        // fields and blocks with an explicit message rather than
+        // silently shipping a malformed email/URL in the .gwct.
+        if (!markValidity(emailRow, EMAIL_PATTERN)) {
+            showReportDialog(window, 'Check the Email field',
+                `"${emailRow.text.trim()}" doesn't look like a valid email address.`);
+            return;
+        }
+        if (!markValidity(urlRow, URL_PATTERN)) {
+            showReportDialog(window, 'Check the URL field',
+                `"${urlRow.text.trim()}" doesn't look like a valid URL (must start with http:// or https://).`);
             return;
         }
 

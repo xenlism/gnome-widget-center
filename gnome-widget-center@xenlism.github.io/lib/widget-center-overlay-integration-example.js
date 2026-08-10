@@ -35,12 +35,15 @@
  *       onWidgetSettings: id => this._openWidgetSettings(id),
  *       onWidgetRemove: id => this._removeWidgetViaEditMode(id),
  *       onOpenPreferences: () => this.openPreferences(),
- *       onApplyThemePack: (manifest, enabled) => {
- *           this._logger.debug('widget-center-overlay',
- *               `theme pack "${manifest.id}" ${enabled ? 'applied' : 'removed'}`);
- *       },
  *   });
  *   this._widgetCenterOverlay.enable();
+ *
+ * NOTE (2026-08-10): there is no `onApplyThemePack` hook any more —
+ * applying/unloading a theme pack is driven entirely by the
+ * `active-theme-pack` GSettings key the overlay itself already writes;
+ * watch that key the same way `disabled-widgets` is already watched
+ * above (see extension.js's own `_applyActiveThemePack()` for the real
+ * implementation this example mirrors).
  *
  * Placement in enable(): after `this._settings` exists (the overlay reads/
  * writes the same GSettings schema for disabled-widgets and its own

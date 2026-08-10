@@ -19,8 +19,9 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import Cairo from 'cairo';
 import {
-    SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba,
+    SHADOW_DEFAULTS, hexToRgba as _hexToRgba,
     toCssColor as _toCssColor, parseFontDescription as _parseFontDescription, BORDER_DEFAULTS, OPACITY_DEFAULTS,} from '../../lib/widgetVisualKit.js';
+import {createLayeredCard, applyLayeredCardStyle} from '../../lib/cardLayers.js';
 
 const RING_SIZE = 128; // 1x1 block-type is now 11x11 cells (176px) not 10x10 (160px); scaled 116 * (176/160) = 127.6 -> 128
 
@@ -40,14 +41,11 @@ export default class CirclesYearWidget {
     }
 
     buildActor() {
-        this._actor = new St.Bin({
-            style_class: 'circles-year-root',
-            x_expand: true,
-            y_expand: true,
-        });
+        this._layers = createLayeredCard({contentStyleClass: 'circles-year-root'});
+        this._actor = this._layers.root;
 
         const outerBox = new St.BoxLayout({vertical: true, x_expand: true, y_expand: true});
-        this._actor.set_child(outerBox);
+        this._layers.content.add_child(outerBox);
         outerBox.set_style('padding: 14px;');
 
         this._stack = new St.Widget({
@@ -219,7 +217,7 @@ export default class CirclesYearWidget {
     _render() {
         const backgroundColor = _toCssColor(this._settings.backgroundColor, '#FFFFFF00');
         const cornerRadius = this._settings.cornerRadius ?? 18;
-        this._actor.set_style(_cardStyleCss(this._settings, {cornerRadiusFallback: 18}));
+        applyLayeredCardStyle(this._layers, this._settings, {backgroundColorFallback: '#FFFFFF00', cornerRadiusFallback: 18});
 
         const yearColor = _toCssColor(this._settings.yearColor, '#FFFFFFFF');
         const dayColor = _toCssColor(this._settings.dayColor, '#FFFFFFB3');

@@ -1,6 +1,6 @@
 {
-  "id": "system-monitor",
-  "name": "System Monitor",
+  "id": "xenlism.github.io.system-monitor",
+  "name": "xenlism's System Monitor",
   "description": "iStat-style card: CPU/Memory/Disk usage as glowing ring gauges, plus a network throughput line. Click to launch an app.",
   "version": "1.0.0",
   "author": "GNOME Widget Center",

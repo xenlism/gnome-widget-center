@@ -1,6 +1,6 @@
 {
-  "id": "geek-week-stat-bay",
-  "name": "Geek Week/Stat (Bay)",
+  "id": "xenlism.github.io.geek-week-stat-bay",
+  "name": "xenlism's Geek Week/Stat (Bay)",
   "description": "Medium `3x1` card (35×11 grid cells): big centered week line on top, stat line centered underneath.",
   "version": "1.0.0",
   "author": "GNOME Widget Center",

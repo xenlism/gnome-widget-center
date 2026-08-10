@@ -1,6 +1,6 @@
 {
-  "id": "calendar-modern",
-  "name": "Calendar (Modern)",
+  "id": "xenlism.github.io.calendar-modern",
+  "name": "xenlism's Calendar (Modern)",
   "description": "Card-style calendar showing month, weekday and day number.",
   "version": "1.0.0",
   "author": "GNOME Widget Center",

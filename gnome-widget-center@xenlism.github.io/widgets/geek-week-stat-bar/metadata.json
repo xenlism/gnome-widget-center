@@ -1,6 +1,6 @@
 {
-  "id": "geek-week-stat-bar",
-  "name": "Geek Week/Stat (Bar)",
+  "id": "xenlism.github.io.geek-week-stat-bar",
+  "name": "xenlism's Geek Week/Stat (Bar)",
   "description": "Wide `barx2` card (23×5 grid cells): big centered week line on top, stat line centered underneath.",
   "version": "1.0.0",
   "author": "GNOME Widget Center",

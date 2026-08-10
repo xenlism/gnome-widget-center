@@ -1,6 +1,6 @@
 {
-  "id": "media-player-wide",
-  "name": "Media Player (Wide)",
+  "id": "xenlism.github.io.media-player-wide",
+  "name": "xenlism's Media Player (Wide)",
   "description": "2x1 wide Now Playing card: album cover on the left, track info and Play/Previous/Next controls on the right.",
   "version": "1.0.0",
   "author": "gnome-widget-center",

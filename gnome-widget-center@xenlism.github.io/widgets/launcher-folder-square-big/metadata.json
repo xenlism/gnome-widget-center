@@ -1,6 +1,6 @@
 {
-  "id": "launcher-folder-square-big",
-  "name": "Folder Launcher (Square Big)",
+  "id": "xenlism.github.io.launcher-folder-square-big",
+  "name": "xenlism's Folder Launcher (Square Big)",
   "description": "Android-style launcher grid for FOLDERS instead of apps: pick up to 9 directories, each shown with your system's folder icon. Clicking one opens it in your default file manager (Nautilus by default).",
   "version": "1.0.0",
   "author": "GNOME Widget Center",

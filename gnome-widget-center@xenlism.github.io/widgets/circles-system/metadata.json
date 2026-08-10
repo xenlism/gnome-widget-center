@@ -1,6 +1,6 @@
 {
-  "id": "circles-system",
-  "name": "Circles System",
+  "id": "xenlism.github.io.circles-system",
+  "name": "xenlism's Circles System",
   "description": "1x1 card with three small ring gauges (CPU / Memory / Disk) side by side, each independently colored with its own value text and font.",
   "version": "1.0.0",
   "author": "GNOME Widget Center",

@@ -1,6 +1,6 @@
 {
-  "id": "date-modern",
-  "name": "Date (Modern)",
+  "id": "xenlism.github.io.date-modern",
+  "name": "xenlism's Date (Modern)",
   "description": "Vertical stacked date card - month, day-of-week and day-of-month each on their own line.",
   "version": "1.0.0",
   "author": "GNOME Widget Center",

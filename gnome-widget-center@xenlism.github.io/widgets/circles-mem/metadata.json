@@ -1,6 +1,6 @@
 {
-  "id": "circles-mem",
-  "name": "Circles MEM",
+  "id": "xenlism.github.io.circles-mem",
+  "name": "xenlism's Circles MEM",
   "description": "1x1 ring gauge showing live memory (RAM) usage percent, centered inside a single progress ring.",
   "version": "1.0.0",
   "author": "GNOME Widget Center",

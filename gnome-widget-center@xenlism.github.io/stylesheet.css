@@ -190,7 +190,15 @@
 }
 
 .wc-overlay-card-screenshot {
-    height: 160px;
+    /* 2026-08-10 fix: was 160px (with the JS side separately, and
+       wrongly, painting the image at a stale 170px - see
+       _buildScreenshot()'s own comment) - a mismatched ratio from the
+       Preferences window's own card banner (370px card, 160px banner,
+       ~2.31:1). This card's content area is 456px wide (480px card -
+       12px padding each side), so 456 / 2.31 = ~197px reproduces that
+       same ratio here, just taller in absolute pixels because this
+       card itself is wider. */
+    height: 197px;
     border-radius: 8px;
     background-color: rgba(0, 0, 0, 0.35);
 }

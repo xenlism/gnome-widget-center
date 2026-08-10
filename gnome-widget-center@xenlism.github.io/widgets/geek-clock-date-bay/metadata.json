@@ -1,6 +1,6 @@
 {
-  "id": "geek-clock-date-bay",
-  "name": "Geek Clock Date (Bay)",
+  "id": "xenlism.github.io.geek-clock-date-bay",
+  "name": "xenlism's Geek Clock Date (Bay)",
   "description": "Medium `3x1` card (35×11 grid cells): big centered clock on top, date line centered underneath.",
   "version": "1.0.0",
   "author": "GNOME Widget Center",

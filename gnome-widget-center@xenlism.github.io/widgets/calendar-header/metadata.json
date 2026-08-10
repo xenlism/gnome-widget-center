@@ -1,6 +1,6 @@
 {
-  "id": "calendar-header",
-  "name": "Calendar (Header)",
+  "id": "xenlism.github.io.calendar-header",
+  "name": "xenlism's Calendar (Header)",
   "description": "Two-tone calendar with a colored header band for month and weekday.",
   "version": "1.0.0",
   "author": "GNOME Widget Center",

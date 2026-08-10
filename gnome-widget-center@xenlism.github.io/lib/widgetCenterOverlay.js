@@ -42,6 +42,7 @@
 // scrollable content on shell-version 50.
 
 import Clutter from 'gi://Clutter';
+import GdkPixbuf from 'gi://GdkPixbuf';
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import Meta from 'gi://Meta';
@@ -99,12 +100,17 @@ export class WidgetCenterOverlay {
      *     discover() is used (matches the live desktop exactly); if not,
      *     this file does its own read-only metadata.json folder scan.
      *   - onWidgetSettings(id), onWidgetRemove(id), onOpenPreferences(),
-     *     onWidgetEnabledChanged(id, enabled), onApplyThemePack(manifest, enabled),
+     *     onWidgetEnabledChanged(id, enabled),
      *     onThemePackRemove(entry): hooks a real integration can use to do
      *     more than the built-in fallback (e.g. onWidgetRemove actually
      *     deleting layout/settings via StorageService, not just
      *     disabling; onThemePackRemove doing something other than a
-     *     straight recursive delete of the pack's folder).
+     *     straight recursive delete of the pack's folder). NOTE
+     *     (2026-08-10): `onApplyThemePack` was removed from this list —
+     *     applying a theme pack is now driven entirely by the
+     *     `active-theme-pack` GSettings key this file writes
+     *     (`_loadThemePack()`/`_unloadThemePack()`); extension.js watches
+     *     that key itself rather than being called back here.
      *   - logger: anything with a .debug(tag, msg) method (see lib/logger.js).
      */
     constructor(extensionObject, services = {}) {
@@ -675,21 +681,11 @@ export class WidgetCenterOverlay {
             card.add_child(new St.Label({text: `by ${manifest.author}`, style_class: 'wc-overlay-card-author'}));
 
         const controls = new St.BoxLayout({style_class: 'wc-overlay-card-controls'});
-        // Theme state is informational. A theme is loaded as a complete
-        // desktop configuration, so making this a toggle led to every
-        // unconfigured theme looking enabled on a fresh installation.
-        controls.add_child(this._buildThemeStatus(this._isThemePackEnabled(id)));
+        // 2026-08-10 ask: the separate "Apply" button + read-only status
+        // switch are now ONE interactive switch - see _buildThemeToggle()'s
+        // own doc comment for what turning it on/off actually does.
+        controls.add_child(this._buildThemeToggle(entry));
         controls.add_child(new St.Widget({x_expand: true}));
-        // Keep the action visible: the old icon-only button was easily
-        // missed, especially on cards without screenshots.
-        const loadButton = new St.Button({
-            style_class: 'wc-overlay-load-button',
-            label: 'Apply',
-            can_focus: true,
-            reactive: true,
-            accessible_name: `Apply theme ${manifest.name ?? id}`,
-        });
-        
         // Export re-opens this pack's own themePackExportDialog.js
         // prefilled with its manifest (name/description/author/url/
         // widgets) via the --export-theme-id= flag — see
@@ -712,8 +708,6 @@ export class WidgetCenterOverlay {
                 'user-trash-symbolic', 'Uninstall', () => this._removeThemePack(entry)));
         }
         card.add_child(controls);
-        loadButton.connect('clicked', () => this._loadThemePack(entry));
-        controls.add_child(loadButton);
         return card;
     }
 
@@ -725,20 +719,40 @@ export class WidgetCenterOverlay {
         }
     }
 
+    /** @private Turns this pack ON — the interactive switch's ONLY job
+     * now is to write `active-theme-pack` (see _buildThemeToggle()).
+     * Everything this method used to do by hand (pre-touching
+     * `disabled-widgets` for the pack's widget list, then calling
+     * `onApplyThemePack`) is now done ONCE, uniformly, by extension.js's
+     * own `active-theme-pack` watcher (`_applyActiveThemePack()`) —
+     * whether this write came from here or from the separate prefs
+     * process's own theme card switch. Doing it here too used to race
+     * that watcher's own disabled-widgets write and, for a flat .gwct
+     * pack, never actually moved an already-placed widget to its new
+     * saved position — see that method's doc comment for the full
+     * 2026-08-10 fix this simplification is part of. */
     _loadThemePack(entry) {
-        const {id, manifest} = entry;
-        const current = new Set(this._getDisabledWidgets());
-        for (const widgetId of manifest.widgets ?? []) {
-            current.delete(widgetId);
-        }
-        this._writeDisabledWidgets(current);
         try {
-            this._gsettings.set_string(ACTIVE_THEME_PACK_KEY, id);
+            this._gsettings.set_string(ACTIVE_THEME_PACK_KEY, entry.id);
             Gio.Settings.sync();
         } catch (e) {
             console.error('[widget-center] overlay: could not save active theme pack', e);
         }
-        this._services.onApplyThemePack?.(entry);
+        this._renderTab('themes');
+    }
+
+    /** @private Turns the currently-active pack OFF — just clears the
+     * marker, it never undoes what the theme placed (which widgets it
+     * enabled/positioned may since have been independently changed by
+     * the user, so "undo" isn't well-defined here — see
+     * _buildThemeToggle()'s own doc comment). */
+    _unloadThemePack() {
+        try {
+            this._gsettings.set_string(ACTIVE_THEME_PACK_KEY, '');
+            Gio.Settings.sync();
+        } catch (e) {
+            console.error('[widget-center] overlay: could not clear active theme pack', e);
+        }
         this._renderTab('themes');
     }
 
@@ -1177,30 +1191,100 @@ export class WidgetCenterOverlay {
         return 1;
     }
 
-    _buildScreenshot(basePath, metadataOrManifest) {
+            _buildScreenshot(basePath, metadataOrManifest) {
         const shotPath = this._resolveScreenshot(basePath, metadataOrManifest);
         const bin = new St.Bin({style_class: 'wc-overlay-card-screenshot', x_expand: true});
 
+        let uri = null;
         if (shotPath) {
-            // St's CSS parser only accepts numeric/percentage <length>
-            // values for background-size/background-position - it doesn't
-            // understand the "cover"/"center" keywords (they get silently
-            // dropped with a "Ignoring length property that isn't a
-            // number" warning, which also meant the image was never sized
-            // into the bin). .wc-overlay-card is a fixed 480px wide with
-            // 12px padding each side, and .wc-overlay-card-screenshot is a
-            // fixed 160px tall, so use those exact pixel dimensions
-            // instead of "cover" for the same fill effect.
-            const uri = Gio.File.new_for_path(shotPath).get_uri();
-            bin.set_style(`background-image: url("${uri}"); background-size: 456px 160px; background-position: 0px 0px;`);
+            uri = Gio.File.new_for_path(shotPath).get_uri();
         } else {
+            // Fallback: show an icon if no screenshot is available
             bin.set_child(new St.Icon({
                 icon_name: 'image-x-generic-symbolic',
                 icon_size: 48,
                 style_class: 'wc-overlay-card-screenshot-fallback',
             }));
         }
+
+        // 1. Set initial aspect ratio to 3:1 (using default width of 456px)
+        // Height is calculated as 456 / 3 = 152px (applies to both image and fallback cases)
+        const initialWidth = 456;
+        const initialHeight = Math.round(initialWidth / 3);
+        bin.height = initialHeight;
+        
+        if (shotPath) {
+            bin.set_style(this._coverBackgroundStyle(shotPath, uri, initialWidth, initialHeight));
+        }
+
+        // 2. Listen for card allocation changes (e.g., when screen resizes or card width changes)
+        // to update the height while maintaining a 3:1 aspect ratio (for both cases)
+        bin.connect('notify::allocation', () => {
+            const actualWidth = bin.allocation.get_width();
+            if (actualWidth > 0 && bin._lastWidth !== actualWidth) {
+                bin._lastWidth = actualWidth;
+                
+                // Calculate new height to maintain 3:1 aspect ratio
+                const actualHeight = Math.round(actualWidth / 3);
+                
+                // Force update height only (width follows the card)
+                bin.height = actualHeight;
+                
+                // If a screenshot exists, update the background crop style to match new dimensions
+                if (shotPath) {
+                    bin.set_style(this._coverBackgroundStyle(shotPath, uri, actualWidth, actualHeight));
+                }
+            }
+        });
+
         return bin;
+    }
+
+    /**
+     * @private Builds a `background-image`/`background-size`/
+     * `background-position` style string that crops (never stretches) a
+     * source image to fill a `boxWidth`x`boxHeight` box - manual
+     * replacement for CSS `background-size: cover; background-position:
+     * center`, which St's CSS parser doesn't understand (see
+     * `_buildScreenshot()`'s own comment on why).
+     * @param {string} shotPath - on-disk path (for GdkPixbuf.Pixbuf.
+     *   get_file_info(), which reads just the header, not the full image,
+     *   to get the source's real pixel dimensions).
+     * @param {string} uri - `file://` URI for the same path, for the CSS
+     *   `background-image: url(...)` declaration itself.
+     * @param {number} boxWidth
+     * @param {number} boxHeight
+     * @returns {string}
+     */
+    _coverBackgroundStyle(shotPath, uri, boxWidth, boxHeight) {
+        const fallback =
+            `background-image: url("${uri}"); background-size: ${boxWidth}px ${boxHeight}px; background-position: 0px 0px;`;
+
+        let width, height;
+        try {
+            [, width, height] = GdkPixbuf.Pixbuf.get_file_info(shotPath);
+        } catch (e) {
+            console.warn(`[widget-center] could not read screenshot dimensions for "${shotPath}", falling back to a stretched fit`, e);
+        }
+        if (!width || !height)
+            return fallback; // couldn't identify the image - same stretched fallback this method replaces
+
+        // Scale UP only (never down) by whichever axis needs more growth
+        // to fully cover the box - the smaller-overflow axis then hangs
+        // over the box edge, which background-position below centers and
+        // St's own clipping on the St.Bin (a plain widget, clips its
+        // background to its allocated box like any other) crops away.
+        const scale = Math.max(boxWidth / width, boxHeight / height);
+        const scaledWidth = Math.ceil(width * scale);
+        const scaledHeight = Math.ceil(height * scale);
+
+        // Center the overflow: whichever axis grew past the box gets a
+        // negative offset of half the overflow, pulling the image back so
+        // its center - not its top-left corner - lands in the box center.
+        const offsetX = -Math.round((scaledWidth - boxWidth) / 2);
+        const offsetY = -Math.round((scaledHeight - boxHeight) / 2);
+
+        return `background-image: url("${uri}"); background-size: ${scaledWidth}px ${scaledHeight}px; background-position: ${offsetX}px ${offsetY}px;`;
     }
 
     _resolveScreenshot(basePath, metadataOrManifest) {
@@ -1247,10 +1331,10 @@ export class WidgetCenterOverlay {
     /**
      * Shared on/off switch — St.Button(toggle_mode:true) + a "knob"
      * child, reused (rather than duplicated) so the widget-enable control
-     * (Overview tab) and the theme-active indicator (Themes tab) render
-     * as the exact same visual switch. Pass `onChange: null` for a
-     * read-only/informational switch (see `_buildThemeStatus()` below) —
-     * `sensitive: false` then blocks both the click and the `:hover`/
+     * (Overview tab) and the theme-active toggle (Themes tab, see
+     * `_buildThemeToggle()` below) render as the exact same visual
+     * switch. Pass `onChange: null` for a read-only/informational switch
+     * — `sensitive: false` then blocks both the click and the `:hover`/
      * `:active` CSS states, matching a genuinely disabled control rather
      * than a clickable-looking one that silently does nothing.
      * @param {boolean} initialOn
@@ -1272,19 +1356,32 @@ export class WidgetCenterOverlay {
         return button;
     }
 
-    /** @private read-only switch showing whether a theme pack is the
-     * currently active one. No text caption alongside it (removed
-     * 2026-08-08 — the switch's own on/off position already says
-     * "active" or not; a redundant word next to it was just noise). Kept
-     * as a non-interactive switch rather than a real toggle for the same
-     * reason `_buildThemeStatus()` always has: only one theme pack is
-     * ever active at a time, so clicking a card's own switch on/off
-     * doesn't map onto a meaningful action the way it does for a widget's
-     * independent enable/disable switch. */
-    _buildThemeStatus(enabled) {
-        const status = this._buildSwitch(enabled, null);
-        status.accessible_name = enabled ? 'Active' : 'Not loaded';
-        return status;
+    /** @private Interactive on/off switch for a theme pack card —
+     * 2026-08-10 ask: replaces the old separate "Apply" button + this
+     * same read-only status switch with ONE control that both shows and
+     * drives whether this pack is the active theme. Turning ON just
+     * calls `_loadThemePack()` (writes `active-theme-pack`, see that
+     * method's own doc comment for what actually applying it now does).
+     * Turning OFF calls `_unloadThemePack()` (clears the marker only —
+     * never unloads whatever the theme most recently placed, since
+     * "undo everything a theme did" isn't well-defined and was never
+     * asked for). Only one pack is ever active, so flipping one card's
+     * switch on always leaves every other card's switch reading off on
+     * the next render — `_isThemePackEnabled()` comparing every card
+     * against the single `active-theme-pack` value already gives this
+     * "mutually exclusive" behavior for free, no extra bookkeeping
+     * needed here. */
+    _buildThemeToggle(entry) {
+        const toggle = this._buildSwitch(this._isThemePackEnabled(entry.id), on => {
+            if (on)
+                this._loadThemePack(entry);
+            else
+                this._unloadThemePack();
+        });
+        toggle.accessible_name = this._isThemePackEnabled(entry.id)
+            ? `${entry.manifest?.name ?? entry.id} — active`
+            : `${entry.manifest?.name ?? entry.id} — not loaded`;
+        return toggle;
     }
 
     _buildIconButton(iconName, callback) {

@@ -1,6 +1,6 @@
 {
-  "id": "circles-disk-half",
-  "name": "Disk (Half Ring)",
+  "id": "xenlism.github.io.circles-disk-half",
+  "name": "xenlism's Disk (Half Ring)",
   "description": "1x1 card: Disk usage as a half-circle (semicircle) ring next to a percentage label, instead of a full circle. The ring side can be flipped to hug the left or right edge of the card.",
   "version": "1.0.0",
   "author": "GNOME Widget Center",

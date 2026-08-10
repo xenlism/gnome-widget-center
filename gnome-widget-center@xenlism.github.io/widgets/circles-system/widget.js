@@ -27,7 +27,8 @@ import Gio from 'gi://Gio';
 import Cairo from 'cairo';
 
 import {SystemMetricsService} from '../../lib/systemMetricsApi.js';
-import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor, parseFontDescription as _parseFontDescription, BORDER_DEFAULTS, OPACITY_DEFAULTS,} from '../../lib/widgetVisualKit.js';
+import {SHADOW_DEFAULTS, hexToRgba as _hexToRgba, toCssColor as _toCssColor, parseFontDescription as _parseFontDescription, BORDER_DEFAULTS, OPACITY_DEFAULTS,} from '../../lib/widgetVisualKit.js';
+import {createLayeredCard, applyLayeredCardStyle} from '../../lib/cardLayers.js';
 
 // 1x1 block-type is 11x11 cells (176x176px). Card padding is 12px a
 // side, leaving ~152px of content width for three rings + two gaps:
@@ -53,14 +54,11 @@ export default class CirclesSystemWidget {
     }
 
     buildActor() {
-        this._actor = new St.Bin({
-            style_class: 'circles-system-root',
-            x_expand: true,
-            y_expand: true,
-        });
+        this._layers = createLayeredCard({contentStyleClass: 'circles-system-root'});
+        this._actor = this._layers.root;
 
         const outerBox = new St.BoxLayout({vertical: true, x_expand: true, y_expand: true});
-        this._actor.set_child(outerBox);
+        this._layers.content.add_child(outerBox);
         outerBox.set_style(`padding: ${CARD_PADDING}px;`);
 
         const centerBin = new St.Bin({x_expand: true, y_expand: true, x_align: Clutter.ActorAlign.CENTER, y_align: Clutter.ActorAlign.CENTER});
@@ -222,7 +220,7 @@ export default class CirclesSystemWidget {
 
     /** @private */
     _render() {
-        this._actor.set_style(_cardStyleCss(this._settings, {backgroundColorFallback: '#FFFFFF00', cornerRadiusFallback: 18}));
+        applyLayeredCardStyle(this._layers, this._settings, {backgroundColorFallback: '#FFFFFF00', cornerRadiusFallback: 18});
 
         const captionColor = _toCssColor(this._settings.captionColor, '#FFFFFFB3');
         const captionFont = _parseFontDescription(this._settings.captionFont ?? 'Sans 8', 'Sans', 8);

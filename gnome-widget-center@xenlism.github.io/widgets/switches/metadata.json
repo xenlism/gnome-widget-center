@@ -1,6 +1,6 @@
 {
-  "id": "switches",
-  "name": "Switches",
+  "id": "xenlism.github.io.switches",
+  "name": "xenlism's Switches",
   "description": "Two pill-shaped vertical drag sliders: volume (drag to set level, click the icon to mute/unmute) and screen brightness (drag to set level).",
   "version": "1.0.0",
   "author": "GNOME Widget Center",

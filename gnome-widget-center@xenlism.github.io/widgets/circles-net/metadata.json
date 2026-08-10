@@ -1,6 +1,6 @@
 {
-  "id": "circles-net",
-  "name": "Circles NET",
+  "id": "xenlism.github.io.circles-net",
+  "name": "xenlism's Circles NET",
   "description": "1x1 dual-ring gauge: outer ring = download, inner ring = upload, each scaled against a configurable max speed, with live throughput numbers centered inside.",
   "version": "1.0.0",
   "author": "GNOME Widget Center",

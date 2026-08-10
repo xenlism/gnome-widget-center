@@ -1,6 +1,6 @@
 {
-  "id": "weather-modern",
-  "name": "Weather (modern)",
+  "id": "xenlism.github.io.weather-modern",
+  "name": "xenlism's Weather (modern)",
   "description": "Rounded weather card (icon + big temperature + condition) with an IP-detectable location field and a configurable refresh rate - powered by Open-Meteo (no API key required).",
   "version": "1.0.0",
   "author": "GNOME Widget Center",

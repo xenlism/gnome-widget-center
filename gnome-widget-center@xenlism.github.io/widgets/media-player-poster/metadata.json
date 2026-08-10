@@ -1,6 +1,6 @@
 {
-  "id": "media-player-poster",
-  "name": "Media Player (Poster)",
+  "id": "xenlism.github.io.media-player-poster",
+  "name": "xenlism's Media Player (Poster)",
   "description": "2x2 poster-style Now Playing card: large album cover on top, bold track title and artist below, with Play/Previous/Next controls - no blur, just a solid background.",
   "version": "1.0.0",
   "author": "gnome-widget-center",

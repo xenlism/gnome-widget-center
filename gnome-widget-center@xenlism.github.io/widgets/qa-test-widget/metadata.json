@@ -1,6 +1,6 @@
 {
-  "id": "qa-test-widget",
-  "name": "QA Test Widget",
+  "id": "xenlism.github.io.qa-test-widget",
+  "name": "xenlism's QA Test Widget",
   "description": "Not a real desktop widget - exists to exercise the force/appearance system, .gwct export/import secret redaction, and .gwcbak backup/restore + dependency checking during testing. Safe to disable or remove any time.",
   "version": "1.0.0",
   "author": "gnome-widget-center QA",
