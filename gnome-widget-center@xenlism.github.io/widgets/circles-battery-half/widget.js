@@ -53,6 +53,16 @@
 // true` (see that file), so the same translation still gets the flat
 // edge flush with the card edge, but anything that pokes past it is now
 // clipped to the card rectangle instead of escaping it.
+//
+// 2026-08-09 (handover v5): the translation above was dropped as an
+// extra-cautious measure, leaving the ring inset by the full
+// `CARD_PADDING` on its outer (card-facing) side same as every other
+// element in the card - safe, but visibly far from the edge.
+//
+// 2026-08-10: translation restored in `_layoutChildren()` now that the
+// v3 clip fix above is confirmed to hold it - the ring's outer curve
+// sits flush with the card edge again, with the clip (not distance from
+// the edge) doing the work of preventing bleed-through.
 
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
@@ -199,20 +209,6 @@ export default class CirclesBatteryHalfWidget {
      * ring column first. */
     _layoutChildren() {
         const side = this._settings.ringSide === 'left' ? 'left' : 'right';
-        // 2026-08-09 (handover v5): dropped the `set_translation()` that
-        // used to sit here. It shifted the ring's DrawingArea outward by
-        // `CARD_PADDING` on top of a layout that already placed the
-        // ring flush with the padded content edge, so the ring's own
-        // curve/stroke ended up `CARD_PADDING` px past the card's actual
-        // border - visible in the user's screenshot as the ring bulging
-        // out past the card into whatever sits behind it. Simplest
-        // robust fix: the ring column now just respects the same
-        // `CARD_PADDING` inset every other element in this card already
-        // does, same as it would if it were plain content instead of a
-        // hand-translated DrawingArea - trades a few px of "flush with
-        // the border" snugness for never being able to escape the card
-        // again, independent of whatever clip/paint-order subtleties
-        // were or weren't at play.
         this._row.remove_all_children();
         if (side === 'left') {
             this._row.add_child(this._ringArea);
@@ -223,6 +219,23 @@ export default class CirclesBatteryHalfWidget {
             this._row.add_child(new St.Widget({width: COLUMN_GAP, height: 1}));
             this._row.add_child(this._ringArea);
         }
+
+        // 2026-08-10: re-added (as a `set_translation()`, same mechanism
+        // v5's comment above used to describe before it was dropped) to
+        // close the `CARD_PADDING` (14px) gap the user reported between
+        // the ring's outer curve and the card's actual edge. v5 dropped
+        // this specifically because, at the time, `content` had no
+        // `clip_to_allocation`, so pushing the ring `CARD_PADDING` past
+        // its padded position let the drawn arc bleed straight through
+        // the card's rounded-rect border into the desktop background.
+        // That's no longer true: lib/cardLayers.js's createLayeredCard()
+        // now clips `content` to the full card rectangle (2026-08-09,
+        // handover v3), so this same translation lands the ring's flat/
+        // curved edges exactly flush with the card edge and anything
+        // that would poke past it is clipped there instead of escaping -
+        // safe to restore.
+        const push = side === 'left' ? -CARD_PADDING : CARD_PADDING;
+        this._ringArea.set_translation(push, 0, 0);
     }
 
     /** @private (re)starts the periodic backstop refresh - see this

@@ -30,6 +30,23 @@
   detach-then-reattach (one player quits, another starts) while a GetAll
   call was still in flight could feed the outgoing player's stale metadata
   into the new player's proxy cache.
+## 2026-08-10 — `circles-battery-half`: ring flush with card edge
+
+**Scope:** `widgets/circles-battery-half/widget.js` only.
+
+- Re-added a `set_translation()` push (dropped in the 2026-08-09 v5
+  addendum as an over-cautious fix for an older bleed-through bug) so
+  the ring sits flush with the card's actual edge instead of inset by
+  the full `CARD_PADDING` (14px). Safe now because `lib/cardLayers.js`'s
+  `content` layer already clips to the full card rectangle (2026-08-09
+  v3) — matches the same translation `circles-cpu-half`,
+  `circles-disk-half`, `circles-mem-half`, and `circles-net-half`
+  already had. See `HANDOVER_2026-08-10.md` for the full writeup and a
+  list of other reported-but-not-yet-implemented items (edge-aware
+  auto-flip for `ringSide`, theme apply's position bug, theme
+  prefs/overlay Apply-button removal, theme export field validation,
+  remaining `Shell.BlurEffect` migration work).
+
 ## 2026-07-31 — Weather widgets: one shared "location" field + IP-detect button
 
 **Scope:** `lib/widgetConfigUI.js`, `lib/widgetConfigValidator.js`,

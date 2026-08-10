@@ -6,7 +6,7 @@
   "author": "GNOME Widget Center",
   "api-version": 1,
   "entry": "widget.js",
-  "block-type": "barx3",
+  "block-type": "barx2",
   "default-position": {
     "x": 60,
     "y": 60,
