@@ -184,7 +184,7 @@ export default class PowerMenuBarWidget {
         return {
             backgroundColor: '#FFFFFF00', // white @ 0.85 alpha ("d9")
             cornerRadius: 18,
-            iconColor: '#2e2e2e',
+            iconColor: '#FFFFFF',
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
@@ -203,7 +203,7 @@ export default class PowerMenuBarWidget {
             `padding: ${PADDING_Y}px ${PADDING_X}px;`
         );
 
-        const iconColor = settings?.iconColor ?? '#2e2e2e';
+        const iconColor = settings?.iconColor ?? '#FFFFFF';
         for (const icon of this._icons)
             icon.set_style(`color: ${iconColor};`);
     }

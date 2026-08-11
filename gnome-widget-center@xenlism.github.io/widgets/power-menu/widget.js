@@ -180,7 +180,7 @@ export default class PowerMenuWidget {
         return {
             backgroundColor: '#FFFFFF00', // white @ 0.85 alpha ("d9")
             cornerRadius: 18,
-            iconColor: '#2e2e2e',
+            iconColor: '#FFFFFF',
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
@@ -198,7 +198,7 @@ export default class PowerMenuWidget {
         const cornerRadius = settings?.cornerRadius ?? 18;
         this._content.set_style(this._cardStyle(backgroundColor, cornerRadius) + `padding: ${PADDING}px;`);
 
-        const iconColor = settings?.iconColor ?? '#2e2e2e';
+        const iconColor = settings?.iconColor ?? '#FFFFFF';
         for (const icon of this._icons)
             icon.set_style(`color: ${iconColor};`);
     }
