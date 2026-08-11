@@ -1,296 +1,296 @@
 {
-  "version": "1.0",
-  "tabs": [
-    {
-      "id": "general",
-      "label": "Circles Year",
-      "description": "Year progress ring settings",
-      "icon": "x-office-calendar-symbolic",
-      "groups": [
+    "version": "1.0",
+    "tabs": [
         {
-          "id": "card",
-          "label": "Card",
-          "description": "",
-          "fields": [
-            {
-              "id": "backgroundColor",
-              "label": "Background color",
-              "description": "Card background. Defaults to fully transparent.",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "alpha": true,
-              "default": "#FFFFFF00"
-            },
-            {
-              "id": "cornerRadius",
-              "label": "Corner radius",
-              "description": "Roundness of the card corners",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 18,
-              "min": 0,
-              "max": 64,
-              "step": 1,
-              "suffix": "px"
-            }
-          ]
+            "id": "general",
+            "label": "Circles Year",
+            "description": "Year progress ring settings",
+            "icon": "x-office-calendar-symbolic",
+            "groups": [
+                {
+                    "id": "card",
+                    "label": "Card",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "backgroundColor",
+                            "label": "Background color",
+                            "description": "Card background. Defaults to fully transparent.",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#000000a9"
+                        },
+                        {
+                            "id": "cornerRadius",
+                            "label": "Corner radius",
+                            "description": "Roundness of the card corners",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 18,
+                            "min": 0,
+                            "max": 64,
+                            "step": 1,
+                            "suffix": "px"
+                        }
+                    ]
+                },
+                {
+                    "id": "borderOpacity",
+                    "label": "Border & Opacity",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "borderEnabled",
+                            "label": "Enable border",
+                            "description": "Draw a border around this widget's card",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": false
+                        },
+                        {
+                            "id": "borderColor",
+                            "label": "Border color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFF33",
+                            "visibleIf": "borderEnabled"
+                        },
+                        {
+                            "id": "borderWidth",
+                            "label": "Border width",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 1,
+                            "min": 0,
+                            "max": 16,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "borderEnabled"
+                        },
+                        {
+                            "id": "opacity",
+                            "label": "Opacity",
+                            "description": "Fades the entire widget - background, text, icons, everything.",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 100,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "suffix": "%"
+                        }
+                    ]
+                },
+                {
+                    "id": "text",
+                    "label": "Text",
+                    "description": "The year text floating on top of the ring",
+                    "fields": [
+                        {
+                            "id": "yearFont",
+                            "label": "Year font",
+                            "description": "Face and size used for the big year number (e.g. 2026)",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "default": "Sans Bold 26"
+                        },
+                        {
+                            "id": "yearColor",
+                            "label": "Year color",
+                            "description": "Color of the big year number",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFFFF"
+                        },
+                        {
+                            "id": "showDayCount",
+                            "label": "Show day count",
+                            "description": "Show \"day X / Y\" below the year number",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": true
+                        },
+                        {
+                            "id": "dayFont",
+                            "label": "Day count font",
+                            "description": "Face and size used for the \"day X / Y\" line",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "default": "Sans 11"
+                        },
+                        {
+                            "id": "dayColor",
+                            "label": "Day count color",
+                            "description": "Color of the \"day X / Y\" line",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFFB3"
+                        }
+                    ]
+                },
+                {
+                    "id": "ring",
+                    "label": "Ring",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "circleBaseColor",
+                            "label": "Circle base color",
+                            "description": "Base/track color drawn behind the progress ring",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFF26"
+                        },
+                        {
+                            "id": "ringColor",
+                            "label": "Ring color",
+                            "description": "Color of the year-progress ring (day-of-year / days-in-year)",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#33D17AFF"
+                        },
+                        {
+                            "id": "ringThickness",
+                            "label": "Ring thickness",
+                            "description": "Stroke width of both the base track and the progress ring",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 10,
+                            "min": 4,
+                            "max": 24,
+                            "step": 1,
+                            "suffix": "px"
+                        }
+                    ]
+                },
+                {
+                    "id": "behavior",
+                    "label": "Behavior",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "refreshRateSeconds",
+                            "label": "Refresh rate",
+                            "description": "How often the date/ring is re-checked. The date only changes once a day, so this can be large.",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 300,
+                            "min": 5,
+                            "max": 86400,
+                            "step": 5,
+                            "suffix": "s"
+                        },
+                        {
+                            "id": "launchAppPath",
+                            "label": "Click to launch",
+                            "description": "Pick a .desktop file to launch when this card is clicked. Leave empty to disable.",
+                            "dataType": "string",
+                            "fieldType": "filepicker",
+                            "filters": [
+                                "*.desktop"
+                            ],
+                            "default": ""
+                        }
+                    ]
+                }
+            ]
         },
         {
-          "id": "borderOpacity",
-          "label": "Border & Opacity",
-          "description": "",
-          "fields": [
-            {
-              "id": "borderEnabled",
-              "label": "Enable border",
-              "description": "Draw a border around this widget's card",
-              "dataType": "boolean",
-              "fieldType": "switch",
-              "default": false
-            },
-            {
-              "id": "borderColor",
-              "label": "Border color",
-              "description": "",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "alpha": true,
-              "default": "#FFFFFF33",
-              "visibleIf": "borderEnabled"
-            },
-            {
-              "id": "borderWidth",
-              "label": "Border width",
-              "description": "",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 1,
-              "min": 0,
-              "max": 16,
-              "step": 1,
-              "suffix": "px",
-              "visibleIf": "borderEnabled"
-            },
-            {
-              "id": "opacity",
-              "label": "Opacity",
-              "description": "Fades the entire widget - background, text, icons, everything.",
-              "dataType": "integer",
-              "fieldType": "slider",
-              "default": 100,
-              "min": 0,
-              "max": 100,
-              "step": 1,
-              "suffix": "%"
-            }
-          ]
-        },
-        {
-          "id": "text",
-          "label": "Text",
-          "description": "The year text floating on top of the ring",
-          "fields": [
-            {
-              "id": "yearFont",
-              "label": "Year font",
-              "description": "Face and size used for the big year number (e.g. 2026)",
-              "dataType": "string",
-              "fieldType": "fontpicker",
-              "default": "Sans Bold 26"
-            },
-            {
-              "id": "yearColor",
-              "label": "Year color",
-              "description": "Color of the big year number",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "alpha": true,
-              "default": "#FFFFFFFF"
-            },
-            {
-              "id": "showDayCount",
-              "label": "Show day count",
-              "description": "Show \"day X / Y\" below the year number",
-              "dataType": "boolean",
-              "fieldType": "switch",
-              "default": true
-            },
-            {
-              "id": "dayFont",
-              "label": "Day count font",
-              "description": "Face and size used for the \"day X / Y\" line",
-              "dataType": "string",
-              "fieldType": "fontpicker",
-              "default": "Sans 11"
-            },
-            {
-              "id": "dayColor",
-              "label": "Day count color",
-              "description": "Color of the \"day X / Y\" line",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "alpha": true,
-              "default": "#FFFFFFB3"
-            }
-          ]
-        },
-        {
-          "id": "ring",
-          "label": "Ring",
-          "description": "",
-          "fields": [
-            {
-              "id": "circleBaseColor",
-              "label": "Circle base color",
-              "description": "Base/track color drawn behind the progress ring",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "alpha": true,
-              "default": "#FFFFFF26"
-            },
-            {
-              "id": "ringColor",
-              "label": "Ring color",
-              "description": "Color of the year-progress ring (day-of-year / days-in-year)",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "alpha": true,
-              "default": "#33D17AFF"
-            },
-            {
-              "id": "ringThickness",
-              "label": "Ring thickness",
-              "description": "Stroke width of both the base track and the progress ring",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 10,
-              "min": 4,
-              "max": 24,
-              "step": 1,
-              "suffix": "px"
-            }
-          ]
-        },
-        {
-          "id": "behavior",
-          "label": "Behavior",
-          "description": "",
-          "fields": [
-            {
-              "id": "refreshRateSeconds",
-              "label": "Refresh rate",
-              "description": "How often the date/ring is re-checked. The date only changes once a day, so this can be large.",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 300,
-              "min": 5,
-              "max": 86400,
-              "step": 5,
-              "suffix": "s"
-            },
-            {
-              "id": "launchAppPath",
-              "label": "Click to launch",
-              "description": "Pick a .desktop file to launch when this card is clicked. Leave empty to disable.",
-              "dataType": "string",
-              "fieldType": "filepicker",
-              "filters": [
-                "*.desktop"
-              ],
-              "default": ""
-            }
-          ]
+            "id": "shadow",
+            "label": "Shadow",
+            "description": "Drop shadow behind this widget.",
+            "groups": [
+                {
+                    "id": "shadow",
+                    "label": "Shadow effect",
+                    "description": "Off by default. Default color is black at 30% transparency.",
+                    "fields": [
+                        {
+                            "id": "shadowEnabled",
+                            "label": "Enable shadow",
+                            "description": "Add a drop shadow behind this widget",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": true
+                        },
+                        {
+                            "id": "shadowColor",
+                            "label": "Shadow color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#000000",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowOpacity",
+                            "label": "Shadow transparency",
+                            "description": "Shadow opacity, 0-100%",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 24.8,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "suffix": "%",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowAngle",
+                            "label": "Shadow angle",
+                            "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 90,
+                            "min": 0,
+                            "max": 360,
+                            "step": 1,
+                            "suffix": "°",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowDistance",
+                            "label": "Shadow distance",
+                            "description": "How far the shadow is offset, in pixels",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 2,
+                            "min": 0,
+                            "max": 60,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowBlur",
+                            "label": "Shadow blur",
+                            "description": "Blur radius, in pixels",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 10,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "shadowEnabled"
+                        }
+                    ]
+                }
+            ]
         }
-      ]
-    },
-    {
-      "id": "shadow",
-      "label": "Shadow",
-      "description": "Drop shadow behind this widget.",
-      "groups": [
-        {
-          "id": "shadow",
-          "label": "Shadow effect",
-          "description": "Off by default. Default color is black at 30% transparency.",
-          "fields": [
-            {
-              "id": "shadowEnabled",
-              "label": "Enable shadow",
-              "description": "Add a drop shadow behind this widget",
-              "dataType": "boolean",
-              "fieldType": "switch",
-              "default": false
-            },
-            {
-              "id": "shadowColor",
-              "label": "Shadow color",
-              "description": "",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "default": "#000000",
-              "visibleIf": "shadowEnabled"
-            },
-            {
-              "id": "shadowOpacity",
-              "label": "Shadow transparency",
-              "description": "Shadow opacity, 0-100%",
-              "dataType": "integer",
-              "fieldType": "slider",
-              "default": 30,
-              "min": 0,
-              "max": 100,
-              "step": 1,
-              "suffix": "%",
-              "visibleIf": "shadowEnabled"
-            },
-            {
-              "id": "shadowAngle",
-              "label": "Shadow angle",
-              "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
-              "dataType": "integer",
-              "fieldType": "slider",
-              "default": 90,
-              "min": 0,
-              "max": 360,
-              "step": 1,
-              "suffix": "°",
-              "visibleIf": "shadowEnabled"
-            },
-            {
-              "id": "shadowDistance",
-              "label": "Shadow distance",
-              "description": "How far the shadow is offset, in pixels",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 6,
-              "min": 0,
-              "max": 60,
-              "step": 1,
-              "suffix": "px",
-              "visibleIf": "shadowEnabled"
-            },
-            {
-              "id": "shadowBlur",
-              "label": "Shadow blur",
-              "description": "Blur radius, in pixels",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 16,
-              "min": 0,
-              "max": 100,
-              "step": 1,
-              "suffix": "px",
-              "visibleIf": "shadowEnabled"
-            }
-          ]
-        }
-      ]
-    }
-  ]
+    ]
 }

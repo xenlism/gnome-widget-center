@@ -1,8 +1,3 @@
-// i18n/th.js — widgets/calendar-minimal (th)
-// Auto-generated translation table; keys mirror this widget's
-// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
-// canonical English source every other locale file mirrors).
-
 export default {
     "meta.name": "ปฏิทิน (มินิมอล)",
     "meta.description": "ปฏิทินแบบไร้กรอบที่แสดงเฉพาะเลขวันที่ วัน และเดือน",
@@ -14,5 +9,5 @@ export default {
     "field.accentColor.label": "สีข้อความรอง",
     "field.accentColor.description": "สีของบรรทัดวัน/เดือน",
     "field.showMonth.label": "แสดงเดือน",
-    "field.showMonth.description": "แสดงเดือนข้างวันในสัปดาห์",
+    "field.showMonth.description": "แสดงเดือนข้างวันในสัปดาห์"
 };

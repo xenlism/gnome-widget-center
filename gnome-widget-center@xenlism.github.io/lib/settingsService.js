@@ -1,213 +1,72 @@
-import Gio from 'gi://Gio';
-import GLib from 'gi://GLib';
+import Gio from "gi://Gio";
 
-/**
- * @class SettingsService
- * @description Manages global HOST-level flags/preferences (which widgets
- * are disabled, dev-mode, etc) via GNOME's GSettings — compiled locally
- * inside the extension (`products/extension/schemas/`), never installed system-wide.
- *
- * มอดูลศูนย์กลางสำหรับการจัดการ Host-level settings เท่านั้น (ไม่ใช่ settings ของ
- * widget แต่ละตัว - อันนั้นเป็นหน้าที่ของ WidgetSettings/JSON ตาม
- * development/docs/SETTINGS_SPEC.md) อ้างอิงตามสเปก: development/docs/ARCHITECTURE.md §2.3
- *
- * แก้ไข 2026-07-13: เดิม init() เรียก
- * `Gio.SettingsSchemaSource.get_default()` ซึ่งมองหาแค่ schema ที่ compile
- * ติดตั้งระดับระบบ (`/usr/share/glib-2.0/schemas`) เท่านั้น — schema ของเรา
- * ไม่เคยถูกติดตั้งตรงนั้น (compile ไว้ใน `products/extension/schemas/` เอง) ดังนั้น
- * lookup() จะคืน null และ throw เสมอ ไม่ว่าจะสร้างไฟล์ .gschema.xml ถูกต้อง
- * แค่ไหนก็ตาม แก้เป็นใช้ `Extension.getSettings()` ที่ GNOME Shell 45+
- * ให้มาแทน — เมธอดนี้ resolve schema จากโฟลเดอร์ของ extension เองโดยตรง
- * ไม่ต้องแตะ system schema dir เลย (ตรงตามเป้าหมาย "ไม่ต้อง root" ของโปรเจกต์)
- */
+import GLib from "gi://GLib";
+
 export class SettingsService {
-    /**
-     * @param {Extension|string} extensionObjectOrSchemasDir - either the
-     *   `this` from WidgetCenterExtension.enable()/prefs.js's
-     *   ExtensionPreferences subclass (anything with a `getSettings()`
-     *   method — needed so getSettings() can resolve the extension's own
-     *   install directory to find its local schema), OR a plain string
-     *   path to the directory containing the compiled
-     *   `gschemas.compiled` (2026-07-30 addition — for
-     *   widget-center-prefs-app.js, the standalone GTK4 Preferences app,
-     *   which runs completely outside GNOME Shell's extension machinery
-     *   and therefore has no Extension instance to call getSettings() on;
-     *   see that file's header for why it exists at all).
-     */
     constructor(extensionObjectOrSchemasDir) {
-        if (typeof extensionObjectOrSchemasDir === 'string') {
+        if (typeof extensionObjectOrSchemasDir === "string") {
             this._extensionObject = null;
             this._schemasDir = extensionObjectOrSchemasDir;
         } else {
             this._extensionObject = extensionObjectOrSchemasDir;
             this._schemasDir = null;
         }
-        /** @private {Gio.Settings} GNOME GSettings engine wrapper link */
         this._globalSettings = null;
-        /** @private {boolean} Internal initialization state indicator */
         this._isInitialized = false;
-        /** @private {string} Target unique local schema id */
-        this._schemaId = 'org.gnome.shell.extensions.widget-center';
+        this._schemaId = "org.gnome.shell.extensions.widget-center";
     }
-
-    /**
-     * @method init
-     * @description Resolves the locally-compiled schema — via the
-     * Extension base class's getSettings() when constructed with an
-     * Extension instance, or directly from a schemas directory path when
-     * constructed with one (see constructor doc) — and initializes the
-     * GSettings link. Throws only if the extension's own
-     * `schemas/gschemas.compiled` is missing/corrupt (a packaging bug),
-     * never because of anything outside the extension.
-     */
     init() {
         if (this._isInitialized) return;
-
         if (this._extensionObject?.getSettings) {
-            // getSettings() looks up products/extension/schemas/gschemas.compiled
-            // inside this extension's own install dir - no system-wide
-            // compile needed.
             this._globalSettings = this._extensionObject.getSettings(this._schemaId);
         } else if (this._schemasDir) {
-            // Standalone-app path (no Extension instance available) - do
-            // by hand exactly what Extension.getSettings() does under the
-            // hood: point a SettingsSchemaSource at our own compiled
-            // schemas/ directory (falling back to the system default
-            // source as its parent, same as getSettings() does, purely so
-            // schema *inheritance* keeps working if we ever add one) and
-            // look our schema up in it directly, rather than the
-            // system-wide schema source alone (which, per this class's
-            // 2026-07-13 fix above, never has our schema installed in it).
-            const source = Gio.SettingsSchemaSource.new_from_directory(
-                this._schemasDir, Gio.SettingsSchemaSource.get_default(), false);
+            const source = Gio.SettingsSchemaSource.new_from_directory(this._schemasDir, Gio.SettingsSchemaSource.get_default(), false);
             const schema = source.lookup(this._schemaId, false);
             if (!schema) {
-                throw new Error(
-                    `schema '${this._schemaId}' not found under ${this._schemasDir} — ` +
-                    'is schemas/gschemas.compiled present and up to date?');
+                throw new Error(`schema '${this._schemaId}' not found under ${this._schemasDir} — ` + "is schemas/gschemas.compiled present and up to date?");
             }
-            this._globalSettings = new Gio.Settings({settings_schema: schema});
+            this._globalSettings = new Gio.Settings({
+                settings_schema: schema
+            });
         } else {
-            throw new Error(
-                'SettingsService requires either an Extension instance (with getSettings()) ' +
-                'or a schemas directory path — pass `this` from enable()/fillPreferencesWindow(), ' +
-                'or the extension\'s install directory\'s `schemas/` path.'
-            );
+            throw new Error("SettingsService requires either an Extension instance (with getSettings()) " + "or a schemas directory path — pass `this` from enable()/fillPreferencesWindow(), " + "or the extension's install directory's `schemas/` path.");
         }
-
         this._isInitialized = true;
     }
-
-    /**
-     * @method getGlobalValue
-     * @description Safe retrieval of host preference fields mapped automatically to native JS types.
-     * @param {string} key - Host configuration key name defined in the schema.
-     * @returns {*} Formatted unpacked native JavaScript type data.
-     */
     getGlobalValue(key) {
         if (!this._isInitialized) {
-            throw new Error('SettingsService has not been initialized yet.');
+            throw new Error("SettingsService has not been initialized yet.");
         }
-
         if (!this._globalSettings.settings_schema.has_key(key)) {
             throw new Error(`The key '${key}' does not exist in the schema '${this._schemaId}'.`);
         }
-
         const variant = this._globalSettings.get_value(key);
         return variant.deep_unpack();
     }
-
-    /**
-     * @method setGlobalValue
-     * @description Updates a host preference by auto-detecting the compiled schema data type.
-     * @param {string} key - Target key name.
-     * @param {*} value - Data to record into GSettings (dconf).
-     */
     setGlobalValue(key, value) {
         if (!this._isInitialized) {
-            throw new Error('SettingsService has not been initialized yet.');
+            throw new Error("SettingsService has not been initialized yet.");
         }
-
         if (!this._globalSettings.settings_schema.has_key(key)) {
             throw new Error(`The key '${key}' does not exist in the schema '${this._schemaId}'.`);
         }
-
-        // NOTE (real-hardware bug, 2026-07-19): `get_value_type()` returns a
-        // GVariantType, and GVariantType has NO `get_string()` method —
-        // that's a GVariant method (for reading a string *value* out), not
-        // a GVariantType one (for reading the type *signature* out). Calling
-        // it threw `TypeError: ...get_string is not a function` on every
-        // single setGlobalValue() call, one line before ever reaching the
-        // GLib.Variant.new fix below — so that earlier fix never actually
-        // got exercised on real hardware yet. The correct call for reading
-        // a GVariantType's signature back out as a JS string is
-        // `dup_string()` (binds `g_variant_type_dup_string()`).
         const keyType = this._globalSettings.settings_schema.get_key(key).get_value_type().dup_string();
-        // NOTE (real-hardware bug, 2026-07-18): `GLib.Variant.new(type, value)`
-        // is NOT a valid GJS call — `g_variant_new()` is a variadic C
-        // function, which GObject-Introspection does not expose as a
-        // bindable static method, so `GLib.Variant.new` is `undefined` and
-        // calling it throws a TypeError. That exception happened inside
-        // whatever called setGlobalValue() (prefs.js's switch-row handler,
-        // or extension.js's Edit Mode "Remove" action) — never here, never
-        // logged by gnome-shell itself — so every write silently failed:
-        // the switch would visually flip but `disabled-widgets` in dconf
-        // never actually changed, so `changed::disabled-widgets` never
-        // fired and the widget never got removed from the desktop. Fixed
-        // by using GJS's own `new GLib.Variant(type, value)` constructor,
-        // which IS specifically provided by gjs's GLib.Variant override to
-        // pack an arbitrary JS value given a GVariant type string.
         const variant = new GLib.Variant(keyType, value);
         this._globalSettings.set_value(key, variant);
-
         Gio.Settings.sync();
     }
-
-    /**
-     * @method isReady
-     * @description Whether init() has completed successfully — callers
-     *   (extension.js, prefs.js) treat SettingsService as non-essential
-     *   per its own init() doc comment, so this lets them check once
-     *   instead of wrapping every call in try/catch.
-     * @returns {boolean}
-     */
     get isReady() {
         return this._isInitialized;
     }
-
-    /**
-     * @method onChanged
-     * @description Subscribes to live GSettings changes for one key (task
-     * 05 — lets the Control Center's toggle switches take effect on the
-     * desktop immediately, without a shell restart: prefs.js runs in a
-     * separate GTK4 process, but both processes are watching the SAME
-     * dconf-backed key, so this fires in the Shell process whenever the
-     * prefs process changes it). Returns the GObject signal handler id,
-     * to be passed to disconnect() during teardown.
-     * @param {string} key
-     * @param {function(*):void} callback - called with the new unpacked
-     *   value every time the key changes, from either process.
-     * @returns {number} handlerId
-     */
     onChanged(key, callback) {
         if (!this._isInitialized) {
-            throw new Error('SettingsService has not been initialized yet.');
+            throw new Error("SettingsService has not been initialized yet.");
         }
-
         return this._globalSettings.connect(`changed::${key}`, () => {
             callback(this.getGlobalValue(key));
         });
     }
-
-    /**
-     * @method disconnect
-     * @description Disconnects a handler previously returned by
-     * onChanged(). Safe to call with a null/undefined handlerId (no-op) so
-     * callers don't need to guard every teardown path themselves.
-     * @param {number} [handlerId]
-     */
     disconnect(handlerId) {
-        if (this._globalSettings && handlerId != null)
-            this._globalSettings.disconnect(handlerId);
+        if (this._globalSettings && handlerId != null) this._globalSettings.disconnect(handlerId);
     }
 }

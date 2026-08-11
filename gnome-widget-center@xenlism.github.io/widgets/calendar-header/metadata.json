@@ -1,9 +1,9 @@
 {
   "id": "xenlism.github.io.calendar-header",
-  "name": "xenlism's Calendar (Header)",
+  "name": "Calendar (Header) By Xenlism",
   "description": "Two-tone calendar with a colored header band for month and weekday.",
   "version": "1.0.0",
-  "author": "GNOME Widget Center",
+  "author": "Nattapong Pullkhow",
   "api-version": 1,
   "entry": "widget.js",
   "block-type": "1x1",
@@ -12,5 +12,6 @@
     "y": 40,
     "monitor": 0
   },
-  "screenshot": "screenshot.png"
+  "screenshot": "screenshot.png",
+  "themeable": true
 }

@@ -1,8 +1,3 @@
-// i18n/zh.js — widgets/calendar-header (zh)
-// Auto-generated translation table; keys mirror this widget's
-// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
-// canonical English source every other locale file mirrors).
-
 export default {
     "meta.name": "日历（标题栏）",
     "meta.description": "双色日历，月份和星期使用彩色标题栏。",
@@ -16,5 +11,5 @@ export default {
     "field.bodyColor.label": "主体背景",
     "field.bodyColor.description": "日期数字后面的面板",
     "field.dayColor.label": "日期数字颜色",
-    "field.dayColor.description": "日期数字的颜色",
+    "field.dayColor.description": "日期数字的颜色"
 };

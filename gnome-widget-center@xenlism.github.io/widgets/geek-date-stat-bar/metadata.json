@@ -1,9 +1,9 @@
 {
   "id": "xenlism.github.io.geek-date-stat-bar",
-  "name": "xenlism's Geek Date Stat (Bar)",
+  "name": "Geek Date Stat (Bar) By Xenlism",
   "description": "Wide bar card: big centered date on top, CPU/MEM/DISK percentages centered underneath.",
   "version": "1.0.0",
-  "author": "GNOME Widget Center",
+  "author": "Nattapong Pullkhow",
   "api-version": 1,
   "entry": "widget.js",
   "block-type": "barx2",
@@ -12,5 +12,6 @@
     "y": 60,
     "monitor": 0
   },
-  "screenshot": "screenshot.png"
+  "screenshot": "screenshot.png",
+  "themeable": true
 }

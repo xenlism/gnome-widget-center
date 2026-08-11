@@ -1,8 +1,3 @@
-// i18n/th.js — widgets/date-modern (th)
-// Auto-generated translation table; keys mirror this widget's
-// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
-// canonical English source every other locale file mirrors).
-
 export default {
     "meta.name": "วันที่ (โมเดิร์น)",
     "meta.description": "การ์ดวันที่แบบเรียงซ้อนแนวตั้ง — เดือน วัน และวันที่ อยู่คนละบรรทัด",
@@ -34,5 +29,5 @@ export default {
     "field.launchOnClick.label": "เปิดแอปเมื่อคลิก",
     "field.launchOnClick.description": "ต้องเลือกแอปด้านล่างก่อน",
     "field.desktopFilePath.label": "แอปที่จะเปิด",
-    "field.desktopFilePath.description": "แอปพลิเคชัน (ไฟล์ .desktop) ที่จะเปิดเมื่อคลิก",
+    "field.desktopFilePath.description": "แอปพลิเคชัน (ไฟล์ .desktop) ที่จะเปิดเมื่อคลิก"
 };

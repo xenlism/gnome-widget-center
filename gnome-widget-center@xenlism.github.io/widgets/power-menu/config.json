@@ -29,7 +29,7 @@
               "dataType": "string",
               "fieldType": "colorpicker",
               "format": "color",
-              "default": "#000000"
+              "default": "#FFFFFF"
             }
           ]
         },

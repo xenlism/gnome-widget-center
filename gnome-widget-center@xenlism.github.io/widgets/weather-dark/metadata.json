@@ -1,9 +1,9 @@
 {
   "id": "xenlism.github.io.weather-dark",
-  "name": "xenlism's Weather (Dark)",
+  "name": "Weather (Dark) By Xenlism",
   "description": "Wide dark weather card - temperature, condition and day, with the weather-minimal icon set. Powered by Open-Meteo (no API key required).",
   "version": "1.0.0",
-  "author": "GNOME Widget Center",
+  "author": "Nattapong Pullkhow",
   "api-version": 1,
   "entry": "widget.js",
   "block-type": "2x1",
@@ -12,5 +12,6 @@
     "y": 80,
     "monitor": 0
   },
-  "screenshot": "screenshot.png"
+  "screenshot": "screenshot.png",
+  "themeable": true
 }

@@ -1,298 +1,298 @@
 {
-  "version": "1.0",
-  "tabs": [
-    {
-      "id": "general",
-      "label": "Circles Clock",
-      "description": "Concentric-ring clock settings",
-      "icon": "preferences-system-time-symbolic",
-      "groups": [
+    "version": "1.0",
+    "tabs": [
         {
-          "id": "card",
-          "label": "Card",
-          "description": "",
-          "fields": [
-            {
-              "id": "backgroundColor",
-              "label": "Background color",
-              "description": "Card background. Defaults to fully transparent.",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "alpha": true,
-              "default": "#FFFFFF00"
-            },
-            {
-              "id": "cornerRadius",
-              "label": "Corner radius",
-              "description": "Roundness of the card corners",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 18,
-              "min": 0,
-              "max": 64,
-              "step": 1,
-              "suffix": "px"
-            }
-          ]
+            "id": "general",
+            "label": "Circles Clock",
+            "description": "Concentric-ring clock settings",
+            "icon": "preferences-system-time-symbolic",
+            "groups": [
+                {
+                    "id": "card",
+                    "label": "Card",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "backgroundColor",
+                            "label": "Background color",
+                            "description": "Card background. Defaults to fully transparent.",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#ffffff26"
+                        },
+                        {
+                            "id": "cornerRadius",
+                            "label": "Corner radius",
+                            "description": "Roundness of the card corners",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 18,
+                            "min": 0,
+                            "max": 64,
+                            "step": 1,
+                            "suffix": "px"
+                        }
+                    ]
+                },
+                {
+                    "id": "borderOpacity",
+                    "label": "Border & Opacity",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "borderEnabled",
+                            "label": "Enable border",
+                            "description": "Draw a border around this widget's card",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": false
+                        },
+                        {
+                            "id": "borderColor",
+                            "label": "Border color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFF33",
+                            "visibleIf": "borderEnabled"
+                        },
+                        {
+                            "id": "borderWidth",
+                            "label": "Border width",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 1,
+                            "min": 0,
+                            "max": 16,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "borderEnabled"
+                        },
+                        {
+                            "id": "opacity",
+                            "label": "Opacity",
+                            "description": "Fades the entire widget - background, text, icons, everything.",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 100,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "suffix": "%"
+                        }
+                    ]
+                },
+                {
+                    "id": "time",
+                    "label": "Time text",
+                    "description": "The HH:MM:SS text floating on top of the rings",
+                    "fields": [
+                        {
+                            "id": "format24h",
+                            "label": "24-hour format",
+                            "description": "Show 14:30:05 instead of 02:30:05 PM-style hours",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": true
+                        },
+                        {
+                            "id": "timeFont",
+                            "label": "Time font",
+                            "description": "Face and size used for the HH:MM:SS text",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "default": "Sans Bold 20"
+                        },
+                        {
+                            "id": "timeColor",
+                            "label": "Time color",
+                            "description": "Color of the HH:MM:SS text",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFFFF"
+                        }
+                    ]
+                },
+                {
+                    "id": "rings",
+                    "label": "Rings",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "circleBaseColor",
+                            "label": "Circle base color",
+                            "description": "Base/track color drawn behind every ring",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFF26"
+                        },
+                        {
+                            "id": "colorHH",
+                            "label": "Outer ring color (HH)",
+                            "description": "Hour ring - outermost",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#e5a50a"
+                        },
+                        {
+                            "id": "colorMM",
+                            "label": "Middle ring color (MM)",
+                            "description": "Minute ring - middle",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#2ec27e"
+                        },
+                        {
+                            "id": "colorSS",
+                            "label": "Inner ring color (SS)",
+                            "description": "Second ring - innermost",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#3584e4"
+                        },
+                        {
+                            "id": "ringThickness",
+                            "label": "Ring thickness",
+                            "description": "Stroke width of each ring",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 10,
+                            "min": 4,
+                            "max": 24,
+                            "step": 1,
+                            "suffix": "px"
+                        }
+                    ]
+                },
+                {
+                    "id": "behavior",
+                    "label": "Behavior",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "refreshRateSeconds",
+                            "label": "Refresh rate",
+                            "description": "How often the clock re-reads the system time and repaints. Lower = smoother second-hand sweep, slightly more CPU.",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 1,
+                            "min": 1,
+                            "max": 60,
+                            "step": 1,
+                            "suffix": "s"
+                        },
+                        {
+                            "id": "launchAppPath",
+                            "label": "Click to launch",
+                            "description": "Pick a .desktop file to launch when this card is clicked. Leave empty to disable.",
+                            "dataType": "string",
+                            "fieldType": "filepicker",
+                            "filters": [
+                                "*.desktop"
+                            ],
+                            "default": ""
+                        }
+                    ]
+                }
+            ]
         },
         {
-          "id": "borderOpacity",
-          "label": "Border & Opacity",
-          "description": "",
-          "fields": [
-            {
-              "id": "borderEnabled",
-              "label": "Enable border",
-              "description": "Draw a border around this widget's card",
-              "dataType": "boolean",
-              "fieldType": "switch",
-              "default": false
-            },
-            {
-              "id": "borderColor",
-              "label": "Border color",
-              "description": "",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "alpha": true,
-              "default": "#FFFFFF33",
-              "visibleIf": "borderEnabled"
-            },
-            {
-              "id": "borderWidth",
-              "label": "Border width",
-              "description": "",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 1,
-              "min": 0,
-              "max": 16,
-              "step": 1,
-              "suffix": "px",
-              "visibleIf": "borderEnabled"
-            },
-            {
-              "id": "opacity",
-              "label": "Opacity",
-              "description": "Fades the entire widget - background, text, icons, everything.",
-              "dataType": "integer",
-              "fieldType": "slider",
-              "default": 100,
-              "min": 0,
-              "max": 100,
-              "step": 1,
-              "suffix": "%"
-            }
-          ]
-        },
-        {
-          "id": "time",
-          "label": "Time text",
-          "description": "The HH:MM:SS text floating on top of the rings",
-          "fields": [
-            {
-              "id": "format24h",
-              "label": "24-hour format",
-              "description": "Show 14:30:05 instead of 02:30:05 PM-style hours",
-              "dataType": "boolean",
-              "fieldType": "switch",
-              "default": true
-            },
-            {
-              "id": "timeFont",
-              "label": "Time font",
-              "description": "Face and size used for the HH:MM:SS text",
-              "dataType": "string",
-              "fieldType": "fontpicker",
-              "default": "Sans Bold 20"
-            },
-            {
-              "id": "timeColor",
-              "label": "Time color",
-              "description": "Color of the HH:MM:SS text",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "alpha": true,
-              "default": "#FFFFFFFF"
-            }
-          ]
-        },
-        {
-          "id": "rings",
-          "label": "Rings",
-          "description": "",
-          "fields": [
-            {
-              "id": "circleBaseColor",
-              "label": "Circle base color",
-              "description": "Base/track color drawn behind every ring",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "alpha": true,
-              "default": "#FFFFFF26"
-            },
-            {
-              "id": "colorHH",
-              "label": "Outer ring color (HH)",
-              "description": "Hour ring - outermost",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "alpha": true,
-              "default": "#e5a50a"
-            },
-            {
-              "id": "colorMM",
-              "label": "Middle ring color (MM)",
-              "description": "Minute ring - middle",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "alpha": true,
-              "default": "#2ec27e"
-            },
-            {
-              "id": "colorSS",
-              "label": "Inner ring color (SS)",
-              "description": "Second ring - innermost",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "alpha": true,
-              "default": "#3584e4"
-            },
-            {
-              "id": "ringThickness",
-              "label": "Ring thickness",
-              "description": "Stroke width of each ring",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 10,
-              "min": 4,
-              "max": 24,
-              "step": 1,
-              "suffix": "px"
-            }
-          ]
-        },
-        {
-          "id": "behavior",
-          "label": "Behavior",
-          "description": "",
-          "fields": [
-            {
-              "id": "refreshRateSeconds",
-              "label": "Refresh rate",
-              "description": "How often the clock re-reads the system time and repaints. Lower = smoother second-hand sweep, slightly more CPU.",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 1,
-              "min": 1,
-              "max": 60,
-              "step": 1,
-              "suffix": "s"
-            },
-            {
-              "id": "launchAppPath",
-              "label": "Click to launch",
-              "description": "Pick a .desktop file to launch when this card is clicked. Leave empty to disable.",
-              "dataType": "string",
-              "fieldType": "filepicker",
-              "filters": [
-                "*.desktop"
-              ],
-              "default": ""
-            }
-          ]
+            "id": "shadow",
+            "label": "Shadow",
+            "description": "Drop shadow behind this widget.",
+            "groups": [
+                {
+                    "id": "shadow",
+                    "label": "Shadow effect",
+                    "description": "Off by default. Default color is black at 30% transparency.",
+                    "fields": [
+                        {
+                            "id": "shadowEnabled",
+                            "label": "Enable shadow",
+                            "description": "Add a drop shadow behind this widget",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": false
+                        },
+                        {
+                            "id": "shadowColor",
+                            "label": "Shadow color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#000000",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowOpacity",
+                            "label": "Shadow transparency",
+                            "description": "Shadow opacity, 0-100%",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 30,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "suffix": "%",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowAngle",
+                            "label": "Shadow angle",
+                            "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 90,
+                            "min": 0,
+                            "max": 360,
+                            "step": 1,
+                            "suffix": "°",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowDistance",
+                            "label": "Shadow distance",
+                            "description": "How far the shadow is offset, in pixels",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 6,
+                            "min": 0,
+                            "max": 60,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowBlur",
+                            "label": "Shadow blur",
+                            "description": "Blur radius, in pixels",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 16,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "shadowEnabled"
+                        }
+                    ]
+                }
+            ]
         }
-      ]
-    },
-    {
-      "id": "shadow",
-      "label": "Shadow",
-      "description": "Drop shadow behind this widget.",
-      "groups": [
-        {
-          "id": "shadow",
-          "label": "Shadow effect",
-          "description": "Off by default. Default color is black at 30% transparency.",
-          "fields": [
-            {
-              "id": "shadowEnabled",
-              "label": "Enable shadow",
-              "description": "Add a drop shadow behind this widget",
-              "dataType": "boolean",
-              "fieldType": "switch",
-              "default": false
-            },
-            {
-              "id": "shadowColor",
-              "label": "Shadow color",
-              "description": "",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "default": "#000000",
-              "visibleIf": "shadowEnabled"
-            },
-            {
-              "id": "shadowOpacity",
-              "label": "Shadow transparency",
-              "description": "Shadow opacity, 0-100%",
-              "dataType": "integer",
-              "fieldType": "slider",
-              "default": 30,
-              "min": 0,
-              "max": 100,
-              "step": 1,
-              "suffix": "%",
-              "visibleIf": "shadowEnabled"
-            },
-            {
-              "id": "shadowAngle",
-              "label": "Shadow angle",
-              "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
-              "dataType": "integer",
-              "fieldType": "slider",
-              "default": 90,
-              "min": 0,
-              "max": 360,
-              "step": 1,
-              "suffix": "°",
-              "visibleIf": "shadowEnabled"
-            },
-            {
-              "id": "shadowDistance",
-              "label": "Shadow distance",
-              "description": "How far the shadow is offset, in pixels",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 6,
-              "min": 0,
-              "max": 60,
-              "step": 1,
-              "suffix": "px",
-              "visibleIf": "shadowEnabled"
-            },
-            {
-              "id": "shadowBlur",
-              "label": "Shadow blur",
-              "description": "Blur radius, in pixels",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 16,
-              "min": 0,
-              "max": 100,
-              "step": 1,
-              "suffix": "px",
-              "visibleIf": "shadowEnabled"
-            }
-          ]
-        }
-      ]
-    }
-  ]
+    ]
 }

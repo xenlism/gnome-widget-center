@@ -1,0 +1,216 @@
+{
+    "version": "1.0",
+    "tabs": [
+        {
+            "id": "general",
+            "label": "Folder Launcher (Square)",
+            "description": "4 folder shortcuts in a 2x2 icon grid",
+            "icon": "folder-symbolic",
+            "groups": [
+                {
+                    "id": "folders",
+                    "label": "Folders",
+                    "description": "Up to 4 folders, filled left-to-right, top-to-bottom. Clicking one opens it in your file manager. Use the dropdown to quick-add a special folder (Downloads, Documents, Music, Pictures, Videos, Desktop, Public, Templates, Home), or Browse for any other folder.",
+                    "fields": [
+                        {
+                            "id": "folders",
+                            "label": "Folders (max 4)",
+                            "description": "Quick-add a special folder, or browse for any other folder",
+                            "dataType": "list",
+                            "fieldType": "list",
+                            "default": [],
+                            "maxItems": 4,
+                            "item": {
+                                "dataType": "string",
+                                "format": "folder",
+                                "scanDirectory": "/home"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "fileManager",
+                    "label": "File manager",
+                    "description": "The app used to open a folder when its icon is clicked.",
+                    "fields": [
+                        {
+                            "id": "fileManagerDesktopFile",
+                            "label": "File manager app",
+                            "description": "Application (.desktop file) used to open folders. Defaults to Nautilus (GNOME Files).",
+                            "dataType": "string",
+                            "fieldType": "filepicker",
+                            "format": "file",
+                            "default": "/usr/share/applications/org.gnome.Nautilus.desktop",
+                            "filters": [
+                                "*.desktop"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "appearance",
+                    "label": "Appearance",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "backgroundColor",
+                            "label": "Background color",
+                            "description": "Card background. Use the alpha slider for transparency, e.g. #FFFFFF0F for white at ~85% transparent.",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFF00"
+                        },
+                        {
+                            "id": "cornerRadius",
+                            "label": "Corner radius",
+                            "description": "Roundness of the card background",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 18,
+                            "min": 0,
+                            "max": 64,
+                            "step": 1,
+                            "suffix": "px"
+                        }
+                    ]
+                },
+                {
+                    "id": "borderOpacity",
+                    "label": "Border & Opacity",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "borderEnabled",
+                            "label": "Enable border",
+                            "description": "Draw a border around this widget's card",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": false
+                        },
+                        {
+                            "id": "borderColor",
+                            "label": "Border color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFF33",
+                            "visibleIf": "borderEnabled"
+                        },
+                        {
+                            "id": "borderWidth",
+                            "label": "Border width",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 1,
+                            "min": 0,
+                            "max": 16,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "borderEnabled"
+                        },
+                        {
+                            "id": "opacity",
+                            "label": "Opacity",
+                            "description": "Fades the entire widget - background, text, icons, everything.",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 100,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "suffix": "%"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "shadow",
+            "label": "Shadow",
+            "description": "Drop shadow behind this widget.",
+            "groups": [
+                {
+                    "id": "shadow",
+                    "label": "Shadow effect",
+                    "description": "Off by default. Default color is black at 30% transparency.",
+                    "fields": [
+                        {
+                            "id": "shadowEnabled",
+                            "label": "Enable shadow",
+                            "description": "Add a drop shadow behind this widget",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": false
+                        },
+                        {
+                            "id": "shadowColor",
+                            "label": "Shadow color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#000000",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowOpacity",
+                            "label": "Shadow transparency",
+                            "description": "Shadow opacity, 0-100%",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 30,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "suffix": "%",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowAngle",
+                            "label": "Shadow angle",
+                            "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 90,
+                            "min": 0,
+                            "max": 360,
+                            "step": 1,
+                            "suffix": "°",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowDistance",
+                            "label": "Shadow distance",
+                            "description": "How far the shadow is offset, in pixels",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 6,
+                            "min": 0,
+                            "max": 60,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowBlur",
+                            "label": "Shadow blur",
+                            "description": "Blur radius, in pixels",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 16,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "shadowEnabled"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

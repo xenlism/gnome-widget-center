@@ -1,8 +1,3 @@
-// i18n/en.js — widgets/date-modern (en)
-// Auto-generated translation table; keys mirror this widget's
-// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
-// canonical English source every other locale file mirrors).
-
 export default {
     "meta.name": "Date (Modern)",
     "meta.description": "Vertical stacked date card - month, day-of-week and day-of-month each on their own line.",
@@ -34,5 +29,5 @@ export default {
     "field.launchOnClick.label": "Launch app on click",
     "field.launchOnClick.description": "Requires an app to be chosen below",
     "field.desktopFilePath.label": "App to launch",
-    "field.desktopFilePath.description": "Application (.desktop file) launched on click",
+    "field.desktopFilePath.description": "Application (.desktop file) launched on click"
 };

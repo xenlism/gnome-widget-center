@@ -1,8 +1,3 @@
-// i18n/en.js — gnome-widget-center (extension) (en)
-// Auto-generated translation table; keys mirror this widget's
-// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
-// canonical English source every other locale file mirrors).
-
 export default {
     "tab.overview.label": "Overview",
     "tab.store.label": "Store",
@@ -60,5 +55,5 @@ export default {
     "backup.result.files_restored": "Restored files for {count} widget(s).",
     "backup.result.reopen_hint": "Reopen this window (or restart the widgets) to see everything.",
     "shared.result.missing_dependencies": "Missing system dependencies:",
-    "shared.result.install_with": "install with:",
+    "shared.result.install_with": "install with:"
 };

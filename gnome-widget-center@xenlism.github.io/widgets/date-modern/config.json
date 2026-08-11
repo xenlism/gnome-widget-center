@@ -1,220 +1,220 @@
 {
-  "version": "1.0",
-  "tabs": [
-    {
-      "id": "general",
-      "label": "Date (Modern)",
-      "description": "Vertical stacked date card settings",
-      "icon": "x-office-calendar-symbolic",
-      "groups": [
+    "version": "1.0",
+    "tabs": [
         {
-          "id": "font",
-          "label": "Font",
-          "description": "Month, day-of-week and day-of-month each have their own separate font face and size.",
-          "fields": [
-            {
-              "id": "monthFont",
-              "label": "Month font",
-              "description": "Font face and size for the month (e.g. Jul)",
-              "dataType": "string",
-              "fieldType": "fontpicker",
-              "format": "font",
-              "default": "Noto Sans Thai Bold 30"
-            },
-            {
-              "id": "dowFont",
-              "label": "Day-of-week font",
-              "description": "Font face and size for the day-of-week abbreviation (e.g. TU)",
-              "dataType": "string",
-              "fieldType": "fontpicker",
-              "format": "font",
-              "default": "Noto Sans Thai Bold 30"
-            },
-            {
-              "id": "dayFont",
-              "label": "Day-of-month font",
-              "description": "Font face and size for the day-of-month number (01-31)",
-              "dataType": "string",
-              "fieldType": "fontpicker",
-              "format": "font",
-              "default": "Noto Sans Thai Bold 30"
-            }
-          ]
+            "id": "general",
+            "label": "Date (Modern)",
+            "description": "Vertical stacked date card settings",
+            "icon": "x-office-calendar-symbolic",
+            "groups": [
+                {
+                    "id": "font",
+                    "label": "Font",
+                    "description": "Month, day-of-week and day-of-month each have their own separate font face and size.",
+                    "fields": [
+                        {
+                            "id": "monthFont",
+                            "label": "Month font",
+                            "description": "Font face and size for the month (e.g. Jul)",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "format": "font",
+                            "default": "Noto Sans Thai Bold 30"
+                        },
+                        {
+                            "id": "dowFont",
+                            "label": "Day-of-week font",
+                            "description": "Font face and size for the day-of-week abbreviation (e.g. TU)",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "format": "font",
+                            "default": "Noto Sans Thai Bold 30"
+                        },
+                        {
+                            "id": "dayFont",
+                            "label": "Day-of-month font",
+                            "description": "Font face and size for the day-of-month number (01-31)",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "format": "font",
+                            "default": "Noto Sans Thai Bold 30"
+                        }
+                    ]
+                },
+                {
+                    "id": "colors",
+                    "label": "Colors",
+                    "description": "Month, day-of-week and day-of-month each have their own separate color.",
+                    "fields": [
+                        {
+                            "id": "colorMonth",
+                            "label": "Month color",
+                            "description": "Color of the month text",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "default": "#d81f26"
+                        },
+                        {
+                            "id": "colorDow",
+                            "label": "Day-of-week color",
+                            "description": "Color of the day-of-week text",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "default": "#1a1a1a"
+                        },
+                        {
+                            "id": "colorDay",
+                            "label": "Day-of-month color",
+                            "description": "Color of the day-of-month number",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "default": "#1a1a1a"
+                        },
+                        {
+                            "id": "cardColor",
+                            "label": "Card background color",
+                            "description": "Background color of the date card",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "default": "#ffffff"
+                        }
+                    ]
+                },
+                {
+                    "id": "card",
+                    "label": "Card shape",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "cornerRadius",
+                            "label": "Corner radius",
+                            "description": "Roundness of the date card's corners",
+                            "dataType": "number",
+                            "fieldType": "spinbutton",
+                            "default": 18,
+                            "min": 0,
+                            "max": 60,
+                            "step": 1,
+                            "suffix": "px"
+                        }
+                    ]
+                },
+                {
+                    "id": "launch",
+                    "label": "Launch on click",
+                    "description": "Clicking the date card (without holding Super) launches the chosen app.",
+                    "fields": [
+                        {
+                            "id": "launchOnClick",
+                            "label": "Launch app on click",
+                            "description": "Requires an app to be chosen below",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": false
+                        },
+                        {
+                            "id": "desktopFilePath",
+                            "label": "App to launch",
+                            "description": "Application (.desktop file) launched on click",
+                            "dataType": "string",
+                            "fieldType": "filepicker",
+                            "format": "file",
+                            "default": "",
+                            "filters": [
+                                "*.desktop"
+                            ],
+                            "enabledIf": "launchOnClick"
+                        }
+                    ]
+                }
+            ]
         },
         {
-          "id": "colors",
-          "label": "Colors",
-          "description": "Month, day-of-week and day-of-month each have their own separate color.",
-          "fields": [
-            {
-              "id": "colorMonth",
-              "label": "Month color",
-              "description": "Color of the month text",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "default": "#d81f26"
-            },
-            {
-              "id": "colorDow",
-              "label": "Day-of-week color",
-              "description": "Color of the day-of-week text",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "default": "#1a1a1a"
-            },
-            {
-              "id": "colorDay",
-              "label": "Day-of-month color",
-              "description": "Color of the day-of-month number",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "default": "#1a1a1a"
-            },
-            {
-              "id": "cardColor",
-              "label": "Card background color",
-              "description": "Background color of the date card",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "default": "#ffffff"
-            }
-          ]
-        },
-        {
-          "id": "card",
-          "label": "Card shape",
-          "description": "",
-          "fields": [
-            {
-              "id": "cornerRadius",
-              "label": "Corner radius",
-              "description": "Roundness of the date card's corners",
-              "dataType": "number",
-              "fieldType": "spinbutton",
-              "default": 18,
-              "min": 0,
-              "max": 60,
-              "step": 1,
-              "suffix": "px"
-            }
-          ]
-        },
-        {
-          "id": "launch",
-          "label": "Launch on click",
-          "description": "Clicking the date card (without holding Super) launches the chosen app.",
-          "fields": [
-            {
-              "id": "launchOnClick",
-              "label": "Launch app on click",
-              "description": "Requires an app to be chosen below",
-              "dataType": "boolean",
-              "fieldType": "switch",
-              "default": false
-            },
-            {
-              "id": "desktopFilePath",
-              "label": "App to launch",
-              "description": "Application (.desktop file) launched on click",
-              "dataType": "string",
-              "fieldType": "filepicker",
-              "format": "file",
-              "default": "",
-              "filters": [
-                "*.desktop"
-              ],
-              "enabledIf": "launchOnClick"
-            }
-          ]
+            "id": "shadow",
+            "label": "Shadow",
+            "description": "Drop shadow behind this widget.",
+            "groups": [
+                {
+                    "id": "shadow",
+                    "label": "Shadow effect",
+                    "description": "Off by default. Default color is black at 30% transparency.",
+                    "fields": [
+                        {
+                            "id": "shadowEnabled",
+                            "label": "Enable shadow",
+                            "description": "Add a drop shadow behind this widget",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": false
+                        },
+                        {
+                            "id": "shadowColor",
+                            "label": "Shadow color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#000000",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowOpacity",
+                            "label": "Shadow transparency",
+                            "description": "Shadow opacity, 0-100%",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 30,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "suffix": "%",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowAngle",
+                            "label": "Shadow angle",
+                            "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 90,
+                            "min": 0,
+                            "max": 360,
+                            "step": 1,
+                            "suffix": "°",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowDistance",
+                            "label": "Shadow distance",
+                            "description": "How far the shadow is offset, in pixels",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 6,
+                            "min": 0,
+                            "max": 60,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowBlur",
+                            "label": "Shadow blur",
+                            "description": "Blur radius, in pixels",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 16,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "shadowEnabled"
+                        }
+                    ]
+                }
+            ]
         }
-      ]
-    },
-    {
-      "id": "shadow",
-      "label": "Shadow",
-      "description": "Drop shadow behind this widget.",
-      "groups": [
-        {
-          "id": "shadow",
-          "label": "Shadow effect",
-          "description": "Off by default. Default color is black at 30% transparency.",
-          "fields": [
-            {
-              "id": "shadowEnabled",
-              "label": "Enable shadow",
-              "description": "Add a drop shadow behind this widget",
-              "dataType": "boolean",
-              "fieldType": "switch",
-              "default": false
-            },
-            {
-              "id": "shadowColor",
-              "label": "Shadow color",
-              "description": "",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "default": "#000000",
-              "visibleIf": "shadowEnabled"
-            },
-            {
-              "id": "shadowOpacity",
-              "label": "Shadow transparency",
-              "description": "Shadow opacity, 0-100%",
-              "dataType": "integer",
-              "fieldType": "slider",
-              "default": 30,
-              "min": 0,
-              "max": 100,
-              "step": 1,
-              "suffix": "%",
-              "visibleIf": "shadowEnabled"
-            },
-            {
-              "id": "shadowAngle",
-              "label": "Shadow angle",
-              "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
-              "dataType": "integer",
-              "fieldType": "slider",
-              "default": 90,
-              "min": 0,
-              "max": 360,
-              "step": 1,
-              "suffix": "°",
-              "visibleIf": "shadowEnabled"
-            },
-            {
-              "id": "shadowDistance",
-              "label": "Shadow distance",
-              "description": "How far the shadow is offset, in pixels",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 6,
-              "min": 0,
-              "max": 60,
-              "step": 1,
-              "suffix": "px",
-              "visibleIf": "shadowEnabled"
-            },
-            {
-              "id": "shadowBlur",
-              "label": "Shadow blur",
-              "description": "Blur radius, in pixels",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 16,
-              "min": 0,
-              "max": 100,
-              "step": 1,
-              "suffix": "px",
-              "visibleIf": "shadowEnabled"
-            }
-          ]
-        }
-      ]
-    }
-  ]
+    ]
 }

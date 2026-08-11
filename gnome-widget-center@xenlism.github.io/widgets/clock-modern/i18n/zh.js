@@ -1,8 +1,3 @@
-// i18n/zh.js — widgets/clock-modern (zh)
-// Auto-generated translation table; keys mirror this widget's
-// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
-// canonical English source every other locale file mirrors).
-
 export default {
     "meta.name": "时钟（现代）",
     "meta.description": "垂直堆叠数字时钟卡片——上午/下午、时、分、秒各占一行。",
@@ -37,5 +32,5 @@ export default {
     "field.launchOnClick.label": "点击时启动应用",
     "field.launchOnClick.description": "需要在下方选择一个应用",
     "field.desktopFilePath.label": "要启动的应用",
-    "field.desktopFilePath.description": "点击后启动的应用程序（.desktop 文件）",
+    "field.desktopFilePath.description": "点击后启动的应用程序（.desktop 文件）"
 };

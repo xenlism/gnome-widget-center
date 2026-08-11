@@ -1,8 +1,3 @@
-// i18n/th.js — widgets/weather-panel (th)
-// Auto-generated translation table; keys mirror this widget's
-// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
-// canonical English source every other locale file mirrors).
-
 export default {
     "meta.name": "สภาพอากาศ (พาเนล)",
     "meta.description": "การ์ดสภาพอากาศทรงมน (ไอคอน + อุณหภูมิตัวใหญ่ + สภาพอากาศ) พร้อมช่องตำแหน่งที่ตั้งที่ตรวจจับจาก IP ได้ และตั้งค่าความถี่รีเฟรชได้ — ขับเคลื่อนโดย Open-Meteo (ไม่ต้องใช้ API key)",
@@ -33,7 +28,7 @@ export default {
     "field.iconSize.label": "ขนาดไอคอน",
     "field.iconSize.description": "ขนาดไอคอนสภาพอากาศ",
     "group.condition.label": "สภาพอากาศ",
-    "group.condition.description": "บรรทัดข้อความใต้อุณหภูมิ (เช่น \"เมฆมาก\", \"ฝนตก\", \"ท้องฟ้าแจ่มใส\")",
+    "group.condition.description": 'บรรทัดข้อความใต้อุณหภูมิ (เช่น "เมฆมาก", "ฝนตก", "ท้องฟ้าแจ่มใส")',
     "field.conditionFont.label": "ฟอนต์ข้อความสภาพอากาศ",
     "field.conditionFont.description": "ชนิดและขนาดฟอนต์ของข้อความสภาพอากาศ",
     "field.conditionColor.label": "สีข้อความสภาพอากาศ",
@@ -62,5 +57,5 @@ export default {
     "condition.Snow Showers": "หิมะซู่",
     "condition.Storm": "พายุฝนฟ้าคะนอง",
     "condition.Storm (Hail)": "พายุลูกเห็บ",
-    "condition.Unknown": "ไม่ทราบ",
+    "condition.Unknown": "ไม่ทราบ"
 };

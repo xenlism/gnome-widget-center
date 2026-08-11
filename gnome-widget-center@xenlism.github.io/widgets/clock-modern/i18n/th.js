@@ -1,8 +1,3 @@
-// i18n/th.js — widgets/clock-modern (th)
-// Auto-generated translation table; keys mirror this widget's
-// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
-// canonical English source every other locale file mirrors).
-
 export default {
     "meta.name": "นาฬิกา (โมเดิร์น)",
     "meta.description": "การ์ดนาฬิกาแบบเรียงซ้อนตัวเลขแนวตั้ง — am/pm ชั่วโมง นาที และวินาที อยู่คนละบรรทัด",
@@ -37,5 +32,5 @@ export default {
     "field.launchOnClick.label": "เปิดแอปเมื่อคลิก",
     "field.launchOnClick.description": "ต้องเลือกแอปด้านล่างก่อน",
     "field.desktopFilePath.label": "แอปที่จะเปิด",
-    "field.desktopFilePath.description": "แอปพลิเคชัน (ไฟล์ .desktop) ที่จะเปิดเมื่อคลิก",
+    "field.desktopFilePath.description": "แอปพลิเคชัน (ไฟล์ .desktop) ที่จะเปิดเมื่อคลิก"
 };

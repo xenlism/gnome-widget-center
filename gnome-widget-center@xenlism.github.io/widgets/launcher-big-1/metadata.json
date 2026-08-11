@@ -1,16 +1,18 @@
 {
   "id": "xenlism.github.io.launcher-big-1",
-  "name": "xenlism's Launcher (Big) 1",
+  "name": "Launcher (Big) 1 By Xenlism",
   "description": "Android-style launcher shortcut: 9 app icons in a 3x3 grid, no labels, click launches each app's .desktop entry.",
   "version": "1.0.0",
-  "author": "GNOME Widget Center",
+  "author": "Nattapong Pullkhow",
   "api-version": 1,
   "entry": "widget.js",
   "block-type": "2x2",
   "default-position": {
-    "x": 40,
-    "y": 40,
+    "x": 1184,
+    "y": 336,
     "monitor": 0
   },
-  "screenshot": "screenshot.png"
+  "screenshot": "screenshot.png",
+  "themeable": false,
+  "forceSettingsAware": true
 }

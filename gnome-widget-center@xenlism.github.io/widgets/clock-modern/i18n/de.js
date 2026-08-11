@@ -1,8 +1,3 @@
-// i18n/de.js — widgets/clock-modern (de)
-// Auto-generated translation table; keys mirror this widget's
-// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
-// canonical English source every other locale file mirrors).
-
 export default {
     "meta.name": "Uhr (Modern)",
     "meta.description": "Vertikal gestapelte Ziffern-Uhrenkarte – AM/PM, Stunde, Minute und Sekunde jeweils in einer eigenen Zeile.",
@@ -37,5 +32,5 @@ export default {
     "field.launchOnClick.label": "App beim Klicken starten",
     "field.launchOnClick.description": "Erfordert die Auswahl einer App unten",
     "field.desktopFilePath.label": "Zu startende App",
-    "field.desktopFilePath.description": "Anwendung (.desktop-Datei), die beim Klicken gestartet wird",
+    "field.desktopFilePath.description": "Anwendung (.desktop-Datei), die beim Klicken gestartet wird"
 };

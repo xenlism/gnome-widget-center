@@ -1,16 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  Host-level settings ONLY (which widgets the user has disabled, etc).
-  Per-widget settings are JSON files (see development/docs/SETTINGS_SPEC.md) - this
-  schema must never gain per-widget or third-party-widget keys.
-
-  This is compiled and shipped INSIDE the extension folder
-  (products/extension/schemas/gschemas.compiled) and loaded via
-  Extension.getSettings() in GNOME Shell 45+, which reads from the
-  extension's own schema directory - NOT /usr/share/glib-2.0/schemas.
-  No system-wide install/root access is required. See
-  development/docs/SETTINGS_SPEC.md "Host settings เอง" for the rationale.
--->
 <schemalist gettext-domain="gnome-widget-center">
   <schema id="org.gnome.shell.extensions.widget-center"
           path="/org/gnome/shell/extensions/widget-center/">
@@ -230,21 +218,7 @@
       </description>
     </key>
 
-    <!-- ==================================================================
-      Force Settings (2026-08-09, ForceSettingsSpecification.md;
-      switches split 2026-08-09 per user request into 4 independent
-      toggles instead of 1). FOUR independent on/off switches, each
-      covering its own slice of Background + Shadow appearance - see
-      lib/forceSettingsHelper.js for the resolution logic that reads
-      these keys. Deliberately separate from the OLDER, still-live
-      per-property force flags (background.force/cornerRadius.force/
-      dropShadow.force/border.force/opacity.force, lib/themeService.js's
-      theme.json) - by product decision, border/opacity keep using that
-      older mechanism unchanged; only background/cornerRadius/dropShadow
-      migrate to this GSettings model. See HANDOVER_FORCE_SETTINGS.md for
-      the full writeup.
-    -->
-
+    
     <key name="force-background-color-enabled" type="b">
       <default>false</default>
       <summary>Force Background Color on every widget (independent switch)</summary>

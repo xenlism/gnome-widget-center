@@ -41,9 +41,9 @@
 //     Powered property. If NO adapter is present (desktop, VM, adapter
 //     disabled in firmware), this button/icon automatically falls back
 //     to an Airplane Mode toggle instead of sitting permanently inert -
-//     org.gnome.SettingsDaemon.Rfkill (session bus), the same DBus
-//     service GNOME Shell's own Quick Settings "Airplane Mode" toggle
-//     uses (js/ui/status/rfkill.js), toggling its AirplaneMode property.
+//     GSettings org.gnome.settings-daemon.plugins.rfkill's airplane-mode
+//     key, same schema widgets/settings-control (1x1) uses for its own
+//     fallback.
 //   - Do Not Disturb  -> GSettings org.gnome.desktop.notifications'
 //     show-banners key (DND active means show-banners is false - this is
 //     the same key GNOME's own Quick Settings "Do Not Disturb" toggle
@@ -61,6 +61,7 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import {hasAllocation, insertChildAboveSafely, isMappedActor} from '../../lib/actorLifecycle.js';
 import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, BORDER_DEFAULTS, OPACITY_DEFAULTS,} from '../../lib/widgetVisualKit.js';
 
 const TOOLTIP_SHOW_DELAY_MS = 400;
@@ -73,10 +74,14 @@ const NOTIFICATIONS_SCHEMA = 'org.gnome.desktop.notifications';
 const INTERFACE_SCHEMA = 'org.gnome.desktop.interface';
 
 // Airplane Mode fallback - only used when no Bluetooth adapter is found.
-// Same DBus service GNOME Shell's own Quick Settings menu reads.
-const RFKILL_BUS_NAME = 'org.gnome.SettingsDaemon.Rfkill';
-const RFKILL_OBJECT_PATH = '/org/gnome/SettingsDaemon/Rfkill';
-const RFKILL_IFACE = 'org.gnome.SettingsDaemon.Rfkill';
+// GSettings key GNOME's own rfkill handling reads/writes - same schema
+// widgets/settings-control (1x1) already uses successfully. Earlier this
+// widget went through org.gnome.SettingsDaemon.Rfkill on the session bus
+// instead, but that bus name isn't always owned/activatable (varies by
+// distro/session), which surfaced as a "could not reach
+// org.gnome.SettingsDaemon.Rfkill" error and left the button permanently
+// inert. GSettings has no such "is the service running" precondition.
+const RFKILL_SCHEMA = 'org.gnome.settings-daemon.plugins.rfkill';
 
 export default class SettingsControlBarWidget {
     /**
@@ -113,7 +118,7 @@ export default class SettingsControlBarWidget {
         // whether a Bluetooth adapter was found. See _enableBluetooth().
         this._btMode = 'bluetooth';
         this._bluetoothTooltipText = 'Bluetooth';
-        this._rfkillProxy = null;
+        this._rfkillSettings = null;
         this._rfkillSignalId = null;
 
         this._notifSettings = null;
@@ -152,13 +157,15 @@ export default class SettingsControlBarWidget {
         // which prevents the expanding cells below from spreading the icons
         // across the bar. Keep the painted card and row at the root's full
         // block allocation instead.
-        const syncContentSize = () => {
-            this._content.set_position(0, 0);
+        this._actor.connect("notify::mapped", () => {
+            if (!this._actor.mapped) return;
             this._content.set_size(this._actor.width, this._actor.height);
-        };
-        this._actor.connect('notify::width', syncContentSize);
-        this._actor.connect('notify::height', syncContentSize);
-        syncContentSize();
+        });
+
+        this._actor.connect("notify::allocation", () => {
+            if (!this._actor.mapped) return;
+            this._content.set_size(this._actor.width, this._actor.height);
+        });
         this._content.set_style(
             _cardStyleCss(this._settings, {backgroundColorFallback: '#FFFFFF00', cornerRadiusFallback: 18}) +
             `padding: ${PADDING_Y}px ${PADDING_X}px;`
@@ -252,14 +259,14 @@ export default class SettingsControlBarWidget {
         this._btSignalId = null;
         this._btAdapterPath = null;
 
-        if (this._rfkillProxy && this._rfkillSignalId) {
+        if (this._rfkillSettings && this._rfkillSignalId) {
             try {
-                this._rfkillProxy.disconnect(this._rfkillSignalId);
+                this._rfkillSettings.disconnect(this._rfkillSignalId);
             } catch (e) {
-                // proxy may already be gone
+                // settings object may already be gone
             }
         }
-        this._rfkillProxy = null;
+        this._rfkillSettings = null;
         this._rfkillSignalId = null;
 
         if (this._notifSettings && this._notifSignalId) {
@@ -418,19 +425,17 @@ export default class SettingsControlBarWidget {
     }
 
     /** @private only called when no Bluetooth adapter was found. Same
-     * DBus service (session bus) GNOME Shell's own Quick Settings
-     * "Airplane Mode" toggle reads/writes. */
+     * GSettings schema GNOME's own rfkill handling reads/writes - see
+     * RFKILL_SCHEMA's comment for why this replaced a DBus proxy. */
     _enableAirplaneModeFallback() {
         try {
-            this._rfkillProxy = Gio.DBusProxy.new_for_bus_sync(
-                Gio.BusType.SESSION, Gio.DBusProxyFlags.NONE, null,
-                RFKILL_BUS_NAME, RFKILL_OBJECT_PATH, RFKILL_IFACE, null);
-            this._rfkillSignalId = this._rfkillProxy.connect('g-properties-changed', () => this._renderBluetooth());
+            this._rfkillSettings = new Gio.Settings({schema_id: RFKILL_SCHEMA});
+            this._rfkillSignalId = this._rfkillSettings.connect('changed::airplane-mode', () => this._renderBluetooth());
             this._btMode = 'airplane';
             this._bluetoothTooltipText = 'Airplane Mode';
         } catch (e) {
-            this._api.logger.error(`settings-control-bar: could not reach ${RFKILL_BUS_NAME}: ${e.message}`);
-            this._rfkillProxy = null;
+            this._api.logger.error(`settings-control-bar: could not reach ${RFKILL_SCHEMA}: ${e.message}`);
+            this._rfkillSettings = null;
             // Neither Bluetooth nor rfkill available - leave the button
             // inert, same "missing service" convention as every other
             // toggle in this widget, but keep the Bluetooth label/icon
@@ -447,7 +452,7 @@ export default class SettingsControlBarWidget {
 
         if (this._btMode === 'airplane') {
             this._bluetoothIcon.icon_name = 'airplane-mode-symbolic';
-            const airplaneOn = this._rfkillProxy?.get_cached_property('AirplaneMode')?.unpack() ?? false;
+            const airplaneOn = this._rfkillSettings?.get_boolean('airplane-mode') ?? false;
             // Airplane Mode "on" is the active/lit state here, same
             // on=lit convention as every other toggle in this row -
             // even though it's the opposite polarity from Bluetooth's
@@ -464,15 +469,16 @@ export default class SettingsControlBarWidget {
     /** @private */
     _toggleBluetooth() {
         if (this._btMode === 'airplane') {
-            if (!this._rfkillProxy) {
+            if (!this._rfkillSettings) {
                 this._api.logger.error('settings-control-bar: Airplane Mode toggle requested but rfkill is unavailable');
                 return;
             }
-            const airplaneOn = this._rfkillProxy.get_cached_property('AirplaneMode')?.unpack() ?? false;
-            this._setDBusProperty(
-                Gio.BusType.SESSION, RFKILL_BUS_NAME, RFKILL_OBJECT_PATH,
-                RFKILL_IFACE, 'AirplaneMode', GLib.Variant.new_boolean(!airplaneOn)
-            );
+            try {
+                const airplaneOn = this._rfkillSettings.get_boolean('airplane-mode');
+                this._rfkillSettings.set_boolean('airplane-mode', !airplaneOn);
+            } catch (e) {
+                this._api.logger.error(`settings-control-bar: Airplane Mode toggle failed: ${e.message}`);
+            }
             return;
         }
 
@@ -621,6 +627,12 @@ export default class SettingsControlBarWidget {
         const enterId = button.connect('enter-event', () => {
             showTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, TOOLTIP_SHOW_DELAY_MS, () => {
                 showTimeoutId = null;
+                const stage = this._actor?.get_stage?.();
+                if (!stage || !isMappedActor(button, stage) ||
+                    !hasAllocation(this._actor) || !hasAllocation(button) ||
+                    this._row?.get_parent?.() !== this._content)
+                    return GLib.SOURCE_REMOVE;
+
                 const text = typeof textOrFn === 'function' ? textOrFn() : textOrFn;
                 tooltipLabel = new St.Label({
                     style_class: 'settings-control-bar-widget-tooltip',
@@ -633,7 +645,11 @@ export default class SettingsControlBarWidget {
                 // this._content is tooltipLabel's true parent-to-be - it's
                 // also the direct parent of this._row, so this stays valid
                 // however many per-button wrapper levels sit in between.
-                this._content.insert_child_above(tooltipLabel, this._row);
+                if (!insertChildAboveSafely(this._content, tooltipLabel, this._row)) {
+                    tooltipLabel.destroy();
+                    tooltipLabel = null;
+                    return GLib.SOURCE_REMOVE;
+                }
 
                 const [buttonAbsX, buttonAbsY] = button.get_transformed_position();
                 const [contentAbsX, contentAbsY] = this._content.get_transformed_position();

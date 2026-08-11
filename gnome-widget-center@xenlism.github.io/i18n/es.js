@@ -1,8 +1,3 @@
-// i18n/es.js — gnome-widget-center (extension) (es)
-// Auto-generated translation table; keys mirror this widget's
-// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
-// canonical English source every other locale file mirrors).
-
 export default {
     "tab.overview.label": "Resumen",
     "tab.store.label": "Tienda",
@@ -18,5 +13,5 @@ export default {
     "category.backup": "Copia de seguridad y restauración",
     "category.importexport": "Importar/Exportar",
     "category.advanced": "Avanzado",
-    "category.about": "Acerca de",
+    "category.about": "Acerca de"
 };

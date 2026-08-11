@@ -1,8 +1,3 @@
-// i18n/ja.js — widgets/weather-panel (ja)
-// Auto-generated translation table; keys mirror this widget's
-// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
-// canonical English source every other locale file mirrors).
-
 export default {
     "meta.name": "天気（ミニマル）",
     "meta.description": "ミニマルな天気カード — アイコン、天気状況、気温を表示。Open-Meteo提供（APIキー不要）。",
@@ -52,5 +47,5 @@ export default {
     "condition.Snow Showers": "にわか雪",
     "condition.Storm": "雷雨",
     "condition.Storm (Hail)": "雷雨（ひょう）",
-    "condition.Unknown": "不明",
+    "condition.Unknown": "不明"
 };

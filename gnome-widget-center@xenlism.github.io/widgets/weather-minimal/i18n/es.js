@@ -1,8 +1,3 @@
-// i18n/es.js — widgets/weather-minimal (es)
-// Auto-generated translation table; keys mirror this widget's
-// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
-// canonical English source every other locale file mirrors).
-
 export default {
     "meta.name": "Clima (Minimalista)",
     "meta.description": "Tarjeta de clima minimalista: icono, condición y temperatura, impulsada por Open-Meteo (no requiere clave de API).",
@@ -23,7 +18,7 @@ export default {
     "field.iconSize.label": "Tamaño del icono",
     "field.iconSize.description": "Tamaño del icono del clima",
     "group.condition.label": "Condición del clima",
-    "group.condition.description": "La línea de texto debajo del icono (p. ej., \"Tormenta\", \"Lluvia\", \"Despejado\")",
+    "group.condition.description": 'La línea de texto debajo del icono (p. ej., "Tormenta", "Lluvia", "Despejado")',
     "field.conditionFont.label": "Fuente de la condición",
     "field.conditionFont.description": "Tipo y tamaño de fuente del texto de la condición",
     "field.conditionColor.label": "Color de la condición",
@@ -52,5 +47,5 @@ export default {
     "condition.Snow Showers": "Chubascos de nieve",
     "condition.Storm": "Tormenta",
     "condition.Storm (Hail)": "Tormenta (granizo)",
-    "condition.Unknown": "Desconocido",
+    "condition.Unknown": "Desconocido"
 };

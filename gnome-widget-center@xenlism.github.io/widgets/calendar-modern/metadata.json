@@ -1,9 +1,9 @@
 {
   "id": "xenlism.github.io.calendar-modern",
-  "name": "xenlism's Calendar (Modern)",
+  "name": "Calendar (Modern) By Xenlism",
   "description": "Card-style calendar showing month, weekday and day number.",
   "version": "1.0.0",
-  "author": "GNOME Widget Center",
+  "author": "Nattapong Pullkhow",
   "api-version": 1,
   "entry": "widget.js",
   "block-type": "1x1",
@@ -12,5 +12,6 @@
     "y": 40,
     "monitor": 0
   },
-  "screenshot": "screenshot.png"
+  "screenshot": "screenshot.png",
+  "themeable": true
 }

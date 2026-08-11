@@ -1,9 +1,9 @@
 {
   "id": "xenlism.github.io.cpu-monitor",
-  "name": "xenlism's CPU Monitor",
+  "name": "CPU Monitor By Xenlism",
   "description": "1x1 card showing live CPU usage percent with a scrolling sparkline history graph.",
   "version": "1.0.0",
-  "author": "GNOME Widget Center",
+  "author": "Nattapong Pullkhow",
   "api-version": 1,
   "entry": "widget.js",
   "block-type": "1x1",
@@ -12,5 +12,6 @@
     "y": 40,
     "monitor": 0
   },
-  "screenshot": "screenshot.png"
+  "screenshot": "screenshot.png",
+  "themeable": true
 }

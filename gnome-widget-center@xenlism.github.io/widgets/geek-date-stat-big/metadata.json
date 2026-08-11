@@ -1,16 +1,17 @@
 {
   "id": "xenlism.github.io.geek-date-stat-big",
-  "name": "xenlism's Geek Date Stat (Big)",
+  "name": "Geek Date Stat (Big) By Xenlism",
   "description": "Large card: big centered date on top, CPU/MEM/DISK percentages centered underneath.",
   "version": "1.0.0",
-  "author": "GNOME Widget Center",
+  "author": "Nattapong Pullkhow",
   "api-version": 1,
   "entry": "widget.js",
   "block-type": "4x1",
   "default-position": {
-    "x": 60,
-    "y": 60,
+    "x": 608,
+    "y": 144,
     "monitor": 0
   },
-  "screenshot": "screenshot.png"
+  "screenshot": "screenshot.png",
+  "themeable": true
 }

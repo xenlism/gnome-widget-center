@@ -1,8 +1,3 @@
-// i18n/en.js — widgets/weather-panel (en)
-// Auto-generated translation table; keys mirror this widget's
-// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
-// canonical English source every other locale file mirrors).
-
 export default {
     "meta.name": "Weather (Panel)",
     "meta.description": "Rounded weather card (icon + big temperature + condition) with an IP-detectable location field and a configurable refresh rate - powered by Open-Meteo (no API key required).",
@@ -33,7 +28,7 @@ export default {
     "field.iconSize.label": "Icon size",
     "field.iconSize.description": "Size of the weather icon",
     "group.condition.label": "Weather Condition",
-    "group.condition.description": "The text line below the temperature (e.g. \"Cloudy\", \"Rain\", \"Clear\")",
+    "group.condition.description": 'The text line below the temperature (e.g. "Cloudy", "Rain", "Clear")',
     "field.conditionFont.label": "Condition font",
     "field.conditionFont.description": "Font face and size for the condition text",
     "field.conditionColor.label": "Condition color",
@@ -62,5 +57,5 @@ export default {
     "condition.Snow Showers": "Snow Showers",
     "condition.Storm": "Storm",
     "condition.Storm (Hail)": "Storm (Hail)",
-    "condition.Unknown": "Unknown",
+    "condition.Unknown": "Unknown"
 };

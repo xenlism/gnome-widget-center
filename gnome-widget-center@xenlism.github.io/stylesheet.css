@@ -1,6 +1,4 @@
-/* ==========================================================
- * Widget Edit Toolbar
- * ========================================================== */
+
 
 .widget-edit-toolbar,
 .widget-edit-mode-icon-row,
@@ -10,25 +8,21 @@
     padding: 4px;
 }
 
-/* Action row */
 .widget-edit-mode-icon-row {
     spacing: 8px;
 }
 
-/* Drag area */
 .widget-edit-mode-drag-handle {
     background-color: rgba(0, 0, 0, 1.0);
     border-radius: 0 0 16px 16px;
 }
 
-/* Move icon */
 .widget-edit-mode-grip {
     color: #ffffff;
     icon-size: 56px;
     font-size: 56px;
 }
 
-/* Toolbar buttons */
 .widget-edit-mode-action {
     color: #ffffff;
     background-color: rgba(0, 0, 0, 1.0);
@@ -42,13 +36,11 @@
     background-color: rgba(255,255,255,0.15);
 }
 
-/* Action icons */
 .widget-edit-mode-action-icon {
     icon-size: 16px;
     color: #ffffff;
 }
 
-/* Tooltip */
 .widget-edit-mode-tooltip {
     background-color: rgba(0,0,0,0.90);
     color: #ffffff;
@@ -56,18 +48,8 @@
     padding: 4px 8px;
 }
 
-/* ==========================================================
- * Drag guide lines + drop placeholder
- * ----------------------------------------------------------
- * These actors (lib/guideRenderer.js's pool + editModeDragController.js's
- * _buildPlaceholder()) only ever set a style_class, never an inline
- * style - so until this stylesheet defines these classes they paint as
- * fully transparent boxes: correctly sized and positioned every drag
- * frame, just invisible. That's why the alignment guides (and the
- * green/red drop-target box) didn't show up while dragging a widget.
- * ========================================================== */
 .widget-edit-mode-guide-line {
-    background-color: rgba(245, 166, 35, 0.9); /* amber - same accent as the media-player-circle progress ring */
+    background-color: rgba(245, 166, 35, 0.9); 
 }
 
 .widget-edit-mode-placeholder-valid {
@@ -81,11 +63,6 @@
     border: 2px dashed rgba(224, 27, 36, 0.9);
     border-radius: 12px;
 }
-
-/* ==========================================================
- * Widget Center Overlay (lib/widgetCenterOverlay.js)
- * Standalone add-on, see that file's header before touching this section.
- * ========================================================== */
 
 .wc-overlay {
     background-color: rgba(20, 20, 20, 0.97);
@@ -116,11 +93,6 @@
     background-color: rgba(255, 255, 255, 0.15);
 }
 
-/* Sort bar (Overview + Themes tabs) — reuses the same pill look as
- * .wc-overlay-tab/.wc-overlay-tab-active for the per-mode buttons
- * (see widgetCenterOverlay.js's _buildSortBar()), just in a slightly
- * tighter row since it sits above a content grid rather than in the
- * header. */
 .wc-overlay-sortbar {
     padding: 8px 0;
     spacing: 8px;
@@ -131,10 +103,6 @@
     padding: 8px 4px;
 }
 
-/* Search box (Overview + Themes tabs) — sits at the right-hand end of
- * .wc-overlay-sortbar (see widgetCenterOverlay.js's _buildSearchEntry()).
- * Same rounded-pill language as the sort buttons next to it, just an
- * input instead of a toggle. */
 .wc-overlay-search {
     color: #ffffff;
     background-color: rgba(255, 255, 255, 0.08);
@@ -190,14 +158,7 @@
 }
 
 .wc-overlay-card-screenshot {
-    /* 2026-08-10 fix: was 160px (with the JS side separately, and
-       wrongly, painting the image at a stale 170px - see
-       _buildScreenshot()'s own comment) - a mismatched ratio from the
-       Preferences window's own card banner (370px card, 160px banner,
-       ~2.31:1). This card's content area is 456px wide (480px card -
-       12px padding each side), so 456 / 2.31 = ~197px reproduces that
-       same ratio here, just taller in absolute pixels because this
-       card itself is wider. */
+
     height: 197px;
     border-radius: 8px;
     background-color: rgba(0, 0, 0, 0.35);
@@ -238,6 +199,10 @@
     color: #ffffff;
     padding: 6px;
     border-radius: 6px;
+}
+
+.wc-overlay-icon-text-box {
+    spacing: 6px;
 }
 
 .wc-overlay-toggle:hover,
@@ -290,27 +255,6 @@
     font-weight: bold;
 }
 
-/* ==========================================================
- * Shared on/off switch (lib/widgetCenterOverlay.js)
- * St.Button(toggle_mode:true) + one child "knob" widget, moved
- * left/right and recolored purely via the :checked pseudo-class - no JS
- * state machine needed, St tracks `checked` natively. Used by the
- * Overview tab's widget-enable control and the Themes tab's
- * theme-active indicator.
- *
- * 2026-08-09: this block used to be a much larger "Overlay Preferences
- * tab" section (lib/widgetCenterOverlayPreferences.js's own
- * wc-pref-outer/banner/column/section/row/status/cycle-button/slider/
- * color-swatch rules, plus a global bare `StSlider {...}` rule) — that
- * file was a St/Clutter reimplementation of the real Preferences
- * window, made obsolete once the overlay's "Preferences" button started
- * handing off to the real window instead (see widgetCenterOverlay.js's
- * own 2026-08-08 comment on `_openExtensionPreferences()`) and was
- * never actually imported by anything since. Deleted the file itself
- * and every one of those now-dead CSS classes (grepped every
- * `wc-pref-*` name across lib/*.js first — only wc-pref-switch/
- * wc-pref-switch-knob had a live caller) — kept only those two below,
- * still used for the shared toggle above. */
 .wc-pref-switch {
     width: 44px;
     height: 24px;

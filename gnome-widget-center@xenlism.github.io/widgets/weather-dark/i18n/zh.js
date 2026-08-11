@@ -1,8 +1,3 @@
-// i18n/zh.js — widgets/weather-dark (zh)
-// Auto-generated translation table; keys mirror this widget's
-// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
-// canonical English source every other locale file mirrors).
-
 export default {
     "meta.name": "天气（深色）",
     "meta.description": "宽幅深色天气卡片——温度、天气状况和天数，使用与“天气（极简）”相同的图标集。由 Open-Meteo 提供支持（无需 API 密钥）。",
@@ -52,5 +47,5 @@ export default {
     "condition.Snow Showers": "阵雪",
     "condition.Storm": "暴风雨",
     "condition.Storm (Hail)": "冰雹风暴",
-    "condition.Unknown": "未知",
+    "condition.Unknown": "未知"
 };

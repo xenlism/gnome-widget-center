@@ -1,9 +1,9 @@
 {
   "id": "xenlism.github.io.geek-week-stat-bar",
-  "name": "xenlism's Geek Week/Stat (Bar)",
+  "name": "Geek Week/Stat (Bar) By Xenlism",
   "description": "Wide `barx2` card (23×5 grid cells): big centered week line on top, stat line centered underneath.",
   "version": "1.0.0",
-  "author": "GNOME Widget Center",
+  "author": "Nattapong Pullkhow",
   "api-version": 1,
   "entry": "widget.js",
   "block-type": "barx2",
@@ -12,5 +12,6 @@
     "y": 60,
     "monitor": 0
   },
-  "screenshot": "screenshot.png"
+  "screenshot": "screenshot.png",
+  "themeable": true
 }

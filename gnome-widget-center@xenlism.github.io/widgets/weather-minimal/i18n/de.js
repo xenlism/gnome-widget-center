@@ -1,8 +1,3 @@
-// i18n/de.js — widgets/weather-minimal (de)
-// Auto-generated translation table; keys mirror this widget's
-// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
-// canonical English source every other locale file mirrors).
-
 export default {
     "meta.name": "Wetter (Minimal)",
     "meta.description": "Minimalistische Wetterkarte – Symbol, Bedingung und Temperatur, unterstützt von Open-Meteo (kein API-Schlüssel erforderlich).",
@@ -52,5 +47,5 @@ export default {
     "condition.Snow Showers": "Schneeschauer",
     "condition.Storm": "Gewitter",
     "condition.Storm (Hail)": "Gewitter (Hagel)",
-    "condition.Unknown": "Unbekannt",
+    "condition.Unknown": "Unbekannt"
 };

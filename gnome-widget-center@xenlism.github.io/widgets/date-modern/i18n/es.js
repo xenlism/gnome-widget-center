@@ -1,8 +1,3 @@
-// i18n/es.js — widgets/date-modern (es)
-// Auto-generated translation table; keys mirror this widget's
-// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
-// canonical English source every other locale file mirrors).
-
 export default {
     "meta.name": "Fecha (Moderno)",
     "meta.description": "Tarjeta de fecha apilada verticalmente: mes, día de la semana y día del mes, cada uno en su propia línea.",
@@ -34,5 +29,5 @@ export default {
     "field.launchOnClick.label": "Iniciar aplicación al hacer clic",
     "field.launchOnClick.description": "Requiere elegir una aplicación a continuación",
     "field.desktopFilePath.label": "Aplicación a iniciar",
-    "field.desktopFilePath.description": "Aplicación (archivo .desktop) que se inicia al hacer clic",
+    "field.desktopFilePath.description": "Aplicación (archivo .desktop) que se inicia al hacer clic"
 };

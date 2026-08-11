@@ -1,9 +1,9 @@
 {
   "id": "xenlism.github.io.network-monitor",
-  "name": "xenlism's Network Monitor",
+  "name": "Network Monitor By Xenlism",
   "description": "1x1 card showing live download/upload throughput with a two-line sparkline history graph.",
   "version": "1.0.0",
-  "author": "GNOME Widget Center",
+  "author": "Nattapong Pullkhow",
   "api-version": 1,
   "entry": "widget.js",
   "block-type": "1x1",
@@ -12,5 +12,6 @@
     "y": 40,
     "monitor": 0
   },
-  "screenshot": "screenshot.png"
+  "screenshot": "screenshot.png",
+  "themeable": true
 }

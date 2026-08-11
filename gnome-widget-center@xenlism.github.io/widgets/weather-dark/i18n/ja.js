@@ -1,8 +1,3 @@
-// i18n/ja.js — widgets/weather-dark (ja)
-// Auto-generated translation table; keys mirror this widget's
-// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
-// canonical English source every other locale file mirrors).
-
 export default {
     "meta.name": "天気（ダーク）",
     "meta.description": "ワイドなダーク天気カード — 気温・天気状況・曜日を表示。weather-minimalと同じアイコンセットを使用。Open-Meteo提供（APIキー不要）。",
@@ -52,5 +47,5 @@ export default {
     "condition.Snow Showers": "にわか雪",
     "condition.Storm": "雷雨",
     "condition.Storm (Hail)": "雷雨（ひょう）",
-    "condition.Unknown": "不明",
+    "condition.Unknown": "不明"
 };

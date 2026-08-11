@@ -1,1 +1,0 @@
-# Widget Registry API

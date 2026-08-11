@@ -1,8 +1,3 @@
-// i18n/en.js — widgets/calendar-header (en)
-// Auto-generated translation table; keys mirror this widget's
-// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
-// canonical English source every other locale file mirrors).
-
 export default {
     "meta.name": "Calendar (Header)",
     "meta.description": "Two-tone calendar with a colored header band for month and weekday.",
@@ -16,5 +11,5 @@ export default {
     "field.bodyColor.label": "Body background",
     "field.bodyColor.description": "Panel behind the day number",
     "field.dayColor.label": "Day number color",
-    "field.dayColor.description": "Color of the day number",
+    "field.dayColor.description": "Color of the day number"
 };

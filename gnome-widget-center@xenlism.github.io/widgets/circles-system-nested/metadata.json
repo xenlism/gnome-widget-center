@@ -1,9 +1,9 @@
 {
   "id": "xenlism.github.io.circles-system-nested",
-  "name": "xenlism's System Monitor Nested",
+  "name": "System Monitor Nested By Xenlism",
   "description": "1x1 card: a single circle with three concentric ring gauges - CPU (outer), Memory (middle), Disk (inner) - each its own color, like Activity rings.",
   "version": "1.0.0",
-  "author": "GNOME Widget Center",
+  "author": "Nattapong Pullkhow",
   "api-version": 1,
   "entry": "widget.js",
   "block-type": "1x1",
@@ -12,5 +12,6 @@
     "y": 40,
     "monitor": 0
   },
-  "screenshot": "screenshot.png"
+  "screenshot": "screenshot.png",
+  "themeable": true
 }

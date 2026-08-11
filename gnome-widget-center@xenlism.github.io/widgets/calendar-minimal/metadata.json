@@ -1,9 +1,9 @@
 {
   "id": "xenlism.github.io.calendar-minimal",
-  "name": "xenlism's Calendar (Minimal)",
+  "name": "Calendar (Minimal) By Xenlism",
   "description": "Chromeless calendar showing just the day number, weekday and month.",
   "version": "1.0.0",
-  "author": "GNOME Widget Center",
+  "author": "Nattapong Pullkhow",
   "api-version": 1,
   "entry": "widget.js",
   "themeable": true,

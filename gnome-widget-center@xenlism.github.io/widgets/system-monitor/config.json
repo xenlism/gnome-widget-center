@@ -1,264 +1,264 @@
 {
-  "version": "1.0",
-  "tabs": [
-    {
-      "id": "general",
-      "label": "System Monitor",
-      "description": "CPU/Memory/Disk ring gauges and network throughput",
-      "icon": "utilities-system-monitor-symbolic",
-      "groups": [
+    "version": "1.0",
+    "tabs": [
         {
-          "id": "rings",
-          "label": "Ring colors",
-          "description": "One shared color pair used for all three gauges (CPU/Memory/Disk)",
-          "fields": [
-            {
-              "id": "activeColor",
-              "label": "Circle active color",
-              "description": "Color of the filled portion of each ring",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "default": "#33C7F5"
-            },
-            {
-              "id": "baseColor",
-              "label": "Circle base color",
-              "description": "Color of the ring's empty track",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "default": "#33383D"
-            }
-          ]
+            "id": "general",
+            "label": "System Monitor",
+            "description": "CPU/Memory/Disk ring gauges and network throughput",
+            "icon": "utilities-system-monitor-symbolic",
+            "groups": [
+                {
+                    "id": "rings",
+                    "label": "Ring colors",
+                    "description": "One shared color pair used for all three gauges (CPU/Memory/Disk)",
+                    "fields": [
+                        {
+                            "id": "activeColor",
+                            "label": "Circle active color",
+                            "description": "Color of the filled portion of each ring",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "default": "#33C7F5"
+                        },
+                        {
+                            "id": "baseColor",
+                            "label": "Circle base color",
+                            "description": "Color of the ring's empty track",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "default": "#33383D"
+                        }
+                    ]
+                },
+                {
+                    "id": "typography",
+                    "label": "Font",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "font",
+                            "label": "Font face + size",
+                            "description": "Face and size for the big percentage number inside each ring; the CPU/Memory/Disk caption and the network line scale down from this",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "format": "font",
+                            "default": "Sans Bold 18"
+                        }
+                    ]
+                },
+                {
+                    "id": "appearance",
+                    "label": "Appearance",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "backgroundColor",
+                            "label": "Background color",
+                            "description": "Card background. Use the alpha slider for transparency.",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFF00"
+                        },
+                        {
+                            "id": "cornerRadius",
+                            "label": "Corner radius",
+                            "description": "Roundness of the card background",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 18,
+                            "min": 0,
+                            "max": 64,
+                            "step": 1,
+                            "suffix": "px"
+                        }
+                    ]
+                },
+                {
+                    "id": "borderOpacity",
+                    "label": "Border & Opacity",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "borderEnabled",
+                            "label": "Enable border",
+                            "description": "Draw a border around this widget's card",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": false
+                        },
+                        {
+                            "id": "borderColor",
+                            "label": "Border color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFF33",
+                            "visibleIf": "borderEnabled"
+                        },
+                        {
+                            "id": "borderWidth",
+                            "label": "Border width",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 1,
+                            "min": 0,
+                            "max": 16,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "borderEnabled"
+                        },
+                        {
+                            "id": "opacity",
+                            "label": "Opacity",
+                            "description": "Fades the entire widget - background, text, icons, everything.",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 100,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "suffix": "%"
+                        }
+                    ]
+                },
+                {
+                    "id": "behavior",
+                    "label": "Behavior",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "refreshRateSec",
+                            "label": "Refresh rate",
+                            "description": "How often CPU/Memory/Disk/Network are re-read",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 3,
+                            "min": 1,
+                            "max": 30,
+                            "step": 1,
+                            "suffix": "s"
+                        }
+                    ]
+                },
+                {
+                    "id": "click",
+                    "label": "Click to launch",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "launchOnClick",
+                            "label": "Launch app on click",
+                            "description": "Requires an app to be chosen below",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": false
+                        },
+                        {
+                            "id": "desktopFilePath",
+                            "label": "App to launch",
+                            "description": "Application (.desktop file) launched when the card is clicked, e.g. a system monitor or task manager",
+                            "dataType": "string",
+                            "fieldType": "filepicker",
+                            "format": "file",
+                            "default": "",
+                            "filters": [
+                                "*.desktop"
+                            ],
+                            "enabledIf": "launchOnClick"
+                        }
+                    ]
+                }
+            ]
         },
         {
-          "id": "typography",
-          "label": "Font",
-          "description": "",
-          "fields": [
-            {
-              "id": "font",
-              "label": "Font face + size",
-              "description": "Face and size for the big percentage number inside each ring; the CPU/Memory/Disk caption and the network line scale down from this",
-              "dataType": "string",
-              "fieldType": "fontpicker",
-              "format": "font",
-              "default": "Sans Bold 18"
-            }
-          ]
-        },
-        {
-          "id": "appearance",
-          "label": "Appearance",
-          "description": "",
-          "fields": [
-            {
-              "id": "backgroundColor",
-              "label": "Background color",
-              "description": "Card background. Use the alpha slider for transparency.",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "alpha": true,
-              "default": "#FFFFFF00"
-            },
-            {
-              "id": "cornerRadius",
-              "label": "Corner radius",
-              "description": "Roundness of the card background",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 18,
-              "min": 0,
-              "max": 64,
-              "step": 1,
-              "suffix": "px"
-            }
-          ]
-        },
-        {
-          "id": "borderOpacity",
-          "label": "Border & Opacity",
-          "description": "",
-          "fields": [
-            {
-              "id": "borderEnabled",
-              "label": "Enable border",
-              "description": "Draw a border around this widget's card",
-              "dataType": "boolean",
-              "fieldType": "switch",
-              "default": false
-            },
-            {
-              "id": "borderColor",
-              "label": "Border color",
-              "description": "",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "alpha": true,
-              "default": "#FFFFFF33",
-              "visibleIf": "borderEnabled"
-            },
-            {
-              "id": "borderWidth",
-              "label": "Border width",
-              "description": "",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 1,
-              "min": 0,
-              "max": 16,
-              "step": 1,
-              "suffix": "px",
-              "visibleIf": "borderEnabled"
-            },
-            {
-              "id": "opacity",
-              "label": "Opacity",
-              "description": "Fades the entire widget - background, text, icons, everything.",
-              "dataType": "integer",
-              "fieldType": "slider",
-              "default": 100,
-              "min": 0,
-              "max": 100,
-              "step": 1,
-              "suffix": "%"
-            }
-          ]
-        },
-        {
-          "id": "behavior",
-          "label": "Behavior",
-          "description": "",
-          "fields": [
-            {
-              "id": "refreshRateSec",
-              "label": "Refresh rate",
-              "description": "How often CPU/Memory/Disk/Network are re-read",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 3,
-              "min": 1,
-              "max": 30,
-              "step": 1,
-              "suffix": "s"
-            }
-          ]
-        },
-        {
-          "id": "click",
-          "label": "Click to launch",
-          "description": "",
-          "fields": [
-            {
-              "id": "launchOnClick",
-              "label": "Launch app on click",
-              "description": "Requires an app to be chosen below",
-              "dataType": "boolean",
-              "fieldType": "switch",
-              "default": true
-            },
-            {
-              "id": "desktopFilePath",
-              "label": "App to launch",
-              "description": "Application (.desktop file) launched when the card is clicked, e.g. a system monitor or task manager",
-              "dataType": "string",
-              "fieldType": "filepicker",
-              "format": "file",
-              "default": "/usr/share/applications/org.gnome.SystemMonitor.desktop",
-              "filters": [
-                "*.desktop"
-              ],
-              "enabledIf": "launchOnClick"
-            }
-          ]
+            "id": "shadow",
+            "label": "Shadow",
+            "description": "Drop shadow behind this widget.",
+            "groups": [
+                {
+                    "id": "shadow",
+                    "label": "Shadow effect",
+                    "description": "Off by default. Default color is black at 30% transparency.",
+                    "fields": [
+                        {
+                            "id": "shadowEnabled",
+                            "label": "Enable shadow",
+                            "description": "Add a drop shadow behind this widget",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": false
+                        },
+                        {
+                            "id": "shadowColor",
+                            "label": "Shadow color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#000000",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowOpacity",
+                            "label": "Shadow transparency",
+                            "description": "Shadow opacity, 0-100%",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 30,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "suffix": "%",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowAngle",
+                            "label": "Shadow angle",
+                            "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 90,
+                            "min": 0,
+                            "max": 360,
+                            "step": 1,
+                            "suffix": "°",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowDistance",
+                            "label": "Shadow distance",
+                            "description": "How far the shadow is offset, in pixels",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 6,
+                            "min": 0,
+                            "max": 60,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowBlur",
+                            "label": "Shadow blur",
+                            "description": "Blur radius, in pixels",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 16,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "shadowEnabled"
+                        }
+                    ]
+                }
+            ]
         }
-      ]
-    },
-    {
-      "id": "shadow",
-      "label": "Shadow",
-      "description": "Drop shadow behind this widget.",
-      "groups": [
-        {
-          "id": "shadow",
-          "label": "Shadow effect",
-          "description": "Off by default. Default color is black at 30% transparency.",
-          "fields": [
-            {
-              "id": "shadowEnabled",
-              "label": "Enable shadow",
-              "description": "Add a drop shadow behind this widget",
-              "dataType": "boolean",
-              "fieldType": "switch",
-              "default": false
-            },
-            {
-              "id": "shadowColor",
-              "label": "Shadow color",
-              "description": "",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "default": "#000000",
-              "visibleIf": "shadowEnabled"
-            },
-            {
-              "id": "shadowOpacity",
-              "label": "Shadow transparency",
-              "description": "Shadow opacity, 0-100%",
-              "dataType": "integer",
-              "fieldType": "slider",
-              "default": 30,
-              "min": 0,
-              "max": 100,
-              "step": 1,
-              "suffix": "%",
-              "visibleIf": "shadowEnabled"
-            },
-            {
-              "id": "shadowAngle",
-              "label": "Shadow angle",
-              "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
-              "dataType": "integer",
-              "fieldType": "slider",
-              "default": 90,
-              "min": 0,
-              "max": 360,
-              "step": 1,
-              "suffix": "°",
-              "visibleIf": "shadowEnabled"
-            },
-            {
-              "id": "shadowDistance",
-              "label": "Shadow distance",
-              "description": "How far the shadow is offset, in pixels",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 6,
-              "min": 0,
-              "max": 60,
-              "step": 1,
-              "suffix": "px",
-              "visibleIf": "shadowEnabled"
-            },
-            {
-              "id": "shadowBlur",
-              "label": "Shadow blur",
-              "description": "Blur radius, in pixels",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 16,
-              "min": 0,
-              "max": 100,
-              "step": 1,
-              "suffix": "px",
-              "visibleIf": "shadowEnabled"
-            }
-          ]
-        }
-      ]
-    }
-  ]
+    ]
 }

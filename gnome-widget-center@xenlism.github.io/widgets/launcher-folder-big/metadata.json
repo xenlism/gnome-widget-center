@@ -1,0 +1,18 @@
+{
+  "id": "xenlism.github.io.launcher-folder-big",
+  "name": "Folder Launcher Big By Xenlism",
+  "description": "Android-style launcher grid for FOLDERS instead of apps: pick up to 9 directories, each shown with your system's folder icon. Clicking one opens it in your default file manager (Nautilus by default).",
+  "version": "1.0.0",
+  "author": "Nattapong Pullkhow",
+  "api-version": 1,
+  "entry": "widget.js",
+  "block-type": "2x2",
+  "default-position": {
+    "x": 1216,
+    "y": 560,
+    "monitor": 0
+  },
+  "screenshot": "screenshot.png",
+  "themeable": false,
+  "forceSettingsAware": true
+}

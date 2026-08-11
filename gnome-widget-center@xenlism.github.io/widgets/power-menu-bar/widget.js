@@ -38,6 +38,7 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import {hasAllocation, insertChildAboveSafely, isMappedActor} from '../../lib/actorLifecycle.js';
 import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS,} from '../../lib/widgetVisualKit.js';
 
 const TOOLTIP_SHOW_DELAY_MS = 400;
@@ -88,13 +89,15 @@ export default class PowerMenuBarWidget {
         // which prevents the expanding cells below from spreading the icons
         // across the bar. Keep the painted card and row at the root's full
         // block allocation instead.
-        const syncContentSize = () => {
-            this._content.set_position(0, 0);
+        this._actor.connect("notify::mapped", () => {
+            if (!this._actor.mapped) return;
             this._content.set_size(this._actor.width, this._actor.height);
-        };
-        this._actor.connect('notify::width', syncContentSize);
-        this._actor.connect('notify::height', syncContentSize);
-        syncContentSize();
+        });
+
+        this._actor.connect("notify::allocation", () => {
+            if (!this._actor.mapped) return;
+            this._content.set_size(this._actor.width, this._actor.height);
+        });
         this._content.set_style(
             _cardStyleCss(this._settings, {backgroundColorFallback: '#FFFFFF00', cornerRadiusFallback: 18}) +
             `padding: ${PADDING_Y}px ${PADDING_X}px;`
@@ -181,7 +184,7 @@ export default class PowerMenuBarWidget {
         return {
             backgroundColor: '#FFFFFF00', // white @ 0.85 alpha ("d9")
             cornerRadius: 18,
-            iconColor: '#2e2e2e',
+            iconColor: '#FFFFFF',
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
@@ -259,6 +262,12 @@ export default class PowerMenuBarWidget {
         const enterId = button.connect('enter-event', () => {
             showTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, TOOLTIP_SHOW_DELAY_MS, () => {
                 showTimeoutId = null;
+                const stage = this._actor?.get_stage?.();
+                if (!stage || !isMappedActor(button, stage) ||
+                    !hasAllocation(this._actor) || !hasAllocation(button) ||
+                    this._row?.get_parent?.() !== this._content)
+                    return GLib.SOURCE_REMOVE;
+
                 tooltipLabel = new St.Label({
                     style_class: 'power-menu-bar-widget-tooltip',
                     text,
@@ -270,7 +279,11 @@ export default class PowerMenuBarWidget {
                 // this._content is tooltipLabel's true parent-to-be - it's
                 // also the direct parent of this._row, so this stays valid
                 // however many per-button wrapper levels sit in between.
-                this._content.insert_child_above(tooltipLabel, this._row);
+                if (!insertChildAboveSafely(this._content, tooltipLabel, this._row)) {
+                    tooltipLabel.destroy();
+                    tooltipLabel = null;
+                    return GLib.SOURCE_REMOVE;
+                }
 
                 const [buttonAbsX, buttonAbsY] = button.get_transformed_position();
                 const [contentAbsX, contentAbsY] = this._content.get_transformed_position();

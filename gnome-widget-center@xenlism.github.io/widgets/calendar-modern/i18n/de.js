@@ -1,8 +1,3 @@
-// i18n/de.js — widgets/calendar-modern (de)
-// Auto-generated translation table; keys mirror this widget's
-// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
-// canonical English source every other locale file mirrors).
-
 export default {
     "meta.name": "Kalender (Modern)",
     "meta.description": "Kartenartiger Kalender mit Monat, Wochentag und Tagesnummer.",
@@ -14,5 +9,5 @@ export default {
     "field.accentColor.label": "Wochentagsfarbe",
     "field.accentColor.description": "Farbe des Wochentagstexts",
     "field.textColor.label": "Textfarbe",
-    "field.textColor.description": "Farbe von Monat und Tageszahl",
+    "field.textColor.description": "Farbe von Monat und Tageszahl"
 };

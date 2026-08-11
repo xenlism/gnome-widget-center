@@ -1,335 +1,335 @@
 {
-  "version": "1.0",
-  "tabs": [
-    {
-      "id": "general",
-      "label": "Battery (Half Ring)",
-      "description": "Half-circle battery ring settings",
-      "icon": "battery-full-symbolic",
-      "groups": [
+    "version": "1.0",
+    "tabs": [
         {
-          "id": "card",
-          "label": "Card",
-          "description": "",
-          "fields": [
-            {
-              "id": "backgroundColor",
-              "label": "Background color",
-              "description": "Card background. Use the alpha slider for transparency.",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "alpha": true,
-              "default": "#FFFFFF00"
-            },
-            {
-              "id": "cornerRadius",
-              "label": "Corner radius",
-              "description": "Roundness of the card corners",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 18,
-              "min": 0,
-              "max": 64,
-              "step": 1,
-              "suffix": "px"
-            }
-          ]
-        },
-        {
-          "id": "borderOpacity",
-          "label": "Border & Opacity",
-          "description": "",
-          "fields": [
-            {
-              "id": "borderEnabled",
-              "label": "Enable border",
-              "description": "Draw a border around this widget's card",
-              "dataType": "boolean",
-              "fieldType": "switch",
-              "default": false
-            },
-            {
-              "id": "borderColor",
-              "label": "Border color",
-              "description": "",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "alpha": true,
-              "default": "#FFFFFF33",
-              "visibleIf": "borderEnabled"
-            },
-            {
-              "id": "borderWidth",
-              "label": "Border width",
-              "description": "",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 1,
-              "min": 0,
-              "max": 16,
-              "step": 1,
-              "suffix": "px",
-              "visibleIf": "borderEnabled"
-            },
-            {
-              "id": "opacity",
-              "label": "Opacity",
-              "description": "Fades the entire widget - background, text, icons, everything.",
-              "dataType": "integer",
-              "fieldType": "slider",
-              "default": 100,
-              "min": 0,
-              "max": 100,
-              "step": 1,
-              "suffix": "%"
-            }
-          ]
-        },
-        {
-          "id": "ring",
-          "label": "Ring",
-          "description": "The ring's color switches automatically by charge level (or to the charging color while plugged in).",
-          "fields": [
-            {
-              "id": "circleBaseColor",
-              "label": "Ring base color (track)",
-              "description": "Base/track color drawn behind the battery progress ring",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "alpha": true,
-              "default": "#FFFFFF26"
-            },
-            {
-              "id": "ringColorLow",
-              "label": "Low battery color (< 20%)",
-              "description": "Ring color while battery is at or below 20% and not charging",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "alpha": true,
-              "default": "#E01B24FF"
-            },
-            {
-              "id": "ringColorMid",
-              "label": "Medium battery color (20-50%)",
-              "description": "Ring color while battery is above 20% and below 50% and not charging",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "alpha": true,
-              "default": "#F5C211FF"
-            },
-            {
-              "id": "ringColorHigh",
-              "label": "High battery color (> 50%)",
-              "description": "Ring color while battery is at or above 50% and not charging",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "alpha": true,
-              "default": "#33D17AFF"
-            },
-            {
-              "id": "ringColorCharging",
-              "label": "Charging color",
-              "description": "Ring (and bolt glyph) color while the battery is charging, regardless of percentage",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "alpha": true,
-              "default": "#3584E4FF"
-            },
-            {
-              "id": "ringThickness",
-              "label": "Ring thickness",
-              "description": "Stroke width of the half-ring",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 10,
-              "min": 3,
-              "max": 24,
-              "step": 1,
-              "suffix": "px"
-            },
-            {
-              "id": "ringSide",
-              "label": "Ring side",
-              "description": "Which side holds the half-ring. Its curve bends inward toward the text.",
-              "dataType": "string",
-              "fieldType": "dropdown",
-              "default": "right",
-              "options": [
+            "id": "general",
+            "label": "Battery (Half Ring)",
+            "description": "Half-circle battery ring settings",
+            "icon": "battery-full-symbolic",
+            "groups": [
                 {
-                  "value": "right",
-                  "label": "Right (curves inward left)"
+                    "id": "card",
+                    "label": "Card",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "backgroundColor",
+                            "label": "Background color",
+                            "description": "Card background. Use the alpha slider for transparency.",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#00000000"
+                        },
+                        {
+                            "id": "cornerRadius",
+                            "label": "Corner radius",
+                            "description": "Roundness of the card corners",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 18,
+                            "min": 0,
+                            "max": 64,
+                            "step": 1,
+                            "suffix": "px"
+                        }
+                    ]
                 },
                 {
-                  "value": "left",
-                  "label": "Left (curves inward right)"
+                    "id": "borderOpacity",
+                    "label": "Border & Opacity",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "borderEnabled",
+                            "label": "Enable border",
+                            "description": "Draw a border around this widget's card",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": false
+                        },
+                        {
+                            "id": "borderColor",
+                            "label": "Border color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFF33",
+                            "visibleIf": "borderEnabled"
+                        },
+                        {
+                            "id": "borderWidth",
+                            "label": "Border width",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 1,
+                            "min": 0,
+                            "max": 16,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "borderEnabled"
+                        },
+                        {
+                            "id": "opacity",
+                            "label": "Opacity",
+                            "description": "Fades the entire widget - background, text, icons, everything.",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 100,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "suffix": "%"
+                        }
+                    ]
+                },
+                {
+                    "id": "ring",
+                    "label": "Ring",
+                    "description": "The ring's color switches automatically by charge level (or to the charging color while plugged in).",
+                    "fields": [
+                        {
+                            "id": "circleBaseColor",
+                            "label": "Ring base color (track)",
+                            "description": "Base/track color drawn behind the battery progress ring",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFF26"
+                        },
+                        {
+                            "id": "ringColorLow",
+                            "label": "Low battery color (< 20%)",
+                            "description": "Ring color while battery is at or below 20% and not charging",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#E01B24FF"
+                        },
+                        {
+                            "id": "ringColorMid",
+                            "label": "Medium battery color (20-50%)",
+                            "description": "Ring color while battery is above 20% and below 50% and not charging",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#F5C211FF"
+                        },
+                        {
+                            "id": "ringColorHigh",
+                            "label": "High battery color (> 50%)",
+                            "description": "Ring color while battery is at or above 50% and not charging",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#33D17AFF"
+                        },
+                        {
+                            "id": "ringColorCharging",
+                            "label": "Charging color",
+                            "description": "Ring (and bolt glyph) color while the battery is charging, regardless of percentage",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#3584E4FF"
+                        },
+                        {
+                            "id": "ringThickness",
+                            "label": "Ring thickness",
+                            "description": "Stroke width of the half-ring",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 10,
+                            "min": 3,
+                            "max": 24,
+                            "step": 1,
+                            "suffix": "px"
+                        },
+                        {
+                            "id": "ringSide",
+                            "label": "Ring side",
+                            "description": "Which side holds the half-ring. Its curve bends inward toward the text.",
+                            "dataType": "string",
+                            "fieldType": "dropdown",
+                            "default": "left",
+                            "options": [
+                                {
+                                    "value": "right",
+                                    "label": "Right (curves inward left)"
+                                },
+                                {
+                                    "value": "left",
+                                    "label": "Left (curves inward right)"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "text",
+                    "label": "Text",
+                    "description": "Percentage text only shown while not charging - a bolt glyph replaces it while charging.",
+                    "fields": [
+                        {
+                            "id": "captionText",
+                            "label": "Caption text",
+                            "description": "Small label shown above the percentage",
+                            "dataType": "string",
+                            "fieldType": "text",
+                            "default": "BATTERY"
+                        },
+                        {
+                            "id": "captionFont",
+                            "label": "Caption font",
+                            "description": "Face and size of the caption label",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "format": "font",
+                            "default": "Sans 10"
+                        },
+                        {
+                            "id": "captionColor",
+                            "label": "Caption color",
+                            "description": "Color of the caption label",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFFB3"
+                        },
+                        {
+                            "id": "percentFont",
+                            "label": "Percent text font",
+                            "description": "Face and size of the percentage number (and the charging bolt glyph)",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "format": "font",
+                            "default": "Sans Bold 24"
+                        },
+                        {
+                            "id": "percentColor",
+                            "label": "Percent text color",
+                            "description": "Color of the percentage number (not used while charging - see Ring group)",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFFFF"
+                        }
+                    ]
+                },
+                {
+                    "id": "behavior",
+                    "label": "Behavior",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "refreshRateSeconds",
+                            "label": "Refresh rate",
+                            "description": "How often battery status is re-read, in addition to updating instantly on UPower change notifications",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 5,
+                            "min": 1,
+                            "max": 60,
+                            "step": 1,
+                            "suffix": "s"
+                        }
+                    ]
                 }
-              ]
-            }
-          ]
+            ]
         },
         {
-          "id": "text",
-          "label": "Text",
-          "description": "Percentage text only shown while not charging - a bolt glyph replaces it while charging.",
-          "fields": [
-            {
-              "id": "captionText",
-              "label": "Caption text",
-              "description": "Small label shown above the percentage",
-              "dataType": "string",
-              "fieldType": "text",
-              "default": "BATTERY"
-            },
-            {
-              "id": "captionFont",
-              "label": "Caption font",
-              "description": "Face and size of the caption label",
-              "dataType": "string",
-              "fieldType": "fontpicker",
-              "format": "font",
-              "default": "Sans 10"
-            },
-            {
-              "id": "captionColor",
-              "label": "Caption color",
-              "description": "Color of the caption label",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "alpha": true,
-              "default": "#FFFFFFB3"
-            },
-            {
-              "id": "percentFont",
-              "label": "Percent text font",
-              "description": "Face and size of the percentage number (and the charging bolt glyph)",
-              "dataType": "string",
-              "fieldType": "fontpicker",
-              "format": "font",
-              "default": "Sans Bold 24"
-            },
-            {
-              "id": "percentColor",
-              "label": "Percent text color",
-              "description": "Color of the percentage number (not used while charging - see Ring group)",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "alpha": true,
-              "default": "#FFFFFFFF"
-            }
-          ]
-        },
-        {
-          "id": "behavior",
-          "label": "Behavior",
-          "description": "",
-          "fields": [
-            {
-              "id": "refreshRateSeconds",
-              "label": "Refresh rate",
-              "description": "How often battery status is re-read, in addition to updating instantly on UPower change notifications",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 5,
-              "min": 1,
-              "max": 60,
-              "step": 1,
-              "suffix": "s"
-            }
-          ]
+            "id": "shadow",
+            "label": "Shadow",
+            "description": "Drop shadow behind this widget.",
+            "groups": [
+                {
+                    "id": "shadow",
+                    "label": "Shadow effect",
+                    "description": "Off by default. Default color is black at 30% transparency.",
+                    "fields": [
+                        {
+                            "id": "shadowEnabled",
+                            "label": "Enable shadow",
+                            "description": "Add a drop shadow behind this widget",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": false
+                        },
+                        {
+                            "id": "shadowColor",
+                            "label": "Shadow color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#000000",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowOpacity",
+                            "label": "Shadow transparency",
+                            "description": "Shadow opacity, 0-100%",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 30,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "suffix": "%",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowAngle",
+                            "label": "Shadow angle",
+                            "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 90,
+                            "min": 0,
+                            "max": 360,
+                            "step": 1,
+                            "suffix": "°",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowDistance",
+                            "label": "Shadow distance",
+                            "description": "How far the shadow is offset, in pixels",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 6,
+                            "min": 0,
+                            "max": 60,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowBlur",
+                            "label": "Shadow blur",
+                            "description": "Blur radius, in pixels",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 16,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "shadowEnabled"
+                        }
+                    ]
+                }
+            ]
         }
-      ]
-    },
-    {
-      "id": "shadow",
-      "label": "Shadow",
-      "description": "Drop shadow behind this widget.",
-      "groups": [
-        {
-          "id": "shadow",
-          "label": "Shadow effect",
-          "description": "Off by default. Default color is black at 30% transparency.",
-          "fields": [
-            {
-              "id": "shadowEnabled",
-              "label": "Enable shadow",
-              "description": "Add a drop shadow behind this widget",
-              "dataType": "boolean",
-              "fieldType": "switch",
-              "default": false
-            },
-            {
-              "id": "shadowColor",
-              "label": "Shadow color",
-              "description": "",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "default": "#000000",
-              "visibleIf": "shadowEnabled"
-            },
-            {
-              "id": "shadowOpacity",
-              "label": "Shadow transparency",
-              "description": "Shadow opacity, 0-100%",
-              "dataType": "integer",
-              "fieldType": "slider",
-              "default": 30,
-              "min": 0,
-              "max": 100,
-              "step": 1,
-              "suffix": "%",
-              "visibleIf": "shadowEnabled"
-            },
-            {
-              "id": "shadowAngle",
-              "label": "Shadow angle",
-              "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
-              "dataType": "integer",
-              "fieldType": "slider",
-              "default": 90,
-              "min": 0,
-              "max": 360,
-              "step": 1,
-              "suffix": "°",
-              "visibleIf": "shadowEnabled"
-            },
-            {
-              "id": "shadowDistance",
-              "label": "Shadow distance",
-              "description": "How far the shadow is offset, in pixels",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 6,
-              "min": 0,
-              "max": 60,
-              "step": 1,
-              "suffix": "px",
-              "visibleIf": "shadowEnabled"
-            },
-            {
-              "id": "shadowBlur",
-              "label": "Shadow blur",
-              "description": "Blur radius, in pixels",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 16,
-              "min": 0,
-              "max": 100,
-              "step": 1,
-              "suffix": "px",
-              "visibleIf": "shadowEnabled"
-            }
-          ]
-        }
-      ]
-    }
-  ]
+    ]
 }

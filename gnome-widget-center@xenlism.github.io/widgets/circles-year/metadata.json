@@ -1,9 +1,9 @@
 {
   "id": "xenlism.github.io.circles-year",
-  "name": "xenlism's Circles Year",
+  "name": "Circles Year By Xenlism",
   "description": "1x1 ring gauge showing the current year floating in the center, with a progress ring for how far through the year today's date is (day-of-year / days-in-year).",
   "version": "1.0.0",
-  "author": "GNOME Widget Center",
+  "author": "Nattapong Pullkhow",
   "api-version": 1,
   "entry": "widget.js",
   "block-type": "1x1",
@@ -12,5 +12,6 @@
     "y": 40,
     "monitor": 0
   },
-  "screenshot": "screenshot.png"
+  "screenshot": "screenshot.png",
+  "themeable": true
 }

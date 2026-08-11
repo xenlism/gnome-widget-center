@@ -51,6 +51,7 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import {hasAllocation, insertChildAboveSafely, isMappedActor} from '../../lib/actorLifecycle.js';
 import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, borderCss as _borderCss, BORDER_DEFAULTS, OPACITY_DEFAULTS} from '../../lib/widgetVisualKit.js';
 
 const TOOLTIP_SHOW_DELAY_MS = 400;
@@ -78,6 +79,7 @@ export default class SettingsControlWidget {
         this._themeIcon = null;
         this._networkButton = null;
         this._bluetoothButton = null;
+        this._airplaneMode = false;
         this._dndButton = null;
         this._themeButton = null;
 
@@ -132,13 +134,15 @@ export default class SettingsControlWidget {
         // FixedLayout otherwise allocates this card at the grid's natural
         // size. Keep the card at the complete 1x1 block so its 2x2 button
         // grid has the intended, symmetric padding on every side.
-        const syncContentSize = () => {
-            this._content.set_position(0, 0);
+        this._actor.connect("notify::mapped", () => {
+            if (!this._actor.mapped) return;
             this._content.set_size(this._actor.width, this._actor.height);
-        };
-        this._actor.connect('notify::width', syncContentSize);
-        this._actor.connect('notify::height', syncContentSize);
-        syncContentSize();
+        });
+
+        this._actor.connect("notify::allocation", () => {
+            if (!this._actor.mapped) return;
+            this._content.set_size(this._actor.width, this._actor.height);
+        });
         this._content.set_style(this._cardStyle(backgroundColor, cornerRadius) + `padding: ${PADDING}px;`);
 
         this._grid = new St.Widget({
@@ -157,10 +161,24 @@ export default class SettingsControlWidget {
         layout.attach(this._networkButton, 0, 0, 1, 1);
         this._tooltips.push(this._attachTooltip(this._networkButton, 'Wi-Fi'));
 
-        this._bluetoothIcon = new St.Icon({icon_name: 'bluetooth-symbolic', icon_size: ICON_SIZE});
-        this._bluetoothButton = this._makeButton(this._bluetoothIcon, () => this._toggleBluetooth());
+        this._bluetoothIcon = new St.Icon({
+            icon_name: 'bluetooth-symbolic',
+            icon_size: ICON_SIZE
+        });
+
+        this._bluetoothButton = this._makeButton(
+            this._bluetoothIcon,
+            () => this._toggleBluetoothOrAirplane()
+        );
+
         layout.attach(this._bluetoothButton, 1, 0, 1, 1);
-        this._tooltips.push(this._attachTooltip(this._bluetoothButton, 'Bluetooth'));
+
+        this._bluetoothTooltip = this._attachTooltip(
+            this._bluetoothButton,
+            'Bluetooth'
+        );
+
+        this._tooltips.push(this._bluetoothTooltip);
 
         this._dndIcon = new St.Icon({icon_name: 'notifications-disabled-symbolic', icon_size: ICON_SIZE});
         this._dndButton = this._makeButton(this._dndIcon, () => this._toggleDnd());
@@ -334,10 +352,21 @@ export default class SettingsControlWidget {
     _enableBluetooth() {
         try {
             const objectManager = Gio.DBusProxy.new_for_bus_sync(
-                Gio.BusType.SYSTEM, Gio.DBusProxyFlags.NONE, null,
-                'org.bluez', '/', 'org.freedesktop.DBus.ObjectManager', null);
+                Gio.BusType.SYSTEM,
+                Gio.DBusProxyFlags.NONE,
+                null,
+                'org.bluez',
+                '/',
+                'org.freedesktop.DBus.ObjectManager',
+                null
+            );
+
             const [managedObjects] = objectManager.call_sync(
-                'GetManagedObjects', null, Gio.DBusCallFlags.NONE, -1, null
+                'GetManagedObjects',
+                null,
+                Gio.DBusCallFlags.NONE,
+                -1,
+                null
             ).deep_unpack();
 
             this._btAdapterPath = Object.keys(managedObjects)
@@ -345,39 +374,138 @@ export default class SettingsControlWidget {
 
             if (this._btAdapterPath) {
                 this._btProxy = Gio.DBusProxy.new_for_bus_sync(
-                    Gio.BusType.SYSTEM, Gio.DBusProxyFlags.NONE, null,
-                    'org.bluez', this._btAdapterPath, 'org.bluez.Adapter1', null);
-                this._btSignalId = this._btProxy.connect('g-properties-changed', () => this._renderBluetooth());
+                    Gio.BusType.SYSTEM,
+                    Gio.DBusProxyFlags.NONE,
+                    null,
+                    'org.bluez',
+                    this._btAdapterPath,
+                    'org.bluez.Adapter1',
+                    null
+                );
+
+                this._btSignalId = this._btProxy.connect(
+                    'g-properties-changed',
+                    () => this._renderBluetooth()
+                );
+
+                this._airplaneMode = false;
             } else {
-                this._api.logger.error('settings-control: no Bluetooth adapter found');
+                this._enableAirplaneFallback();
             }
+
         } catch (e) {
-            this._api.logger.error(`settings-control: could not reach BlueZ: ${e.message}`);
+            // Bluetooth/BlueZ ไม่มี → ใช้ Airplane Mode แทน
             this._btProxy = null;
             this._btAdapterPath = null;
+            this._enableAirplaneFallback();
         }
+
         this._renderBluetooth();
     }
+    _enableAirplaneFallback() {
+    this._airplaneMode = true;
+
+    if (!this._bluetoothIcon || !this._bluetoothButton)
+        return;
+
+    this._bluetoothIcon.icon_name = 'airplane-mode-symbolic';
+
+    this._setToggleState(
+        this._bluetoothIcon,
+        this._bluetoothButton,
+        false
+    );
+
+    this._bluetoothTooltip?.hide();
+
+    this._airplaneTooltip = this._attachTooltip(
+        this._bluetoothButton,
+        'Airplane Mode'
+    );
+
+    this._tooltips.push(this._airplaneTooltip);
+}
 
     /** @private */
     _renderBluetooth() {
         if (!this._bluetoothIcon)
             return;
-        const powered = this._btProxy?.get_cached_property('Powered')?.unpack() ?? false;
-        this._setToggleState(this._bluetoothIcon, this._bluetoothButton, powered);
-    }
 
-    /** @private */
-    _toggleBluetooth() {
-        if (!this._btProxy || !this._btAdapterPath) {
-            this._api.logger.error('settings-control: Bluetooth toggle requested but no adapter is available');
+        if (this._airplaneMode) {
+            this._renderAirplaneMode();
             return;
         }
-        const powered = this._btProxy.get_cached_property('Powered')?.unpack() ?? false;
-        this._setDBusProperty(
-            Gio.BusType.SYSTEM, 'org.bluez', this._btAdapterPath,
-            'org.bluez.Adapter1', 'Powered', GLib.Variant.new_boolean(!powered)
+
+        const powered =
+            this._btProxy
+                ?.get_cached_property('Powered')
+                ?.unpack() ?? false;
+
+        this._bluetoothIcon.icon_name = 'bluetooth-symbolic';
+
+        this._setToggleState(
+            this._bluetoothIcon,
+            this._bluetoothButton,
+            powered
         );
+    }
+    _renderAirplaneMode() {
+        try {
+            const settings = new Gio.Settings({
+                schema_id: 'org.gnome.settings-daemon.plugins.rfkill'
+            });
+
+            const enabled = settings.get_boolean('airplane-mode');
+
+            this._bluetoothIcon.icon_name =
+                'airplane-mode-symbolic';
+
+            this._setToggleState(
+                this._bluetoothIcon,
+                this._bluetoothButton,
+                enabled
+            );
+        } catch (e) {
+            this._setToggleState(
+                this._bluetoothIcon,
+                this._bluetoothButton,
+                false
+            );
+        }
+    }
+    /** @private */
+    _toggleBluetoothOrAirplane() {
+        if (this._airplaneMode) {
+            this._toggleAirplaneMode();
+            return;
+        }
+
+        this._toggleBluetooth();
+    }
+    _toggleAirplaneMode() {
+        try {
+            const settings = new Gio.Settings({
+                schema_id: 'org.gnome.settings-daemon.plugins.rfkill'
+            });
+
+            const current = settings.get_boolean('airplane-mode');
+
+            settings.set_boolean(
+                'airplane-mode',
+                !current
+            );
+
+            this._setToggleState(
+                this._bluetoothIcon,
+                this._bluetoothButton,
+                !current
+            );
+
+        } catch (e) {
+            this._api.logger.error(
+                `settings-control: Airplane Mode toggle failed: ${e.message}`
+            );
+        }
     }
 
     // ---- Do Not Disturb (GSettings) ----------------------------------------
@@ -505,6 +633,15 @@ export default class SettingsControlWidget {
         const enterId = button.connect('enter-event', () => {
             showTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, TOOLTIP_SHOW_DELAY_MS, () => {
                 showTimeoutId = null;
+                // This callback can run after the widget has been removed or
+                // reparented. Only touch theme/layout APIs on mapped actors
+                // that still share the original parent tree.
+                const stage = this._actor?.get_stage?.();
+                if (!stage || !isMappedActor(button, stage) ||
+                    !hasAllocation(this._actor) || !hasAllocation(button) ||
+                    this._grid?.get_parent?.() !== this._content)
+                    return GLib.SOURCE_REMOVE;
+
                 tooltipLabel = new St.Label({
                     style_class: 'settings-control-widget-tooltip',
                     text,
@@ -513,7 +650,11 @@ export default class SettingsControlWidget {
                     'background-color: rgba(20, 20, 20, 0.95); color: #fff; ' +
                     'font-size: 12px; padding: 4px 8px; border-radius: 6px;'
                 );
-                this._actor.insert_child_above(tooltipLabel, this._grid);
+                if (!insertChildAboveSafely(this._actor, tooltipLabel, this._grid)) {
+                    tooltipLabel.destroy();
+                    tooltipLabel = null;
+                    return GLib.SOURCE_REMOVE;
+                }
 
                 const [buttonX, buttonY] = button.get_position();
                 const [, labelHeight] = tooltipLabel.get_preferred_height(-1);

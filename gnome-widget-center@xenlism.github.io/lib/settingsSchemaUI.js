@@ -1,114 +1,70 @@
-// products/extension/lib/settingsSchemaUI.js
-//
-// Task 05 — builds an Adw.PreferencesPage from a widget's declarative
-// `metadata.json` "settings" schema (see settingsSchema.js for the
-// format this consumes and the reasoning behind its v1 type list) plus a
-// live WidgetSettings proxy to read/write. Prefs process ONLY (imports
-// Adw/Gtk/Gdk) — never import this from widgetLoader.js or anything else
-// that also runs in the Shell process, per development/docs/WIDGET_API.md §4's
-// process split.
-//
-// One row type per settingsSchema.js's SETTING_TYPES entry:
-//   string   -> Adw.EntryRow
-//   number   -> Adw.SpinRow (unbounded)
-//   range    -> Adw.SpinRow bounded by min/max
-//   boolean  -> Adw.SwitchRow
-//   dropdown -> Adw.ComboRow (Gtk.StringList of option labels)
-//   color    -> Adw.ActionRow + Gtk.ColorDialogButton suffix
-//   size     -> Adw.SpinRow in pixels, bounded by min/max if given
-//   font     -> Adw.ActionRow + Gtk.FontDialogButton suffix
-//
-// Every row writes straight through to the settings proxy on change —
-// same debounced auto-save WidgetSettings.load() already gives any other
-// caller (see widgetSettings.js), no separate "Save" step. Matches every
-// hand-written prefs.js already in this codebase (e.g.
-// widgets/clock/prefs.js) so a widget switching FROM a hand-written
-// prefs.js TO a declarative schema doesn't change that behavior.
+import Adw from "gi://Adw";
 
-import Adw from 'gi://Adw';
-import Gtk from 'gi://Gtk';
-import Gdk from 'gi://Gdk';
-import Pango from 'gi://Pango';
-import GLib from 'gi://GLib';
+import Gtk from "gi://Gtk";
 
-// 2026-08-09 (handover v3 crash fix) - same rationale as
-// lib/widgetConfigFieldRows.js's own _esc(): Adw row title/subtitle
-// are Pango markup, field.label/description are arbitrary
-// widget-author text (settingsSchema.json), so escape before handing
-// them to a markup-parsed property. set_tooltip_text()/plain-text
-// calls are left alone.
+import Gdk from "gi://Gdk";
+
+import Pango from "gi://Pango";
+
+import GLib from "gi://GLib";
+
 function _esc(text) {
-    return GLib.markup_escape_text(String(text ?? ''), -1);
+    return GLib.markup_escape_text(String(text ?? ""), -1);
 }
 
-/**
- * @method buildSettingsPage
- * @description Entry point — call this instead of importing a widget's
- * own prefs.js when it has no prefs.js of its own but does have a
- * `settings` array in metadata.json (see prefs.js's `_openWidgetPrefs()`
- * for the precedence rule between the two).
- * @param {Array} schema - metadata.settings. Assumed already validated —
- *   WidgetLoader.discover() rejects a widget with an invalid schema
- *   before it can ever reach the Control Center's widget list (see
- *   settingsSchema.js's validateSettingsSchema()), so this function
- *   trusts its input and does not re-validate.
- * @param {Object} settingsProxy - from WidgetSettings.load(), already
- *   defaulted (WidgetSettings.applyDefaults() has already run by the
- *   time a widget shows up in the list — see widgetLoader.js).
- * @param {string} title - the widget's display name, used as the page
- *   title.
- * @returns {Adw.PreferencesPage}
- */
 export function buildSettingsPage(schema, settingsProxy, title) {
-    const page = new Adw.PreferencesPage({title});
-    const group = new Adw.PreferencesGroup();
+    const page = new Adw.PreferencesPage({
+        title: title
+    });
+    const group = new Adw.PreferencesGroup;
     page.add(group);
-
-    for (const field of schema)
-        group.add(_buildRow(field, settingsProxy));
-
+    for (const field of schema) group.add(_buildRow(field, settingsProxy));
     return page;
 }
 
 function _buildRow(field, settingsProxy) {
     const current = field.id in settingsProxy ? settingsProxy[field.id] : field.default;
-
     switch (field.type) {
-    case 'string':
+      case "string":
         return _stringRow(field, settingsProxy, current);
-    case 'number':
+
+      case "number":
         return _numberRow(field, settingsProxy, current);
-    case 'range':
+
+      case "range":
         return _rangeRow(field, settingsProxy, current);
-    case 'boolean':
+
+      case "boolean":
         return _booleanRow(field, settingsProxy, current);
-    case 'dropdown':
+
+      case "dropdown":
         return _dropdownRow(field, settingsProxy, current);
-    case 'color':
+
+      case "color":
         return _colorRow(field, settingsProxy, current);
-    case 'size':
+
+      case "size":
         return _sizeRow(field, settingsProxy, current);
-    case 'font':
+
+      case "font":
         return _fontRow(field, settingsProxy, current);
-    default:
-        // Unreachable if validateSettingsSchema() ran first (see this
-        // function's caller doc comment) — a plain disabled row instead
-        // of throwing, so one bad field can't blank the whole page if
-        // this is ever reached by some future caller that skips
-        // validation.
+
+      default:
         return new Adw.ActionRow({
             title: _esc(field.label ?? field.id),
             subtitle: `Unknown setting type "${field.type}"`,
-            sensitive: false,
+            sensitive: false
         });
     }
 }
 
 function _stringRow(field, settingsProxy, current) {
-    const row = new Adw.EntryRow({title: _esc(field.label), text: String(current ?? '')});
-    if (field.description)
-        row.set_tooltip_text(field.description);
-    row.connect('notify::text', () => {
+    const row = new Adw.EntryRow({
+        title: _esc(field.label),
+        text: String(current ?? "")
+    });
+    if (field.description) row.set_tooltip_text(field.description);
+    row.connect("notify::text", () => {
         settingsProxy[field.id] = row.text;
     });
     return row;
@@ -119,12 +75,14 @@ function _numberRow(field, settingsProxy, current) {
         lower: -Number.MAX_SAFE_INTEGER,
         upper: Number.MAX_SAFE_INTEGER,
         step_increment: 1,
-        value: current,
+        value: current
     });
-    const row = new Adw.SpinRow({title: _esc(field.label), adjustment});
-    if (field.description)
-        row.set_tooltip_text(field.description);
-    row.connect('notify::value', () => {
+    const row = new Adw.SpinRow({
+        title: _esc(field.label),
+        adjustment: adjustment
+    });
+    if (field.description) row.set_tooltip_text(field.description);
+    row.connect("notify::value", () => {
         settingsProxy[field.id] = row.value;
     });
     return row;
@@ -136,67 +94,67 @@ function _rangeRow(field, settingsProxy, current) {
         lower: field.min,
         upper: field.max,
         step_increment: step,
-        value: current,
+        value: current
     });
     const row = new Adw.SpinRow({
         title: _esc(field.label),
-        subtitle: `${field.min}\u2013${field.max}`,
-        adjustment,
-        digits: Number.isInteger(step) ? 0 : 2,
+        subtitle: `${field.min}–${field.max}`,
+        adjustment: adjustment,
+        digits: Number.isInteger(step) ? 0 : 2
     });
-    if (field.description)
-        row.set_tooltip_text(field.description);
-    row.connect('notify::value', () => {
+    if (field.description) row.set_tooltip_text(field.description);
+    row.connect("notify::value", () => {
         settingsProxy[field.id] = row.value;
     });
     return row;
 }
 
 function _booleanRow(field, settingsProxy, current) {
-    const row = new Adw.SwitchRow({title: _esc(field.label), active: Boolean(current)});
-    if (field.description)
-        row.set_subtitle(_esc(field.description));
-    row.connect('notify::active', () => {
+    const row = new Adw.SwitchRow({
+        title: _esc(field.label),
+        active: Boolean(current)
+    });
+    if (field.description) row.set_subtitle(_esc(field.description));
+    row.connect("notify::active", () => {
         settingsProxy[field.id] = row.active;
     });
     return row;
 }
 
 function _dropdownRow(field, settingsProxy, current) {
-    // options: either plain strings, or {value, label} objects — both
-    // forms accepted so a widget author with a plain enum-like list of
-    // strings doesn't have to wrap every one in an object.
-    const options = field.options.map(opt =>
-        typeof opt === 'string' ? {value: opt, label: opt} : opt);
-
-    const model = new Gtk.StringList({strings: options.map(opt => opt.label)});
-    const row = new Adw.ComboRow({title: _esc(field.label), model});
-    if (field.description)
-        row.set_tooltip_text(field.description);
-
+    const options = field.options.map(opt => typeof opt === "string" ? {
+        value: opt,
+        label: opt
+    } : opt);
+    const model = new Gtk.StringList({
+        strings: options.map(opt => opt.label)
+    });
+    const row = new Adw.ComboRow({
+        title: _esc(field.label),
+        model: model
+    });
+    if (field.description) row.set_tooltip_text(field.description);
     const currentIndex = options.findIndex(opt => opt.value === current);
     row.selected = currentIndex >= 0 ? currentIndex : 0;
-
-    row.connect('notify::selected', () => {
+    row.connect("notify::selected", () => {
         settingsProxy[field.id] = options[row.selected]?.value;
     });
     return row;
 }
 
 function _colorRow(field, settingsProxy, current) {
-    const row = new Adw.ActionRow({title: _esc(field.label)});
-    if (field.description)
-        row.set_subtitle(_esc(field.description));
-
-    const rgba = new Gdk.RGBA();
-    rgba.parse(typeof current === 'string' ? current : String(field.default));
-
-    const button = new Gtk.ColorDialogButton({
-        dialog: new Gtk.ColorDialog(),
-        rgba,
-        valign: Gtk.Align.CENTER,
+    const row = new Adw.ActionRow({
+        title: _esc(field.label)
     });
-    button.connect('notify::rgba', () => {
+    if (field.description) row.set_subtitle(_esc(field.description));
+    const rgba = new Gdk.RGBA;
+    rgba.parse(typeof current === "string" ? current : String(field.default));
+    const button = new Gtk.ColorDialogButton({
+        dialog: new Gtk.ColorDialog,
+        rgba: rgba,
+        valign: Gtk.Align.CENTER
+    });
+    button.connect("notify::rgba", () => {
         settingsProxy[field.id] = button.rgba.to_string();
     });
     row.add_suffix(button);
@@ -204,69 +162,46 @@ function _colorRow(field, settingsProxy, current) {
     return row;
 }
 
-// pixel-sized value (e.g. an icon size, a border width) — same
-// Adw.SpinRow shape as _rangeRow(), but `min`/`max` are OPTIONAL here
-// (a widget author who just wants "some reasonable pixel size, no hard
-// bound" doesn't have to invent an arbitrary min/max just to satisfy
-// validateSettingsSchema() the way `range` requires — see its comment).
-// Falls back to a generous 0–10000px span when neither is given.
 function _sizeRow(field, settingsProxy, current) {
-    const hasBounds = typeof field.min === 'number' && typeof field.max === 'number';
+    const hasBounds = typeof field.min === "number" && typeof field.max === "number";
     const adjustment = new Gtk.Adjustment({
         lower: hasBounds ? field.min : 0,
-        upper: hasBounds ? field.max : 10000,
+        upper: hasBounds ? field.max : 1e4,
         step_increment: field.step ?? 1,
-        value: current,
+        value: current
     });
     const row = new Adw.SpinRow({
         title: _esc(field.label),
-        subtitle: hasBounds ? `${field.min}\u2013${field.max} px` : 'px',
-        adjustment,
-        digits: Number.isInteger(field.step ?? 1) ? 0 : 2,
+        subtitle: hasBounds ? `${field.min}–${field.max} px` : "px",
+        adjustment: adjustment,
+        digits: Number.isInteger(field.step ?? 1) ? 0 : 2
     });
-    if (field.description)
-        row.set_tooltip_text(field.description);
-    row.connect('notify::value', () => {
+    if (field.description) row.set_tooltip_text(field.description);
+    row.connect("notify::value", () => {
         settingsProxy[field.id] = row.value;
     });
     return row;
 }
 
-// font picker — GTK4's Gtk.FontDialogButton reads/writes a
-// Pango.FontDescription object via its `font-desc` property, not a plain
-// string, so this converts through Pango explicitly on both ends rather
-// than assuming a bare string getter/setter exists (it doesn't). Stored
-// on disk / read from `field.default` as a plain string either way (e.g.
-// "Sans Bold 12") — same as every other setting value in this file — so
-// a widget's own widget.js never has to import Pango just to read this
-// setting back out of `api.settings`.
 function _fontRow(field, settingsProxy, current) {
-    const row = new Adw.ActionRow({title: _esc(field.label)});
-    if (field.description)
-        row.set_subtitle(_esc(field.description));
-
-    const button = new Gtk.FontDialogButton({
-        dialog: new Gtk.FontDialog(),
-        valign: Gtk.Align.CENTER,
+    const row = new Adw.ActionRow({
+        title: _esc(field.label)
     });
-
-    // Guards the two failure modes that previously crashed prefs.js here
-    // (same fix as widgetConfigUI.js's _fontRow): an empty/missing
-    // current-or-default string reaching Pango.FontDescription.from_string(),
-    // and button.get_font_desc() coming back null (e.g. dialog dismissed
-    // without a selection) before .to_string() is called on it.
-    const fallback = typeof field.default === 'string' && field.default.length > 0 ? field.default : 'Sans 10';
-    const initial = typeof current === 'string' && current.length > 0 ? current : fallback;
+    if (field.description) row.set_subtitle(_esc(field.description));
+    const button = new Gtk.FontDialogButton({
+        dialog: new Gtk.FontDialog,
+        valign: Gtk.Align.CENTER
+    });
+    const fallback = typeof field.default === "string" && field.default.length > 0 ? field.default : "Sans 10";
+    const initial = typeof current === "string" && current.length > 0 ? current : fallback;
     try {
         button.set_font_desc(Pango.FontDescription.from_string(initial));
     } catch (e) {
         button.set_font_desc(Pango.FontDescription.from_string(fallback));
     }
-
-    button.connect('notify::font-desc', () => {
+    button.connect("notify::font-desc", () => {
         const desc = button.get_font_desc();
-        if (!desc)
-            return;
+        if (!desc) return;
         settingsProxy[field.id] = desc.to_string();
     });
     row.add_suffix(button);

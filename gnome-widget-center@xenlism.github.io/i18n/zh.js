@@ -1,8 +1,3 @@
-// i18n/zh.js — gnome-widget-center (extension) (zh)
-// Auto-generated translation table; keys mirror this widget's
-// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
-// canonical English source every other locale file mirrors).
-
 export default {
     "tab.overview.label": "总览",
     "tab.store.label": "商店",
@@ -18,5 +13,5 @@ export default {
     "category.backup": "备份与恢复",
     "category.importexport": "导入/导出",
     "category.advanced": "高级",
-    "category.about": "关于",
+    "category.about": "关于"
 };

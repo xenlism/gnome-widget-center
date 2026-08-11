@@ -1,9 +1,9 @@
 {
   "id": "xenlism.github.io.my-widget",
-  "name": "xenlism's My Widget",
+  "name": "My Widget By Xenlism",
   "description": "TODO: one line describing what this widget does.",
   "version": "1.0.0",
-  "author": "TODO: your name",
+  "author": "Nattapong Pullkhow",
   "api-version": 1,
   "entry": "widget.js",
   "themeable": true,

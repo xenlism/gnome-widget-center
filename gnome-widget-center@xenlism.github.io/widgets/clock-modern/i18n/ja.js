@@ -1,8 +1,3 @@
-// i18n/ja.js — widgets/clock-modern (ja)
-// Auto-generated translation table; keys mirror this widget's
-// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
-// canonical English source every other locale file mirrors).
-
 export default {
     "meta.name": "時計（モダン）",
     "meta.description": "縦積み数字時計カード — 午前/午後・時・分・秒をそれぞれ別の行に表示。",
@@ -37,5 +32,5 @@ export default {
     "field.launchOnClick.label": "クリック時にアプリを起動",
     "field.launchOnClick.description": "下でアプリを選択する必要があります",
     "field.desktopFilePath.label": "起動するアプリ",
-    "field.desktopFilePath.description": "クリック時に起動するアプリケーション（.desktopファイル）",
+    "field.desktopFilePath.description": "クリック時に起動するアプリケーション（.desktopファイル）"
 };

@@ -1,8 +1,3 @@
-// i18n/th.js — widgets/calendar-header (th)
-// Auto-generated translation table; keys mirror this widget's
-// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
-// canonical English source every other locale file mirrors).
-
 export default {
     "meta.name": "ปฏิทิน (หัวเรื่อง)",
     "meta.description": "ปฏิทินสองโทนสีพร้อมแถบหัวเรื่องสีสำหรับเดือนและวัน",
@@ -16,5 +11,5 @@ export default {
     "field.bodyColor.label": "พื้นหลังส่วนเนื้อหา",
     "field.bodyColor.description": "แผงด้านหลังตัวเลขวันที่",
     "field.dayColor.label": "สีตัวเลขวันที่",
-    "field.dayColor.description": "สีของตัวเลขวันที่",
+    "field.dayColor.description": "สีของตัวเลขวันที่"
 };

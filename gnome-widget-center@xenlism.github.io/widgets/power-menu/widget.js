@@ -35,6 +35,7 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import {hasAllocation, insertChildAboveSafely, isMappedActor} from '../../lib/actorLifecycle.js';
 import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, borderCss as _borderCss, BORDER_DEFAULTS, OPACITY_DEFAULTS} from '../../lib/widgetVisualKit.js';
 
 const TOOLTIP_SHOW_DELAY_MS = 400;
@@ -91,13 +92,15 @@ export default class PowerMenuWidget {
         // FixedLayout otherwise allocates this card at the grid's natural
         // size. Keep the card at the complete 1x1 block so its 2x2 button
         // grid has the intended, symmetric padding on every side.
-        const syncContentSize = () => {
-            this._content.set_position(0, 0);
+        this._actor.connect("notify::mapped", () => {
+            if (!this._actor.mapped) return;
             this._content.set_size(this._actor.width, this._actor.height);
-        };
-        this._actor.connect('notify::width', syncContentSize);
-        this._actor.connect('notify::height', syncContentSize);
-        syncContentSize();
+        });
+
+        this._actor.connect("notify::allocation", () => {
+            if (!this._actor.mapped) return;
+            this._content.set_size(this._actor.width, this._actor.height);
+        });
         this._content.set_style(this._cardStyle(backgroundColor, cornerRadius) + `padding: ${PADDING}px;`);
 
         this._grid = new St.Widget({
@@ -177,7 +180,7 @@ export default class PowerMenuWidget {
         return {
             backgroundColor: '#FFFFFF00', // white @ 0.85 alpha ("d9")
             cornerRadius: 18,
-            iconColor: '#2e2e2e',
+            iconColor: '#FFFFFF',
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
@@ -282,6 +285,12 @@ export default class PowerMenuWidget {
         const enterId = button.connect('enter-event', () => {
             showTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, TOOLTIP_SHOW_DELAY_MS, () => {
                 showTimeoutId = null;
+                const stage = this._actor?.get_stage?.();
+                if (!stage || !isMappedActor(button, stage) ||
+                    !hasAllocation(this._actor) || !hasAllocation(button) ||
+                    this._grid?.get_parent?.() !== this._actor)
+                    return GLib.SOURCE_REMOVE;
+
                 tooltipLabel = new St.Label({
                     style_class: 'power-menu-widget-tooltip',
                     text,
@@ -290,7 +299,11 @@ export default class PowerMenuWidget {
                     'background-color: rgba(20, 20, 20, 0.95); color: #fff; ' +
                     'font-size: 12px; padding: 4px 8px; border-radius: 6px;'
                 );
-                this._actor.insert_child_above(tooltipLabel, this._grid);
+                if (!insertChildAboveSafely(this._actor, tooltipLabel, this._grid)) {
+                    tooltipLabel.destroy();
+                    tooltipLabel = null;
+                    return GLib.SOURCE_REMOVE;
+                }
 
                 const [buttonX, buttonY] = button.get_position();
                 const [, labelHeight] = tooltipLabel.get_preferred_height(-1);

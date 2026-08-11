@@ -1,287 +1,287 @@
 {
-  "version": "1.0",
-  "tabs": [
-    {
-      "id": "general",
-      "label": "Weather (Dark)",
-      "description": "Dark weather card settings",
-      "icon": "weather-clear-symbolic",
-      "groups": [
+    "version": "1.0",
+    "tabs": [
         {
-          "id": "location",
-          "label": "Location",
-          "description": "Type coordinates directly, or use the location button to detect them from your IP address.",
-          "fields": [
-            {
-              "id": "location",
-              "label": "Location",
-              "description": "Coordinates as latitude,longitude - e.g. 15.1111,85.2555",
-              "dataType": "string",
-              "fieldType": "location",
-              "pattern": "^-?\\d{1,2}(\\.\\d+)?\\s*,\\s*-?\\d{1,3}(\\.\\d+)?$",
-              "default": "8.643021595875682, 98.26415681292032"
-            }
-          ]
-        },
-        {
-          "id": "card",
-          "label": "Card",
-          "description": "",
-          "fields": [
-            {
-              "id": "cardColor",
-              "label": "Background color",
-              "description": "Background color of the weather card",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "default": "#1c1f26"
-            },
-            {
-              "id": "cornerRadius",
-              "label": "Corner radius",
-              "description": "Roundness of the card's corners",
-              "dataType": "number",
-              "fieldType": "spinbutton",
-              "default": 18,
-              "min": 0,
-              "max": 60,
-              "step": 1,
-              "suffix": "px"
-            }
-          ]
-        },
-        {
-          "id": "borderOpacity",
-          "label": "Border & Opacity",
-          "description": "",
-          "fields": [
-            {
-              "id": "borderEnabled",
-              "label": "Enable border",
-              "description": "Draw a border around this widget's card",
-              "dataType": "boolean",
-              "fieldType": "switch",
-              "default": false
-            },
-            {
-              "id": "borderColor",
-              "label": "Border color",
-              "description": "",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "alpha": true,
-              "default": "#FFFFFF33",
-              "visibleIf": "borderEnabled"
-            },
-            {
-              "id": "borderWidth",
-              "label": "Border width",
-              "description": "",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 1,
-              "min": 0,
-              "max": 16,
-              "step": 1,
-              "suffix": "px",
-              "visibleIf": "borderEnabled"
-            },
-            {
-              "id": "opacity",
-              "label": "Opacity",
-              "description": "Fades the entire widget - background, text, icons, everything.",
-              "dataType": "integer",
-              "fieldType": "slider",
-              "default": 100,
-              "min": 0,
-              "max": 100,
-              "step": 1,
-              "suffix": "%"
-            }
-          ]
-        },
-        {
-          "id": "icon",
-          "label": "Weather Icon",
-          "description": "Same icon set as Weather (Minimal), based on weather-iconic (https://github.com/konradmichalik/weather-iconic) naming conventions.",
-          "fields": [
-            {
-              "id": "iconColor",
-              "label": "Icon color",
-              "description": "Color the weather icon is tinted",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "default": "#ffffff"
-            },
-            {
-              "id": "iconSize",
-              "label": "Icon size",
-              "description": "Size of the weather icon",
-              "dataType": "number",
-              "fieldType": "spinbutton",
-              "default": 72,
-              "min": 16,
-              "max": 160,
-              "step": 1,
-              "suffix": "px"
-            }
-          ]
-        },
-        {
-          "id": "condition",
-          "label": "Weather Condition",
-          "description": "The text line below the temperature (e.g. \"Storm\", \"Rain\", \"Clear\")",
-          "fields": [
-            {
-              "id": "conditionFont",
-              "label": "Condition font",
-              "description": "Font face and size for the condition text",
-              "dataType": "string",
-              "fieldType": "fontpicker",
-              "format": "font",
-              "default": "Sans 18"
-            },
-            {
-              "id": "conditionColor",
-              "label": "Condition color",
-              "description": "Color of the condition text",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "default": "#e6e6e6"
-            }
-          ]
-        },
-        {
-          "id": "temp",
-          "label": "Temperature",
-          "description": "",
-          "fields": [
-            {
-              "id": "tempFont",
-              "label": "Temperature font",
-              "description": "Font face and size for the temperature",
-              "dataType": "string",
-              "fieldType": "fontpicker",
-              "format": "font",
-              "default": "Sans Bold 40"
-            },
-            {
-              "id": "tempColor",
-              "label": "Temperature color",
-              "description": "Color of the temperature text",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "default": "#ffffff"
-            },
-            {
-              "id": "tempUnit",
-              "label": "Unit",
-              "description": "Celsius or Fahrenheit",
-              "dataType": "string",
-              "fieldType": "dropdown",
-              "default": "celsius",
-              "options": [
+            "id": "general",
+            "label": "Weather (Dark)",
+            "description": "Dark weather card settings",
+            "icon": "weather-clear-symbolic",
+            "groups": [
                 {
-                  "value": "celsius",
-                  "label": "Celsius (°C)"
+                    "id": "location",
+                    "label": "Location",
+                    "description": "Type coordinates directly, or use the location button to detect them from your IP address.",
+                    "fields": [
+                        {
+                            "id": "location",
+                            "label": "Location",
+                            "description": "Coordinates as latitude,longitude - e.g. 15.1111,85.2555",
+                            "dataType": "string",
+                            "fieldType": "location",
+                            "pattern": "^-?\\d{1,2}(\\.\\d+)?\\s*,\\s*-?\\d{1,3}(\\.\\d+)?$",
+                            "default": "8.61501,98.23994"
+                        }
+                    ]
                 },
                 {
-                  "value": "fahrenheit",
-                  "label": "Fahrenheit (°F)"
+                    "id": "card",
+                    "label": "Card",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "cardColor",
+                            "label": "Background color",
+                            "description": "Background color of the weather card",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "default": "#1c1f26"
+                        },
+                        {
+                            "id": "cornerRadius",
+                            "label": "Corner radius",
+                            "description": "Roundness of the card's corners",
+                            "dataType": "number",
+                            "fieldType": "spinbutton",
+                            "default": 18,
+                            "min": 0,
+                            "max": 60,
+                            "step": 1,
+                            "suffix": "px"
+                        }
+                    ]
+                },
+                {
+                    "id": "borderOpacity",
+                    "label": "Border & Opacity",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "borderEnabled",
+                            "label": "Enable border",
+                            "description": "Draw a border around this widget's card",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": false
+                        },
+                        {
+                            "id": "borderColor",
+                            "label": "Border color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFF33",
+                            "visibleIf": "borderEnabled"
+                        },
+                        {
+                            "id": "borderWidth",
+                            "label": "Border width",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 1,
+                            "min": 0,
+                            "max": 16,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "borderEnabled"
+                        },
+                        {
+                            "id": "opacity",
+                            "label": "Opacity",
+                            "description": "Fades the entire widget - background, text, icons, everything.",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 100,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "suffix": "%"
+                        }
+                    ]
+                },
+                {
+                    "id": "icon",
+                    "label": "Weather Icon",
+                    "description": "Same icon set as Weather (Minimal), based on weather-iconic (https://github.com/konradmichalik/weather-iconic) naming conventions.",
+                    "fields": [
+                        {
+                            "id": "iconColor",
+                            "label": "Icon color",
+                            "description": "Color the weather icon is tinted",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "default": "#ffffff"
+                        },
+                        {
+                            "id": "iconSize",
+                            "label": "Icon size",
+                            "description": "Size of the weather icon",
+                            "dataType": "number",
+                            "fieldType": "spinbutton",
+                            "default": 72,
+                            "min": 16,
+                            "max": 160,
+                            "step": 1,
+                            "suffix": "px"
+                        }
+                    ]
+                },
+                {
+                    "id": "condition",
+                    "label": "Weather Condition",
+                    "description": "The text line below the temperature (e.g. \"Storm\", \"Rain\", \"Clear\")",
+                    "fields": [
+                        {
+                            "id": "conditionFont",
+                            "label": "Condition font",
+                            "description": "Font face and size for the condition text",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "format": "font",
+                            "default": "Sans 18"
+                        },
+                        {
+                            "id": "conditionColor",
+                            "label": "Condition color",
+                            "description": "Color of the condition text",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "default": "#e6e6e6"
+                        }
+                    ]
+                },
+                {
+                    "id": "temp",
+                    "label": "Temperature",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "tempFont",
+                            "label": "Temperature font",
+                            "description": "Font face and size for the temperature",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "format": "font",
+                            "default": "Sans Bold 40"
+                        },
+                        {
+                            "id": "tempColor",
+                            "label": "Temperature color",
+                            "description": "Color of the temperature text",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "default": "#ffffff"
+                        },
+                        {
+                            "id": "tempUnit",
+                            "label": "Unit",
+                            "description": "Celsius or Fahrenheit",
+                            "dataType": "string",
+                            "fieldType": "dropdown",
+                            "default": "celsius",
+                            "options": [
+                                {
+                                    "value": "celsius",
+                                    "label": "Celsius (°C)"
+                                },
+                                {
+                                    "value": "fahrenheit",
+                                    "label": "Fahrenheit (°F)"
+                                }
+                            ]
+                        }
+                    ]
                 }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "shadow",
-      "label": "Shadow",
-      "description": "Drop shadow behind this widget.",
-      "groups": [
+            ]
+        },
         {
-          "id": "shadow",
-          "label": "Shadow effect",
-          "description": "Off by default. Default color is black at 30% transparency.",
-          "fields": [
-            {
-              "id": "shadowEnabled",
-              "label": "Enable shadow",
-              "description": "Add a drop shadow behind this widget",
-              "dataType": "boolean",
-              "fieldType": "switch",
-              "default": false
-            },
-            {
-              "id": "shadowColor",
-              "label": "Shadow color",
-              "description": "",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "default": "#000000",
-              "visibleIf": "shadowEnabled"
-            },
-            {
-              "id": "shadowOpacity",
-              "label": "Shadow transparency",
-              "description": "Shadow opacity, 0-100%",
-              "dataType": "integer",
-              "fieldType": "slider",
-              "default": 30,
-              "min": 0,
-              "max": 100,
-              "step": 1,
-              "suffix": "%",
-              "visibleIf": "shadowEnabled"
-            },
-            {
-              "id": "shadowAngle",
-              "label": "Shadow angle",
-              "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
-              "dataType": "integer",
-              "fieldType": "slider",
-              "default": 90,
-              "min": 0,
-              "max": 360,
-              "step": 1,
-              "suffix": "°",
-              "visibleIf": "shadowEnabled"
-            },
-            {
-              "id": "shadowDistance",
-              "label": "Shadow distance",
-              "description": "How far the shadow is offset, in pixels",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 6,
-              "min": 0,
-              "max": 60,
-              "step": 1,
-              "suffix": "px",
-              "visibleIf": "shadowEnabled"
-            },
-            {
-              "id": "shadowBlur",
-              "label": "Shadow blur",
-              "description": "Blur radius, in pixels",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 16,
-              "min": 0,
-              "max": 100,
-              "step": 1,
-              "suffix": "px",
-              "visibleIf": "shadowEnabled"
-            }
-          ]
+            "id": "shadow",
+            "label": "Shadow",
+            "description": "Drop shadow behind this widget.",
+            "groups": [
+                {
+                    "id": "shadow",
+                    "label": "Shadow effect",
+                    "description": "Off by default. Default color is black at 30% transparency.",
+                    "fields": [
+                        {
+                            "id": "shadowEnabled",
+                            "label": "Enable shadow",
+                            "description": "Add a drop shadow behind this widget",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": false
+                        },
+                        {
+                            "id": "shadowColor",
+                            "label": "Shadow color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#000000",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowOpacity",
+                            "label": "Shadow transparency",
+                            "description": "Shadow opacity, 0-100%",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 30,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "suffix": "%",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowAngle",
+                            "label": "Shadow angle",
+                            "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 90,
+                            "min": 0,
+                            "max": 360,
+                            "step": 1,
+                            "suffix": "°",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowDistance",
+                            "label": "Shadow distance",
+                            "description": "How far the shadow is offset, in pixels",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 6,
+                            "min": 0,
+                            "max": 60,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowBlur",
+                            "label": "Shadow blur",
+                            "description": "Blur radius, in pixels",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 16,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "shadowEnabled"
+                        }
+                    ]
+                }
+            ]
         }
-      ]
-    }
-  ]
+    ]
 }

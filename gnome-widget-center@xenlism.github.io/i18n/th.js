@@ -1,8 +1,3 @@
-// i18n/th.js — gnome-widget-center (extension) (th)
-// Auto-generated translation table; keys mirror this widget's
-// metadata.json/config.json field ids 1:1 (see i18n/en.js for the
-// canonical English source every other locale file mirrors).
-
 export default {
     "tab.overview.label": "ภาพรวม",
     "tab.store.label": "สโตร์",
@@ -60,5 +55,5 @@ export default {
     "backup.result.files_restored": "กู้คืนไฟล์แล้ว {count} วิดเจ็ต",
     "backup.result.reopen_hint": "เปิดหน้าต่างนี้ใหม่ (หรือรีสตาร์ทวิดเจ็ต) เพื่อให้เห็นการเปลี่ยนแปลงทั้งหมด",
     "shared.result.missing_dependencies": "ขาดโปรแกรมที่จำเป็นในระบบ:",
-    "shared.result.install_with": "ติดตั้งด้วยคำสั่ง:",
+    "shared.result.install_with": "ติดตั้งด้วยคำสั่ง:"
 };

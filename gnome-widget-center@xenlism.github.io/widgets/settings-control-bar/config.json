@@ -38,7 +38,7 @@
               "dataType": "string",
               "fieldType": "colorpicker",
               "format": "color",
-              "default": "#9a9996"
+              "default": "#FFFFFF"
             }
           ]
         },
