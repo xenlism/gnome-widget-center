@@ -180,7 +180,7 @@ export default class PowerMenuWidget {
         return {
             backgroundColor: '#FFFFFF00', // white @ 0.85 alpha ("d9")
             cornerRadius: 18,
-            iconColor: '#FFFFFF',
+            iconColor: '#2e2e2e',
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,

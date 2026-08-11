@@ -671,16 +671,16 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
 
         const borderGroup = new Adw.PreferencesGroup({
             title: "Widget border",
-            description: "Uses the older theme.json mechanism, not the 4 GSettings Force " + 'switches above. "Enabled" below must be ON for "Force" to actually draw ' + "anything - Force only decides whether this group's values OVERRIDE a " + "widget's own border, it does not turn the border on by itself."
+            description: "Uses the older theme.json mechanism, not the 4 GSettings Force " + "switches above. Forces this border's color/width onto every widget, " + "overriding whatever a widget sets for itself in its own Appearance settings."
         });
         page.add(borderGroup);
         
-        const borderEnabledRow = new Adw.SwitchRow({
-            title: "Enabled",
-            subtitle: "Turning this off hides the border everywhere, even with Force on below.",
-            active: !!current.border.enabled
+        const borderForceRow = new Adw.SwitchRow({
+            title: "Force border on every widget",
+            subtitle: "Off: widgets keep their own border settings. On: every widget uses the color/width below.",
+            active: !!current.border.enabled && !!current.border.force
         });
-        borderGroup.add(borderEnabledRow);
+        borderGroup.add(borderForceRow);
         
         const borderColorRow = new Adw.ActionRow({
             title: "Border color"
@@ -710,27 +710,17 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         });
         borderGroup.add(borderWidthRow);
         
-        const borderForceRow = new Adw.SwitchRow({
-            title: "Force this border on every widget",
-            subtitle: "Overrides any border a widget sets for itself in its own Appearance settings.",
-            active: !!current.border.force
-        });
-        borderGroup.add(borderForceRow);
-        
         const saveBorder = () => {
             theme.setGlobalTheme({
                 border: {
-                    enabled: borderEnabledRow.active,
+                    enabled: borderForceRow.active,
                     width: borderWidthRow.value,
                     color: rgbaToHex8(borderColorButton.rgba),
                     force: borderForceRow.active
                 }
             });
         };
-        borderForceRow.connect("notify::active", () => {
-            if (borderForceRow.active && !borderEnabledRow.active) borderEnabledRow.active = true; else saveBorder();
-        });
-        borderEnabledRow.connect("notify::active", saveBorder);
+        borderForceRow.connect("notify::active", saveBorder);
         borderColorButton.connect("notify::rgba", saveBorder);
         borderWidthRow.connect("notify::value", saveBorder);
 
