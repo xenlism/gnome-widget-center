@@ -28,7 +28,7 @@ let controller = null;
 
 let buildPromise = null;
 
-async function presentWindow(requestedWidgetId, focusTarget = null, exportThemeId = null, exportThemeNew = false) {
+async function presentWindow(requestedWidgetId, focusTarget = null, exportThemeId = null, exportThemeNew = false, attachScreenshotPath = null) {
     if (!controller) {
         window = new Adw.PreferencesWindow({
             application: app
@@ -59,7 +59,9 @@ async function presentWindow(requestedWidgetId, focusTarget = null, exportThemeI
     if (!window) return;
     if (requestedWidgetId) controller.jumpToWidget(window, requestedWidgetId); else if (focusTarget === "backup") controller.showBackupPage(window); else if (focusTarget === "preferences") controller.showPreferencesPage(window);
     window.present();
-    if (exportThemeId) controller.openExportThemeDialogForPack(window, exportThemeId); else if (exportThemeNew) controller.openExportThemeDialog(window);
+    if (exportThemeId) controller.openExportThemeDialogForPack(window, exportThemeId); else if (exportThemeNew) controller.openExportThemeDialog(window, attachScreenshotPath ? {
+        screenshotPath: attachScreenshotPath
+    } : {});
 }
 
 app.connect("activate", () => {
@@ -72,10 +74,11 @@ app.connect("command-line", (application, commandLine) => {
     let focusTarget = null;
     let exportThemeId = null;
     let exportThemeNew = false;
+    let attachScreenshotPath = null;
     for (const arg of argv) {
-        if (arg.startsWith("--widget-id=")) requestedWidgetId = arg.slice("--widget-id=".length); else if (arg.startsWith("--focus=")) focusTarget = arg.slice("--focus=".length); else if (arg.startsWith("--export-theme-id=")) exportThemeId = arg.slice("--export-theme-id=".length); else if (arg === "--export-theme-new") exportThemeNew = true;
+        if (arg.startsWith("--widget-id=")) requestedWidgetId = arg.slice("--widget-id=".length); else if (arg.startsWith("--focus=")) focusTarget = arg.slice("--focus=".length); else if (arg.startsWith("--export-theme-id=")) exportThemeId = arg.slice("--export-theme-id=".length); else if (arg === "--export-theme-new") exportThemeNew = true; else if (arg.startsWith("--attach-screenshot=")) attachScreenshotPath = arg.slice("--attach-screenshot=".length);
     }
-    presentWindow(requestedWidgetId, focusTarget, exportThemeId, exportThemeNew).catch(e => logError(e, "[widget-center] widget-center-prefs-app: command-line handling failed"));
+    presentWindow(requestedWidgetId, focusTarget, exportThemeId, exportThemeNew, attachScreenshotPath).catch(e => logError(e, "[widget-center] widget-center-prefs-app: command-line handling failed"));
     return 0;
 });
 

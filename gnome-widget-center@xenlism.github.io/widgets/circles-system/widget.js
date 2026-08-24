@@ -14,6 +14,7 @@ import { SHADOW_DEFAULTS, hexToRgba as _hexToRgba, toCssColor as _toCssColor, pa
 
 import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
 
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 const RING_SIZE = 44;
 
 const RING_SPACING = 8;
@@ -153,25 +154,10 @@ export default class CirclesSystemWidget {
     }
     getDefaultSettings() {
         return {
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
-            backgroundColor: "#FFFFFF00",
-            cornerRadius: 18,
-            circleBaseColor: "#FFFFFF26",
-            cpuRingColor: "#33D17AFF",
-            memRingColor: "#3584E4FF",
-            hddRingColor: "#F5C211FF",
-            ringThickness: 6,
-            captionFont: "Sans 8",
-            captionColor: "#FFFFFFB3",
-            cpuValueFont: "Sans Bold 11",
-            cpuValueColor: "#FFFFFFFF",
-            memValueFont: "Sans Bold 11",
-            memValueColor: "#FFFFFFFF",
-            hddValueFont: "Sans Bold 11",
-            hddValueColor: "#FFFFFFFF",
-            refreshRateSeconds: 2
         };
     }
     onSettingsChanged() {

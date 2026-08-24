@@ -14,6 +14,7 @@ import { MprisMediaService } from "../../lib/mediaApi.js";
 
 import { SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor, BORDER_DEFAULTS, OPACITY_DEFAULTS } from "../../lib/widgetVisualKit.js";
 
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 const SIZE = 176;
 
 const COVER_SIZE = 154;
@@ -54,9 +55,17 @@ export default class MediaPlayerSquareWidget {
             layout_manager: new Clutter.BinLayout,
             width: SIZE,
             height: SIZE,
-            reactive: true,
-            clip_to_allocation: false
+            reactive: true
         });
+        this._content = new St.Widget({
+            layout_manager: new Clutter.BinLayout,
+            clip_to_allocation: true
+        });
+        this._content.add_constraint(new Clutter.BindConstraint({
+            source: this._actor,
+            coordinate: Clutter.BindCoordinate.SIZE
+        }));
+        this._actor.add_child(this._content);
         this._coverStack = new St.Widget({
             layout_manager: new Clutter.BinLayout,
             width: COVER_SIZE,
@@ -65,7 +74,7 @@ export default class MediaPlayerSquareWidget {
             y_align: Clutter.ActorAlign.CENTER,
             clip_to_allocation: true
         });
-        this._actor.add_child(this._coverStack);
+        this._content.add_child(this._coverStack);
         this._fallbackArea = new St.DrawingArea({
             width: COVER_SIZE,
             height: COVER_SIZE
@@ -105,7 +114,9 @@ export default class MediaPlayerSquareWidget {
         this._artistLabel = new St.Label({
             text: ""
         });
-        for (const label of [ this._titleLabel, this._albumLabel, this._artistLabel ]) label.clutter_text.set_ellipsize(3);
+        // Overflowing titles/album/artist text is hidden by the Content
+        // Layer's clip_to_allocation (Rule 4) - no ellipsize substitute.
+        for (const label of [ this._titleLabel, this._albumLabel, this._artistLabel ]) label.clutter_text.set_line_wrap(false);
         this._textBox = new St.BoxLayout({
             vertical: true,
             width: COVER_SIZE,
@@ -125,7 +136,7 @@ export default class MediaPlayerSquareWidget {
             style: "background-color: transparent;"
         });
         this._coverButton.connect("clicked", () => this._onCoverClicked());
-        this._actor.add_child(this._coverButton);
+        this._content.add_child(this._coverButton);
         this._prevButton = this._makeButton("media-skip-backward-symbolic", () => this._media.previous());
         this._playPauseButton = this._makeButton("media-playback-start-symbolic", () => this._onPlayClicked());
         this._nextButton = this._makeButton("media-skip-forward-symbolic", () => this._media.next());
@@ -138,7 +149,7 @@ export default class MediaPlayerSquareWidget {
         this._controls.add_child(this._prevButton);
         this._controls.add_child(this._playPauseButton);
         this._controls.add_child(this._nextButton);
-        this._actor.add_child(this._controls);
+        this._content.add_child(this._controls);
         this._actor.set_track_hover(true);
         this._hoverId = this._actor.connect("notify::hover", () => {
             this._controls.visible = this._actor.hover;
@@ -163,15 +174,10 @@ export default class MediaPlayerSquareWidget {
     }
     getDefaultSettings() {
         return {
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
-            backgroundColor: "#FFFFFF00",
-            cornerRadius: 18,
-            infoFont: "Sans Bold 13",
-            infoColor: "#FFFFFFFF",
-            buttonColor: "#FFFFFFFF",
-            desktopFilePath: ""
         };
     }
     onSettingsChanged() {

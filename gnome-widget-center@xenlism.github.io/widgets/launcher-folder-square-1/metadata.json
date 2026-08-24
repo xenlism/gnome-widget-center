@@ -1,17 +1,15 @@
 {
-  "id": "xenlism.github.io.launcher-folder-square-1",
-  "name": "Folder Launcher (Square) By Xenlism",
-  "description": "Android-style launcher shortcut for FOLDERS: 4 folders in a 2x2 grid, no labels, click opens each in your default file manager. Recognizes XDG special folders (Downloads, Documents, Music, Pictures, Videos, Desktop, Public, Templates, Home) and shows their proper icon instead of a generic folder icon.",
-  "version": "1.0.0",
-  "author": "Nattapong Pullkhow",
-  "api-version": 1,
-  "entry": "widget.js",
-  "block-type": "1x1",
-  "default-position": {
-    "x": 1216,
-    "y": 368,
-    "monitor": 0
-  },
-  "themeable": false,
-  "forceSettingsAware": true
+    "id": "xenlism.github.io.launcher-folder-square-1",
+    "name": "Folder Launcher (Square) By Xenlism",
+    "description": "Android-style launcher shortcut for FOLDERS: 4 folders in a 2x2 grid, no labels, click opens each in your default file manager. Recognizes XDG special folders (Downloads, Documents, Music, Pictures, Videos, Desktop, Public, Templates, Home) and shows their proper icon instead of a generic folder icon.",
+    "version": "1.0.0",
+    "author": "Nattapong Pullkhow",
+    "api-version": 1,
+    "entry": "widget.js",
+    "block-type": "1x1",
+    "default-position": {
+        "x": 1216,
+        "y": 368,
+        "monitor": 0
+    }
 }

@@ -1,4 +1,9 @@
-
+/* [FIX] wc-overlay-card-screenshot: static height corrected from 197px to
+ * 152px to match the 3:1 width:height ratio (card content width 456px =
+ * 480px card - 24px padding -> 456/3 = 152px). Previously mismatched the
+ * runtime value set in widgetCenterOverlay.js:_buildScreenshot(), causing
+ * a flash of wrong ratio before JS override. Applies to both screenshot
+ * and non-screenshot (fallback icon) cards, since both use the same bin. */
 
 .widget-edit-toolbar,
 .widget-edit-mode-icon-row,
@@ -158,8 +163,7 @@
 }
 
 .wc-overlay-card-screenshot {
-
-    height: 197px;
+    height: 152px; /* 3:1 ratio (456px content width / 3) */
     border-radius: 8px;
     background-color: rgba(0, 0, 0, 0.35);
 }

@@ -1,43 +1,5 @@
 import Pango from "gi://Pango";
 
-let _forcedTheme = null;
-
-export function setForcedTheme(theme) {
-    _forcedTheme = theme ?? null;
-}
-
-function _isForced(category) {
-    return !!_forcedTheme?.[category]?.force;
-}
-
-let _forceSettingsHelper = null;
-
-export function setForceSettingsHelper(helper) {
-    _forceSettingsHelper = helper ?? null;
-}
-
-function _resolveForceSettings(settings, {backgroundColorKey: backgroundColorKey = "backgroundColor", cornerRadiusKey: cornerRadiusKey = "cornerRadius"} = {}) {
-    if (!_forceSettingsHelper) return null;
-    const effIgnore = settings?.__ignoreForce === true;
-    if (effIgnore) return null;
-    
-    const s = settings ?? {};
-    return _forceSettingsHelper.resolve({
-        background: {
-            color: s[backgroundColorKey],
-            cornerRadius: s[cornerRadiusKey],
-            blur: s.blurEnabled ?? BLUR_DEFAULTS.blurEnabled ? s.blurRadius : 0
-        },
-        shadow: {
-            enabled: s.shadowEnabled,
-            color: s.shadowColor,
-            opacity: s.shadowOpacity,
-            spread: 0,
-            blur: s.shadowBlur
-        }
-    });
-}
-
 export const SHADOW_ANGLE_STEPS = [ 45, 90, 135, 180, 225, 270, 315 ];
 
 export function angleDistanceToOffset(angleDeg, distance) {
@@ -46,6 +8,19 @@ export function angleDistanceToOffset(angleDeg, distance) {
         offsetX: Math.round(Math.cos(rad) * distance * 100) / 100,
         offsetY: Math.round(Math.sin(rad) * distance * 100) / 100
     };
+}
+
+// Registered by extension.js at enable() with a GlobalShadowHelper
+// instance (see lib/globalShadowHelper.js). shadow-distance/shadow-angle
+// are the one appearance value every widget's drop shadow always shares
+// - everything else (color/opacity/blur/spread) is purely per-widget,
+// read straight from that widget's own settings below. There is no more
+// "Force Settings" system pinning background/corner-radius/blur/shadow
+// to a global value - each widget always owns its own card styling.
+let _globalShadowHelper = null;
+
+export function setGlobalShadowHelper(helper) {
+    _globalShadowHelper = helper ?? null;
 }
 
 export const SHADOW_DEFAULTS = {
@@ -69,23 +44,7 @@ export function boxShadowCss({color: color, opacityPercent: opacityPercent, angl
     return `box-shadow: ${offsetX}px ${offsetY}px ${Math.max(0, blur)}px ${spread}px rgba(${r}, ${g}, ${b}, ${a});`;
 }
 
-export function getForceAwareBlurSettings(settings, ignoreForce = false) {
-    const effIgnore = ignoreForce || settings?.__ignoreForce === true;
-    const resolved = effIgnore ? null : _resolveForceSettings(settings);
-    if (resolved) {
-        const radius = resolved.background.blur;
-        return {
-            enabled: Number.isFinite(radius) && radius > 0,
-            radius: Math.max(0, radius ?? BLUR_DEFAULTS.blurRadius)
-        };
-    }
-    if (!effIgnore && _isForced("background")) {
-        const radius = _forcedTheme.background?.blur;
-        return {
-            enabled: Number.isFinite(radius) && radius > 0,
-            radius: Math.max(0, radius ?? BLUR_DEFAULTS.blurRadius)
-        };
-    }
+export function getBlurSettings(settings) {
     const s = settings ?? {};
     return {
         enabled: s.blurEnabled ?? BLUR_DEFAULTS.blurEnabled,
@@ -93,44 +52,20 @@ export function getForceAwareBlurSettings(settings, ignoreForce = false) {
     };
 }
 
-export function shadowBoxShadowCss(settings, ignoreForce = false) {
-    const effIgnore = ignoreForce || settings?.__ignoreForce === true;
-    const resolved = effIgnore ? null : _resolveForceSettings(settings);
-    if (resolved) {
-        const {shadow: shadow} = resolved;
-        if (!shadow.enabled) return "";
-        return boxShadowCss({
-            color: shadow.color,
-            opacityPercent: shadow.opacity,
-            angleDeg: shadow.angle,
-            distance: shadow.distance,
-            blur: shadow.blur,
-            spread: shadow.spread
-        });
-    }
-    if (!effIgnore && _isForced("dropShadow")) return _forcedShadowBoxShadowCss(_forcedTheme.dropShadow);
+export function shadowBoxShadowCss(settings) {
     const s = settings ?? {};
     if (!(s.shadowEnabled ?? SHADOW_DEFAULTS.shadowEnabled)) return "";
+    // shadow-distance/shadow-angle are always-global (see
+    // lib/globalShadowHelper.js) - every other shadow property still
+    // comes from the widget's own settings.
+    const globalDistanceAngle = _globalShadowHelper?.getGlobalShadowDistanceAngle?.();
     return boxShadowCss({
         color: s.shadowColor ?? SHADOW_DEFAULTS.shadowColor,
         opacityPercent: Number.isFinite(s.shadowOpacity) ? s.shadowOpacity : SHADOW_DEFAULTS.shadowOpacity,
-        angleDeg: Number.isFinite(s.shadowAngle) ? s.shadowAngle : SHADOW_DEFAULTS.shadowAngle,
-        distance: Number.isFinite(s.shadowDistance) ? s.shadowDistance : SHADOW_DEFAULTS.shadowDistance,
+        angleDeg: globalDistanceAngle?.angle ?? (Number.isFinite(s.shadowAngle) ? s.shadowAngle : SHADOW_DEFAULTS.shadowAngle),
+        distance: globalDistanceAngle?.distance ?? (Number.isFinite(s.shadowDistance) ? s.shadowDistance : SHADOW_DEFAULTS.shadowDistance),
         blur: Number.isFinite(s.shadowBlur) ? s.shadowBlur : SHADOW_DEFAULTS.shadowBlur,
         spread: 0
-    });
-}
-
-function _forcedShadowBoxShadowCss(dropShadow) {
-    if (!dropShadow?.enabled || dropShadow?.transparent) return "";
-    const opacity = Number.isFinite(dropShadow.opacity) ? Math.min(1, Math.max(0, dropShadow.opacity)) : .45;
-    return boxShadowCss({
-        color: dropShadow.color ?? "#000000",
-        opacityPercent: opacity * 100,
-        angleDeg: Number.isFinite(dropShadow.angle) ? dropShadow.angle : 90,
-        distance: Number.isFinite(dropShadow.distance) ? dropShadow.distance : 4,
-        blur: Number.isFinite(dropShadow.blurRadius) ? dropShadow.blurRadius : 12,
-        spread: Number.isFinite(dropShadow.spread) ? dropShadow.spread : 0
     });
 }
 
@@ -154,7 +89,14 @@ export function textShadowCss(settings) {
     const s = settings ?? {};
     if (!(s.textShadowEnabled ?? TEXT_SHADOW_DEFAULTS.textShadowEnabled)) return "";
     const opacityPercent = Number.isFinite(s.textShadowOpacity) ? s.textShadowOpacity : TEXT_SHADOW_DEFAULTS.textShadowOpacity;
-    const angleDeg = Number.isFinite(s.textShadowAngle) ? s.textShadowAngle : TEXT_SHADOW_DEFAULTS.textShadowAngle;
+    // Angle is never a real per-widget choice for text shadows either -
+    // same "one global light source direction" rule as card shadows
+    // (see shadowBoxShadowCss() above / GlobalShadowHelper.
+    // getGlobalShadowDistanceAngle()). Distance/blur/color/opacity stay
+    // fully per-widget; only angle always comes from the shared global
+    // value when one is registered.
+    const globalAngle = _globalShadowHelper?.getGlobalShadowDistanceAngle?.();
+    const angleDeg = globalAngle?.angle ?? (Number.isFinite(s.textShadowAngle) ? s.textShadowAngle : TEXT_SHADOW_DEFAULTS.textShadowAngle);
     const distance = Number.isFinite(s.textShadowDistance) ? s.textShadowDistance : TEXT_SHADOW_DEFAULTS.textShadowDistance;
     const blur = Number.isFinite(s.textShadowBlur) ? Math.max(0, s.textShadowBlur) : TEXT_SHADOW_DEFAULTS.textShadowBlur;
     const {offsetX: offsetX, offsetY: offsetY} = angleDistanceToOffset(angleDeg, distance);
@@ -171,30 +113,41 @@ export function textShadowCss(settings) {
 export const BORDER_DEFAULTS = {
     borderEnabled: false,
     borderWidth: 1,
+    // Absolute last-resort fallback only - used when borderCss() has
+    // neither a settings.borderColor NOR a background color to fall
+    // back to (see borderCss() below). Every normal call path goes
+    // through cardStyleCss(), which always has a background color to
+    // pass in, so this rarely fires in practice.
     borderColor: "#FFFFFF33"
 };
 
-export function borderCss(settings, ignoreForce = false) {
-    const effIgnore = ignoreForce || settings?.__ignoreForce === true;
-    if (!effIgnore && _isForced("border")) {
-        const forced = _forcedTheme.border;
-        if (!forced?.enabled) return "";
-        const width = Number.isFinite(forced.width) ? Math.max(0, forced.width) : BORDER_DEFAULTS.borderWidth;
-        const color = toCssColor(forced.color ?? BORDER_DEFAULTS.borderColor, BORDER_DEFAULTS.borderColor);
-        return `border: ${width}px solid ${color};`;
-    }
+// Border color priority (see extension.js's Layer Lab "card A" /
+// resolveBorderColor() - same policy, transplanted here):
+//   1. settings.borderColor - the widget's own config.json default AND
+//      any later user override both live here, in that order of
+//      precedence, because WidgetSettings.applyDefaults() (see
+//      lib/widgetSettings.js) bakes a widget's config.json default for
+//      this field straight into settings the very first time it loads
+//      - a user pick simply overwrites that same key afterward. So by
+//      the time borderCss() runs, settings.borderColor already IS
+//      "user setting, or failing that, this widget's config.json
+//      default" - there's no separate tier to check for that.
+//   2. backgroundColorCss - the card's own resolved background color,
+//      passed in by cardStyleCss() below. Only reached if settings
+//      truly has no borderColor key at all (e.g. a bare/partial
+//      settings object that never went through the defaults merge).
+//   3. BORDER_DEFAULTS.borderColor, only if neither of the above exist.
+//
+// Falling through to the background when tier 1 is genuinely empty
+// means an enabled border reads as a soft rim on the glass instead of
+// an outline in an unrelated color that draws the eye to the live-blur
+// layer's square corners (see cardLayers.js's applyLayeredCardStyle()).
+export function borderCss(settings, backgroundColorCss = null) {
     const s = settings ?? {};
-    const widgetEnabled = s.borderEnabled ?? BORDER_DEFAULTS.borderEnabled;
-    // Not forced: the widget's own border setting can still override, but
-    // when the widget hasn't turned its own border on, fall back to the
-    // plain global "Enabled" toggle as the default — same base-default
-    // behavior ThemeService.getEffectiveWidgetTheme() already gives every
-    // themeable widget that goes through applyWidgetStyle().
-    const globalBorder = !effIgnore ? _forcedTheme?.border : null;
-    const enabled = widgetEnabled || !!globalBorder?.enabled;
-    if (!enabled) return "";
-    const width = widgetEnabled ? (Number.isFinite(s.borderWidth) ? Math.max(0, s.borderWidth) : BORDER_DEFAULTS.borderWidth) : Number.isFinite(globalBorder?.width) ? Math.max(0, globalBorder.width) : BORDER_DEFAULTS.borderWidth;
-    const color = widgetEnabled ? toCssColor(s.borderColor ?? BORDER_DEFAULTS.borderColor, BORDER_DEFAULTS.borderColor) : toCssColor(globalBorder?.color ?? BORDER_DEFAULTS.borderColor, BORDER_DEFAULTS.borderColor);
+    if (!(s.borderEnabled ?? BORDER_DEFAULTS.borderEnabled)) return "";
+    const width = Number.isFinite(s.borderWidth) ? Math.max(0, s.borderWidth) : BORDER_DEFAULTS.borderWidth;
+    const rawColor = s.borderColor ?? backgroundColorCss ?? BORDER_DEFAULTS.borderColor;
+    const color = toCssColor(rawColor, rawColor);
     return `border: ${width}px solid ${color};`;
 }
 
@@ -202,20 +155,14 @@ export const OPACITY_DEFAULTS = {
     opacity: 100
 };
 
-export function opacityValue(settings, ignoreForce = false) {
-    const effIgnore = ignoreForce || settings?.__ignoreForce === true;
-    if (!effIgnore && _isForced("opacity")) {
-        const forced = _forcedTheme.opacity;
-        const percent = Number.isFinite(forced?.value) ? Math.min(100, Math.max(0, forced.value)) : OPACITY_DEFAULTS.opacity;
-        return Math.round(percent / 100 * 255);
-    }
+export function opacityValue(settings) {
     const s = settings ?? {};
     const percent = Number.isFinite(s.opacity) ? Math.min(100, Math.max(0, s.opacity)) : OPACITY_DEFAULTS.opacity;
     return Math.round(percent / 100 * 255);
 }
 
-export function applyCardOpacity(actor, settings, ignoreForce = false) {
-    if (actor) actor.opacity = opacityValue(settings, ignoreForce);
+export function applyCardOpacity(actor, settings) {
+    if (actor) actor.opacity = opacityValue(settings);
 }
 
 export const BLUR_DEFAULTS = {
@@ -223,56 +170,30 @@ export const BLUR_DEFAULTS = {
     blurRadius: 24
 };
 
-export function blurCss(settings, ignoreForce = false) {
-    const effIgnore = ignoreForce || settings?.__ignoreForce === true;
-    const resolved = effIgnore ? null : _resolveForceSettings(settings);
-    if (resolved) {
-        const radius = resolved.background.blur;
-        return Number.isFinite(radius) && radius > 0 ? `-st-background-blur: ${Math.round(radius)}px;` : "";
-    }
-    if (!effIgnore && _isForced("background")) {
-        const radius = _forcedTheme.background?.blur;
-        return Number.isFinite(radius) && radius > 0 ? `-st-background-blur: ${Math.round(radius)}px;` : "";
-    }
-    const s = settings ?? {};
-    if (!(s.blurEnabled ?? BLUR_DEFAULTS.blurEnabled)) return "";
-    const radius = Number.isFinite(s.blurRadius) ? Math.max(0, s.blurRadius) : BLUR_DEFAULTS.blurRadius;
-    return `-st-background-blur: ${Math.round(radius)}px;`;
+// NOTE: this used to also emit a `-st-background-blur` CSS declaration
+// here for cardStyleCss() to include. Dropped it - St's CSS parser
+// doesn't actually recognize that property (confirmed: it wasn't doing
+// anything, just quietly parsed-and-ignored - which is also liable to
+// spam "unknown property" warnings into the Shell's log on every
+// style update, i.e. every _render() call, for widgets like clocks that
+// re-render every second). Real background blur for this extension's
+// widgets goes entirely through the actual Shell.BlurEffect Clutter
+// effect now - see lib/cardLayers.js's applyCardBlur().
+export function blurCss() {
+    return "";
 }
 
 export function cardStyleCss(settings, options = {}) {
-    const { ignoreForce = false, backgroundColorKey: backgroundColorKey = "backgroundColor", backgroundColorFallback: backgroundColorFallback = "#000000F5", cornerRadiusKey: cornerRadiusKey = "cornerRadius", cornerRadiusFallback: cornerRadiusFallback = 18, includeShadow: includeShadow = true, includeBorder: includeBorder = true, includeBlur: includeBlur = true} = options;
-    const effIgnore = ignoreForce || settings?.__ignoreForce === true;
-    const resolved = effIgnore ? null : _resolveForceSettings(settings, {
-        backgroundColorKey: backgroundColorKey,
-        cornerRadiusKey: cornerRadiusKey
-    });
-    let backgroundColor;
-    if (resolved) {
-        backgroundColor = toCssColor(resolved.background.color, backgroundColorFallback);
-    } else if (!effIgnore && _isForced("background")) {
-        const forced = _forcedTheme.background;
-        const alpha = forced.transparent ? 0 : 1;
-        backgroundColor = toCssColor(withAlphaHex(forced.color ?? "#1e1e2e", alpha), backgroundColorFallback);
-    } else {
-        backgroundColor = toCssColor(settings?.[backgroundColorKey], backgroundColorFallback);
-    }
-    let cornerRadius;
-    if (resolved) {
-        cornerRadius = Number.isFinite(resolved.background.cornerRadius) ? Math.max(0, resolved.background.cornerRadius) : cornerRadiusFallback;
-    } else if (!effIgnore && _isForced("cornerRadius")) {
-        const forcedRadius = _forcedTheme.cornerRadius?.value;
-        cornerRadius = Number.isFinite(forcedRadius) ? Math.max(0, forcedRadius) : cornerRadiusFallback;
-    } else {
-        const cornerRadiusRaw = settings?.[cornerRadiusKey];
-        cornerRadius = Number.isFinite(cornerRadiusRaw) ? cornerRadiusRaw : cornerRadiusFallback;
-    }
+    const { backgroundColorKey: backgroundColorKey = "backgroundColor", backgroundColorFallback: backgroundColorFallback = "#000000F5", cornerRadiusKey: cornerRadiusKey = "cornerRadius", cornerRadiusFallback: cornerRadiusFallback = 18, includeShadow: includeShadow = true, includeBorder: includeBorder = true, includeBlur: includeBlur = true} = options;
+    const backgroundColor = toCssColor(settings?.[backgroundColorKey], backgroundColorFallback);
+    const cornerRadiusRaw = settings?.[cornerRadiusKey];
+    const cornerRadius = Number.isFinite(cornerRadiusRaw) ? cornerRadiusRaw : cornerRadiusFallback;
     let css = `background-color: ${backgroundColor}; border-radius: ${cornerRadius}px;`;
-    if (includeBorder) css += borderCss(settings, effIgnore);
-    if (includeBlur) css += blurCss(settings, effIgnore);
-    if (includeShadow) css += shadowBoxShadowCss(settings, effIgnore);
+    if (includeBorder) css += borderCss(settings, backgroundColor);
+    if (includeShadow) css += shadowBoxShadowCss(settings);
     return css;
 }
+
 
 export function hexToRgba(hex) {
     const m = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.exec(hex ?? "");

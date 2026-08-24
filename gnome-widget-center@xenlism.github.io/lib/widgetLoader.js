@@ -8,6 +8,10 @@ import { WidgetSettings } from "./widgetSettings.js";
 
 import { validateSettingsSchema, getSchemaDefaults } from "./settingsSchema.js";
 
+import { readWidgetConfig } from "./widgetConfigReader.js";
+
+import { getConfigDefaults } from "./widgetConfigValidator.js";
+
 import { SettingsWatcher } from "./settingsWatcher.js";
 
 import { BlockSizeManager, BLOCK_CELL_SIZE } from "./blockSizeManager.js";
@@ -15,12 +19,20 @@ import { BlockSizeManager, BLOCK_CELL_SIZE } from "./blockSizeManager.js";
 const REQUIRED_METADATA_FIELDS = [ "id", "name", "entry" ];
 
 export class WidgetLoader {
-    constructor(searchPaths, storageService = null, logger = console, shadowOverflowMargin = 0, hostSettings = null, themeService = null) {
+    constructor(searchPaths, storageService = null, logger = console, shadowOverflowMargin = 0, hostSettings = null, themeService = null, onRescanRequested = null) {
         this._searchPaths = searchPaths;
         this._storageService = storageService;
         this._logger = logger;
         this._instances = new Map;
         this._errors = [];
+        // Optional host-provided callback so a widget's own `api.host.rescan()`
+        // (see _buildApi() below) can ask the host to discover + load any
+        // widget directories that showed up on disk since the last load,
+        // without the loader needing to know anything about the host's
+        // layer/placement logic itself. Used by Architect Widgets (see
+        // lib/architectWidgetKit.js) right after writing a new Child's
+        // files, but generic to any widget that creates files on disk.
+        this._onRescanRequested = onRescanRequested;
         this._shadowOverflowMargin = Math.max(0, Number(shadowOverflowMargin) || 0);
         this._hostSettings = hostSettings;
         this._themeService = themeService;
@@ -147,6 +159,78 @@ export class WidgetLoader {
         }
         return started;
     }
+    // Reads widgets/<id>/config.json (the settings-PANEL schema - tabs of
+    // fields with a `default` each, distinct from metadata.json's flatter
+    // "settings" array) and flattens every field's `default` into a plain
+    // {fieldId: value} map, so those defaults can be merged into a
+    // widget's actual persisted settings rather than only ever being used
+    // as a display fallback when rendering the settings panel.
+    _configJsonDefaults(widgetInfo) {
+        try {
+            const { config } = readWidgetConfig(widgetInfo.path);
+            return config ? getConfigDefaults(config) : {};
+        } catch (e) {
+            this._logger.warn?.(`[widget-loader] "${widgetInfo.id}": could not read config.json defaults: ${e.message}`);
+            return {};
+        }
+    }
+    // Merges config.json defaults + metadata.json "settings" defaults +
+    // the widget's own getDefaultSettings(), then applies whichever of
+    // those keys are still missing from `settings` (WidgetSettings.
+    // applyDefaults() only fills in keys that don't already exist - it
+    // never overwrites a real saved/user value). Called both at initial
+    // widget load and after WidgetSettings.reloadFromDisk(), so that a
+    // Reset (which deletes the widget's settings file and lets
+    // reloadFromDisk() sync the live settings object down to the now-empty
+    // disk file) ends up restored to defaults rather than left with a
+    // genuinely empty settings object.
+    _applyDefaults(widgetInfo, instance, settings) {
+        try {
+            const configJsonDefaults = this._configJsonDefaults(widgetInfo);
+            const schemaDefaults = getSchemaDefaults(widgetInfo.metadata.settings);
+            const defaults = {
+                ...configJsonDefaults,
+                ...schemaDefaults,
+                ...instance?.getDefaultSettings?.() ?? {}
+            };
+            WidgetSettings.applyDefaults(settings, defaults);
+        } catch (e) {
+            this._recordError(widgetInfo, `getDefaultSettings() threw: ${e.message}`);
+        }
+    }
+    // Safety net for the "createLayeredCard() but never actually calls
+    // applyLayeredCardStyle() in _render()" bug class (this is exactly
+    // what happened to geek-stat-clock before it got fixed by hand). Never
+    // overrides a widget that already painted its own card layer — St's
+    // get_style() comes back non-empty the moment a widget's own _render()
+    // has called applyLayeredCardStyle()/set_style() on layers.card, which
+    // for every widget that remembers to do this always happens
+    // synchronously inside buildActor() (constructors call _render() once
+    // for the initial paint) — so by the time this runs, right after
+    // buildActor() returns, a normal widget's card is already styled and
+    // this is a no-op. Only fires (and only then, with a loud warning so
+    // it's obvious in logs) for a widget that forgot.
+    //
+    // cardLayers.js is imported lazily (dynamic import, not a static
+    // top-of-file import) because it pulls in St. St's typelib only
+    // resolves inside the gnome-shell process. WidgetLoader itself is
+    // also loaded by the standalone prefs app (widget-center-prefs-app.js,
+    // run under plain `gjs -m`), which only ever calls discover() — never
+    // loadOne() — but a static `import St from "gi://St"` anywhere in the
+    // module graph throws at import time regardless of whether it's used,
+    // crashing the whole prefs process before it can open a window.
+    async _ensureCardPainted(widgetInfo, instance, settings) {
+        const card = instance?._layers?.card;
+        if (!card) return;
+        try {
+            if (card.get_style()) return;
+            const { applyLayeredCardStyle: applyLayeredCardStyle } = await import("./cardLayers.js");
+            applyLayeredCardStyle(instance._layers, settings);
+            this._logger.warn?.(`[widget-loader] "${widgetInfo.id}": never called applyLayeredCardStyle() in _render() — painted its card with defaults instead. Add the call in the widget's own _render().`);
+        } catch (e) {
+            this._recordError(widgetInfo, `_ensureCardPainted() failed: ${e.message}`);
+        }
+    }
     async loadOne(widgetInfo) {
         if (this._instances.has(widgetInfo.id)) return this._instances.get(widgetInfo.id);
         const ModuleClass = await this.loadModule(widgetInfo);
@@ -160,18 +244,7 @@ export class WidgetLoader {
             this._recordError(widgetInfo, `constructor threw: ${e.message}`);
             return null;
         }
-        if (this._storageService) {
-            try {
-                const schemaDefaults = getSchemaDefaults(widgetInfo.metadata.settings);
-                const defaults = {
-                    ...schemaDefaults,
-                    ...instance.getDefaultSettings?.() ?? {}
-                };
-                WidgetSettings.applyDefaults(settings, defaults);
-            } catch (e) {
-                this._recordError(widgetInfo, `getDefaultSettings() threw: ${e.message}`);
-            }
-        }
+        if (this._storageService) this._applyDefaults(widgetInfo, instance, settings);
         let actor;
         try {
             actor = instance.buildActor();
@@ -183,6 +256,7 @@ export class WidgetLoader {
             this._recordError(widgetInfo, `buildActor() threw: ${e.message}`);
             return null;
         }
+        await this._ensureCardPainted(widgetInfo, instance, settings);
         await this._enforceBlockSize(widgetInfo, actor);
         try {
             instance.enable?.();
@@ -194,7 +268,7 @@ export class WidgetLoader {
             ModuleClass: ModuleClass,
             instance: instance,
             actor: actor,
-            settings: api.settings // Use the Proxy-wrapped settings from the api object
+            settings: api.settings
         };
         this._instances.set(widgetInfo.id, entry);
         this._logger.log?.(`[widget-loader] loaded "${widgetInfo.id}" from ${widgetInfo.path}`);
@@ -202,6 +276,15 @@ export class WidgetLoader {
             const changed = WidgetSettings.reloadFromDisk(widgetInfo.id, this._storageService);
             if (!changed) return;
             const current = this._instances.get(widgetInfo.id);
+            // reloadFromDisk() is a pure disk-sync - it deletes any key
+            // no longer present in the file (which is every key, right
+            // after a Reset deletes the file entirely) and applies no
+            // defaults of its own. Re-fill anything now missing the same
+            // way initial load does, or Reset leaves the widget with a
+            // genuinely empty settings object. applyDefaults() only fills
+            // keys that are still absent, so this never overwrites a
+            // value that legitimately came from the disk sync.
+            if (this._storageService) this._applyDefaults(widgetInfo, current?.instance, settings);
             try {
                 current?.instance.onSettingsChanged?.(current.settings);
             } catch (e) {
@@ -265,16 +348,10 @@ export class WidgetLoader {
         let instance, actor;
         try {
             instance = new ModuleClass(api);
-            if (this._storageService) {
-                const schemaDefaults = getSchemaDefaults(widgetInfo.metadata.settings);
-                const defaults = {
-                    ...schemaDefaults,
-                    ...instance.getDefaultSettings?.() ?? {}
-                };
-                WidgetSettings.applyDefaults(settings, defaults);
-            }
+            if (this._storageService) this._applyDefaults(widgetInfo, instance, settings);
             actor = instance.buildActor();
             if (!actor) throw new Error("buildActor() returned null/undefined");
+            await this._ensureCardPainted(widgetInfo, instance, settings);
             await this._enforceBlockSize(widgetInfo, actor);
         } catch (e) {
             this._logger.error?.(`[widget-loader] "${widgetId}" hot-reload build failed: ${e.message} — keeping previous version running`);
@@ -300,7 +377,7 @@ export class WidgetLoader {
             ModuleClass: ModuleClass,
             instance: instance,
             actor: actor,
-            settings: api.settings // Use the Proxy-wrapped settings from the api object
+            settings: api.settings
         };
         this._instances.set(widgetId, newEntry);
         this._logger.log?.(`[widget-loader] hot-reloaded "${widgetId}"`);
@@ -317,8 +394,17 @@ export class WidgetLoader {
     async _enforceBlockSize(widgetInfo, actor) {
         const {cols: cols, rows: rows} = BlockSizeManager.getBlockSizeFor(widgetInfo.metadata);
         try {
-            const {StWidgetWrapper: StWidgetWrapper} = await (import("./gjskit/st/StWidget.js"));
-            new StWidgetWrapper(actor).size(cols * BLOCK_CELL_SIZE, rows * BLOCK_CELL_SIZE).clip(true, this._shadowOverflowMargin);
+            const width = cols * BLOCK_CELL_SIZE;
+            const height = rows * BLOCK_CELL_SIZE;
+            actor.set_size(width, height);
+            const margin = Math.max(0, Number(this._shadowOverflowMargin) || 0);
+            if (margin === 0) {
+                actor.remove_clip();
+                actor.clip_to_allocation = true;
+            } else {
+                actor.clip_to_allocation = false;
+                actor.set_clip(-margin, -margin, width + margin * 2, height + margin * 2);
+            }
         } catch (e) {
             this._recordError(widgetInfo, `failed to enforce block-type size: ${e.message}`);
         }
@@ -349,38 +435,33 @@ export class WidgetLoader {
     _buildApi(widgetInfo, settings) {
         const hostSettings = this._hostSettings;
         
-        // Check whether this widget should be forced to ignore Force Settings
-        const shouldIgnoreForce = !widgetInfo.metadata?.["themeable"] && !widgetInfo.metadata?.["forceSettingsAware"];
-        
-        // Wrap the settings object in a Proxy to intercept reads for the __ignoreForce flag
-        const wrappedSettings = new Proxy(settings, {
-            get(target, prop) {
-                if (prop === "__ignoreForce") return shouldIgnoreForce;
-                return target[prop];
-            }
-        });
-        
         return {
-            settings: wrappedSettings,
-            // `themeable` controls regular ThemeService styling only. Force
-            // Settings remain global and apply to both themeable and
-            // self-styled widgets.
-            themeable: !!widgetInfo.metadata?.["themeable"],
-            // For themeable widgets that also need to run their own
-            // periodic/content _render() (clock ticks, stat refreshes,
-            // settings changes) on the SAME actor ThemeService styles:
-            // St's set_style() replaces the whole inline style rather than
-            // merging, so the widget must fold ThemeService's resolved CSS
-            // into its own set_style() call instead of calling cardStyleCss()
-            // independently — otherwise whichever call runs last wins and
-            // silently drops the other (Force Settings reverting, the
-            // box-sizing fix disappearing, or the two configs flapping).
-            // Returns null (not "") when there's no ThemeService yet, or
-            // when the widget isn't themeable, so callers can tell "no CSS"
-            // apart from "empty CSS".
-            resolveCardCss: () => this._themeService && widgetInfo.metadata?.["themeable"] ? this._themeService.computeWidgetStyleCss(widgetInfo.id) : null,
+            settings: settings,
+            // Every widget always manages its own card styling from its
+            // own settings — there's no more "Force Settings"/"themeable"
+            // system that can override a widget's background/corner-radius/
+            // blur/shadow from a global switch. The one thing that's still
+            // shared globally is the shadow's angle/distance (see
+            // widgetVisualKit.js's shadowBoxShadowCss() and
+            // lib/globalShadowHelper.js) — everything else always comes
+            // straight from the widget's own config.json/settings.
             monitorInfo: null,
             position: this._buildPositionApi(widgetInfo),
+            host: {
+                // Best-effort: discover + load any newly-appeared widget
+                // directory (e.g. one this widget just created on disk)
+                // and place it in the running layer. No-op if the host
+                // didn't wire a callback (older host build, or a widget
+                // being loaded outside the normal extension - e.g. a
+                // future test harness). Never throws into caller code.
+                rescan: () => {
+                    try {
+                        this._onRescanRequested?.();
+                    } catch (e) {
+                        this._logger.error?.(`[widget-loader] "${widgetInfo.id}": api.host.rescan() callback threw`, e);
+                    }
+                }
+            },
             bus: {
                 emit() {},
                 on() {},

@@ -1,0 +1,16 @@
+{
+    "id": "xenlism.github.io.xtile-gimp",
+    "name": "Xtile GIMP By Xenlism",
+    "description": "1x1 app launcher tile for GIMP - same Xtile widget as Xtile Firefox (shares its widget.js class via `extends XtileBaseWidget`), only the default .desktop in this widget's own config.json differs. Centered icon, app name at the bottom, card background auto-tinted from the app's own icon color.",
+    "version": "1.0.0",
+    "author": "Nattapong Pullkhow",
+    "api-version": 1,
+    "entry": "widget.js",
+    "block-type": "1x1",
+    "default-position": {
+        "x": 640,
+        "y": 600,
+        "monitor": 0
+    },
+    "screenshot": "screenshot.png"
+}

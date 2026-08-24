@@ -6,8 +6,11 @@ import GLib from "gi://GLib";
 
 import Gio from "gi://Gio";
 
-import { SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, parseFontDescription as _parseFontDescription } from "../../lib/widgetVisualKit.js";
+import { SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, parseFontDescription as _parseFontDescription } from "../../lib/widgetVisualKit.js";
 
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
+
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 const DOW_ABBREV = {
     1: "MO",
     2: "TU",
@@ -26,10 +29,14 @@ export default class DateModernWidget {
         this._buttonPressId = null;
     }
     buildActor() {
-        this._actor = new St.BoxLayout({
-            style_class: "date-modern-widget-root",
+        this._layers = createLayeredCard({
+            contentStyleClass: "date-modern-widget-root"
+        });
+        this._actor = this._layers.root;
+        this._content = new St.BoxLayout({
             vertical: true
         });
+        this._layers.content.add_child(this._content);
         this._monthLabel = new St.Label({
             style_class: "date-modern-widget-month"
         });
@@ -39,9 +46,9 @@ export default class DateModernWidget {
         this._dayLabel = new St.Label({
             style_class: "date-modern-widget-day"
         });
-        this._actor.add_child(this._monthLabel);
-        this._actor.add_child(this._dowLabel);
-        this._actor.add_child(this._dayLabel);
+        this._content.add_child(this._monthLabel);
+        this._content.add_child(this._dowLabel);
+        this._content.add_child(this._dayLabel);
         this._render();
         this._applyClickHandler();
         return this._actor;
@@ -61,17 +68,8 @@ export default class DateModernWidget {
     }
     getDefaultSettings() {
         return {
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
-            monthFont: "Sans Bold 14",
-            dowFont: "Sans Bold 16",
-            dayFont: "Sans Bold 30",
-            colorMonth: "#d81f26",
-            colorDow: "#1a1a1a",
-            colorDay: "#1a1a1a",
-            cardColor: "#ffffff",
-            cornerRadius: 18,
-            launchOnClick: false,
-            desktopFilePath: ""
         };
     }
     onSettingsChanged() {
@@ -119,9 +117,11 @@ export default class DateModernWidget {
         const colorMonth = this._settings.colorMonth ?? "#d81f26";
         const colorDow = this._settings.colorDow ?? "#1a1a1a";
         const colorDay = this._settings.colorDay ?? "#1a1a1a";
-        const cardColor = this._settings.cardColor ?? "#ffffff";
-        const cornerRadius = this._settings.cornerRadius ?? 18;
-        this._actor.set_style(`background-color: ${cardColor}; ` + `border-radius: ${cornerRadius}px; ` + "padding: 12px 12px; " + "spacing: 0px;" + _shadowBoxShadowCss(this._settings));
+        applyLayeredCardStyle(this._layers, this._settings, {
+            backgroundColorKey: "cardColor",
+            cornerRadiusFallback: 18
+        }, false);
+        this._content.set_style(" padding: 12px 12px; spacing: 0px;");
         this._monthLabel.set_text(now.format("%b") ?? "");
         this._monthLabel.set_style(`color: ${colorMonth}; font-family: ${monthFontFamily}; ` + `font-size: ${monthFontSize}px; font-weight: bold; text-align: center;`);
         const dowCode = DOW_ABBREV[now.get_day_of_week()] ?? "";

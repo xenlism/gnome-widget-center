@@ -10,8 +10,13 @@ import Gvc from "gi://Gvc";
 
 import Cairo from "cairo";
 
+import * as Main from "resource:///org/gnome/shell/ui/main.js";
+
 import { SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, BORDER_DEFAULTS, OPACITY_DEFAULTS, deferUntilMapped as _deferUntilMapped } from "../../lib/widgetVisualKit.js";
 
+import { createLayeredCard } from "../../lib/cardLayers.js";
+
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 const BUTTON_WIDTH = 64;
 
 const BUTTON_HEIGHT = 140;
@@ -177,27 +182,31 @@ export default class SwitchesWidget {
         this._sinkNotifyId = null;
         this._brightnessProxy = null;
         this._brightnessSignalId = null;
+        this._brightnessScale = null;
+        this._brightnessScaleSignalId = null;
         this._timerId = null;
     }
     buildActor() {
-        this._actor = new St.Widget({
-            style_class: "switches-widget-root",
-            layout_manager: new Clutter.FixedLayout
+        this._layers = createLayeredCard({
+            contentStyleClass: "switches-widget-content",
         });
+        this._actor = this._layers.root;
+        // this._content is a plain wrapper - the Content Layer itself
+        // (this._layers.content) carries no style of its own (Rule 5).
         this._content = new St.Bin({
-            style_class: "switches-widget-content",
             x_align: Clutter.ActorAlign.CENTER,
-            y_align: Clutter.ActorAlign.CENTER
+            y_align: Clutter.ActorAlign.CENTER,
+            x_expand: true,
+            y_expand: true,
         });
-        this._content.add_constraint(new Clutter.BindConstraint({
-            source: this._actor,
-            coordinate: Clutter.BindCoordinate.SIZE
-        }));
-        this._actor.add_child(this._content);
-        _deferUntilMapped(this._content, () => this._content.set_style(_cardStyleCss(this._settings, {
-            backgroundColorFallback: "#FFFFFF00",
-            cornerRadiusFallback: 18
-        }) + `padding: ${PADDING}px;`));
+        this._layers.content.add_child(this._content);
+        _deferUntilMapped(this._actor, () => {
+            this._layers.card.set_style(_cardStyleCss(this._settings, {
+                backgroundColorFallback: "#FFFFFF00",
+                cornerRadiusFallback: 18
+            }));
+            this._content.set_style(`padding: ${PADDING}px;`);
+        });
         const row = new St.BoxLayout({
             vertical: false,
             x_align: Clutter.ActorAlign.CENTER,
@@ -254,24 +263,27 @@ export default class SwitchesWidget {
         }
         this._brightnessProxy = null;
         this._brightnessSignalId = null;
+        if (this._brightnessScale && this._brightnessScaleSignalId !== null) {
+            try {
+                this._brightnessScale.disconnect(this._brightnessScaleSignalId);
+            } catch (e) {}
+        }
+        this._brightnessScale = null;
+        this._brightnessScaleSignalId = null;
     }
     getDefaultSettings() {
         return {
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
-            backgroundColor: "#FFFFFF00",
-            cornerRadius: 18,
-            baseColor: "#9a9996",
-            highlightColor: "#3584e4",
-            refreshRateSeconds: 3
         };
     }
     onSettingsChanged() {
-        if (this._content) this._content.set_style(_cardStyleCss(this._settings, {
+        if (this._layers?.card) this._layers.card.set_style(_cardStyleCss(this._settings, {
             backgroundColorFallback: "#FFFFFF00",
             cornerRadiusFallback: 18
-        }) + `padding: ${PADDING}px;`);
+        }));
         this._applyColors();
         this._startTimer();
     }
@@ -354,7 +366,25 @@ export default class SwitchesWidget {
         if (!this._defaultSink) return;
         this._defaultSink.change_is_muted(!this._defaultSink.is_muted);
     }
+    /** @private Prefers GNOME Shell's own Main.brightnessManager (the same
+     * BrightnessScale machinery the hardware brightness keys use), since it
+     * covers external/DisplayPort/HDMI monitor backlights too. Falls back
+     * to the org.gnome.SettingsDaemon.Power.Screen DBus proxy (built-in
+     * panel only) when brightnessManager isn't available - older GNOME
+     * versions, or a session type where it never got instantiated. */
     _connectBrightness() {
+        const globalScale = Main.brightnessManager?.scales?.find(s => !s.monitor);
+        if (globalScale) {
+            this._brightnessScale = globalScale;
+            try {
+                this._brightnessScaleSignalId = globalScale.connect("notify::value", () => this._refreshBrightnessState());
+            } catch (e) {
+                this._api.logger.error(`switches: could not watch brightness scale: ${e}`);
+                this._brightnessScaleSignalId = null;
+            }
+            this._refreshBrightnessState();
+            return;
+        }
         try {
             this._brightnessProxy = Gio.DBusProxy.new_for_bus_sync(Gio.BusType.SESSION, Gio.DBusProxyFlags.NONE, null, BRIGHTNESS_BUS_NAME, BRIGHTNESS_OBJECT_PATH, BRIGHTNESS_IFACE, null);
             this._brightnessSignalId = this._brightnessProxy.connect("g-properties-changed", () => this._refreshBrightnessState());
@@ -366,6 +396,10 @@ export default class SwitchesWidget {
     }
     _refreshBrightnessState() {
         if (!this._lightPill || this._lightPill.isDragging) return;
+        if (this._brightnessScale) {
+            this._lightPill.setFraction(this._brightnessScale.value ?? 0);
+            return;
+        }
         const percent = this._brightnessProxy?.get_cached_property("Brightness")?.unpack() ?? -1;
         if (percent < 0) {
             this._lightPill.setFraction(0);
@@ -374,8 +408,24 @@ export default class SwitchesWidget {
         this._lightPill.setFraction(percent / 100);
     }
     _applyBrightnessFraction(fraction) {
-        if (!this._brightnessProxy) return;
-        const percent = Math.round(fraction * 100);
+        if (this._brightnessScale) {
+            try {
+                this._brightnessScale.value = Math.max(0, Math.min(1, fraction));
+            } catch (e) {
+                this._api.logger.error(`switches: failed to set brightness scale: ${e}`);
+            }
+            return;
+        }
+        if (!this._brightnessProxy) {
+            // The proxy can fail to connect once (e.g. gsd-power isn't up
+            // yet right after login) and, without this, would stay null
+            // for the widget's whole lifetime - silently doing nothing on
+            // every future drag with no way to recover except toggling
+            // the widget off/on. Retry lazily here instead.
+            this._connectBrightness();
+            if (!this._brightnessProxy) return;
+        }
+        const percent = Math.max(0, Math.min(100, Math.round(fraction * 100)));
         try {
             Gio.DBus.session.call_sync(BRIGHTNESS_BUS_NAME, BRIGHTNESS_OBJECT_PATH, "org.freedesktop.DBus.Properties", "Set", new GLib.Variant("(ssv)", [ BRIGHTNESS_IFACE, "Brightness", new GLib.Variant("i", percent) ]), null, Gio.DBusCallFlags.NONE, -1, null);
         } catch (e) {

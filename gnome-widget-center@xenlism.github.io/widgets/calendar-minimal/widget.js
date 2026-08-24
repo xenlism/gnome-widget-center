@@ -4,8 +4,11 @@ import St from "gi://St";
 
 import GLib from "gi://GLib";
 
-import { SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss } from "../../lib/widgetVisualKit.js";
+import { SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss } from "../../lib/widgetVisualKit.js";
 
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
+
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 export default class CalendarMinimalWidget {
     constructor(api) {
         this._api = api;
@@ -13,18 +16,22 @@ export default class CalendarMinimalWidget {
         this._timeoutId = null;
     }
     buildActor() {
-        this._actor = new St.BoxLayout({
-            style_class: "calendar-minimal-widget-root",
+        this._layers = createLayeredCard({
+            contentStyleClass: "calendar-minimal-widget-root"
+        });
+        this._actor = this._layers.root;
+        this._content = new St.BoxLayout({
             vertical: true
         });
+        this._layers.content.add_child(this._content);
         this._dayLabel = new St.Label({
             style_class: "calendar-minimal-widget-day"
         });
         this._subtitleLabel = new St.Label({
             style_class: "calendar-minimal-widget-subtitle"
         });
-        this._actor.add_child(this._dayLabel);
-        this._actor.add_child(this._subtitleLabel);
+        this._content.add_child(this._dayLabel);
+        this._content.add_child(this._subtitleLabel);
         this._render();
         return this._actor;
     }
@@ -42,11 +49,9 @@ export default class CalendarMinimalWidget {
     }
     getDefaultSettings() {
         return {
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
             cardColor: "#ffffff",
-            textColor: "#1a1a1a",
-            accentColor: "#d81f26",
-            showMonth: true
         };
     }
     onSettingsChanged() {
@@ -54,11 +59,14 @@ export default class CalendarMinimalWidget {
     }
     _render() {
         const now = GLib.DateTime.new_now_local();
-        const cardColor = this._settings.cardColor ?? "#ffffff";
         const textColor = this._settings.textColor ?? "#1a1a1a";
         const accentColor = this._settings.accentColor ?? "#6b6b6b";
         const showMonth = this._settings.showMonth ?? true;
-        this._actor.set_style("border-radius: 22px; " + "padding: 18px 12px; " + "spacing: 4px;" + _shadowBoxShadowCss(this._settings));
+        applyLayeredCardStyle(this._layers, this._settings, {
+            backgroundColorKey: "cardColor",
+            cornerRadiusFallback: 22
+        }, false);
+        this._content.set_style(" padding: 18px 12px; spacing: 4px;");
         this._dayLabel.set_text(`${now.get_day_of_month()}`);
         this._dayLabel.set_style(`color: ${textColor}; font-weight: 300; font-size: 64px; ` + "text-align: center;");
         const weekday = (now.format("%A") ?? "").toUpperCase();

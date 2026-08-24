@@ -2,9 +2,7 @@
 //
 // A compact 1x1 card with a 2x2 grid of icon-only buttons: Suspend,
 // Restart, Power Off, Log Out. No text labels - each button shows a
-// hover tooltip instead (same delayed-hover-label pattern used by
-// lib/widgetEditMode.js's toolbar buttons, reimplemented locally here
-// since widget.js can't import lib/widgetEditMode.js's private method).
+// hover tooltip instead, via lib/widgetTooltip.js's attachTooltip().
 //
 // Root actor (this._actor) is a plain St.Widget with Clutter.FixedLayout,
 // holding a single St.Bin child (this._content) that does the actual
@@ -35,14 +33,16 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
-import {hasAllocation, insertChildAboveSafely, isMappedActor} from '../../lib/actorLifecycle.js';
 import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, borderCss as _borderCss, BORDER_DEFAULTS, OPACITY_DEFAULTS} from '../../lib/widgetVisualKit.js';
+import {createLayeredCard} from '../../lib/cardLayers.js';
+import {attachTooltip} from '../../lib/widgetTooltip.js';
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 
 const TOOLTIP_SHOW_DELAY_MS = 400;
-const ICON_SIZE = 22;
+const ICON_SIZE = 24;
 const BUTTON_SIZE = 60;
 const GRID_SPACING = 8;
-const PADDING = 12;
+const PADDING = 8;
 
 export default class PowerMenuWidget {
     /**
@@ -61,7 +61,7 @@ export default class PowerMenuWidget {
     // (DBus proxies are created in enable(); a click before that simply
     // no-ops via the `?.` guards in the *_call* helpers below).
     buildActor() {
-        const backgroundColor = this._settings?.backgroundColor ?? '#FFFFFF00';
+        const backgroundColor = this._settings?.backgroundColor ?? '#070000a5';
         const cornerRadius = this._settings?.cornerRadius ?? 18;
         const iconColor = this._settings?.iconColor ?? '#2e2e2e';
 
@@ -73,35 +73,29 @@ export default class PowerMenuWidget {
         // applyBlockSize() (called by the host right after buildActor()
         // returns) - this._content below is bound to whatever size that
         // ends up setting, rather than this widget assuming/hardcoding it.
-        this._actor = new St.Widget({
-            style_class: 'power-menu-widget-root',
-            layout_manager: new Clutter.FixedLayout(),
-            reactive: true,
+        this._layers = createLayeredCard({
+            contentStyleClass: 'power-menu-widget-root',
+            withTooltipLayer: true,
         });
+        this._actor = this._layers.root;
+        this._actor.reactive = true;
 
+        // Card background/corner-radius CSS (this widget's own _cardStyle()
+        // helper, not the shared applyLayeredCardStyle) now targets the
+        // dedicated Background Layer instead of a hand-rolled inner Bin.
+        this._layers.card.set_style(this._cardStyle(backgroundColor, cornerRadius));
+
+        // this._content is a plain wrapper - padding lives here, never the
+        // Content Layer itself (Rule 5).
         this._content = new St.Bin({
             style_class: 'power-menu-widget-content',
             x_align: Clutter.ActorAlign.CENTER,
             y_align: Clutter.ActorAlign.CENTER,
+            x_expand: true,
+            y_expand: true,
         });
-        this._content.add_constraint(new Clutter.BindConstraint({
-            source: this._actor,
-            coordinate: Clutter.BindCoordinate.SIZE,
-        }));
-        this._actor.add_child(this._content);
-        // FixedLayout otherwise allocates this card at the grid's natural
-        // size. Keep the card at the complete 1x1 block so its 2x2 button
-        // grid has the intended, symmetric padding on every side.
-        this._actor.connect("notify::mapped", () => {
-            if (!this._actor.mapped) return;
-            this._content.set_size(this._actor.width, this._actor.height);
-        });
-
-        this._actor.connect("notify::allocation", () => {
-            if (!this._actor.mapped) return;
-            this._content.set_size(this._actor.width, this._actor.height);
-        });
-        this._content.set_style(this._cardStyle(backgroundColor, cornerRadius) + `padding: ${PADDING}px;`);
+        this._content.set_style(`padding: ${PADDING}px;`);
+        this._layers.content.add_child(this._content);
 
         this._grid = new St.Widget({
             style_class: 'power-menu-widget-grid',
@@ -127,7 +121,7 @@ export default class PowerMenuWidget {
         actions.forEach(({icon, tooltip, onClicked}, i) => {
             const button = this._makeButton(icon, iconColor, onClicked);
             layout.attach(button, i % 2, Math.trunc(i / 2), 1, 1);
-            this._tooltips.push(this._attachTooltip(button, tooltip));
+            this._tooltips.push(attachTooltip(button, this._layers, tooltip));
         });
 
         return this._actor;
@@ -178,9 +172,7 @@ export default class PowerMenuWidget {
 
     getDefaultSettings() {
         return {
-            backgroundColor: '#FFFFFF00', // white @ 0.85 alpha ("d9")
-            cornerRadius: 18,
-            iconColor: '#FFFFFF',
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
@@ -194,11 +186,11 @@ export default class PowerMenuWidget {
         if (!this._actor)
             return;
 
-        const backgroundColor = settings?.backgroundColor ?? '#FFFFFF00';
+        const backgroundColor = settings?.backgroundColor ?? '#070000a5';
         const cornerRadius = settings?.cornerRadius ?? 18;
-        this._content.set_style(this._cardStyle(backgroundColor, cornerRadius) + `padding: ${PADDING}px;`);
+        this._layers.card.set_style(this._cardStyle(backgroundColor, cornerRadius));
 
-        const iconColor = settings?.iconColor ?? '#FFFFFF';
+        const iconColor = settings?.iconColor ?? '#2e2e2e';
         for (const icon of this._icons)
             icon.set_style(`color: ${iconColor};`);
     }
@@ -231,7 +223,7 @@ export default class PowerMenuWidget {
             value = [...value].map(c => c + c).join('');
         const rgbNum = parseInt(value.slice(0, 6), 16);
         if (Number.isNaN(rgbNum))
-            return {r: 255, g: 255, b: 255, a: 0.85}; // falls back to the default #ffffffd9
+            return {r: 255, g: 255, b: 255, a: 0.85}; // falls back to the default #070000a5
         const alphaByte = value.length >= 8 ? parseInt(value.slice(6, 8), 16) : 255;
         const a = Number.isNaN(alphaByte) ? 1 : Math.round((alphaByte / 255) * 1000) / 1000;
         return {r: (rgbNum >> 16) & 255, g: (rgbNum >> 8) & 255, b: rgbNum & 255, a};
@@ -259,100 +251,6 @@ export default class PowerMenuWidget {
         );
         button.connect('clicked', onClicked);
         return button;
-    }
-
-    /**
-     * @private hover-tooltip for a single grid button - no text label is
-     * ever shown on the button itself, only on hover, per the design
-     * spec this widget was built to. Returns `{hide(), destroy()}` -
-     * disable() only ever calls `hide()`, see its comment above.
-     * @param {St.Button} button
-     * @param {string} text
-     */
-    _attachTooltip(button, text) {
-        let showTimeoutId = null;
-        let tooltipLabel = null;
-
-        const hide = () => {
-            if (showTimeoutId != null) {
-                GLib.source_remove(showTimeoutId);
-                showTimeoutId = null;
-            }
-            tooltipLabel?.destroy();
-            tooltipLabel = null;
-        };
-
-        const enterId = button.connect('enter-event', () => {
-            showTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, TOOLTIP_SHOW_DELAY_MS, () => {
-                showTimeoutId = null;
-                const stage = this._actor?.get_stage?.();
-                if (!stage || !isMappedActor(button, stage) ||
-                    !hasAllocation(this._actor) || !hasAllocation(button) ||
-                    this._grid?.get_parent?.() !== this._actor)
-                    return GLib.SOURCE_REMOVE;
-
-                tooltipLabel = new St.Label({
-                    style_class: 'power-menu-widget-tooltip',
-                    text,
-                });
-                tooltipLabel.set_style(
-                    'background-color: rgba(20, 20, 20, 0.95); color: #fff; ' +
-                    'font-size: 12px; padding: 4px 8px; border-radius: 6px;'
-                );
-                if (!insertChildAboveSafely(this._actor, tooltipLabel, this._grid)) {
-                    tooltipLabel.destroy();
-                    tooltipLabel = null;
-                    return GLib.SOURCE_REMOVE;
-                }
-
-                const [buttonX, buttonY] = button.get_position();
-                const [, labelHeight] = tooltipLabel.get_preferred_height(-1);
-                const [, labelWidth] = tooltipLabel.get_preferred_width(-1);
-                const [gridX, gridY] = this._grid.get_position();
-                const [cardWidth, cardHeight] = this._actor.get_size();
-
-                // Prefer just above the button, but the widget layer clips
-                // each widget to its own allocated card - anything
-                // positioned outside [0, cardWidth] x [0, cardHeight] is
-                // simply invisible rather than floating over neighboring
-                // widgets, so both axes are clamped to stay fully on-card.
-                const idealX = gridX + buttonX + (button.width - labelWidth) / 2;
-                const idealY = gridY + buttonY - labelHeight - 6;
-                tooltipLabel.set_position(
-                    Math.max(0, Math.min(idealX, cardWidth - labelWidth)),
-                    Math.max(0, Math.min(idealY, cardHeight - labelHeight))
-                );
-
-                return GLib.SOURCE_REMOVE;
-            });
-            return Clutter.EVENT_PROPAGATE;
-        });
-        const leaveId = button.connect('leave-event', () => {
-            hide();
-            return Clutter.EVENT_PROPAGATE;
-        });
-        const clickedId = button.connect('clicked', hide);
-
-        return {
-            // Called from disable() - cancels any pending show timeout and
-            // destroys an already-visible label, without touching the
-            // signal connections themselves (see disable()'s comment).
-            hide,
-            // Not currently called anywhere (the widget's buttons live for
-            // the whole instance), but kept for symmetry/completeness in
-            // case a future change needs to fully tear a button down.
-            destroy() {
-                hide();
-                try {
-                    button.disconnect(enterId);
-                    button.disconnect(leaveId);
-                    button.disconnect(clickedId);
-                } catch (e) {
-                    // button may already be destroyed by the caller's own
-                    // teardown - same defensive pattern as widgetEditMode.js.
-                }
-            },
-        };
     }
 
     /** @private */

@@ -10,6 +10,9 @@ import { SystemMetricsService } from "../../lib/systemMetricsApi.js";
 
 import { SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor, TEXT_SHADOW_DEFAULTS, textShadowCss as _textShadowCss, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS } from "../../lib/widgetVisualKit.js";
 
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
+
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 const REFRESH_INTERVAL_SECONDS = 30;
 
 const CARD_PADDING = 16;
@@ -77,14 +80,19 @@ export default class GeekArcheySystechBayWidget {
         this._logoLoadToken = 0;
     }
     buildActor() {
-        this._actor = new St.Bin({
-            style_class: "geek-archey-systech-bay-root",
-            x_align: Clutter.ActorAlign.CENTER,
-            y_align: Clutter.ActorAlign.CENTER
+        this._layers = createLayeredCard({
+            contentStyleClass: "geek-archey-systech-bay-root"
         });
+        this._actor = this._layers.root;
+        this._actor.x_align = Clutter.ActorAlign.CENTER;
+        this._actor.y_align = Clutter.ActorAlign.CENTER;
+        // content is a plain wrapper - padding lives here, never the
+        // Content Layer itself (Rule 5).
         const content = new St.BoxLayout({
             vertical: false
         });
+        content.set_style(`padding: ${CARD_PADDING}px;`);
+        this._layers.content.add_child(content);
         this._asciiLabel = new St.Label({
             style_class: "geek-archey-systech-bay-ascii"
         });
@@ -142,7 +150,6 @@ export default class GeekArcheySystechBayWidget {
         });
         infoBox.add_child(this._paletteRow);
         content.add_child(infoBox);
-        this._actor.set_child(content);
         this._render();
         return this._actor;
     }
@@ -167,16 +174,13 @@ export default class GeekArcheySystechBayWidget {
     }
     getDefaultSettings() {
         return {
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
             ...TEXT_SHADOW_DEFAULTS,
             textShadowEnabled: false,
-            distro: "linux",
             distroDetected: false,
-            backgroundColor: "#FFFFFF00",
-            cornerRadius: 18,
-            showColorPalette: true
         };
     }
     onSettingsChanged() {
@@ -233,9 +237,9 @@ export default class GeekArcheySystechBayWidget {
         });
     }
     _render() {
-        this._actor.set_style((this._api.resolveCardCss?.() ?? _cardStyleCss(this._settings, {
+        applyLayeredCardStyle(this._layers, this._settings, {
             cornerRadiusFallback: 18
-        })) + `padding: ${CARD_PADDING}px;`);
+        }, false);
         let accent = GENERIC_ART.color;
         let markup;
         if (this._logoModule) {

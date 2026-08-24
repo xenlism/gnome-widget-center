@@ -14,6 +14,9 @@ import { SystemMetricsService } from "../../lib/systemMetricsApi.js";
 
 import { SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS } from "../../lib/widgetVisualKit.js";
 
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
+
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 const MAX_HISTORY = 40;
 
 const GRAPH_HEIGHT = 46;
@@ -88,17 +91,16 @@ export default class NetworkMonitorWidget {
         this._pressId = null;
     }
     buildActor() {
-        this._actor = new St.Bin({
-            style_class: "network-monitor-root",
-            x_expand: true,
-            y_expand: true
+        this._layers = createLayeredCard({
+            contentStyleClass: "network-monitor-root"
         });
+        this._actor = this._layers.root;
         this._content = new St.BoxLayout({
             vertical: true,
             x_expand: true,
             y_expand: true
         });
-        this._actor.set_child(this._content);
+        this._layers.content.add_child(this._content);
         this._textBox = new St.BoxLayout({
             vertical: true,
             x_expand: true,
@@ -141,18 +143,10 @@ export default class NetworkMonitorWidget {
     }
     getDefaultSettings() {
         return {
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
-            fontDesc: "Sans Bold 20",
-            fontColor: "#FFFFFFFF",
-            downloadLineColor: "#5AC8FAFF",
-            uploadLineColor: "#FF9F0AFF",
-            graphBaseColor: "#FFFFFF12",
-            backgroundColor: "#FFFFFF00",
-            cornerRadius: 18,
-            refreshRateSeconds: 3,
-            launchAppPath: ""
         };
     }
     onSettingsChanged() {
@@ -221,9 +215,9 @@ export default class NetworkMonitorWidget {
         const uploadColor = _toCssColor(this._settings.uploadLineColor, "#FF9F0AFF");
         const graphBaseColor = _toCssColor(this._settings.graphBaseColor, "#FFFFFF12");
         const font = _splitFontDescription(this._settings.fontDesc ?? "Sans Bold 20", "Sans", 20);
-        this._actor.set_style((this._api.resolveCardCss?.() ?? _cardStyleCss(this._settings, {
+        applyLayeredCardStyle(this._layers, this._settings, {
             cornerRadiusFallback: 18
-        })));
+        }, false);
         this._textBox.set_style(`padding: ${CARD_PADDING}px ${CARD_PADDING}px 4px ${CARD_PADDING}px; spacing: 2px;`);
         const numberStyle = color => `color: ${color}; font-family: ${font.family}; font-weight: ${font.weight}; ` + `font-style: ${font.styleCss}; font-size: ${font.size}px;`;
         this._downloadLabel.set_style(numberStyle(downloadColor));

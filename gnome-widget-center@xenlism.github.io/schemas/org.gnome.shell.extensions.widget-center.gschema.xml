@@ -176,6 +176,24 @@
       </description>
     </key>
 
+    <key name="theme-screenshot-keybinding" type="as">
+      <default>['&lt;Super&gt;Delete']</default>
+      <summary>Shortcut that captures the desktop as the Export Theme… screenshot</summary>
+      <description>
+        Read locally by lib/themePackExportDialog.js via a Gtk.ShortcutController
+        on the export dialog window (not a shell-wide Main.wm.addKeybinding,
+        since the Preferences window runs as its own process, not inside the
+        Shell) - pressing it while the dialog is open calls GNOME Shell's
+        org.gnome.Shell.Screenshot D-Bus service to grab the full desktop and
+        attach it as the theme pack's screenshot, same as picking a file
+        through the dialog's "Browse…" button. User-customizable from the
+        Theme pack (.gwct, shareable) group on the Import/Export Preferences
+        page (lib/prefsPageBuilders.js). Array-of-strings type kept for
+        consistency with widget-center-overlay-keybinding, though only the
+        first entry is ever used.
+      </description>
+    </key>
+
     <key name="active-theme-pack" type="s">
       <default>''</default>
       <summary>Id of the most recently loaded theme pack</summary>
@@ -219,122 +237,25 @@
     </key>
 
     
-    <key name="force-background-color-enabled" type="b">
-      <default>false</default>
-      <summary>Force Background Color on every widget (independent switch)</summary>
-      <description>
-        When true, every widget's background color comes from
-        force-background-color below instead of the widget's own
-        config.json. Independent of the other 3 force switches -
-        resolved by lib/forceSettingsHelper.js; widgets never read this
-        key directly.
-      </description>
-    </key>
-
-    <key name="force-corner-radius-enabled" type="b">
-      <default>false</default>
-      <summary>Force Corner Radius on every widget (independent switch)</summary>
-      <description>
-        When true, every widget's corner radius comes from
-        force-corner-radius below instead of the widget's own
-        config.json. Independent of the other 3 force switches -
-        resolved by lib/forceSettingsHelper.js; widgets never read this
-        key directly.
-      </description>
-    </key>
-
-    <key name="force-background-blur-enabled" type="b">
-      <default>false</default>
-      <summary>Force Background Blur on every widget (independent switch)</summary>
-      <description>
-        When true, every widget's background blur comes from
-        force-background-blur below instead of the widget's own
-        config.json. Independent of the other 3 force switches -
-        resolved by lib/forceSettingsHelper.js; widgets never read this
-        key directly.
-      </description>
-    </key>
-
-    <key name="force-shadow-appearance-enabled" type="b">
-      <default>false</default>
-      <summary>Force Shadow appearance on every widget (independent switch)</summary>
-      <description>
-        When true, every widget's shadow (enabled/color/opacity/spread/
-        blur) comes from the force-shadow-* value keys below instead of
-        the widget's own config.json. shadow-distance/shadow-angle are
-        NOT gated by this key, or by any of the 4 force switches - they
-        are always read from GSettings regardless (see those keys' own
-        description). Independent of the other 3 force switches -
-        resolved by lib/forceSettingsHelper.js; widgets never read this
-        key directly.
-      </description>
-    </key>
-
-    <key name="force-background-color" type="s">
-      <default>'#1e1e2eff'</default>
-      <summary>Global Background Color (#HEX + alpha) - used when force-background-color-enabled is on</summary>
-    </key>
-
-    <key name="force-corner-radius" type="i">
-      <range min="0" max="32"/>
-      <default>12</default>
-      <summary>Global Corner Radius (px, 0-32) - used when force-corner-radius-enabled is on</summary>
-    </key>
-
-    <key name="force-background-blur" type="i">
-      <range min="0" max="60"/>
-      <default>0</default>
-      <summary>Global Background Blur (px, 0-60) - used when force-background-blur-enabled is on</summary>
-    </key>
-
-    <key name="force-shadow-enabled" type="b">
-      <default>true</default>
-      <summary>Global Shadow Enable - used when force-shadow-appearance-enabled is on</summary>
-    </key>
-
-    <key name="force-shadow-color" type="s">
-      <default>'#000000ff'</default>
-      <summary>Global Shadow Color (#HEX + alpha) - used when force-shadow-appearance-enabled is on</summary>
-    </key>
-
-    <key name="force-shadow-opacity" type="i">
-      <range min="0" max="100"/>
-      <default>45</default>
-      <summary>Global Shadow Opacity (%, 0-100) - used when force-shadow-appearance-enabled is on</summary>
-    </key>
-
-    <key name="force-shadow-spread" type="i">
-      <range min="0" max="20"/>
-      <default>0</default>
-      <summary>Global Shadow Spread (px, 0-20) - used when force-shadow-appearance-enabled is on</summary>
-    </key>
-
-    <key name="force-shadow-blur" type="i">
-      <range min="0" max="60"/>
-      <default>12</default>
-      <summary>Global Shadow Blur (px, 0-60) - used when force-shadow-appearance-enabled is on</summary>
-    </key>
-
     <key name="shadow-distance" type="i">
       <range min="0" max="30"/>
       <default>4</default>
-      <summary>Shadow Distance (px, 0-30) - ALWAYS read from GSettings</summary>
+      <summary>Global Shadow Distance (px, 0-30)</summary>
       <description>
-        Per ForceSettingsSpecification.md: unlike every other
-        Background/Shadow field, Distance is stored in GSettings and used
-        by every widget regardless of any of the 4 force switches, so a
-        widget's own config.json never carries a shadowDistance value
-        under this model.
+        Applied to every widget's own drop shadow, on top of whatever
+        else the widget sets for itself (color/opacity/blur/spread).
+        Resolved by lib/globalShadowHelper.js; widgets never read this
+        key directly.
       </description>
     </key>
 
     <key name="shadow-angle" type="i">
       <default>90</default>
-      <summary>Shadow Angle (degrees, one of 45/90/135/180/225/270/315) - ALWAYS read from GSettings</summary>
+      <summary>Global Shadow Angle (degrees, one of 45/90/135/180/225/270/315)</summary>
       <description>
-        Same "always global" rule as shadow-distance above. Value should
+        Same always-global rule as shadow-distance above. Value should
         be one of the 45-degree steps in
-        lib/forceSettingsHelper.js's SHADOW_ANGLE_STEPS; anything else
+        lib/globalShadowHelper.js's SHADOW_ANGLE_STEPS; anything else
         falls back to 90 when resolved.
       </description>
     </key>

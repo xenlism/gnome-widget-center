@@ -1,9 +1,11 @@
 // widgets/settings-control/widget.js
 //
 // A compact 1x1 card with a 2x2 grid of icon-only TOGGLE buttons:
-// Wi-Fi/Ethernet, Bluetooth, Do Not Disturb, Dark/Light mode. Same
-// no-label-just-a-tooltip visual language as widgets/power-menu - see
-// that widget's _attachTooltip() for the pattern reused here.
+// Wi-Fi/Ethernet, Bluetooth, Do Not Disturb, Dark/Light mode. No text
+// labels - each button shows a hover tooltip instead, via
+// lib/widgetTooltip.js's attachTooltip(). The Bluetooth button's tooltip
+// text is updated live via that helper's actor.setTooltip() when this
+// widget falls back to an Airplane Mode toggle - see _enableAirplaneFallback().
 //
 // Root actor (this._actor) is a plain St.Widget with Clutter.FixedLayout,
 // holding a single St.Bin child (this._content) that does the actual
@@ -51,14 +53,15 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
-import {hasAllocation, insertChildAboveSafely, isMappedActor} from '../../lib/actorLifecycle.js';
 import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, borderCss as _borderCss, BORDER_DEFAULTS, OPACITY_DEFAULTS} from '../../lib/widgetVisualKit.js';
+import {createLayeredCard} from '../../lib/cardLayers.js';
+import {attachTooltip} from '../../lib/widgetTooltip.js';
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 
-const TOOLTIP_SHOW_DELAY_MS = 400;
-const ICON_SIZE = 22;
+const ICON_SIZE = 24;
 const BUTTON_SIZE = 60;
 const GRID_SPACING = 8;
-const PADDING = 12;
+const PADDING = 0;
 
 const NOTIFICATIONS_SCHEMA = 'org.gnome.desktop.notifications';
 const INTERFACE_SCHEMA = 'org.gnome.desktop.interface';
@@ -97,13 +100,15 @@ export default class SettingsControlWidget {
         this._notifSignalId = null;
         this._interfaceSettings = null;
         this._interfaceSignalId = null;
+        this._rfkillSettings = null;
+        this._rfkillSignalId = null;
     }
 
     // Must never throw. Builds the 2x2 grid with placeholder (off-color,
     // generic) icons - enable() fills in real state right after this
     // actor is placed in the Widget Layer.
     buildActor() {
-        const backgroundColor = this._settings?.backgroundColor ?? '#FFFFFF00';
+        const backgroundColor = this._settings?.backgroundColor ?? '#070000a5';
         const cornerRadius = this._settings?.cornerRadius ?? 18;
         this._iconOnColor = this._settings?.iconOnColor ?? '#3584e4';
         this._iconOffColor = this._settings?.iconOffColor ?? '#9a9996';
@@ -115,35 +120,26 @@ export default class SettingsControlWidget {
         // host right after buildActor() returns) - this._content below is
         // bound to whatever size that ends up setting, rather than this
         // widget assuming/hardcoding it.
-        this._actor = new St.Widget({
-            style_class: 'settings-control-widget-root',
-            layout_manager: new Clutter.FixedLayout(),
-            reactive: true,
+        this._layers = createLayeredCard({
+            contentStyleClass: 'settings-control-widget-root',
+            withTooltipLayer: true,
         });
+        this._actor = this._layers.root;
+        this._actor.reactive = true;
 
+        this._layers.card.set_style(this._cardStyle(backgroundColor, cornerRadius));
+
+        // this._content is a plain wrapper - padding lives here, never the
+        // Content Layer itself (Rule 5).
         this._content = new St.Bin({
             style_class: 'settings-control-widget-content',
             x_align: Clutter.ActorAlign.CENTER,
             y_align: Clutter.ActorAlign.CENTER,
+            x_expand: true,
+            y_expand: true,
         });
-        this._content.add_constraint(new Clutter.BindConstraint({
-            source: this._actor,
-            coordinate: Clutter.BindCoordinate.SIZE,
-        }));
-        this._actor.add_child(this._content);
-        // FixedLayout otherwise allocates this card at the grid's natural
-        // size. Keep the card at the complete 1x1 block so its 2x2 button
-        // grid has the intended, symmetric padding on every side.
-        this._actor.connect("notify::mapped", () => {
-            if (!this._actor.mapped) return;
-            this._content.set_size(this._actor.width, this._actor.height);
-        });
-
-        this._actor.connect("notify::allocation", () => {
-            if (!this._actor.mapped) return;
-            this._content.set_size(this._actor.width, this._actor.height);
-        });
-        this._content.set_style(this._cardStyle(backgroundColor, cornerRadius) + `padding: ${PADDING}px;`);
+        this._content.set_style(`padding: ${PADDING}px;`);
+        this._layers.content.add_child(this._content);
 
         this._grid = new St.Widget({
             style_class: 'settings-control-widget-grid',
@@ -159,7 +155,7 @@ export default class SettingsControlWidget {
         this._networkIcon = new St.Icon({icon_name: 'network-wireless-offline-symbolic', icon_size: ICON_SIZE});
         this._networkButton = this._makeButton(this._networkIcon, () => this._toggleNetwork());
         layout.attach(this._networkButton, 0, 0, 1, 1);
-        this._tooltips.push(this._attachTooltip(this._networkButton, 'Wi-Fi'));
+        this._tooltips.push(attachTooltip(this._networkButton, this._layers, 'Wi-Fi'));
 
         this._bluetoothIcon = new St.Icon({
             icon_name: 'bluetooth-symbolic',
@@ -173,9 +169,16 @@ export default class SettingsControlWidget {
 
         layout.attach(this._bluetoothButton, 1, 0, 1, 1);
 
-        this._bluetoothTooltip = this._attachTooltip(
+        // Text is a getter, not a fixed string - _enableAirplaneFallback()
+        // may flip this._airplaneMode to true after buildActor() has
+        // already run, if no Bluetooth adapter is found. A single
+        // attachTooltip() call (rather than re-attaching a second one on
+        // fallback) keeps this to one set of enter/leave/click listeners
+        // on the button.
+        this._bluetoothTooltip = attachTooltip(
             this._bluetoothButton,
-            'Bluetooth'
+            this._layers,
+            () => this._airplaneMode ? 'Airplane Mode' : 'Bluetooth'
         );
 
         this._tooltips.push(this._bluetoothTooltip);
@@ -183,7 +186,7 @@ export default class SettingsControlWidget {
         this._dndIcon = new St.Icon({icon_name: 'notifications-disabled-symbolic', icon_size: ICON_SIZE});
         this._dndButton = this._makeButton(this._dndIcon, () => this._toggleDnd());
         layout.attach(this._dndButton, 0, 1, 1, 1);
-        this._tooltips.push(this._attachTooltip(this._dndButton, 'Do Not Disturb'));
+        this._tooltips.push(attachTooltip(this._dndButton, this._layers, 'Do Not Disturb'));
 
         // 'weather-clear-night-symbolic' isn't part of the GNOME48 Adwaita
         // icon set (see https://github.com/StorageB/icons/blob/main/GNOME48Adwaita/icons.md,
@@ -192,7 +195,7 @@ export default class SettingsControlWidget {
         this._themeIcon = new St.Icon({icon_name: 'night-light-symbolic', icon_size: ICON_SIZE});
         this._themeButton = this._makeButton(this._themeIcon, () => this._toggleTheme());
         layout.attach(this._themeButton, 1, 1, 1, 1);
-        this._tooltips.push(this._attachTooltip(this._themeButton, 'Dark Mode'));
+        this._tooltips.push(attachTooltip(this._themeButton, this._layers, 'Dark Mode'));
 
         // Placeholder state (all "off") until enable() reads the real
         // thing - buildActor() itself must stay side-effect-free.
@@ -259,16 +262,23 @@ export default class SettingsControlWidget {
         this._interfaceSettings = null;
         this._interfaceSignalId = null;
 
+        if (this._rfkillSettings && this._rfkillSignalId) {
+            try {
+                this._rfkillSettings.disconnect(this._rfkillSignalId);
+            } catch (e) {
+                // settings object may already be gone
+            }
+        }
+        this._rfkillSettings = null;
+        this._rfkillSignalId = null;
+
         for (const tooltip of this._tooltips)
             tooltip.hide();
     }
 
     getDefaultSettings() {
         return {
-            backgroundColor: '#FFFFFF00', // white @ 0.85 alpha ("d9")
-            iconOnColor: '#3584e4',
-            iconOffColor: '#9a9996',
-            cornerRadius: 18,
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
@@ -283,9 +293,9 @@ export default class SettingsControlWidget {
         if (!this._actor)
             return;
 
-        const backgroundColor = settings?.backgroundColor ?? '#FFFFFF00';
+        const backgroundColor = settings?.backgroundColor ?? '#070000a5';
         const cornerRadius = settings?.cornerRadius ?? 18;
-        this._content.set_style(this._cardStyle(backgroundColor, cornerRadius) + `padding: ${PADDING}px;`);
+        this._layers.card.set_style(this._cardStyle(backgroundColor, cornerRadius));
 
         this._iconOnColor = settings?.iconOnColor ?? '#3584e4';
         this._iconOffColor = settings?.iconOffColor ?? '#9a9996';
@@ -405,6 +415,24 @@ export default class SettingsControlWidget {
     _enableAirplaneFallback() {
     this._airplaneMode = true;
 
+    // Subscribe once so external Airplane Mode changes (GNOME Quick
+    // Settings, a hardware kill switch, etc.) update this icon live -
+    // mirrors settings-control-bar's _enableAirplaneModeFallback().
+    try {
+        this._rfkillSettings = new Gio.Settings({
+            schema_id: 'org.gnome.settings-daemon.plugins.rfkill'
+        });
+        this._rfkillSignalId = this._rfkillSettings.connect(
+            'changed::airplane-mode',
+            () => this._renderBluetooth()
+        );
+    } catch (e) {
+        this._api.logger.error(
+            `settings-control: could not reach rfkill settings: ${e.message}`
+        );
+        this._rfkillSettings = null;
+    }
+
     if (!this._bluetoothIcon || !this._bluetoothButton)
         return;
 
@@ -416,14 +444,10 @@ export default class SettingsControlWidget {
         false
     );
 
-    this._bluetoothTooltip?.hide();
-
-    this._airplaneTooltip = this._attachTooltip(
-        this._bluetoothButton,
-        'Airplane Mode'
-    );
-
-    this._tooltips.push(this._airplaneTooltip);
+    // this._airplaneMode is already true by this point, and the
+    // tooltip getter passed to attachTooltip() in buildActor() already
+    // checks it - so the very next hover shows "Airplane Mode" with no
+    // need to hide/re-attach a second tooltip on the same button.
 }
 
     /** @private */
@@ -450,28 +474,15 @@ export default class SettingsControlWidget {
         );
     }
     _renderAirplaneMode() {
-        try {
-            const settings = new Gio.Settings({
-                schema_id: 'org.gnome.settings-daemon.plugins.rfkill'
-            });
+        const enabled = this._rfkillSettings?.get_boolean('airplane-mode') ?? false;
 
-            const enabled = settings.get_boolean('airplane-mode');
+        this._bluetoothIcon.icon_name = 'airplane-mode-symbolic';
 
-            this._bluetoothIcon.icon_name =
-                'airplane-mode-symbolic';
-
-            this._setToggleState(
-                this._bluetoothIcon,
-                this._bluetoothButton,
-                enabled
-            );
-        } catch (e) {
-            this._setToggleState(
-                this._bluetoothIcon,
-                this._bluetoothButton,
-                false
-            );
-        }
+        this._setToggleState(
+            this._bluetoothIcon,
+            this._bluetoothButton,
+            enabled
+        );
     }
     /** @private */
     _toggleBluetoothOrAirplane() {
@@ -483,24 +494,18 @@ export default class SettingsControlWidget {
         this._toggleBluetooth();
     }
     _toggleAirplaneMode() {
+        if (!this._rfkillSettings) {
+            this._api.logger.error(
+                'settings-control: Airplane Mode toggle requested but rfkill is unavailable'
+            );
+            return;
+        }
         try {
-            const settings = new Gio.Settings({
-                schema_id: 'org.gnome.settings-daemon.plugins.rfkill'
-            });
-
-            const current = settings.get_boolean('airplane-mode');
-
-            settings.set_boolean(
-                'airplane-mode',
-                !current
-            );
-
-            this._setToggleState(
-                this._bluetoothIcon,
-                this._bluetoothButton,
-                !current
-            );
-
+            const current = this._rfkillSettings.get_boolean('airplane-mode');
+            this._rfkillSettings.set_boolean('airplane-mode', !current);
+            // No optimistic set_toggle_state needed here - the
+            // changed::airplane-mode signal from _enableAirplaneFallback()
+            // will call _renderBluetooth() and pick up the new value.
         } catch (e) {
             this._api.logger.error(
                 `settings-control: Airplane Mode toggle failed: ${e.message}`
@@ -609,97 +614,6 @@ export default class SettingsControlWidget {
     }
 
     /**
-     * @private hover-tooltip for a single grid button - see
-     * widgets/power-menu/widget.js's _attachTooltip() for the original
-     * this was copied from (kept local since widget.js can't import
-     * another widget's file, and lib/widgetEditMode.js's own version is
-     * private to that module). disable() only ever calls the returned
-     * hide() - see disable()'s comment for why the signal connections
-     * themselves stay live across a disable()/enable() cycle.
-     */
-    _attachTooltip(button, text) {
-        let showTimeoutId = null;
-        let tooltipLabel = null;
-
-        const hide = () => {
-            if (showTimeoutId != null) {
-                GLib.source_remove(showTimeoutId);
-                showTimeoutId = null;
-            }
-            tooltipLabel?.destroy();
-            tooltipLabel = null;
-        };
-
-        const enterId = button.connect('enter-event', () => {
-            showTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, TOOLTIP_SHOW_DELAY_MS, () => {
-                showTimeoutId = null;
-                // This callback can run after the widget has been removed or
-                // reparented. Only touch theme/layout APIs on mapped actors
-                // that still share the original parent tree.
-                const stage = this._actor?.get_stage?.();
-                if (!stage || !isMappedActor(button, stage) ||
-                    !hasAllocation(this._actor) || !hasAllocation(button) ||
-                    this._grid?.get_parent?.() !== this._content)
-                    return GLib.SOURCE_REMOVE;
-
-                tooltipLabel = new St.Label({
-                    style_class: 'settings-control-widget-tooltip',
-                    text,
-                });
-                tooltipLabel.set_style(
-                    'background-color: rgba(20, 20, 20, 0.95); color: #fff; ' +
-                    'font-size: 12px; padding: 4px 8px; border-radius: 6px;'
-                );
-                if (!insertChildAboveSafely(this._actor, tooltipLabel, this._grid)) {
-                    tooltipLabel.destroy();
-                    tooltipLabel = null;
-                    return GLib.SOURCE_REMOVE;
-                }
-
-                const [buttonX, buttonY] = button.get_position();
-                const [, labelHeight] = tooltipLabel.get_preferred_height(-1);
-                const [, labelWidth] = tooltipLabel.get_preferred_width(-1);
-                const [gridX, gridY] = this._grid.get_position();
-                const [cardWidth, cardHeight] = this._actor.get_size();
-
-                // Prefer just above the button, but the widget layer clips
-                // each widget to its own allocated card - anything
-                // positioned outside [0, cardWidth] x [0, cardHeight] is
-                // simply invisible rather than floating over neighboring
-                // widgets, so both axes are clamped to stay fully on-card.
-                const idealX = gridX + buttonX + (button.width - labelWidth) / 2;
-                const idealY = gridY + buttonY - labelHeight - 6;
-                tooltipLabel.set_position(
-                    Math.max(0, Math.min(idealX, cardWidth - labelWidth)),
-                    Math.max(0, Math.min(idealY, cardHeight - labelHeight))
-                );
-
-                return GLib.SOURCE_REMOVE;
-            });
-            return Clutter.EVENT_PROPAGATE;
-        });
-        const leaveId = button.connect('leave-event', () => {
-            hide();
-            return Clutter.EVENT_PROPAGATE;
-        });
-        const clickedId = button.connect('clicked', hide);
-
-        return {
-            hide,
-            destroy() {
-                hide();
-                try {
-                    button.disconnect(enterId);
-                    button.disconnect(leaveId);
-                    button.disconnect(clickedId);
-                } catch (e) {
-                    // button may already be destroyed by the caller's own teardown.
-                }
-            },
-        };
-    }
-
-    /**
      * @private sets a single DBus property via org.freedesktop.DBus.Properties.Set
      * - used instead of relying on a proxy's own property setter since
      * neither proxy here was built with interface introspection info.
@@ -741,7 +655,8 @@ export default class SettingsControlWidget {
             value = [...value].map(c => c + c).join('');
         const rgbNum = parseInt(value.slice(0, 6), 16);
         if (Number.isNaN(rgbNum))
-            return {r: 255, g: 255, b: 255, a: 0.85}; // falls back to the default #ffffffd9
+            return {r: 255, g: 255, b: 255, a: 0.85}; // falls back to the default #070000a5
+
         const alphaByte = value.length >= 8 ? parseInt(value.slice(6, 8), 16) : 255;
         const a = Number.isNaN(alphaByte) ? 1 : Math.round((alphaByte / 255) * 1000) / 1000;
         return {r: (rgbNum >> 16) & 255, g: (rgbNum >> 8) & 255, b: rgbNum & 255, a};

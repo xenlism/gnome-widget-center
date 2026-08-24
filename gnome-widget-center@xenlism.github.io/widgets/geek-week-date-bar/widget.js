@@ -6,6 +6,9 @@ import Clutter from "gi://Clutter";
 
 import { SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor, parseFontDescription as _parseFontDescription, TEXT_SHADOW_DEFAULTS, textShadowCss as _textShadowCss, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS } from "../../lib/widgetVisualKit.js";
 
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
+
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 export default class GeekWeekDateBarWidget {
     constructor(api) {
         this._api = api;
@@ -14,11 +17,15 @@ export default class GeekWeekDateBarWidget {
         this._timeoutId = null;
     }
     buildActor() {
-        this._actor = new St.BoxLayout({
-            style_class: "geek-week-date-bar-widget-root",
+        this._layers = createLayeredCard({
+            contentStyleClass: "geek-week-date-bar-widget-root"
+        });
+        this._actor = this._layers.root;
+        this._content = new St.BoxLayout({
             vertical: true,
             x_align: Clutter.ActorAlign.CENTER
         });
+        this._layers.content.add_child(this._content);
         this._topLabel = new St.Label({
             style_class: "geek-week-date-bar-widget-top",
             x_expand: true
@@ -27,8 +34,8 @@ export default class GeekWeekDateBarWidget {
             style_class: "geek-week-date-bar-widget-bottom",
             x_expand: true
         });
-        this._actor.add_child(this._topLabel);
-        this._actor.add_child(this._bottomLabel);
+        this._content.add_child(this._topLabel);
+        this._content.add_child(this._bottomLabel);
         this._render();
         return this._actor;
     }
@@ -43,20 +50,11 @@ export default class GeekWeekDateBarWidget {
     }
     getDefaultSettings() {
         return {
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
             ...TEXT_SHADOW_DEFAULTS,
-            textShadowEnabled: true,
-            textShadowDistance: 2,
-            textShadowBlur: 4,
-            weekFont: "Sans Bold 22",
-            weekColor: "#ffffff",
-            dateFont: "Sans Bold 12",
-            dateColor: "#e6e6e6",
-            backgroundColor: "#FFFFFF00",
-            textAlign: "center",
-            cornerRadius: 18,
             ...BORDER_DEFAULTS,
-            ...OPACITY_DEFAULTS
+            ...OPACITY_DEFAULTS,
         };
     }
     onSettingsChanged() {
@@ -84,10 +82,11 @@ export default class GeekWeekDateBarWidget {
         const dateColor = this._settings.dateColor ?? "#e6e6e6";
         const textAlign = [ "left", "center", "right" ].includes(this._settings.textAlign) ? this._settings.textAlign : "center";
         const textShadowCss = _textShadowCss(this._settings);
-        this._actor.set_style((this._api.resolveCardCss?.() ?? _cardStyleCss(this._settings, {
+        applyLayeredCardStyle(this._layers, this._settings, {
             cornerRadiusFallback: 18
-        })) + "padding: 8px 18px; " + "spacing: 2px;");
-        const topText = (now.format("%A") ?? "").toUpperCase();
+        }, false);
+        this._content.set_style("padding: 8px 18px; " + "spacing: 2px;");
+        const topText = (now.format(this._settings.weekFormat === "DDD" ? "%a" : "%A") ?? "").toUpperCase();
         this._topLabel.set_text(topText);
         this._topLabel.set_style(`color: ${weekColor}; font-family: ${weekFontFamily}; ` + `font-size: ${weekFontSize}px; font-weight: bold; text-align: ${textAlign}; ` + `${textShadowCss}`);
         const bottomText = (now.format("%d %B %Y") ?? "").toUpperCase();

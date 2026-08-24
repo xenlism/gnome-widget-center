@@ -12,6 +12,9 @@ import { SystemMetricsService } from "../../lib/systemMetricsApi.js";
 
 import { SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor, parseFontDescription as _parseFontDescription, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS } from "../../lib/widgetVisualKit.js";
 
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
+
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 const RING_SIZE = 84;
 
 const RING_THICKNESS = 8;
@@ -30,15 +33,15 @@ export default class SystemMonitorMiniWidget {
         this._gauges = [];
     }
     buildActor() {
-        this._actor = new St.Bin({
-            style_class: "system-monitor-mini-root",
-            x_align: Clutter.ActorAlign.CENTER,
-            y_align: Clutter.ActorAlign.CENTER
+        this._layers = createLayeredCard({
+            contentStyleClass: "system-monitor-mini-root"
         });
-        const content = new St.BoxLayout({
+        this._actor = this._layers.root;
+        this._content = new St.BoxLayout({
             vertical: true,
             x_align: Clutter.ActorAlign.CENTER
         });
+        this._layers.content.add_child(this._content);
         const ringsRow = new St.BoxLayout({
             vertical: false,
             x_align: Clutter.ActorAlign.CENTER
@@ -54,18 +57,17 @@ export default class SystemMonitorMiniWidget {
             height: 1
         }));
         this._gauges.push(this._buildGauge(ringsRow, "Disk"));
-        content.add_child(ringsRow);
+        this._content.add_child(ringsRow);
         this._networkLabel = new St.Label({
             style_class: "system-monitor-mini-net-caption"
         });
         this._networkLabel.set_style("margin-top: 10px; text-align: center;");
-        content.add_child(this._networkLabel);
+        this._content.add_child(this._networkLabel);
         this._networkValue = new St.Label({
             style_class: "system-monitor-mini-net-value"
         });
         this._networkValue.set_style("text-align: center;");
-        content.add_child(this._networkValue);
-        this._actor.set_child(content);
+        this._content.add_child(this._networkValue);
         this._render();
         this._applyClickHandler();
         return this._actor;
@@ -138,17 +140,10 @@ export default class SystemMonitorMiniWidget {
     }
     getDefaultSettings() {
         return {
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
-            activeColor: "#33C7F5",
-            baseColor: "#33383D",
-            font: "Sans Bold 18",
-            backgroundColor: "#FFFFFF00",
-            cornerRadius: 18,
-            refreshRateSec: 3,
-            launchOnClick: false,
-            desktopFilePath: ""
         };
     }
     onSettingsChanged() {
@@ -221,9 +216,10 @@ export default class SystemMonitorMiniWidget {
         return `${formatted} ${units[unitIndex]}`;
     }
     _render() {
-        this._actor.set_style((this._api.resolveCardCss?.() ?? _cardStyleCss(this._settings, {
+        applyLayeredCardStyle(this._layers, this._settings, {
             cornerRadiusFallback: 18
-        })) + `padding: ${CARD_PADDING}px;`);
+        }, false);
+        this._content.set_style(`padding: ${CARD_PADDING}px;`);
         const {family: family, size: size} = _parseFontDescription(this._settings.font ?? "Sans Bold 18", "Sans Bold", 18);
         const captionSize = Math.max(8, Math.round(size * .5));
         for (const gauge of this._gauges) {

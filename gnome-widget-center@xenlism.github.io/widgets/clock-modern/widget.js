@@ -10,6 +10,9 @@ import Pango from "gi://Pango";
 
 import { SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, parseFontDescription as _parseFontDescription, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS } from "../../lib/widgetVisualKit.js";
 
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
+
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 export default class ClockModernWidget {
     constructor(api) {
         this._api = api;
@@ -18,10 +21,14 @@ export default class ClockModernWidget {
         this._buttonPressId = null;
     }
     buildActor() {
-        this._actor = new St.BoxLayout({
-            style_class: "clock-modern-widget-root",
+        this._layers = createLayeredCard({
+            contentStyleClass: "clock-modern-widget-root"
+        });
+        this._actor = this._layers.root;
+        this._content = new St.BoxLayout({
             vertical: true
         });
+        this._layers.content.add_child(this._content);
         this._ampmLabel = new St.Label({
             style_class: "clock-modern-widget-ampm"
         });
@@ -34,10 +41,10 @@ export default class ClockModernWidget {
         this._ssLabel = new St.Label({
             style_class: "clock-modern-widget-ss"
         });
-        this._actor.add_child(this._ampmLabel);
-        this._actor.add_child(this._hhLabel);
-        this._actor.add_child(this._mmLabel);
-        this._actor.add_child(this._ssLabel);
+        this._content.add_child(this._ampmLabel);
+        this._content.add_child(this._hhLabel);
+        this._content.add_child(this._mmLabel);
+        this._content.add_child(this._ssLabel);
         this._render();
         this._applyClickHandler();
         return this._actor;
@@ -57,20 +64,10 @@ export default class ClockModernWidget {
     }
     getDefaultSettings() {
         return {
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
-            format24h: true,
-            font: "Sans Bold 30",
-            ampmFont: "Sans Bold 10",
-            colorHH: "#1a1a1a",
-            colorMM: "#1a1a1a",
-            colorSS: "#1a1a1a",
-            colorAmPm: "#d81f26",
-            cardColor: "#ffffff",
-            cornerRadius: 18,
-            launchOnClick: false,
-            desktopFilePath: ""
         };
     }
     onSettingsChanged() {
@@ -119,10 +116,11 @@ export default class ClockModernWidget {
         const colorMM = this._settings.colorMM ?? "#1a1a1a";
         const colorSS = this._settings.colorSS ?? "#1a1a1a";
         const colorAmPm = this._settings.colorAmPm ?? "#d81f26";
-        this._actor.set_style((this._api.resolveCardCss?.() ?? _cardStyleCss(this._settings, {
+        applyLayeredCardStyle(this._layers, this._settings, {
             backgroundColorKey: "cardColor",
             cornerRadiusFallback: 18
-        })) + "padding: 12px 12px; " + "spacing: 0px;");
+        }, false);
+        this._content.set_style("padding: 12px 12px; " + "spacing: 0px;");
         if (format24h) {
             this._ampmLabel.hide();
         } else {

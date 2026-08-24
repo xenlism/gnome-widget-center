@@ -84,21 +84,15 @@ folder instead, discovered the same way.
   `{cols, rows}` object shape is still accepted for backward compatibility
   — sanitized/remapped rather than trusted as-is — but new widgets should
   pick directly from the table above.
-- `themeable` (optional boolean, default `false`) — opts this widget's
-  root actor into the host-wide theme system
-  (`development/docs/THEME_SYSTEM.md`): background/corner-radius/
-  drop-shadow are styled from `theme.json`'s global appearance settings
-  (with an optional per-widget override under `widgets.<id>.config`,
-  itself editable from this widget's own Control Center settings page —
-  see `_appendWidgetAppearanceGroup()` in `prefs.js`) via
-  `ThemeService.applyWidgetStyle()`. A global "Force" switch on the
-  Appearance page can pin background and/or corner radius to the global
-  value for every themeable widget, ignoring any per-widget override.
-  Leave this unset for widgets that already paint their own background in
-  `widget.js` (e.g. any widget using the "card" pattern from
-  `calendar-modern`/`clock-modern` — see §3's stylesheet.css note) so the
-  host theme never silently overrides a widget's own design without the
-  author asking for it.
+- `themeable` — removed. There is no more host-wide theme/Force
+  Settings system that can paint a widget's card for it. Every widget
+  always self-paints its own card via `applyLayeredCardStyle()`/
+  `cardStyleCss()` in `widget.js`, reading background color/blur/
+  shadow/border/opacity straight from its own settings (see
+  `lib/widgetVisualKit.js`, `lib/cardLayers.js`). The one appearance
+  value still shared globally is the shadow's angle/distance (see
+  `lib/globalShadowHelper.js`) — everything else about a widget's card
+  always comes from that widget's own config.
 - `settings` (optional array) — see §6.1. This is the **only** settings
   system with real Control Center UI generation today.
 - `dependencies` (optional object) — system binaries this widget needs
@@ -866,6 +860,59 @@ any two widgets while `prevent-widget-overlap` is on. Nothing in
 same as the block-size clip itself always was. If `prevent-widget-overlap`
 is off, collision-avoidance (and therefore this guarantee) is skipped
 entirely, same as it always has been for that setting.
+
+### 9.4 GNOME Shell internals (`resource:///org/gnome/shell/...`)
+
+Widgets run **in-process** inside the extension (`widgetLoader.js` loads
+each `widget.js` with a plain dynamic `import(`file://...`)`, in the
+Shell's own GJS runtime — not a sandbox), so importing GNOME Shell's own
+modules works:
+
+```js
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+```
+
+This is a **last resort**, not a first choice — prefer DBus (§9.1) or a
+stable public GSettings schema wherever one exists, because
+`resource:///org/gnome/shell/...` modules are Shell-internal: no API
+stability guarantee, and they can rename/restructure across GNOME
+versions without warning. Reach for `Main.*` only when the thing you
+need genuinely has no DBus/GSettings surface — the concrete case that
+justified it here is `Main.brightnessManager`, whose `.scales` array
+covers **every** connected monitor's backlight (including external
+DisplayPort/HDMI panels on GNOME 46+), where the older
+`org.gnome.SettingsDaemon.Power.Screen` DBus interface only ever
+exposed the laptop's built-in panel:
+
+```js
+const globalScale = Main.brightnessManager?.scales?.find(s => !s.monitor);
+// `.monitor` is null/undefined on the one "global" scale; every other
+// entry in `.scales` is a specific monitor's individual backlight.
+if (globalScale) {
+    globalScale.connect('notify::value', () => { /* re-render */ });
+    const fraction = globalScale.value;      // 0..1, already normalized
+    globalScale.value = 0.5;                 // writes straight through
+}
+```
+
+Must-follow when touching `Main.*`:
+- **Always feature-detect, never assume the property exists** —
+  `Main.brightnessManager` itself can be `undefined` (very old GNOME
+  versions, or a session flavor that never instantiates it). Use `?.`
+  and have a real fallback path, not just a silent no-op.
+- **Keep the old DBus/GSettings path as a fallback**, don't delete it —
+  see `widgets/switches/widget.js`'s `_connectBrightness()` for the
+  pattern: try `Main.brightnessManager` first, fall back to the
+  `org.gnome.SettingsDaemon.Power.Screen` proxy from §9.1 if it's
+  unavailable. This is what keeps the widget working on GNOME versions
+  where `brightnessManager` doesn't exist yet.
+- Disconnect any `Main.*` object signal in `disable()`, same as every
+  other proxy/service in §9.1 — these are regular GObject `connect()`
+  calls and leak exactly the same way if you don't.
+- Don't hold a `Main.*` reference across `disable()`/`enable()` cycles —
+  re-fetch it (e.g. re-run the `.scales.find(...)` lookup) each time
+  `enable()` runs, the same as a DBus proxy is re-created rather than
+  cached across cycles.
 
 ## 10. Minimum supported version
 

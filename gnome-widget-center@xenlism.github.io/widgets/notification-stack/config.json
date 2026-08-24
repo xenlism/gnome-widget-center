@@ -1,0 +1,238 @@
+{
+    "version": "1.0",
+    "tabs": [
+        {
+            "id": "general",
+            "label": "Notification Stack",
+            "description": "Shows your most recent notifications as a stack of cards.",
+            "icon": "preferences-system-notifications-symbolic",
+            "groups": [
+                {
+                    "id": "cards",
+                    "label": "Cards",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "maxCards",
+                            "label": "Cards to show",
+                            "description": "How many recent notifications to keep visible",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 3,
+                            "min": 1,
+                            "max": 6,
+                            "step": 1
+                        },
+                        {
+                            "id": "cardSpacing",
+                            "label": "Spacing between cards",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 8,
+                            "min": 0,
+                            "max": 32,
+                            "step": 1,
+                            "suffix": "px"
+                        },
+                        {
+                            "id": "cardBgColor",
+                            "label": "Card background",
+                            "description": "Background color and transparency of each notification card",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#3A3A3CC2"
+                        },
+                        {
+                            "id": "cornerRadius",
+                            "label": "Corner radius",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 20,
+                            "min": 0,
+                            "max": 48,
+                            "step": 1,
+                            "suffix": "px"
+                        },
+                        {
+                            "id": "showAppIcon",
+                            "label": "Show app icon",
+                            "description": "",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": true
+                        }
+                    ]
+                },
+                {
+                    "id": "blurShadow",
+                    "label": "Blur & Shadow",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "blurEnabled",
+                            "label": "Enable background blur",
+                            "description": "",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": false
+                        },
+                        {
+                            "id": "blurRadius",
+                            "label": "Blur radius",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 24,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "blurEnabled"
+                        },
+                        {
+                            "id": "shadowEnabled",
+                            "label": "Enable drop shadow",
+                            "description": "",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": false
+                        },
+                        {
+                            "id": "shadowColor",
+                            "label": "Shadow color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#000000",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowOpacity",
+                            "label": "Shadow transparency",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 30,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "suffix": "%",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowAngle",
+                            "label": "Shadow angle",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 90,
+                            "min": 0,
+                            "max": 360,
+                            "step": 1,
+                            "suffix": "°",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowDistance",
+                            "label": "Shadow distance",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 6,
+                            "min": 0,
+                            "max": 60,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowBlur",
+                            "label": "Shadow blur",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 16,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "shadowEnabled"
+                        }
+                    ]
+                },
+                {
+                    "id": "text",
+                    "label": "Text",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "showCategoryLabel",
+                            "label": "Show \"Time Sensitive\" label",
+                            "description": "",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": true
+                        },
+                        {
+                            "id": "categoryFont",
+                            "label": "Category font",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "default": "Cantarell Bold 10",
+                            "visibleIf": "showCategoryLabel"
+                        },
+                        {
+                            "id": "categoryColor",
+                            "label": "Category color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "default": "#FF9F0A",
+                            "visibleIf": "showCategoryLabel"
+                        },
+                        {
+                            "id": "titleFont",
+                            "label": "Title font",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "default": "Cantarell Bold 13"
+                        },
+                        {
+                            "id": "titleColor",
+                            "label": "Title color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "default": "#FFFFFF"
+                        },
+                        {
+                            "id": "bodyFont",
+                            "label": "Body font",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "default": "Cantarell 12"
+                        },
+                        {
+                            "id": "bodyColor",
+                            "label": "Body color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "default": "#D1D1D6"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

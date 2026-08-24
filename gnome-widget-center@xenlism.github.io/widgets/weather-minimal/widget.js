@@ -10,6 +10,9 @@ import { loadTranslations } from "./i18n/index.js";
 
 import { SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, parseFontDescription as _parseFontDescription, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS } from "../../lib/widgetVisualKit.js";
 
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
+
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 const FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
 
 const REFRESH_SECONDS = 15 * 60;
@@ -156,10 +159,16 @@ export default class WeatherMinimalWidget {
         return typeof value === "string" && value.length > 0 ? value : english;
     }
     buildActor() {
-        this._actor = new St.BoxLayout({
-            style_class: "weather-minimal-widget-root",
+        this._layers = createLayeredCard({
+            contentStyleClass: "weather-minimal-widget-root"
+        });
+        this._actor = this._layers.root;
+        // this._content is a plain wrapper - padding/spacing live here,
+        // never the Content Layer itself (Rule 5).
+        this._content = new St.BoxLayout({
             vertical: true
         });
+        this._layers.content.add_child(this._content);
         this._iconBin = new St.Bin({
             style_class: "weather-minimal-widget-icon"
         });
@@ -169,9 +178,9 @@ export default class WeatherMinimalWidget {
         this._tempLabel = new St.Label({
             style_class: "weather-minimal-widget-temp"
         });
-        this._actor.add_child(this._iconBin);
-        this._actor.add_child(this._conditionLabel);
-        this._actor.add_child(this._tempLabel);
+        this._content.add_child(this._iconBin);
+        this._content.add_child(this._conditionLabel);
+        this._content.add_child(this._tempLabel);
         this._render();
         this._refresh();
         this._loadI18n();
@@ -193,20 +202,11 @@ export default class WeatherMinimalWidget {
     }
     getDefaultSettings() {
         return {
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
-            location: "13.756331,100.501762",
             locationAutoDetected: false,
-            cardColor: "#ffffff",
-            cornerRadius: 18,
-            iconColor: "#1a1a1a",
-            iconSize: 64,
-            conditionFont: "Sans Bold 16",
-            conditionColor: "#1a1a1a",
-            tempFont: "Sans Bold 34",
-            tempColor: "#1a1a1a",
-            tempUnit: "celsius"
         };
     }
     onSettingsChanged() {
@@ -346,10 +346,11 @@ export default class WeatherMinimalWidget {
         const tempUnit = this._settings.tempUnit ?? "celsius";
         const {family: conditionFontFamily, size: conditionFontSize} = _parseFontDescription(this._settings.conditionFont ?? "Sans Bold 16", "Sans Bold", 16);
         const {family: tempFontFamily, size: tempFontSize} = _parseFontDescription(this._settings.tempFont ?? "Sans Bold 34", "Sans Bold", 34);
-        this._actor.set_style((this._api.resolveCardCss?.() ?? _cardStyleCss(this._settings, {
+        applyLayeredCardStyle(this._layers, this._settings, {
             backgroundColorKey: "cardColor",
             cornerRadiusFallback: 18
-        })) + "padding: 14px 14px; " + "spacing: 6px;");
+        }, false);
+        this._content.set_style("padding: 14px 14px; spacing: 6px;");
         const iconKey = this._weather?.icon ?? "weather-cloud";
         const iconFile = this._getColoredIconFile(iconKey, iconColor);
         if (iconFile) {

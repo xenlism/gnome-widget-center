@@ -12,6 +12,9 @@ import { SystemMetricsService } from "../../lib/systemMetricsApi.js";
 
 import { SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor, parseFontDescription as _parseFontDescription, BORDER_DEFAULTS, OPACITY_DEFAULTS } from "../../lib/widgetVisualKit.js";
 
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
+
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 const RING_SIZE = 128;
 
 const RING_GAP = 4;
@@ -56,17 +59,16 @@ export default class CirclesNetWidget {
         this._uploadScale = MIN_DYNAMIC_SCALE_BYTES_PER_SEC;
     }
     buildActor() {
-        this._actor = new St.Bin({
-            style_class: "circles-net-root",
-            x_expand: true,
-            y_expand: true
+        this._layers = createLayeredCard({
+            contentStyleClass: "circles-net-root"
         });
+        this._actor = this._layers.root;
         const outerBox = new St.BoxLayout({
             vertical: true,
             x_expand: true,
             y_expand: true
         });
-        this._actor.set_child(outerBox);
+        this._layers.content.add_child(outerBox);
         outerBox.set_style("padding: 14px;");
         this._stack = new St.Widget({
             layout_manager: new Clutter.BinLayout,
@@ -123,20 +125,10 @@ export default class CirclesNetWidget {
     }
     getDefaultSettings() {
         return {
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
-            backgroundColor: "#FFFFFF00",
-            cornerRadius: 18,
-            labelFont: "Sans 12",
-            labelColor: "#FFFFFFB3",
-            percentFont: "Sans Bold 14",
-            circleBaseColor: "#FFFFFF26",
-            downloadColor: "#5AC8FAFF",
-            uploadColor: "#FF9F0AFF",
-            ringThickness: 9,
-            refreshRateSeconds: 2,
-            launchAppPath: ""
         };
     }
     onSettingsChanged() {
@@ -205,9 +197,9 @@ export default class CirclesNetWidget {
     _render() {
         const backgroundColor = _toCssColor(this._settings.backgroundColor, "#FFFFFF00");
         const cornerRadius = this._settings.cornerRadius ?? 18;
-        this._actor.set_style((this._api.resolveCardCss?.() ?? _cardStyleCss(this._settings, {
+        applyLayeredCardStyle(this._layers, this._settings, {
             cornerRadiusFallback: 18
-        })));
+        }, false);
         const labelColor = _toCssColor(this._settings.labelColor, "#FFFFFFB3");
         const downloadColor = _toCssColor(this._settings.downloadColor, "#5AC8FAFF");
         const uploadColor = _toCssColor(this._settings.uploadColor, "#FF9F0AFF");

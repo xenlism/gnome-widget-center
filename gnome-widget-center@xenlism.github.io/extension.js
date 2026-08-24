@@ -30,11 +30,11 @@ import { BlockSizeManager } from "./lib/blockSizeManager.js";
 
 import { ThemeService } from "./lib/themeService.js";
 
-import { setForcedTheme, setForceSettingsHelper, applyCardOpacity, cardStyleCss } from "./lib/widgetVisualKit.js";
+import { setGlobalShadowHelper, applyCardOpacity } from "./lib/widgetVisualKit.js";
 
 import { applyCardBlur } from "./lib/cardLayers.js";
 
-import { ForceSettingsHelper } from "./lib/forceSettingsHelper.js";
+import { GlobalShadowHelper } from "./lib/globalShadowHelper.js";
 
 import { WidgetCenterOverlay } from "./lib/widgetCenterOverlay.js";
 
@@ -44,28 +44,37 @@ import { createLogger } from "./lib/logger.js";
 
 import { importGwctDocument } from "./lib/exportService.js";
 
+import { GlobalScreenshotKeybinding } from "./lib/globalScreenshotKeybinding.js";
+
 export default class WidgetCenterExtension extends Extension {
     enable() {
         this._storage = new StorageService;
         this._storage.init();
         this._themeService = new ThemeService;
         this._themeService.init();
-        setForcedTheme(this._themeService.getGlobalTheme());
-        this._themeService.watch(() => {
-            setForcedTheme(this._themeService.getGlobalTheme());
-            this._reapplyTheme();
-        });
+        // theme.json (global background/drop-shadow) only drives the edit
+        // mode toolbar's own styling now — see _reapplyTheme() below. Widget
+        // cards are never painted from it; each widget always owns its own
+        // card styling from its own settings.
+        this._themeService.watch(() => this._reapplyTheme());
         try {
-            const forceGSettings = this.getSettings("org.gnome.shell.extensions.widget-center");
-            this._forceSettingsHelper = new ForceSettingsHelper(forceGSettings);
-            setForceSettingsHelper(this._forceSettingsHelper);
-            this._themeService.setForceSettingsHelper(this._forceSettingsHelper);
-            this._forceSettingsChangedId = this._forceSettingsHelper.watch(() => {
-                this._reapplyTheme();
+            const shadowGSettings = this.getSettings("org.gnome.shell.extensions.widget-center");
+            this._globalShadowHelper = new GlobalShadowHelper(shadowGSettings);
+            setGlobalShadowHelper(this._globalShadowHelper);
+            // shadow-distance/shadow-angle are the only appearance values
+            // shared globally — every widget still owns everything else
+            // about its own card (background/corner-radius/blur/shadow
+            // color+opacity+blur) from its own settings. On a change here,
+            // nudge every widget to re-derive its own card by calling its
+            // OWN _render() (never by writing to entry.actor directly —
+            // that would paint a stray duplicate card on top of the
+            // widget's own).
+            this._globalShadowChangedId = this._globalShadowHelper.watch(() => {
+                this._nudgeShadowAngle();
             });
         } catch (e) {
-            console.error("[widget-center] ForceSettingsHelper setup failed", e);
-            this._forceSettingsHelper = null;
+            console.error("[widget-center] GlobalShadowHelper setup failed", e);
+            this._globalShadowHelper = null;
         }
         this._settings = new SettingsService(this);
         try {
@@ -128,7 +137,7 @@ export default class WidgetCenterExtension extends Extension {
         const bundledWidgetsPath = GLib.build_filenamev([ this.path, "widgets" ]);
         const userWidgetsPath = GLib.build_filenamev([ GLib.get_user_data_dir(), "gnome-widget-center", "widgets" ]);
         this._userWidgetsPath = userWidgetsPath;
-        const loader = new WidgetLoader([ bundledWidgetsPath, userWidgetsPath ], this._storage, this._logger, this._settings?.isReady ? this._settings.getGlobalValue("widget-spacing") : 0, this._settings, this._themeService);
+        const loader = new WidgetLoader([ bundledWidgetsPath, userWidgetsPath ], this._storage, this._logger, this._settings?.isReady ? this._settings.getGlobalValue("widget-spacing") : 0, this._settings, this._themeService, () => this._loadNewlyDiscoveredWidgets());
         this._loader = loader;
         const initialDisabled = new Set(this._settings?.isReady ? this._settings.getGlobalValue("disabled-widgets") : []);
         if (this._settings?.isReady) {
@@ -161,20 +170,34 @@ export default class WidgetCenterExtension extends Extension {
             onWidgetRemove: id => this._removeWidgetViaEditMode(id)
         });
         this._widgetCenterOverlay.enable();
+        // Reuses the same schema/key (theme-screenshot-keybinding) that
+        // themePackExportDialog.js already reads for the accelerator
+        // label - this is what actually claims that keybinding at the
+        // compositor level. See lib/globalScreenshotKeybinding.js for
+        // why a GTK-side shortcut on the dialog window alone can't do
+        // this.
+        try {
+            const keybindingGSettings = this.getSettings("org.gnome.shell.extensions.widget-center");
+            this._globalScreenshotKeybinding = new GlobalScreenshotKeybinding(this, keybindingGSettings, this._logger);
+            this._globalScreenshotKeybinding.enable();
+        } catch (e) {
+            console.error("[widget-center] could not set up the global screenshot keybinding", e);
+            this._globalScreenshotKeybinding = null;
+        }
     }
     disable() {
         this._cancelLoad?.();
         this._cancelLoad = null;
+        this._globalScreenshotKeybinding?.disable();
+        this._globalScreenshotKeybinding = null;
         this._widgetCenterOverlay?.disable();
         this._widgetCenterOverlay = null;
         this._themeService?.unwatch();
-        this._themeService?.setForceSettingsHelper(null);
         this._themeService = null;
-        setForcedTheme(null);
-        this._forceSettingsHelper?.unwatch(this._forceSettingsChangedId);
-        this._forceSettingsChangedId = null;
-        this._forceSettingsHelper = null;
-        setForceSettingsHelper(null);
+        this._globalShadowHelper?.unwatch(this._globalShadowChangedId);
+        this._globalShadowChangedId = null;
+        this._globalShadowHelper = null;
+        setGlobalShadowHelper(null);
         if (this._settings && this._disabledChangedId != null) this._settings.disconnect(this._disabledChangedId);
         this._disabledChangedId = null;
         if (this._settings && this._languageChangedId != null) this._settings.disconnect(this._languageChangedId);
@@ -226,42 +249,32 @@ export default class WidgetCenterExtension extends Extension {
         }
     }
     _reapplyTheme() {
-        if (!this._themeService) return;
-        if (this._loader) {
-            for (const entry of this._loader.instances) {
-                try {
-                    if (entry.metadata["themeable"]) {
-                        this._themeService.applyWidgetStyle(entry.actor, entry.id);
-                    } else if (entry.instance?._render) {
-                        entry.instance._render();
-                    } else if (entry.metadata?.["forceSettingsAware"]) {
-                        // อัปเดต CSS โดยตรงผ่าน cardStyleCss สำหรับ widget ที่ไม่มี _render()
-                        // เพื่อให้แน่ใจว่า Force Settings ถูกปรับ
-                        entry.actor.set_style(cardStyleCss(entry.settings));
-                    }
-                } catch (e) {
-                    console.error(`[widget-center] Failed to reapply theme for "${entry.id}"`, e);
-                }
-                this._applyCardEffects(entry);
+        // theme.json only drives the edit-mode toolbar's own background/
+        // drop-shadow now (applyGlobalStyle()) — widget cards are always
+        // self-painted from each widget's own settings, never from
+        // ThemeService, so there's nothing to touch here per-widget.
+        this._editMode?.reapplyTheme();
+    }
+    _nudgeShadowAngle() {
+        if (!this._loader) return;
+        for (const entry of this._loader.instances) {
+            try {
+                entry.instance?._render?.();
+            } catch (e) {
+                console.error(`[widget-center] Failed to nudge shadow angle for "${entry.id}"`, e);
             }
         }
-        this._editMode?.reapplyTheme();
     }
     _applyCardEffects(entry) {
         if (!entry?.actor) return;
         if (entry.instance?._layers) return;
-        // Widgets with themeable=false (or no themeable key at all) must
-        // NOT have Force Opacity/Blur applied — only themeable widgets
-        // and widgets that explicitly opt in via forceSettingsAware:true
-        // in their metadata.json should receive forced opacity/blur.
-        const ignoreForce = !(entry.metadata?.["themeable"] || entry.metadata?.["forceSettingsAware"]);
         try {
-            applyCardOpacity(entry.actor, entry.settings, ignoreForce);
+            applyCardOpacity(entry.actor, entry.settings);
         } catch (e) {
             console.error(`[widget-center] Failed to apply opacity for "${entry.id}"`, e);
         }
         try {
-            applyCardBlur(entry.actor, entry.settings, ignoreForce);
+            applyCardBlur(entry.actor, entry.settings);
         } catch (e) {
             console.error(`[widget-center] Failed to apply blur for "${entry.id}"`, e);
         }
@@ -272,23 +285,10 @@ export default class WidgetCenterExtension extends Extension {
             y: 40
         };
         const position = this._layer.getSavedPosition(entry.id, fallback);
-        
-        // insert Flag __ignoreForce into settings if widget not themeable
-        if (entry.settings && !entry.metadata?.["themeable"] && !entry.metadata?.["forceSettingsAware"]) {
-            entry.settings.__ignoreForce = true;
-        }
-        
         try {
             BlockSizeManager.applyBlockSize(entry.metadata, entry.actor);
         } catch (e) {
             console.error(`[widget-center] Failed to apply block size for "${entry.id}"`, e);
-        }
-        if (entry.metadata["themeable"]) {
-            try {
-                this._themeService.applyWidgetStyle(entry.actor, entry.id);
-            } catch (e) {
-                console.error(`[widget-center] Failed to apply theme for "${entry.id}"`, e);
-            }
         }
         this._applyCardEffects(entry);
         try {
@@ -328,11 +328,6 @@ export default class WidgetCenterExtension extends Extension {
         if (!newEntry) {
             console.error(`[widget-center] "${widgetId}" could not be reloaded after Reset`);
             return;
-        }
-        
-        //  insert Flag __ignoreForce into settings if widget not themeable
-        if (newEntry.settings && !newEntry.metadata?.["themeable"] && !newEntry.metadata?.["forceSettingsAware"]) {
-            newEntry.settings.__ignoreForce = true;
         }
         
         const fallback = newEntry.metadata["default-position"] ?? {
@@ -473,9 +468,26 @@ export default class WidgetCenterExtension extends Extension {
             this._layer.removeWidgetActor(id);
             this._loader.unloadOne(id);
         }
+        this._loadNewlyDiscoveredWidgets(disabledIds);
+    }
+    // Discovers any widget directory not yet loaded (and not disabled)
+    // and places it in the running layer - the "pick up a widget that
+    // just appeared on disk" half of _applyDisabledWidgets(), pulled out
+    // so it can also run on its own. Two callers today: the
+    // disabled-widgets settings watcher above (with the ids it already
+    // has fresh from the change signal), and api.host.rescan() (see
+    // lib/widgetLoader.js's _buildApi()) - the hook an Architect Widget
+    // calls right after writing a new Child's files to disk (see
+    // lib/architectWidgetKit.js), where `disabledIds` isn't already at
+    // hand so it's re-read from settings instead.
+    _loadNewlyDiscoveredWidgets(disabledIds = null) {
+        if (!this._loader || !this._layer) return;
+        if (this._applyingThemePack) return;
+        const disabled = disabledIds ?? new Set(this._settings?.isReady ? this._settings.getGlobalValue("disabled-widgets") : []);
+        const loadedIds = new Set(this._loader.instances.map(e => e.id));
         const discovered = this._loader.discover();
         for (const widgetInfo of discovered) {
-            if (disabledIds.has(widgetInfo.id) || loadedIds.has(widgetInfo.id)) continue;
+            if (disabled.has(widgetInfo.id) || loadedIds.has(widgetInfo.id)) continue;
             this._loader.loadOne(widgetInfo).then(entry => entry && this._placeEntry(entry)).catch(e => console.error(`[widget-center] "${widgetInfo.id}" failed to load`, e));
         }
     }

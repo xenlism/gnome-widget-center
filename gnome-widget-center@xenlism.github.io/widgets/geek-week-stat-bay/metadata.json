@@ -1,17 +1,16 @@
 {
-  "id": "xenlism.github.io.geek-week-stat-bay",
-  "name": "Geek Week/Stat (Bay) By Xenlism",
-  "description": "Medium `3x1` card (35×11 grid cells): big centered week line on top, stat line centered underneath.",
-  "version": "1.0.0",
-  "author": "Nattapong Pullkhow",
-  "api-version": 1,
-  "entry": "widget.js",
-  "block-type": "3x1",
-  "default-position": {
-    "x": 832,
-    "y": 32,
-    "monitor": 0
-  },
-  "screenshot": "screenshot.png",
-  "themeable": true
+    "id": "xenlism.github.io.geek-week-stat-bay",
+    "name": "Geek Week/Stat (Bay) By Xenlism",
+    "description": "Medium `3x1` card (35\u00d711 grid cells): big centered week line on top, stat line centered underneath.",
+    "version": "1.0.0",
+    "author": "Nattapong Pullkhow",
+    "api-version": 1,
+    "entry": "widget.js",
+    "block-type": "3x1",
+    "default-position": {
+        "x": 832,
+        "y": 32,
+        "monitor": 0
+    },
+    "screenshot": "screenshot.png"
 }

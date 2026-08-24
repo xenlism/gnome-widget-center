@@ -1,17 +1,16 @@
 {
-  "id": "xenlism.github.io.system-monitor",
-  "name": "System Monitor By Xenlism",
-  "description": "iStat-style card: CPU/Memory/Disk usage as glowing ring gauges, plus a network throughput line. Click to launch an app.",
-  "version": "1.0.0",
-  "author": "Nattapong Pullkhow",
-  "api-version": 1,
-  "entry": "widget.js",
-  "block-type": "2x1",
-  "default-position": {
-    "x": 40,
-    "y": 40,
-    "monitor": 0
-  },
-  "screenshot": "screenshot.png",
-  "themeable": true
+    "id": "xenlism.github.io.system-monitor",
+    "name": "System Monitor By Xenlism",
+    "description": "iStat-style card: CPU/Memory/Disk usage as glowing ring gauges, plus a network throughput line. Click to launch an app.",
+    "version": "1.0.0",
+    "author": "Nattapong Pullkhow",
+    "api-version": 1,
+    "entry": "widget.js",
+    "block-type": "2x1",
+    "default-position": {
+        "x": 40,
+        "y": 40,
+        "monitor": 0
+    },
+    "screenshot": "screenshot.png"
 }

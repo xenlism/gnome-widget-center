@@ -1,0 +1,18 @@
+{
+    "id": "xenlism.github.io.calendar-big",
+    "name": "Calendar (big) By Xenlism",
+    "description": "Large month calendar grid with a highlighted today.",
+    "version": "1.0.0",
+    "author": "Nattapong Pullkhow",
+    "api-version": 1,
+    "entry": "widget.js",
+    "block-type": {
+        "cols": 17,
+        "rows": 21
+    },
+    "default-position": {
+        "x": 40,
+        "y": 40,
+        "monitor": 0
+    }
+}

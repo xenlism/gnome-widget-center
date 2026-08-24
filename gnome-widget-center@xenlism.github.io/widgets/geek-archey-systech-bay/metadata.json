@@ -1,17 +1,16 @@
 {
-  "id": "xenlism.github.io.geek-archey-systech-bay",
-  "name": "Geek Archey Sysfetch (Wide) By Xenlism",
-  "description": "archey4-style card: ASCII distro logo plus OS, host, kernel, uptime, packages, shell, resolution, desktop, CPU, GPU, memory, and a 16-color palette strip. Wide layout, more room for long values.",
-  "version": "1.0.0",
-  "author": "Nattapong Pullkhow",
-  "api-version": 1,
-  "entry": "widget.js",
-  "block-type": "4x2",
-  "default-position": {
-    "x": 40,
-    "y": 40,
-    "monitor": 0
-  },
-  "screenshot": "screenshot.png",
-  "themeable": true
+    "id": "xenlism.github.io.geek-archey-systech-bay",
+    "name": "Geek Archey Sysfetch (Wide) By Xenlism",
+    "description": "archey4-style card: ASCII distro logo plus OS, host, kernel, uptime, packages, shell, resolution, desktop, CPU, GPU, memory, and a 16-color palette strip. Wide layout, more room for long values.",
+    "version": "1.0.0",
+    "author": "Nattapong Pullkhow",
+    "api-version": 1,
+    "entry": "widget.js",
+    "block-type": "4x2",
+    "default-position": {
+        "x": 40,
+        "y": 40,
+        "monitor": 0
+    },
+    "screenshot": "screenshot.png"
 }

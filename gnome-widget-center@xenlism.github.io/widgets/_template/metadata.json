@@ -1,17 +1,15 @@
 {
-  "id": "xenlism.github.io.my-widget",
-  "name": "My Widget By Xenlism",
-  "description": "TODO: one line describing what this widget does.",
-  "version": "1.0.0",
-  "author": "Nattapong Pullkhow",
-  "api-version": 1,
-  "entry": "widget.js",
-  "themeable": true,
-  "prefs": "prefs.js",
-  "block-type": "1x1",
-  "default-position": {
-    "x": 40,
-    "y": 40,
-    "monitor": 0
-  }
+    "id": "xenlism.github.io.my-widget",
+    "name": "My Widget By Xenlism",
+    "description": "TODO: one line describing what this widget does.",
+    "version": "1.0.0",
+    "author": "Nattapong Pullkhow",
+    "api-version": 1,
+    "entry": "widget.js",
+    "block-type": "1x1",
+    "default-position": {
+        "x": 40,
+        "y": 40,
+        "monitor": 0
+    }
 }

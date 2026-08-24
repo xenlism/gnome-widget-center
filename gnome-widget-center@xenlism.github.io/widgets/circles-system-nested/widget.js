@@ -12,6 +12,9 @@ import { SystemMetricsService } from "../../lib/systemMetricsApi.js";
 
 import { SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor, parseFontDescription as _parseFontDescription, BORDER_DEFAULTS, OPACITY_DEFAULTS } from "../../lib/widgetVisualKit.js";
 
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
+
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 const RING_SIZE = 128;
 
 const METRICS = [ {
@@ -44,17 +47,16 @@ export default class CirclesSystemNestedWidget {
         };
     }
     buildActor() {
-        this._actor = new St.Bin({
-            style_class: "circles-system-nested-root",
-            x_expand: true,
-            y_expand: true
+        this._layers = createLayeredCard({
+            contentStyleClass: "circles-system-nested-root"
         });
+        this._actor = this._layers.root;
         const outerBox = new St.BoxLayout({
             vertical: true,
             x_expand: true,
             y_expand: true
         });
-        this._actor.set_child(outerBox);
+        this._layers.content.add_child(outerBox);
         outerBox.set_style("padding: 14px;");
         this._stack = new St.Widget({
             layout_manager: new Clutter.BinLayout,
@@ -105,20 +107,10 @@ export default class CirclesSystemNestedWidget {
     }
     getDefaultSettings() {
         return {
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
-            backgroundColor: "#FFFFFF00",
-            cornerRadius: 18,
-            circleBaseColor: "#FFFFFF26",
-            cpuRingColor: "#33D17AFF",
-            memRingColor: "#3584E4FF",
-            hddRingColor: "#F5C211FF",
-            ringThickness: 9,
-            ringGap: 3,
-            showCenterText: true,
-            centerFont: "Sans Bold 10",
-            refreshRateSeconds: 2
         };
     }
     onSettingsChanged() {
@@ -173,10 +165,10 @@ export default class CirclesSystemNestedWidget {
         }
     }
     _render() {
-        this._actor.set_style((this._api.resolveCardCss?.() ?? _cardStyleCss(this._settings, {
+        applyLayeredCardStyle(this._layers, this._settings, {
             backgroundColorFallback: "#FFFFFF00",
             cornerRadiusFallback: 18
-        })));
+        }, false);
         const showCenterText = this._settings.showCenterText ?? true;
         this._centerBox.visible = showCenterText;
         if (showCenterText) {

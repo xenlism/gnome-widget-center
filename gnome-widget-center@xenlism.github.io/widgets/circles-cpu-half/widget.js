@@ -12,6 +12,9 @@ import { SystemMetricsService } from "../../lib/systemMetricsApi.js";
 
 import { SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor, parseFontDescription as _parseFontDescription, BORDER_DEFAULTS, OPACITY_DEFAULTS } from "../../lib/widgetVisualKit.js";
 
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
+
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 const RING_COLUMN_WIDTH = 74;
 
 const CONTENT_HEIGHT = 148;
@@ -19,8 +22,6 @@ const CONTENT_HEIGHT = 148;
 const COLUMN_GAP = 10;
 
 const CARD_PADDING = 14;
-
-const RING_GAP = 4;
 
 const EDGE_SNAP_DISTANCE = 250;
 
@@ -33,17 +34,16 @@ export default class CirclesCpuHalfWidget {
         this._fraction = 0;
     }
     buildActor() {
-        this._actor = new St.Bin({
-            style_class: "circles-cpu-half-root",
-            x_expand: true,
-            y_expand: true
+        this._layers = createLayeredCard({
+            contentStyleClass: "circles-cpu-half-root"
         });
+        this._actor = this._layers.root;
         const outerBox = new St.BoxLayout({
             vertical: true,
             x_expand: true,
             y_expand: true
         });
-        this._actor.set_child(outerBox);
+        this._layers.content.add_child(outerBox);
         outerBox.set_style(`padding: ${CARD_PADDING}px;`);
         const centerBin = new St.Bin({
             x_expand: true,
@@ -95,21 +95,10 @@ export default class CirclesCpuHalfWidget {
     }
     getDefaultSettings() {
         return {
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
-            backgroundColor: "#FFFFFF00",
-            cornerRadius: 18,
-            circleBaseColor: "#FFFFFF26",
-            cpuRingColor: "#33D17AFF",
-            ringThickness: 10,
-            ringSide: "right",
-            captionText: "CPU",
-            captionFont: "Sans 10",
-            captionColor: "#FFFFFFB3",
-            cpuValueFont: "Sans Bold 24",
-            cpuValueColor: "#FFFFFFFF",
-            refreshRateSeconds: 2
         };
     }
     onSettingsChanged() {
@@ -184,10 +173,10 @@ export default class CirclesCpuHalfWidget {
         this._render();
     }
     _render() {
-        this._actor.set_style((this._api.resolveCardCss?.() ?? _cardStyleCss(this._settings, {
+        applyLayeredCardStyle(this._layers, this._settings, {
             backgroundColorFallback: "#FFFFFF00",
             cornerRadiusFallback: 18
-        })));
+        }, false);
         const captionColor = _toCssColor(this._settings.captionColor, "#FFFFFFB3");
         const captionFont = _parseFontDescription(this._settings.captionFont ?? "Sans 10", "Sans", 10);
         this._captionLabel.set_text(this._settings.captionText ?? "CPU");
@@ -209,20 +198,30 @@ export default class CirclesCpuHalfWidget {
         const ringColor = _hexToRgba(this._settings.cpuRingColor ?? "#33D17AFF");
         const cx = side === "left" ? 0 : RING_COLUMN_WIDTH;
         const cy = CONTENT_HEIGHT / 2;
-        const outerRadius = Math.min(RING_COLUMN_WIDTH - thickness / 2 - 2, CONTENT_HEIGHT / 2 - thickness / 2 - 2);
+        // Keep the ring's tip clear of the card's own rounded corner.
+        // The tip already sits CARD_PADDING (14px) in from the edge via
+        // the translation in _layoutChildren(); if cornerRadius grows
+        // past that, the tip paints into the card's transparent rounded
+        // corner cutout and appears to poke out past the card outline.
+        const cornerRadius = Number.isFinite(this._settings.cornerRadius) ? Math.max(0, this._settings.cornerRadius) : 18;
+        const cornerClearance = Math.max(thickness / 2 + 2, cornerRadius - CARD_PADDING);
+        const outerRadius = Math.min(RING_COLUMN_WIDTH - thickness / 2 - 2, CONTENT_HEIGHT / 2 - cornerClearance);
         const fraction = Math.max(0, Math.min(1, this._fraction));
         const start = -Math.PI / 2;
-        const rings = [ outerRadius, outerRadius - thickness - RING_GAP ];
-        cr.setLineWidth(thickness);
-        cr.setLineCap(Cairo.LineCap.BUTT);
-        for (const radius of rings) {
-            if (radius <= 0) continue;
+        // Single half-ring: one gauge, one radius. (Previously this looped
+        // over two radii - a copy-paste leftover from circles-net-half,
+        // which legitimately draws two concentric rings for download+upload.
+        // This widget only has one metric, so the second pass just redrew
+        // the same gauge again at a smaller radius - a duplicate ring.)
+        if (outerRadius > 0) {
+            cr.setLineWidth(thickness);
+            cr.setLineCap(Cairo.LineCap.BUTT);
             cr.setSourceRGBA(baseColor.r, baseColor.g, baseColor.b, baseColor.a);
-            if (side === "left") cr.arc(cx, cy, radius, start, start + Math.PI); else cr.arcNegative(cx, cy, radius, start, start - Math.PI);
+            if (side === "left") cr.arc(cx, cy, outerRadius, start, start + Math.PI); else cr.arcNegative(cx, cy, outerRadius, start, start - Math.PI);
             cr.stroke();
             if (fraction > 0) {
                 cr.setSourceRGBA(ringColor.r, ringColor.g, ringColor.b, ringColor.a);
-                if (side === "left") cr.arc(cx, cy, radius, start, start + fraction * Math.PI); else cr.arcNegative(cx, cy, radius, start, start - fraction * Math.PI);
+                if (side === "left") cr.arc(cx, cy, outerRadius, start, start + fraction * Math.PI); else cr.arcNegative(cx, cy, outerRadius, start, start - fraction * Math.PI);
                 cr.stroke();
             }
         }

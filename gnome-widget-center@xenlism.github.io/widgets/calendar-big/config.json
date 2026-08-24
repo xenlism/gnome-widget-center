@@ -1,0 +1,152 @@
+{
+    "version": "1.0",
+    "tabs": [
+        {
+            "id": "general",
+            "label": "Calendar",
+            "description": "Plain month calendar",
+            "icon": "x-office-calendar-symbolic",
+            "groups": [
+                {
+                    "id": "calendarAppearance",
+                    "label": "Calendar",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "mondayStart",
+                            "label": "Week starts on Monday",
+                            "description": "",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": false
+                        },
+                        {
+                            "id": "calendarFont",
+                            "label": "Calendar font",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "default": "Cantarell 13"
+                        },
+                        {
+                            "id": "monthHeaderColor",
+                            "label": "Month header color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "default": "#1A1A1A"
+                        },
+                        {
+                            "id": "calendarTextColor",
+                            "label": "Day number color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "default": "#1A1A1A"
+                        },
+                        {
+                            "id": "outOfMonthColor",
+                            "label": "Other month day color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "default": "#C7C7CC"
+                        },
+                        {
+                            "id": "weekdayHeaderColor",
+                            "label": "Weekday header color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "default": "#8E8E93"
+                        },
+                        {
+                            "id": "highlightDayColor",
+                            "label": "Today highlight color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "default": "#FF3B30"
+                        },
+                        {
+                            "id": "highlightDayTextColor",
+                            "label": "Today text color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "default": "#FFFFFF"
+                        }
+                    ]
+                },
+                {
+                    "id": "card",
+                    "label": "Card background",
+                    "description": "Applies when this widget's own appearance isn't forced by the global theme.",
+                    "fields": [
+                        {
+                            "id": "cardColor",
+                            "label": "Background",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFFFF"
+                        },
+                        {
+                            "id": "cornerRadius",
+                            "label": "Corner radius",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 24,
+                            "min": 0,
+                            "max": 48,
+                            "step": 1,
+                            "suffix": "px"
+                        }
+                    ]
+                },
+                {
+                    "id": "shadow",
+                    "label": "Shadow",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "shadowAngle",
+                            "label": "Shadow angle",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 90,
+                            "min": 0,
+                            "max": 360,
+                            "step": 1,
+                            "suffix": "\u00b0",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowDistance",
+                            "label": "Shadow distance",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 6,
+                            "min": 0,
+                            "max": 60,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "shadowEnabled"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

@@ -14,6 +14,7 @@ import { MprisMediaService } from "../../lib/mediaApi.js";
 
 import { SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor, BORDER_DEFAULTS, OPACITY_DEFAULTS } from "../../lib/widgetVisualKit.js";
 
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 const SIZE = 176;
 
 const RING_SIZE = 163;
@@ -59,16 +60,24 @@ export default class MediaPlayerCircleWidget {
             layout_manager: new Clutter.BinLayout,
             width: SIZE,
             height: SIZE,
-            reactive: true,
-            clip_to_allocation: false
+            reactive: true
         });
+        this._content = new St.Widget({
+            layout_manager: new Clutter.BinLayout,
+            clip_to_allocation: true
+        });
+        this._content.add_constraint(new Clutter.BindConstraint({
+            source: this._actor,
+            coordinate: Clutter.BindCoordinate.SIZE
+        }));
+        this._actor.add_child(this._content);
         this._ringArea = new St.DrawingArea({
             width: RING_SIZE,
             height: RING_SIZE,
             x_align: Clutter.ActorAlign.CENTER,
             y_align: Clutter.ActorAlign.CENTER
         });
-        this._actor.add_child(this._ringArea);
+        this._content.add_child(this._ringArea);
         this._ringRepaintId = this._ringArea.connect("repaint", () => this._onRingRepaint());
         this._coverStack = new St.Widget({
             layout_manager: new Clutter.BinLayout,
@@ -79,7 +88,7 @@ export default class MediaPlayerCircleWidget {
             style: "background-color: rgba(255,255,255,0.06); border-radius: 999px;",
             clip_to_allocation: true
         });
-        this._actor.add_child(this._coverStack);
+        this._content.add_child(this._coverStack);
         this._fallbackArea = new St.DrawingArea({
             width: COVER_SIZE,
             height: COVER_SIZE
@@ -109,7 +118,9 @@ export default class MediaPlayerCircleWidget {
         this._artistLabel = new St.Label({
             text: ""
         });
-        for (const label of [ this._titleLabel, this._artistLabel ]) label.clutter_text.set_ellipsize(3);
+        // Overflowing titles/artists are hidden by the Content Layer's
+        // clip_to_allocation (Rule 4) - no ellipsize substitute.
+        for (const label of [ this._titleLabel, this._artistLabel ]) label.clutter_text.set_line_wrap(false);
         this._textBox = new St.BoxLayout({
             vertical: true,
             width: SIZE - 24,
@@ -119,7 +130,7 @@ export default class MediaPlayerCircleWidget {
         this._textBox.set_style("padding-bottom: 14px;");
         this._textBox.add_child(this._titleLabel);
         this._textBox.add_child(this._artistLabel);
-        this._actor.add_child(this._textBox);
+        this._content.add_child(this._textBox);
         this._coverButton = new St.Button({
             x_expand: true,
             y_expand: true,
@@ -128,7 +139,7 @@ export default class MediaPlayerCircleWidget {
             style: "background-color: transparent;"
         });
         this._coverButton.connect("clicked", () => this._onCoverClicked());
-        this._actor.add_child(this._coverButton);
+        this._content.add_child(this._coverButton);
         this._prevButton = this._makeButton("media-skip-backward-symbolic", () => this._media.previous());
         this._playPauseButton = this._makeButton("media-playback-start-symbolic", () => this._onPlayClicked());
         this._nextButton = this._makeButton("media-skip-forward-symbolic", () => this._media.next());
@@ -141,7 +152,7 @@ export default class MediaPlayerCircleWidget {
         this._controls.add_child(this._prevButton);
         this._controls.add_child(this._playPauseButton);
         this._controls.add_child(this._nextButton);
-        this._actor.add_child(this._controls);
+        this._content.add_child(this._controls);
         this._actor.set_track_hover(true);
         this._hoverId = this._actor.connect("notify::hover", () => {
             this._controls.visible = this._actor.hover;
@@ -171,15 +182,10 @@ export default class MediaPlayerCircleWidget {
     }
     getDefaultSettings() {
         return {
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
-            backgroundColor: "#FFFFFF00",
-            ringColor: "#F5A623FF",
-            infoFont: "Sans Bold 11",
-            infoColor: "#FFFFFFFF",
-            buttonColor: "#FFFFFFFF",
-            desktopFilePath: ""
         };
     }
     onSettingsChanged() {

@@ -2,10 +2,13 @@ import Clutter from "gi://Clutter";
 
 import GLib from "gi://GLib";
 
-import { $ } from "../../lib/gjskit/st/index.js";
+import St from "gi://St";
 
-import { SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, borderCss as _borderCss, BORDER_DEFAULTS, OPACITY_DEFAULTS } from "../../lib/widgetVisualKit.js";
+import { SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS } from "../../lib/widgetVisualKit.js";
 
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
+
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 export default class CalendarHeaderWidget {
     constructor(api) {
         this._api = api;
@@ -13,36 +16,62 @@ export default class CalendarHeaderWidget {
         this._timeoutId = null;
     }
     buildActor() {
-        const root = $.box({
-            style_class: "calendar-header-widget-root",
-            vertical: true
+        this._layers = createLayeredCard({
+            contentStyleClass: "calendar-header-widget-root"
         });
-        const header = $.box({
+        this._actor = this._layers.root;
+        // this._content is a plain wrapper - it stacks header+body
+        // vertically. The Content Layer itself (this._layers.content)
+        // carries no style of its own (Rule 5).
+        // x_expand/y_expand must be set explicitly here (every other
+        // createLayeredCard() widget's wrapper sets these too - see
+        // circles-cpu-half's outerBox for the pattern this was missing).
+        // Without them, this BoxLayout is a non-expanding child of the
+        // Content Layer's BinLayout and is sized to its own natural
+        // height instead of the card's fixed block size - so header+body
+        // can end up taller or shorter than the actual card, showing
+        // either a sliver of the Card layer's own background peeking out
+        // past body's rounded bottom, or the reverse.
+        this._content = new St.BoxLayout({
+            vertical: true,
+            x_expand: true,
+            y_expand: true
+        });
+        this._layers.content.add_child(this._content);
+        const header = new St.BoxLayout({
             style_class: "calendar-header-widget-header",
-            vertical: true
+            vertical: true,
+            x_expand: true
         });
-        const monthLabel = $.label({
+        const monthLabel = new St.Label({
             style_class: "calendar-header-widget-month"
         });
-        const weekdayLabel = $.label({
+        const weekdayLabel = new St.Label({
             style_class: "calendar-header-widget-weekday"
         });
-        header.append(monthLabel).append(weekdayLabel);
-        const body = $.box({
+        header.add_child(monthLabel);
+        header.add_child(weekdayLabel);
+        const body = new St.BoxLayout({
             style_class: "calendar-header-widget-body",
-            vertical: true
+            vertical: true,
+            x_expand: true,
+            y_expand: true
         });
-        const dayLabel = $.label({
-            style_class: "calendar-header-widget-day"
+        const dayLabel = new St.Label({
+            style_class: "calendar-header-widget-day",
+            x_align: Clutter.ActorAlign.CENTER,
+            y_align: Clutter.ActorAlign.CENTER,
+            x_expand: true,
+            y_expand: true
         });
-        body.append(dayLabel);
-        root.append(header).append(body);
-        this._actor = root.raw;
-        this._header = header.raw;
-        this._monthLabel = monthLabel.raw;
-        this._weekdayLabel = weekdayLabel.raw;
-        this._body = body.raw;
-        this._dayLabel = dayLabel.raw;
+        body.add_child(dayLabel);
+        this._content.add_child(header);
+        this._content.add_child(body);
+        this._header = header;
+        this._monthLabel = monthLabel;
+        this._weekdayLabel = weekdayLabel;
+        this._body = body;
+        this._dayLabel = dayLabel;
         this._render();
         return this._actor;
     }
@@ -60,13 +89,10 @@ export default class CalendarHeaderWidget {
     }
     getDefaultSettings() {
         return {
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
-            headerColor: "#2563eb",
-            headerTextColor: "#ffffff",
-            bodyColor: "#ffffff",
-            dayColor: "#1a1a1a"
         };
     }
     onSettingsChanged() {
@@ -78,7 +104,10 @@ export default class CalendarHeaderWidget {
         const headerTextColor = this._settings.headerTextColor ?? "#ffffff";
         const bodyColor = this._settings.bodyColor ?? "#ffffff";
         const dayColor = this._settings.dayColor ?? "#1a1a1a";
-        this._actor.set_style("border-radius: 22px; " + "spacing: 0px;" + _borderCss(this._settings) + _shadowBoxShadowCss(this._settings));
+        applyLayeredCardStyle(this._layers, this._settings, {
+            cornerRadiusFallback: 22
+        }, false);
+        this._content.set_style("spacing: 0px;");
         this._header.set_style(`background-color: ${headerColor}; ` + "border-radius: 22px 22px 0 0; " + "padding: 14px 12px 10px 12px; " + "spacing: 2px;");
         this._monthLabel.set_text((now.format("%B") ?? "").toUpperCase());
         this._monthLabel.set_style(`color: ${headerTextColor}; font-weight: bold; font-size: 14px; ` + "text-align: center;");

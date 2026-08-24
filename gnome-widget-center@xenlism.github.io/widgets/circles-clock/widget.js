@@ -12,6 +12,7 @@ import { SHADOW_DEFAULTS, hexToRgba as _hexToRgba, toCssColor as _toCssColor, pa
 
 import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
 
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 const STACK_SIZE = 148;
 
 const RING_GAP = 4;
@@ -84,21 +85,10 @@ export default class CirclesClockWidget {
     }
     getDefaultSettings() {
         return {
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
-            backgroundColor: "#FFFFFF00",
-            cornerRadius: 18,
-            format24h: true,
-            timeFont: "Sans Bold 20",
-            timeColor: "#FFFFFFFF",
-            circleBaseColor: "#FFFFFF26",
-            colorHH: "#7A2E3DFF",
-            colorMM: "#E2373DFF",
-            colorSS: "#33D17AFF",
-            ringThickness: 10,
-            refreshRateSeconds: 1,
-            launchAppPath: ""
         };
     }
     onSettingsChanged() {

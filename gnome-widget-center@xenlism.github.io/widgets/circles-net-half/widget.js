@@ -12,6 +12,9 @@ import { SystemMetricsService } from "../../lib/systemMetricsApi.js";
 
 import { SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor, parseFontDescription as _parseFontDescription, BORDER_DEFAULTS, OPACITY_DEFAULTS } from "../../lib/widgetVisualKit.js";
 
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
+
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 const RING_COLUMN_WIDTH = 74;
 
 const CONTENT_HEIGHT = 148;
@@ -63,17 +66,16 @@ export default class CirclesNetHalfWidget {
         this._uploadScale = MIN_DYNAMIC_SCALE_BYTES_PER_SEC;
     }
     buildActor() {
-        this._actor = new St.Bin({
-            style_class: "circles-net-half-root",
-            x_expand: true,
-            y_expand: true
+        this._layers = createLayeredCard({
+            contentStyleClass: "circles-net-half-root"
         });
+        this._actor = this._layers.root;
         const outerBox = new St.BoxLayout({
             vertical: true,
             x_expand: true,
             y_expand: true
         });
-        this._actor.set_child(outerBox);
+        this._layers.content.add_child(outerBox);
         outerBox.set_style(`padding: ${CARD_PADDING}px;`);
         const centerBin = new St.Bin({
             x_expand: true,
@@ -128,21 +130,10 @@ export default class CirclesNetHalfWidget {
     }
     getDefaultSettings() {
         return {
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
-            backgroundColor: "#FFFFFF00",
-            cornerRadius: 18,
-            circleBaseColor: "#FFFFFF26",
-            downloadColor: "#5AC8FAFF",
-            uploadColor: "#FF9F0AFF",
-            ringThickness: 9,
-            ringSide: "right",
-            captionText: "NET",
-            captionFont: "Sans 10",
-            captionColor: "#FFFFFFB3",
-            valueFont: "Sans Bold 13",
-            refreshRateSeconds: 2
         };
     }
     onSettingsChanged() {
@@ -224,10 +215,10 @@ export default class CirclesNetHalfWidget {
         if (this._ringArea) this._ringArea.queue_repaint();
     }
     _render() {
-        this._actor.set_style((this._api.resolveCardCss?.() ?? _cardStyleCss(this._settings, {
+        applyLayeredCardStyle(this._layers, this._settings, {
             backgroundColorFallback: "#FFFFFF00",
             cornerRadiusFallback: 18
-        })));
+        }, false);
         const captionColor = _toCssColor(this._settings.captionColor, "#FFFFFFB3");
         const captionFont = _parseFontDescription(this._settings.captionFont ?? "Sans 10", "Sans", 10);
         this._captionLabel.set_text(this._settings.captionText ?? "NET");
@@ -250,7 +241,13 @@ export default class CirclesNetHalfWidget {
         const cx = side === "left" ? 0 : RING_COLUMN_WIDTH;
         const cy = CONTENT_HEIGHT / 2;
         const start = -Math.PI / 2;
-        const outerRadius = Math.min(RING_COLUMN_WIDTH - thickness / 2 - 2, CONTENT_HEIGHT / 2 - thickness / 2 - 2);
+        // Keep the outer ring's tip clear of the card's own rounded
+        // corner (the inner/upload ring sits further in already, and
+        // stays safe automatically since it's derived from outerRadius
+        // below). See circles-cpu-half/widget.js for the full rationale.
+        const cornerRadius = Number.isFinite(this._settings.cornerRadius) ? Math.max(0, this._settings.cornerRadius) : 18;
+        const cornerClearance = Math.max(thickness / 2 + 2, cornerRadius - CARD_PADDING);
+        const outerRadius = Math.min(RING_COLUMN_WIDTH - thickness / 2 - 2, CONTENT_HEIGHT / 2 - cornerClearance);
         const rings = [ {
             radius: outerRadius,
             fraction: this._downloadFraction,

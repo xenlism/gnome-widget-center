@@ -1,0 +1,28 @@
+{
+    "version": "1.0",
+    "tabs": [
+        {
+            "id": "general",
+            "label": "Child Widget",
+            "description": "TODO: one line describing this tab's settings.",
+            "icon": "preferences-system-symbolic",
+            "groups": [
+                {
+                    "id": "content",
+                    "label": "Content",
+                    "description": "TODO: describe this group of fields. Each field id here is one key your Architect's widget.js can set via createChildWidgetFromParent()'s configOverrides.",
+                    "fields": [
+                        {
+                            "id": "labelText",
+                            "label": "Label text",
+                            "description": "Per-Child text - set at creation time via configOverrides, or left as this default.",
+                            "dataType": "string",
+                            "fieldType": "text",
+                            "default": "child widget"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

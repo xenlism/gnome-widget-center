@@ -10,6 +10,9 @@ import { SystemMetricsService } from "../../lib/systemMetricsApi.js";
 
 import { SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor, parseFontDescription as _parseFontDescription, TEXT_SHADOW_DEFAULTS, textShadowCss as _textShadowCss, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS } from "../../lib/widgetVisualKit.js";
 
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
+
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 export default class GeekWeekStatBayWidget {
     constructor(api) {
         this._api = api;
@@ -19,11 +22,15 @@ export default class GeekWeekStatBayWidget {
         this._metrics = new SystemMetricsService;
     }
     buildActor() {
-        this._actor = new St.BoxLayout({
-            style_class: "geek-week-stat-bay-widget-root",
+        this._layers = createLayeredCard({
+            contentStyleClass: "geek-week-stat-bay-widget-root"
+        });
+        this._actor = this._layers.root;
+        this._content = new St.BoxLayout({
             vertical: true,
             x_align: Clutter.ActorAlign.CENTER
         });
+        this._layers.content.add_child(this._content);
         this._topLabel = new St.Label({
             style_class: "geek-week-stat-bay-widget-top",
             x_expand: true
@@ -32,8 +39,8 @@ export default class GeekWeekStatBayWidget {
             style_class: "geek-week-stat-bay-widget-bottom",
             x_expand: true
         });
-        this._actor.add_child(this._topLabel);
-        this._actor.add_child(this._bottomLabel);
+        this._content.add_child(this._topLabel);
+        this._content.add_child(this._bottomLabel);
         this._render();
         return this._actor;
     }
@@ -48,22 +55,11 @@ export default class GeekWeekStatBayWidget {
     }
     getDefaultSettings() {
         return {
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
             ...TEXT_SHADOW_DEFAULTS,
-            textShadowEnabled: true,
-            textShadowDistance: 2,
-            textShadowBlur: 4,
-            updateInterval: 2,
-            diskPath: "/",
-            weekFont: "Sans Bold 32",
-            weekColor: "#ffffff",
-            systemFont: "Sans Bold 16",
-            systemColor: "#e6e6e6",
-            backgroundColor: "#FFFFFF00",
-            textAlign: "center",
-            cornerRadius: 18,
             ...BORDER_DEFAULTS,
-            ...OPACITY_DEFAULTS
+            ...OPACITY_DEFAULTS,
         };
     }
     onSettingsChanged() {
@@ -113,10 +109,11 @@ export default class GeekWeekStatBayWidget {
         const {cpu: cpu, memory: memory} = this._metrics.sample();
         const disk = this._getDiskUsage(this._settings.diskPath ?? "/");
         const statsText = `CPU ${Math.round(cpu.percent)}%   ` + `MEM ${Math.round(memory.percent)}%   ` + `DISK ${Math.round(disk.percent)}%`;
-        this._actor.set_style((this._api.resolveCardCss?.() ?? _cardStyleCss(this._settings, {
+        applyLayeredCardStyle(this._layers, this._settings, {
             cornerRadiusFallback: 18
-        })) + "padding: 14px 24px; " + "spacing: 5px;");
-        const topText = (now.format("%A") ?? "").toUpperCase();
+        }, false);
+        this._content.set_style("padding: 14px 24px; " + "spacing: 5px;");
+        const topText = (now.format(this._settings.weekFormat === "DDD" ? "%a" : "%A") ?? "").toUpperCase();
         this._topLabel.set_text(topText);
         this._topLabel.set_style(`color: ${weekColor}; font-family: ${weekFontFamily}; ` + `font-size: ${weekFontSize}px; font-weight: bold; text-align: ${textAlign}; ` + `${textShadowCss}`);
         this._bottomLabel.set_text(statsText);

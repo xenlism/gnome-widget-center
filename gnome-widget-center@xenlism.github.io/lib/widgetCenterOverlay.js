@@ -1,3 +1,8 @@
+/* Card preview (screenshot and non-screenshot/fallback) is locked to a
+ * 3:1 width:height ratio - see _buildScreenshot(). The
+ * wc-overlay-card-screenshot CSS height (stylesheet.css) is kept in sync
+ * with that ratio. */
+
 import Clutter from "gi://Clutter";
 
 import GdkPixbuf from "gi://GdkPixbuf";

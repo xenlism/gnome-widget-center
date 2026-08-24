@@ -10,6 +10,9 @@ import { SystemMetricsService } from "../../lib/systemMetricsApi.js";
 
 import { SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor, TEXT_SHADOW_DEFAULTS, textShadowCss as _textShadowCss, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS } from "../../lib/widgetVisualKit.js";
 
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
+
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 const REFRESH_INTERVAL_SECONDS = 30;
 
 const CARD_PADDING = 16;
@@ -44,16 +47,17 @@ export default class GeekArcheySystechSqureWidget {
         this._cancellable = null;
     }
     buildActor() {
-        this._actor = new St.Bin({
-            style_class: "geek-archey-systech-squre-root",
-            x_align: Clutter.ActorAlign.CENTER,
-            y_align: Clutter.ActorAlign.CENTER
+        this._layers = createLayeredCard({
+            contentStyleClass: "geek-archey-systech-squre-root"
         });
+        this._actor = this._layers.root;
+        this._actor.x_align = Clutter.ActorAlign.CENTER;
+        this._actor.y_align = Clutter.ActorAlign.CENTER;
         const infoBox = new St.BoxLayout({
             vertical: true,
             style_class: "geek-archey-systech-squre-info"
         });
-        infoBox.set_style("spacing: 2px;");
+        infoBox.set_style(`padding: ${CARD_PADDING}px; spacing: 2px;`);
         this._headerLabel = new St.Label({
             style_class: "geek-archey-systech-squre-header"
         });
@@ -85,7 +89,7 @@ export default class GeekArcheySystechSqureWidget {
                 color: color
             };
         }
-        this._actor.set_child(infoBox);
+        this._layers.content.add_child(infoBox);
         this._render();
         return this._actor;
     }
@@ -109,15 +113,13 @@ export default class GeekArcheySystechSqureWidget {
     }
     getDefaultSettings() {
         return {
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
             ...TEXT_SHADOW_DEFAULTS,
             textShadowEnabled: true,
-            distro: "linux",
             distroDetected: false,
-            backgroundColor: "#FFFFFF00",
-            cornerRadius: 18
         };
     }
     onSettingsChanged() {
@@ -149,9 +151,9 @@ export default class GeekArcheySystechSqureWidget {
         }
     }
     _render() {
-        this._actor.set_style((this._api.resolveCardCss?.() ?? _cardStyleCss(this._settings, {
+        applyLayeredCardStyle(this._layers, this._settings, {
             cornerRadiusFallback: 18
-        })) + `padding: ${CARD_PADDING}px;`);
+        }, false);
         const accent = GENERIC_ART.color;
         const user = GLib.get_user_name();
         const host = GLib.get_host_name();

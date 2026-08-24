@@ -1,17 +1,16 @@
 {
-  "id": "xenlism.github.io.circles-cpu",
-  "name": "Circles CPU By Xenlism",
-  "description": "1x1 ring gauge showing live CPU usage percent, centered inside a single progress ring.",
-  "version": "1.0.0",
-  "author": "Nattapong Pullkhow",
-  "api-version": 1,
-  "entry": "widget.js",
-  "block-type": "1x1",
-  "default-position": {
-    "x": 40,
-    "y": 40,
-    "monitor": 0
-  },
-  "screenshot": "screenshot.png",
-  "themeable": true
+    "id": "xenlism.github.io.circles-cpu",
+    "name": "Circles CPU By Xenlism",
+    "description": "1x1 ring gauge showing live CPU usage percent, centered inside a single progress ring.",
+    "version": "1.0.0",
+    "author": "Nattapong Pullkhow",
+    "api-version": 1,
+    "entry": "widget.js",
+    "block-type": "1x1",
+    "default-position": {
+        "x": 40,
+        "y": 40,
+        "monitor": 0
+    },
+    "screenshot": "screenshot.png"
 }

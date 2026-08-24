@@ -12,6 +12,9 @@ import { loadTranslations } from "./i18n/index.js";
 
 import { SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, parseFontDescription as _parseFontDescription, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS, deferUntilMapped as _deferUntilMapped } from "../../lib/widgetVisualKit.js";
 
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
+
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 const FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
 
 const REFRESH_SECONDS = 15 * 60;
@@ -158,21 +161,23 @@ export default class WeatherDarkWidget {
         return typeof value === "string" && value.length > 0 ? value : english;
     }
     buildActor() {
-        this._actor = new St.Bin({
-            style_class: "weather-dark-widget-root",
-            x_expand: true,
-            y_expand: true,
-            x_align: Clutter.ActorAlign.START,
-            y_align: Clutter.ActorAlign.CENTER
+        this._layers = createLayeredCard({
+            contentStyleClass: "weather-dark-widget-root"
         });
+        this._actor = this._layers.root;
+        this._actor.x_align = Clutter.ActorAlign.START;
+        this._actor.y_align = Clutter.ActorAlign.CENTER;
+        // this._content is a plain wrapper - padding/spacing live here,
+        // never the Content Layer itself (Rule 5).
         this._content = new St.BoxLayout({
             vertical: false
         });
-        this._actor.set_child(this._content);
+        this._layers.content.add_child(this._content);
         this._textBox = new St.BoxLayout({
             vertical: true,
             y_align: Clutter.ActorAlign.CENTER,
-            x_expand: true
+            x_expand: true,
+            style: "spacing: 4px;"
         });
         this._tempLabel = new St.Label({
             style_class: "weather-dark-widget-temp"
@@ -210,20 +215,11 @@ export default class WeatherDarkWidget {
     }
     getDefaultSettings() {
         return {
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
-            location: "13.756331,100.501762",
             locationAutoDetected: false,
-            cardColor: "#1c1f26",
-            cornerRadius: 18,
-            iconColor: "#f2b544",
-            iconSize: 72,
-            conditionFont: "Sans 18",
-            conditionColor: "#e6e6e6",
-            tempFont: "Sans Bold 40",
-            tempColor: "#ffffff",
-            tempUnit: "celsius"
         };
     }
     onSettingsChanged() {
@@ -363,12 +359,15 @@ export default class WeatherDarkWidget {
         const tempUnit = this._settings.tempUnit ?? "celsius";
         const {family: conditionFontFamily, size: conditionFontSize} = _parseFontDescription(this._settings.conditionFont ?? "Sans 18", "Sans", 18);
         const {family: tempFontFamily, size: tempFontSize} = _parseFontDescription(this._settings.tempFont ?? "Sans Bold 40", "Sans Bold", 40);
-        _deferUntilMapped(this._actor, () => this._actor.set_style((this._api.resolveCardCss?.() ?? _cardStyleCss(this._settings, {
-            backgroundColorKey: "cardColor",
-            cornerRadiusFallback: 18
-        })) + "padding: 20px 26px;"));
-        _deferUntilMapped(this._content, () => this._content.set_style("spacing: 20px;"));
-        _deferUntilMapped(this._textBox, () => this._textBox.set_style("spacing: 4px;"));
+        _deferUntilMapped(this._actor, () => {
+            applyLayeredCardStyle(this._layers, this._settings, {
+                backgroundColorKey: "cardColor",
+                cornerRadiusFallback: 18
+            }, false);
+            this._content.set_style("padding: 20px 26px; spacing: 20px;");
+        });
+        // spacing: 20px between textBox and iconBin is on _actor (card) via padding shorthand above.
+        // _content and _textBox spacings are fixed in their constructors (Rule 5: no style on content layer).
         const iconKey = this._weather?.icon ?? "weather-cloud";
         const iconFile = this._getColoredIconFile(iconKey, iconColor);
         if (iconFile) {

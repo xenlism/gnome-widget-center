@@ -1,0 +1,15 @@
+{
+    "id": "xenlism.github.io.calendar-events",
+    "name": "Calendar + Events By Xenlism",
+    "description": "Month calendar next to a list of today's events.",
+    "version": "1.0.0",
+    "author": "Nattapong Pullkhow",
+    "api-version": 1,
+    "entry": "widget.js",
+    "block-type": "2x1",
+    "default-position": {
+        "x": 40,
+        "y": 40,
+        "monitor": 0
+    }
+}

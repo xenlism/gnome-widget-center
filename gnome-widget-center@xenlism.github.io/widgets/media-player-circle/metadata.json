@@ -1,17 +1,16 @@
 {
-  "id": "xenlism.github.io.media-player-circle",
-  "name": "Media Player (Circle) By Xenlism",
-  "description": "1x1 circular Now Playing card: album cover centered inside a progress ring that tracks playback position, with Play/Previous/Next controls that appear on hover.",
-  "version": "1.0.0",
-  "author": "Nattapong Pullkhow",
-  "api-version": 1,
-  "entry": "widget.js",
-  "block-type": "1x1",
-  "default-position": {
-    "x": 608,
-    "y": 344,
-    "monitor": 0
-  },
-  "screenshot": "screenshot.png",
-  "themeable": true
+    "id": "xenlism.github.io.media-player-circle",
+    "name": "Media Player (Circle) By Xenlism",
+    "description": "1x1 circular Now Playing card: album cover centered inside a progress ring that tracks playback position, with Play/Previous/Next controls that appear on hover.",
+    "version": "1.0.0",
+    "author": "Nattapong Pullkhow",
+    "api-version": 1,
+    "entry": "widget.js",
+    "block-type": "1x1",
+    "default-position": {
+        "x": 608,
+        "y": 344,
+        "monitor": 0
+    },
+    "screenshot": "screenshot.png"
 }

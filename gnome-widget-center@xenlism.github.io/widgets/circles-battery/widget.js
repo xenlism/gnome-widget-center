@@ -12,6 +12,7 @@ import { SHADOW_DEFAULTS, hexToRgba as _hexToRgba, toCssColor as _toCssColor, pa
 
 import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
 
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 const RING_SIZE = 128;
 
 const UPOWER_BUS_NAME = "org.freedesktop.UPower";
@@ -102,24 +103,10 @@ export default class CirclesBatteryWidget {
     }
     getDefaultSettings() {
         return {
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
-            backgroundColor: "#FFFFFF00",
-            cornerRadius: 18,
-            circleBaseColor: "#FFFFFF26",
-            ringColorLow: "#E01B24FF",
-            ringColorMid: "#F5C211FF",
-            ringColorHigh: "#33D17AFF",
-            ringColorCharging: "#3584E4FF",
-            ringThickness: 10,
-            showLabel: true,
-            captionText: "BATTERY",
-            captionFont: "Sans 10",
-            captionColor: "#FFFFFFB3",
-            percentFont: "Sans Bold 22",
-            percentColor: "#FFFFFFFF",
-            refreshRateSeconds: 5
         };
     }
     onSettingsChanged() {

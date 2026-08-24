@@ -6,6 +6,9 @@ import GLib from "gi://GLib";
 
 import { SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS } from "../../lib/widgetVisualKit.js";
 
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
+
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 export default class CalendarModernWidget {
     constructor(api) {
         this._api = api;
@@ -13,10 +16,14 @@ export default class CalendarModernWidget {
         this._timeoutId = null;
     }
     buildActor() {
-        this._actor = new St.BoxLayout({
-            style_class: "calendar-modern-widget-root",
+        this._layers = createLayeredCard({
+            contentStyleClass: "calendar-modern-widget-root"
+        });
+        this._actor = this._layers.root;
+        this._content = new St.BoxLayout({
             vertical: true
         });
+        this._layers.content.add_child(this._content);
         this._monthLabel = new St.Label({
             style_class: "calendar-modern-widget-month"
         });
@@ -26,9 +33,9 @@ export default class CalendarModernWidget {
         this._dayLabel = new St.Label({
             style_class: "calendar-modern-widget-day"
         });
-        this._actor.add_child(this._monthLabel);
-        this._actor.add_child(this._weekdayLabel);
-        this._actor.add_child(this._dayLabel);
+        this._content.add_child(this._monthLabel);
+        this._content.add_child(this._weekdayLabel);
+        this._content.add_child(this._dayLabel);
         this._render();
         return this._actor;
     }
@@ -46,12 +53,10 @@ export default class CalendarModernWidget {
     }
     getDefaultSettings() {
         return {
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
-            cardColor: "#ffffff",
-            accentColor: "#d81f26",
-            textColor: "#1a1a1a"
         };
     }
     onSettingsChanged() {
@@ -62,10 +67,11 @@ export default class CalendarModernWidget {
         const cardColor = this._settings.cardColor ?? "#ffffff";
         const accentColor = this._settings.accentColor ?? "#d81f26";
         const textColor = this._settings.textColor ?? "#1a1a1a";
-        this._actor.set_style((this._api.resolveCardCss?.() ?? _cardStyleCss(this._settings, {
+        applyLayeredCardStyle(this._layers, this._settings, {
             backgroundColorKey: "cardColor",
             cornerRadiusFallback: 22
-        })) + " padding: 18px 12px; spacing: 4px;");
+        }, false);
+        this._content.set_style(" padding: 18px 12px; spacing: 4px;");
         this._monthLabel.set_text((now.format("%B") ?? "").toUpperCase());
         this._monthLabel.set_style(`color: ${textColor}; font-weight: bold; font-size: 20px; ` + "text-align: center;");
         this._weekdayLabel.set_text((now.format("%A") ?? "").toUpperCase());

@@ -14,6 +14,7 @@ import { MprisMediaService } from "../../lib/mediaApi.js";
 
 import { SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor, BORDER_DEFAULTS, OPACITY_DEFAULTS } from "../../lib/widgetVisualKit.js";
 
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 const SIZE = 368;
 
 const PADDING = 16;
@@ -55,20 +56,32 @@ export default class MediaPlayerPosterWidget {
             width: SIZE,
             height: SIZE
         });
-        this._contentBox = new St.BoxLayout({
+        this._content = new St.BoxLayout({
             vertical: true,
             x_expand: true,
-            y_expand: true
+            y_expand: true,
+            clip_to_allocation: true
         });
-        this._contentBox.set_style(`padding: ${PADDING}px;`);
-        this._actor.add_child(this._contentBox);
+        // R1: content always matches blocksize.
+        this._actor.add_child(this._content);
+        this._content.add_constraint(new Clutter.BindConstraint({
+            source: this._actor,
+            coordinate: Clutter.BindCoordinate.SIZE,
+        }));
+        // R5: padding lives on a child wrapper, not on _content itself.
+        this._innerPad = new St.BoxLayout({
+            vertical: true,
+            x_expand: true,
+            y_expand: true,
+            style: `padding: ${PADDING}px;`
+        });
         this._coverStack = new St.Widget({
             layout_manager: new Clutter.BinLayout,
             width: CONTENT_SIZE,
             height: COVER_HEIGHT,
             clip_to_allocation: true
         });
-        this._contentBox.add_child(this._coverStack);
+        this._innerPad.add_child(this._coverStack);
         this._fallbackArea = new St.DrawingArea({
             width: CONTENT_SIZE,
             height: COVER_HEIGHT
@@ -106,15 +119,17 @@ export default class MediaPlayerPosterWidget {
         this._artistLabel = new St.Label({
             text: ""
         });
-        for (const label of [ this._titleLabel, this._artistLabel ]) label.clutter_text.set_ellipsize(3);
+        // Overflowing titles/artists are hidden by the Content Layer's
+        // clip_to_allocation (Rule 4) - no ellipsize substitute.
+        for (const label of [ this._titleLabel, this._artistLabel ]) label.clutter_text.set_line_wrap(false);
         this._titleLabel.set_style("margin-top: 12px;");
         this._artistLabel.set_style("margin-top: 3px;");
-        this._contentBox.add_child(this._titleLabel);
-        this._contentBox.add_child(this._artistLabel);
+        this._innerPad.add_child(this._titleLabel);
+        this._innerPad.add_child(this._artistLabel);
         const spacer = new St.Widget({
             y_expand: true
         });
-        this._contentBox.add_child(spacer);
+        this._innerPad.add_child(spacer);
         this._prevButton = this._makeButton("media-skip-backward-symbolic", () => this._media.previous());
         this._playPauseButton = this._makeButton("media-playback-start-symbolic", () => this._onPlayClicked());
         this._nextButton = this._makeButton("media-skip-forward-symbolic", () => this._media.next());
@@ -126,7 +141,8 @@ export default class MediaPlayerPosterWidget {
         this._controls.add_child(this._prevButton);
         this._controls.add_child(this._playPauseButton);
         this._controls.add_child(this._nextButton);
-        this._contentBox.add_child(this._controls);
+        this._innerPad.add_child(this._controls);
+        this._content.add_child(this._innerPad);
         this._render();
         this._renderState(null);
         return this._actor;
@@ -143,18 +159,10 @@ export default class MediaPlayerPosterWidget {
     }
     getDefaultSettings() {
         return {
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
-            backgroundColor: "#FFFFFF00",
-            widgetCornerRadius: 18,
-            coverCornerRadius: 18,
-            trackFont: "Sans Bold 20",
-            trackColor: "#FFFFFFFF",
-            artistFont: "Sans 13",
-            artistColor: "#FFFFFFB3",
-            buttonColor: "#FFFFFFFF",
-            desktopFilePath: ""
         };
     }
     onSettingsChanged() {

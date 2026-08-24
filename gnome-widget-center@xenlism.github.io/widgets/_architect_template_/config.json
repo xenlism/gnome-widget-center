@@ -1,0 +1,28 @@
+{
+    "version": "1.0",
+    "tabs": [
+        {
+            "id": "general",
+            "label": "Architect Widget",
+            "description": "TODO: one line describing this tab's settings.",
+            "icon": "preferences-system-symbolic",
+            "groups": [
+                {
+                    "id": "content",
+                    "label": "Content",
+                    "description": "TODO: describe this group of fields.",
+                    "fields": [
+                        {
+                            "id": "labelText",
+                            "label": "Label text",
+                            "description": "Text shown above the Add Widget button - delete this field and add your own.",
+                            "dataType": "string",
+                            "fieldType": "text",
+                            "default": "Architect widget"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

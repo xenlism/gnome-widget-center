@@ -24,11 +24,24 @@ import { SettingsStore } from "./settingsStore.js";
 
 import { buildGroup as buildSettingsJsGroup } from "./settingsRenderer.js";
 
-import { ThemeService } from "./themeService.js";
 
 import { rgbaToHex } from "./colorUtils.js";
 
 import { loadTranslations } from "../i18n/index.js";
+
+import { buildAppearanceFieldsFlat } from "./appearanceFieldsSchema.js";
+
+// Same collision-safe fill-the-gaps merge readWidgetConfig() does for
+// config.json (see lib/widgetConfigReader.js) - only reached by a
+// widget with no config.json AND no prefs.js AND no settings.js, so
+// nothing in the current widget set actually hits this (every widget
+// here has a config.json) - future-proofing for a plain
+// metadata.json-only widget.
+function mergeAppearanceFieldsFlat(fields) {
+    const existingIds = new Set(fields.map(f => f.id));
+    const missing = buildAppearanceFieldsFlat().filter(f => !existingIds.has(f.id));
+    return missing.length === 0 ? fields : [ ...fields, ...missing ];
+}
 
 export const PrefsWidgetManagementMixin = Base => class extends Base {
     applyAutoEnablePolicy(settings, discoveredIds) {
@@ -95,7 +108,7 @@ export const PrefsWidgetManagementMixin = Base => class extends Base {
             logError(new Error(`requested-widget-id "${requestedId}" not found among discovered widgets`));
             return;
         }
-        if (!widget.hasConfigJson && !widget.hasPrefs && !widget.hasSettingsSchema && !widget.metadata?.["themeable"]) return;
+        if (!widget.hasConfigJson && !widget.hasPrefs && !widget.hasSettingsSchema) return;
         GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
             this._openWidgetPrefs(window, storage, widget).catch(e => logError(e, `[widget-center] prefs: opening requested settings for "${widget.id}" failed`));
             return GLib.SOURCE_REMOVE;
@@ -119,7 +132,7 @@ export const PrefsWidgetManagementMixin = Base => class extends Base {
                 row.unblock_signal_handler(handlerId);
             }
         });
-        if (widget.hasConfigJson || widget.hasPrefs || widget.hasSettingsSchema || widget.metadata?.["themeable"]) {
+        if (widget.hasConfigJson || widget.hasPrefs || widget.hasSettingsSchema) {
             const settingsButton = new Gtk.Button({
                 icon_name: "go-next-symbolic",
                 valign: Gtk.Align.CENTER,
@@ -163,7 +176,6 @@ export const PrefsWidgetManagementMixin = Base => class extends Base {
             if (config) {
                 const settingsHandle = WidgetSettings.load(widget.id, storage);
                 const prefsPage = buildConfigPage(config, settingsHandle, title, widget.path, translations);
-                this._appendWidgetAppearanceGroup(prefsPage, widget);
                 this._presentPrefsPage(window, widget, prefsPage);
                 return;
             }
@@ -178,8 +190,7 @@ export const PrefsWidgetManagementMixin = Base => class extends Base {
             return;
         }
         const settingsHandle = WidgetSettings.load(widget.id, storage);
-        const prefsPage = buildSettingsPage(widget.metadata.settings ?? [], settingsHandle, title);
-        this._appendWidgetAppearanceGroup(prefsPage, widget);
+        const prefsPage = buildSettingsPage(mergeAppearanceFieldsFlat(widget.metadata.settings ?? []), settingsHandle, title);
         this._presentPrefsPage(window, widget, prefsPage);
     }
     _openWidgetSettingsJsPrefs(window, widget, title) {
@@ -201,86 +212,10 @@ export const PrefsWidgetManagementMixin = Base => class extends Base {
             for (const group of buildSettingsJsGroup(schema, store, {
                 title: title
             })) prefsPage.add(group);
-            this._appendWidgetAppearanceGroup(prefsPage, widget);
-            this._presentPrefsPage(window, widget, prefsPage, () => store.destroy());
+                this._presentPrefsPage(window, widget, prefsPage, () => store.destroy());
         }).catch(e => {
             logError(e, `[widget-center] prefs: failed to open settings.js for "${widget.id}"`);
         });
-    }
-    _appendWidgetAppearanceGroup(prefsPage, widget) {
-        if (!widget.metadata?.["themeable"]) return;
-        const theme = new ThemeService;
-        theme.init();
-        const global = theme.getGlobalTheme();
-        const {config: config} = theme.getWidgetTheme(widget.id);
-        const widgetBackground = config.background ?? {};
-        const widgetCornerRadius = config.cornerRadius ?? {};
-        const group = new Adw.PreferencesGroup({
-            title: "Appearance",
-            description: "This widget's own background and corner radius. Set in the " + 'Control Center\'s Appearance page, "Force" can override these for every widget.'
-        });
-        prefsPage.add(group);
-        const bgForced = !!global.background.force;
-        const transparentRow = new Adw.SwitchRow({
-            title: "Transparent",
-            active: bgForced ? !!global.background.transparent : !!widgetBackground.transparent,
-            sensitive: !bgForced,
-            subtitle: bgForced ? "Forced by the global Appearance settings." : null
-        });
-        group.add(transparentRow);
-        const colorRow = new Adw.ActionRow({
-            title: "Background color",
-            sensitive: !bgForced
-        });
-        const rgba = new Gdk.RGBA;
-        rgba.parse((bgForced ? global.background.color : widgetBackground.color) ?? "#1e1e2e");
-        const colorButton = new Gtk.ColorDialogButton({
-            dialog: new Gtk.ColorDialog,
-            rgba: rgba,
-            valign: Gtk.Align.CENTER,
-            sensitive: !bgForced
-        });
-        colorRow.add_suffix(colorButton);
-        colorRow.set_activatable_widget(colorButton);
-        group.add(colorRow);
-        if (!bgForced) {
-            const saveBackground = () => {
-                theme.setWidgetTheme(widget.id, {
-                    config: {
-                        background: {
-                            transparent: transparentRow.active,
-                            color: rgbaToHex(colorButton.rgba)
-                        }
-                    }
-                });
-            };
-            transparentRow.connect("notify::active", saveBackground);
-            colorButton.connect("notify::rgba", saveBackground);
-        }
-        const radiusForced = !!global.cornerRadius.force;
-        const radiusRow = new Adw.SpinRow({
-            title: "Corner radius",
-            subtitle: radiusForced ? "Forced by the global Appearance settings." : "0–64 px",
-            adjustment: new Gtk.Adjustment({
-                lower: 0,
-                upper: 64,
-                step_increment: 1,
-                value: (radiusForced ? global.cornerRadius.value : widgetCornerRadius.value) ?? 12
-            }),
-            sensitive: !radiusForced
-        });
-        group.add(radiusRow);
-        if (!radiusForced) {
-            radiusRow.connect("notify::value", () => {
-                theme.setWidgetTheme(widget.id, {
-                    config: {
-                        cornerRadius: {
-                            value: radiusRow.value
-                        }
-                    }
-                });
-            });
-        }
     }
     _presentPrefsPage(window, widget, prefsPage, onClose = () => {}) {
         const actionsGroup = new Adw.PreferencesGroup;
@@ -314,8 +249,7 @@ export const PrefsWidgetManagementMixin = Base => class extends Base {
             const settingsHandle = WidgetSettings.load(widget.id, storage);
             const prefsInstance = new module.default(settingsHandle);
             const prefsPage = prefsInstance.buildPrefsWidget();
-            this._appendWidgetAppearanceGroup(prefsPage, widget);
-            this._presentPrefsPage(window, widget, prefsPage);
+                this._presentPrefsPage(window, widget, prefsPage);
         }).catch(e => {
             logError(e, `[widget-center] prefs: failed to open settings for "${widget.id}"`);
         });

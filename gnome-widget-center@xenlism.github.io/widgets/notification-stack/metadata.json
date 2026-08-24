@@ -1,0 +1,15 @@
+{
+  "id": "xenlism.github.io.notification-stack",
+  "name": "Notification Stack By Xenlism",
+  "description": "iOS/macOS-style stack of your most recent notifications.",
+  "version": "1.0.0",
+  "author": "Nattapong Pullkhow",
+  "api-version": 1,
+  "entry": "widget.js",
+  "block-type": "2x2",
+  "default-position": {
+    "x": 40,
+    "y": 40,
+    "monitor": 0
+  }
+}

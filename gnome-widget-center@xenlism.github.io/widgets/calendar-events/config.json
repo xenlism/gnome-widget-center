@@ -1,0 +1,240 @@
+{
+    "version": "1.0",
+    "tabs": [
+        {
+            "id": "calendar",
+            "label": "Calendar",
+            "description": "Month grid appearance",
+            "icon": "x-office-calendar-symbolic",
+            "groups": [
+                {
+                    "id": "calendarAppearance",
+                    "label": "Calendar",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "mondayStart",
+                            "label": "Week starts on Monday",
+                            "description": "",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": false
+                        },
+                        {
+                            "id": "calendarFont",
+                            "label": "Calendar font",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "default": "Cantarell 11"
+                        },
+                        {
+                            "id": "calendarTextColor",
+                            "label": "Day number color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "default": "#1A1A1A"
+                        },
+                        {
+                            "id": "weekdayHeaderColor",
+                            "label": "Weekday header color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "default": "#8E8E93"
+                        },
+                        {
+                            "id": "highlightDayColor",
+                            "label": "Today highlight color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "default": "#3B82F6"
+                        },
+                        {
+                            "id": "highlightDayTextColor",
+                            "label": "Today text color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "default": "#FFFFFF"
+                        }
+                    ]
+                },
+                {
+                    "id": "card",
+                    "label": "Card background",
+                    "description": "Applies when this widget's own appearance isn't forced by the global theme.",
+                    "fields": [
+                        {
+                            "id": "cardColor",
+                            "label": "Background",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#F7F7F5FF"
+                        },
+                        {
+                            "id": "cornerRadius",
+                            "label": "Corner radius",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 20,
+                            "min": 0,
+                            "max": 48,
+                            "step": 1,
+                            "suffix": "px"
+                        }
+                    ]
+                },
+                {
+                    "id": "shadow",
+                    "label": "Shadow",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "shadowAngle",
+                            "label": "Shadow angle",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 90,
+                            "min": 0,
+                            "max": 360,
+                            "step": 1,
+                            "suffix": "\u00b0",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowDistance",
+                            "label": "Shadow distance",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 6,
+                            "min": 0,
+                            "max": 60,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "shadowEnabled"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "events",
+            "label": "Events",
+            "description": "Event list card appearance",
+            "icon": "x-office-calendar-symbolic",
+            "groups": [
+                {
+                    "id": "eventList",
+                    "label": "Event list",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "maxEvents",
+                            "label": "Max events shown",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 4,
+                            "min": 1,
+                            "max": 10,
+                            "step": 1
+                        },
+                        {
+                            "id": "eventCardSpacing",
+                            "label": "Spacing between cards",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 8,
+                            "min": 0,
+                            "max": 32,
+                            "step": 1,
+                            "suffix": "px"
+                        },
+                        {
+                            "id": "eventCardBgColor",
+                            "label": "Event card background",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFFFF"
+                        },
+                        {
+                            "id": "eventCardCornerRadius",
+                            "label": "Event card corner radius",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 14,
+                            "min": 0,
+                            "max": 48,
+                            "step": 1,
+                            "suffix": "px"
+                        },
+                        {
+                            "id": "eventCardBlurEnabled",
+                            "label": "Enable event card blur",
+                            "description": "",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": false
+                        },
+                        {
+                            "id": "eventCardBlurRadius",
+                            "label": "Event card blur radius",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 16,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "eventCardBlurEnabled"
+                        },
+                        {
+                            "id": "eventFont",
+                            "label": "Event text font",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "default": "Cantarell 11"
+                        },
+                        {
+                            "id": "eventTextColor",
+                            "label": "Event text color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "default": "#1A1A1A"
+                        },
+                        {
+                            "id": "noEventsText",
+                            "label": "\"No events\" text",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "text",
+                            "default": "No events today"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

@@ -1,17 +1,16 @@
 {
-  "id": "xenlism.github.io.weather-modern",
-  "name": "Weather (modern) By Xenlism",
-  "description": "Rounded weather card (icon + big temperature + condition) with an IP-detectable location field and a configurable refresh rate - powered by Open-Meteo (no API key required).",
-  "version": "1.0.0",
-  "author": "Nattapong Pullkhow",
-  "api-version": 1,
-  "entry": "widget.js",
-  "block-type": "1x1",
-  "default-position": {
-    "x": 80,
-    "y": 80,
-    "monitor": 0
-  },
-  "screenshot": "screenshot.png",
-  "themeable": true
+    "id": "xenlism.github.io.weather-modern",
+    "name": "Weather (modern) By Xenlism",
+    "description": "Rounded weather card (icon + big temperature + condition) with an IP-detectable location field and a configurable refresh rate - powered by Open-Meteo (no API key required).",
+    "version": "1.0.0",
+    "author": "Nattapong Pullkhow",
+    "api-version": 1,
+    "entry": "widget.js",
+    "block-type": "1x1",
+    "default-position": {
+        "x": 80,
+        "y": 80,
+        "monitor": 0
+    },
+    "screenshot": "screenshot.png"
 }

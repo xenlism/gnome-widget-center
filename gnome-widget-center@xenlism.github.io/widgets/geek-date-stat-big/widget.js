@@ -10,6 +10,9 @@ import { SystemMetricsService } from "../../lib/systemMetricsApi.js";
 
 import { SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor, parseFontDescription as _parseFontDescription, TEXT_SHADOW_DEFAULTS, textShadowCss as _textShadowCss, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS } from "../../lib/widgetVisualKit.js";
 
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
+
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 export default class GeekDateStatBigWidget {
     constructor(api) {
         this._api = api;
@@ -19,11 +22,15 @@ export default class GeekDateStatBigWidget {
         this._metrics = new SystemMetricsService;
     }
     buildActor() {
-        this._actor = new St.BoxLayout({
-            style_class: "geek-date-stat-big-widget-root",
+        this._layers = createLayeredCard({
+            contentStyleClass: "geek-date-stat-big-widget-root"
+        });
+        this._actor = this._layers.root;
+        this._content = new St.BoxLayout({
             vertical: true,
             x_align: Clutter.ActorAlign.CENTER
         });
+        this._layers.content.add_child(this._content);
         this._dateLabel = new St.Label({
             style_class: "geek-date-stat-big-widget-date",
             x_expand: true
@@ -32,8 +39,8 @@ export default class GeekDateStatBigWidget {
             style_class: "geek-date-stat-big-widget-stats",
             x_expand: true
         });
-        this._actor.add_child(this._dateLabel);
-        this._actor.add_child(this._statLabel);
+        this._content.add_child(this._dateLabel);
+        this._content.add_child(this._statLabel);
         this._render();
         return this._actor;
     }
@@ -48,22 +55,11 @@ export default class GeekDateStatBigWidget {
     }
     getDefaultSettings() {
         return {
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
             ...TEXT_SHADOW_DEFAULTS,
-            textShadowEnabled: true,
-            textShadowDistance: 2,
-            textShadowBlur: 4,
-            updateInterval: 2,
-            diskPath: "/",
-            dateFont: "Sans Bold 44",
-            dateColor: "#ffffff",
-            systemFont: "Sans Bold 20",
-            systemColor: "#e6e6e6",
-            backgroundColor: "#FFFFFF00",
-            textAlign: "center",
-            cornerRadius: 18,
             ...BORDER_DEFAULTS,
-            ...OPACITY_DEFAULTS
+            ...OPACITY_DEFAULTS,
         };
     }
     onSettingsChanged() {
@@ -110,9 +106,10 @@ export default class GeekDateStatBigWidget {
         const systemColor = this._settings.systemColor ?? "#e6e6e6";
         const textAlign = [ "left", "center", "right" ].includes(this._settings.textAlign) ? this._settings.textAlign : "center";
         const textShadowCss = _textShadowCss(this._settings);
-        this._actor.set_style((this._api.resolveCardCss?.() ?? _cardStyleCss(this._settings, {
+        applyLayeredCardStyle(this._layers, this._settings, {
             cornerRadiusFallback: 18
-        })) + "padding: 20px 28px; " + "spacing: 8px;");
+        }, false);
+        this._content.set_style("padding: 20px 28px; " + "spacing: 8px;");
         const dateText = (now.format("%d %B %Y") ?? "").toUpperCase();
         this._dateLabel.set_text(dateText);
         this._dateLabel.set_style(`color: ${dateColor}; font-family: ${dateFontFamily}; ` + `font-size: ${dateFontSize}px; font-weight: bold; text-align: ${textAlign}; ` + `${textShadowCss}`);

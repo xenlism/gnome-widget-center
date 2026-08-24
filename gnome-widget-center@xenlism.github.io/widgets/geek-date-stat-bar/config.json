@@ -134,57 +134,6 @@
                             "suffix": "px"
                         }
                     ]
-                },
-                {
-                    "id": "borderOpacity",
-                    "label": "Border & Opacity",
-                    "description": "",
-                    "fields": [
-                        {
-                            "id": "borderEnabled",
-                            "label": "Enable border",
-                            "description": "Draw a border around this widget's card",
-                            "dataType": "boolean",
-                            "fieldType": "switch",
-                            "default": false
-                        },
-                        {
-                            "id": "borderColor",
-                            "label": "Border color",
-                            "description": "",
-                            "dataType": "string",
-                            "fieldType": "colorpicker",
-                            "format": "color",
-                            "alpha": true,
-                            "default": "#FFFFFF33",
-                            "visibleIf": "borderEnabled"
-                        },
-                        {
-                            "id": "borderWidth",
-                            "label": "Border width",
-                            "description": "",
-                            "dataType": "integer",
-                            "fieldType": "spinbutton",
-                            "default": 1,
-                            "min": 0,
-                            "max": 16,
-                            "step": 1,
-                            "suffix": "px",
-                            "visibleIf": "borderEnabled"
-                        },
-                        {
-                            "id": "opacity",
-                            "label": "Opacity",
-                            "description": "Fades the entire widget - background, text, icons, everything.",
-                            "dataType": "integer",
-                            "fieldType": "slider",
-                            "default": 100,
-                            "min": 0,
-                            "max": 100,
-                            "step": 1,
-                            "suffix": "%"
-                        }
-                    ]
                 }
             ]
         },
@@ -238,7 +187,7 @@
                             "min": 0,
                             "max": 360,
                             "step": 1,
-                            "suffix": "°",
+                            "suffix": "\u00b0",
                             "visibleIf": "textShadowEnabled"
                         },
                         {
@@ -282,36 +231,6 @@
                     "description": "Off by default. Default color is black at 30% transparency.",
                     "fields": [
                         {
-                            "id": "shadowEnabled",
-                            "label": "Enable shadow",
-                            "description": "Add a drop shadow behind this widget",
-                            "dataType": "boolean",
-                            "fieldType": "switch",
-                            "default": false
-                        },
-                        {
-                            "id": "shadowColor",
-                            "label": "Shadow color",
-                            "description": "",
-                            "dataType": "string",
-                            "fieldType": "colorpicker",
-                            "default": "#000000",
-                            "visibleIf": "shadowEnabled"
-                        },
-                        {
-                            "id": "shadowOpacity",
-                            "label": "Shadow transparency",
-                            "description": "Shadow opacity, 0-100%",
-                            "dataType": "integer",
-                            "fieldType": "slider",
-                            "default": 30,
-                            "min": 0,
-                            "max": 100,
-                            "step": 1,
-                            "suffix": "%",
-                            "visibleIf": "shadowEnabled"
-                        },
-                        {
                             "id": "shadowAngle",
                             "label": "Shadow angle",
                             "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
@@ -321,7 +240,7 @@
                             "min": 0,
                             "max": 360,
                             "step": 1,
-                            "suffix": "°",
+                            "suffix": "\u00b0",
                             "visibleIf": "shadowEnabled"
                         },
                         {
@@ -333,19 +252,6 @@
                             "default": 6,
                             "min": 0,
                             "max": 60,
-                            "step": 1,
-                            "suffix": "px",
-                            "visibleIf": "shadowEnabled"
-                        },
-                        {
-                            "id": "shadowBlur",
-                            "label": "Shadow blur",
-                            "description": "Blur radius, in pixels",
-                            "dataType": "integer",
-                            "fieldType": "spinbutton",
-                            "default": 16,
-                            "min": 0,
-                            "max": 100,
                             "step": 1,
                             "suffix": "px",
                             "visibleIf": "shadowEnabled"

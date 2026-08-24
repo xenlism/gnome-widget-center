@@ -6,12 +6,14 @@ import Gio from "gi://Gio";
 
 import GLib from "gi://GLib";
 
-import {hasAllocation, insertChildAboveSafely, isMappedActor} from "../../lib/actorLifecycle.js";
-
 import { getAppInfoFromFilename } from "../../lib/utils.js";
 
 import { SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS, deferUntilMapped as _deferUntilMapped } from "../../lib/widgetVisualKit.js";
 
+import { createLayeredCard } from "../../lib/cardLayers.js";
+import { attachTooltip } from "../../lib/widgetTooltip.js";
+
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 const GRID_COLS = 3;
 
 const GRID_ROWS = 3;
@@ -35,43 +37,21 @@ export default class LauncherBig {
         this._cells = [];
     }
     buildActor() {
-        this._actor = new St.Widget({
-            style_class: "launcher-big-root",
-            layout_manager: new Clutter.FixedLayout,
-            reactive: true
+        this._layers = createLayeredCard({
+            contentStyleClass: "launcher-big-content",
+            withTooltipLayer: true,
         });
+        this._actor = this._layers.root;
+        this._actor.reactive = true;
+        // this._content is a plain wrapper - the Content Layer itself
+        // (this._layers.content) carries no style of its own (Rule 5).
         this._content = new St.Bin({
-            style_class: "launcher-big-content",
             x_align: Clutter.ActorAlign.CENTER,
-            y_align: Clutter.ActorAlign.CENTER
+            y_align: Clutter.ActorAlign.CENTER,
+            x_expand: true,
+            y_expand: true,
         });
-        this._content.add_constraint(new Clutter.BindConstraint({
-            source: this._actor,
-            coordinate: Clutter.BindCoordinate.SIZE
-        }));
-        this._actor.add_child(this._content);
-        // Content's size is handled entirely by the BindConstraint
-        // above (resolved during allocation, not via JS property
-        // reads) and FixedLayout defaults children to (0,0) - same as
-        // the `switches` widget, which never had this bug. The manual
-        // syncContentSize() this replaces used to read
-        // this._actor.width/height directly from buildActor(), before
-        // the actor is ever added to the stage; reading those
-        // properties forces St to resolve a preferred-size/theme-node
-        // for the (still unmapped) root actor, producing the repeated
-        // "st_widget_get_theme_node called on the widget ... which is
-        // not in the stage" warnings for both -root and -content.
-        // this._content.set_position(0, 0);
-        this._actor.connect("notify::mapped", () => {
-            if (!this._actor.mapped) return;
-            this._content.set_size(this._actor.width, this._actor.height);
-        });
-
-        this._actor.connect("notify::allocation", () => {
-            if (!this._actor.mapped) return;
-            this._content.set_size(this._actor.width, this._actor.height);
-        });
-        
+        this._layers.content.add_child(this._content);
         const grid = new St.BoxLayout({
             vertical: true
         });
@@ -105,6 +85,8 @@ export default class LauncherBig {
             }
             grid.add_child(rowBox);
         }
+        // R5: card visual styling (background-color, corner-radius) goes on
+        // the dedicated Background Layer; _content stays a pure wrapper.
         this._content.set_child(grid);
         this._render();
         return this._actor;
@@ -115,12 +97,10 @@ export default class LauncherBig {
     }
     getDefaultSettings() {
         return {
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
-            apps: [],
-            backgroundColor: "#FFFFFF00",
-            cornerRadius: 18
         };
     }
     onSettingsChanged() {
@@ -138,9 +118,12 @@ export default class LauncherBig {
     }
     _render() {
         const apps = (this._settings.apps ?? []).slice(0, MAX_APPS);
-        _deferUntilMapped(this._content, () => this._content.set_style(_cardStyleCss(this._settings, {
-            cornerRadiusFallback: 18
-        }) + `padding: ${CARD_PADDING}px;`));
+        _deferUntilMapped(this._actor, () => {
+            this._layers.card.set_style(_cardStyleCss(this._settings, {
+                cornerRadiusFallback: 18
+            }));
+            this._content.set_style(`padding: ${CARD_PADDING}px;`);
+        });
         for (let i = 0; i < this._cells.length; i++) {
             const cell = this._cells[i];
             const path = apps[i] ?? null;
@@ -166,7 +149,7 @@ export default class LauncherBig {
             cell.bin.set_style("background-color: transparent;");
             cell.icon.show();
             if (gicon) cell.icon.set_gicon(gicon); else cell.icon.set_icon_name("application-x-executable-symbolic");
-            if (tooltipText) cell.tooltip = this._attachTooltip(cell.bin, tooltipText);
+            if (tooltipText) cell.tooltip = attachTooltip(cell.bin, this._layers, tooltipText);
             cell.bin.reactive = true;
             cell.pressId = cell.bin.connect("button-press-event", (_actor, event) => {
                 if (event.get_button() !== Clutter.BUTTON_PRIMARY) return Clutter.EVENT_PROPAGATE;
@@ -175,65 +158,6 @@ export default class LauncherBig {
                 return Clutter.EVENT_STOP;
             });
         }
-    }
-    _attachTooltip(cellActor, text) {
-        let showTimeoutId = null;
-        let tooltipLabel = null;
-        const hide = () => {
-            if (showTimeoutId != null) {
-                GLib.source_remove(showTimeoutId);
-                showTimeoutId = null;
-            }
-            tooltipLabel?.destroy();
-            tooltipLabel = null;
-        };
-        const enterId = cellActor.connect("enter-event", () => {
-            showTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, TOOLTIP_SHOW_DELAY_MS, () => {
-                showTimeoutId = null;
-                const stage = this._actor?.get_stage?.();
-                if (!stage || !isMappedActor(cellActor, stage) || !hasAllocation(this._actor) ||
-                    !hasAllocation(cellActor) || this._content?.get_parent?.() !== this._actor)
-                    return GLib.SOURCE_REMOVE;
-                tooltipLabel = new St.Label({
-                    style_class: "launcher-big-tooltip",
-                    text: text
-                });
-                tooltipLabel.set_style("background-color: rgba(20, 20, 20, 0.95); color: #fff; " + "font-size: 12px; padding: 4px 8px; border-radius: 6px;");
-                if (!insertChildAboveSafely(this._actor, tooltipLabel, this._content)) {
-                    tooltipLabel.destroy();
-                    tooltipLabel = null;
-                    return GLib.SOURCE_REMOVE;
-                }
-                const [cellAbsX, cellAbsY] = cellActor.get_transformed_position();
-                const [rootAbsX, rootAbsY] = this._actor.get_transformed_position();
-                const cellX = cellAbsX - rootAbsX;
-                const cellY = cellAbsY - rootAbsY;
-                const [, labelHeight] = tooltipLabel.get_preferred_height(-1);
-                const [, labelWidth] = tooltipLabel.get_preferred_width(-1);
-                const [cardWidth, cardHeight] = this._actor.get_size();
-                const idealX = cellX + (cellActor.width - labelWidth) / 2;
-                const idealY = cellY - labelHeight - 6;
-                tooltipLabel.set_position(Math.max(0, Math.min(idealX, cardWidth - labelWidth)), Math.max(0, Math.min(idealY, cardHeight - labelHeight)));
-                return GLib.SOURCE_REMOVE;
-            });
-            return Clutter.EVENT_PROPAGATE;
-        });
-        const leaveId = cellActor.connect("leave-event", () => {
-            hide();
-            return Clutter.EVENT_PROPAGATE;
-        });
-        const pressId = cellActor.connect("button-press-event", hide);
-        return {
-            hide: hide,
-            destroy() {
-                hide();
-                try {
-                    cellActor.disconnect(enterId);
-                    cellActor.disconnect(leaveId);
-                    cellActor.disconnect(pressId);
-                } catch (e) {}
-            }
-        };
     }
     _launchApp(path) {
         if (!path) return;

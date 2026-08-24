@@ -1,17 +1,16 @@
 {
-  "id": "xenlism.github.io.date-modern",
-  "name": "Date (Modern) By Xenlism",
-  "description": "Vertical stacked date card - month, day-of-week and day-of-month each on their own line.",
-  "version": "1.0.0",
-  "author": "Nattapong Pullkhow",
-  "api-version": 1,
-  "entry": "widget.js",
-  "block-type": "1x1",
-  "default-position": {
-    "x": 60,
-    "y": 60,
-    "monitor": 0
-  },
-  "screenshot": "screenshot.png",
-  "themeable": true
+    "id": "xenlism.github.io.date-modern",
+    "name": "Date (Modern) By Xenlism",
+    "description": "Vertical stacked date card - month, day-of-week and day-of-month each on their own line.",
+    "version": "1.0.0",
+    "author": "Nattapong Pullkhow",
+    "api-version": 1,
+    "entry": "widget.js",
+    "block-type": "1x1",
+    "default-position": {
+        "x": 60,
+        "y": 60,
+        "monitor": 0
+    },
+    "screenshot": "screenshot.png"
 }

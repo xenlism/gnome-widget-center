@@ -1,0 +1,55 @@
+/* widgets/geek-stat-clock/stylesheet.css
+ *
+ * Optional (see WIDGET_API.md §1). As of this widget, the host does not
+ * load a widget's stylesheet.css into the Shell's theme context
+ * automatically - style_class names here are documentation/hooks only.
+ * Actual appearance (color/font/shadow) comes from inline St properties
+ * set in widget.js's _renderLine(), driven by config.json. Same applies
+ * to the Add Child dialog's preset list in _promptChildOptions() - its
+ * vertical layout, spacing, and selected-state highlight are all set
+ * via inline .set_style() calls in widget.js, not the rules below.
+ */
+
+.geek-stat-clock-widget-line1,
+.geek-stat-clock-widget-line2,
+.geek-stat-clock-widget-line3 {
+    padding: 0;
+}
+
+.geek-stat-clock-widget-add-button {
+    padding: 6px 14px;
+    margin: 10px 0 0 0;
+    border-radius: 8px;
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.geek-stat-clock-widget-name-entry {
+    min-width: 220px;
+}
+
+.geek-stat-clock-widget-preset-label {
+    margin-top: 10px;
+    color: #cccccc;
+}
+
+.geek-stat-clock-widget-preset-row {
+    /* Documentation only - see file header. Actual vertical layout +
+       spacing is set inline in widget.js's _promptChildOptions(). */
+    spacing: 4px;
+    margin-top: 2px;
+}
+
+.geek-stat-clock-widget-preset-button {
+    /* Documentation only - see file header. Actual padding/color/
+       selected-state highlight is set inline in widget.js's
+       _promptChildOptions() (refreshSelection()), not via :selected. */
+    padding: 10px 14px;
+    border-radius: 8px;
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+.geek-stat-clock-widget-preset-button:selected {
+    background-color: rgba(90, 160, 255, 0.55);
+}

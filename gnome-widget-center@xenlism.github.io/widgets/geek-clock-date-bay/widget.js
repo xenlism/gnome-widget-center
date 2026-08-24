@@ -1,3 +1,7 @@
+/* [FIX] Root St.BoxLayout now sets clip_to_allocation: true so the
+ * clock/date labels never bleed past the card's rounded corners
+ * (cornerRadius) or border when text overflows the box. */
+
 import St from "gi://St";
 
 import GLib from "gi://GLib";
@@ -6,6 +10,9 @@ import Clutter from "gi://Clutter";
 
 import { SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor, parseFontDescription as _parseFontDescription, TEXT_SHADOW_DEFAULTS, textShadowCss as _textShadowCss, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS } from "../../lib/widgetVisualKit.js";
 
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
+
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 export default class GeekClockDateBayWidget {
     constructor(api) {
         this._api = api;
@@ -14,11 +21,15 @@ export default class GeekClockDateBayWidget {
         this._timeoutId = null;
     }
     buildActor() {
-        this._actor = new St.BoxLayout({
-            style_class: "geek-clock-date-bay-widget-root",
+        this._layers = createLayeredCard({
+            contentStyleClass: "geek-clock-date-bay-widget-root"
+        });
+        this._actor = this._layers.root;
+        this._content = new St.BoxLayout({
             vertical: true,
             x_align: Clutter.ActorAlign.CENTER
         });
+        this._layers.content.add_child(this._content);
         this._clockLabel = new St.Label({
             style_class: "geek-clock-date-bay-widget-clock",
             x_expand: true
@@ -27,8 +38,8 @@ export default class GeekClockDateBayWidget {
             style_class: "geek-clock-date-bay-widget-date",
             x_expand: true
         });
-        this._actor.add_child(this._clockLabel);
-        this._actor.add_child(this._dateLabel);
+        this._content.add_child(this._clockLabel);
+        this._content.add_child(this._dateLabel);
         this._render();
         return this._actor;
     }
@@ -43,24 +54,11 @@ export default class GeekClockDateBayWidget {
     }
     getDefaultSettings() {
         return {
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
             ...TEXT_SHADOW_DEFAULTS,
-            textShadowEnabled: true,
-            textShadowDistance: 2,
-            textShadowBlur: 4,
-            clockFont: "Sans Bold 40",
-            clockColor: "#ffffff",
-            clock24Hour: true,
-            clockShowSeconds: false,
-            dateTextEnabled: true,
-            dateFont: "Sans Bold 18",
-            dateColor: "#e6e6e6",
-            dateFormat: "auto",
-            textAlign: "center",
-            backgroundColor: "#FFFFFF00",
-            cornerRadius: 18,
             ...BORDER_DEFAULTS,
-            ...OPACITY_DEFAULTS
+            ...OPACITY_DEFAULTS,
         };
     }
     onSettingsChanged() {
@@ -114,9 +112,10 @@ export default class GeekClockDateBayWidget {
         const textAlign = [ "left", "center", "right" ].includes(this._settings.textAlign) ? this._settings.textAlign : "center";
         const textShadowCss = _textShadowCss(this._settings);
         const dateTextEnabled = this._settings.dateTextEnabled ?? true;
-        this._actor.set_style((this._api.resolveCardCss?.() ?? _cardStyleCss(this._settings, {
+        applyLayeredCardStyle(this._layers, this._settings, {
             cornerRadiusFallback: 18
-        })) + "padding: 14px 24px; " + "spacing: 6px;");
+        }, false);
+        this._content.set_style("padding: 14px 24px; " + "spacing: 6px;");
         const clockText = now.format(this._clockFormat()) ?? "";
         this._clockLabel.set_text(clockText);
         this._clockLabel.set_style(`color: ${clockColor}; font-family: ${clockFontFamily}; ` + `font-size: ${clockFontSize}px; font-weight: bold; text-align: ${textAlign}; ` + `${textShadowCss}`);

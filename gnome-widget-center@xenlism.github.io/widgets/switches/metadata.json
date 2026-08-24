@@ -1,18 +1,16 @@
 {
-  "id": "xenlism.github.io.switches",
-  "name": "Switches By Xenlism",
-  "description": "Two pill-shaped vertical drag sliders: volume (drag to set level, click the icon to mute/unmute) and screen brightness (drag to set level).",
-  "version": "1.0.0",
-  "author": "Nattapong Pullkhow",
-  "api-version": 1,
-  "entry": "widget.js",
-  "block-type": "1x1",
-  "default-position": {
-    "x": 40,
-    "y": 40,
-    "monitor": 0
-  },
-  "screenshot": "screenshot.png",
-  "themeable": false,
-  "forceSettingsAware": true
+    "id": "xenlism.github.io.switches",
+    "name": "Switches By Xenlism",
+    "description": "Two pill-shaped vertical drag sliders: volume (drag to set level, click the icon to mute/unmute) and screen brightness (drag to set level).",
+    "version": "1.0.0",
+    "author": "Nattapong Pullkhow",
+    "api-version": 1,
+    "entry": "widget.js",
+    "block-type": "1x1",
+    "default-position": {
+        "x": 40,
+        "y": 40,
+        "monitor": 0
+    },
+    "screenshot": "screenshot.png"
 }

@@ -1,0 +1,200 @@
+{
+    "version": "1.0",
+    "tabs": [
+        {
+            "id": "general",
+            "label": "Clock (Analog Minimal)",
+            "description": "Minimalist analog clock face settings",
+            "icon": "preferences-system-time-symbolic",
+            "groups": [
+                {
+                    "id": "card",
+                    "label": "Card",
+                    "description": "The square card behind the round dial.",
+                    "fields": [
+                        {
+                            "id": "backgroundColor",
+                            "label": "Card background color",
+                            "description": "Background of the square card behind the clock face. Leave alpha at 0 for no card at all.",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFFFF"
+                        },
+                        {
+                            "id": "cornerRadius",
+                            "label": "Corner radius",
+                            "description": "Roundness of the card's corners",
+                            "dataType": "number",
+                            "fieldType": "spinbutton",
+                            "default": 24,
+                            "min": 0,
+                            "max": 74,
+                            "step": 1,
+                            "suffix": "px"
+                        }
+                    ]
+                },
+                {
+                    "id": "face",
+                    "label": "Face",
+                    "description": "The round dial itself. No numerals on this face.",
+                    "fields": [
+                        {
+                            "id": "faceColor",
+                            "label": "Clock circle color",
+                            "description": "Background color of the round clock face",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFFFF"
+                        }
+                    ]
+                },
+                {
+                    "id": "ticks",
+                    "label": "Tick marks",
+                    "description": "The hour/minute index lines around the edge of the dial.",
+                    "fields": [
+                        {
+                            "id": "showMinuteTicks",
+                            "label": "Show minute ticks",
+                            "description": "Off shows only the 12 hour ticks",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": true
+                        },
+                        {
+                            "id": "tickColor",
+                            "label": "HH / MM line color",
+                            "description": "Color of both the hour and minute tick marks",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#1A1A1AFF"
+                        }
+                    ]
+                },
+                {
+                    "id": "hands",
+                    "label": "Hands",
+                    "description": "Each hand has its own color.",
+                    "fields": [
+                        {
+                            "id": "hourHandColor",
+                            "label": "HH color",
+                            "description": "Color of the hour hand",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#1A1A1AFF"
+                        },
+                        {
+                            "id": "minuteHandColor",
+                            "label": "MM color",
+                            "description": "Color of the minute hand",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#1A1A1AFF"
+                        },
+                        {
+                            "id": "showSecondHand",
+                            "label": "Show second hand",
+                            "description": "",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": true
+                        },
+                        {
+                            "id": "secondHandColor",
+                            "label": "SS color",
+                            "description": "Color of the second hand",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#D81F26FF",
+                            "visibleIf": "showSecondHand"
+                        }
+                    ]
+                },
+                {
+                    "id": "behavior",
+                    "label": "Behavior",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "refreshRateSeconds",
+                            "label": "Refresh rate",
+                            "description": "How often the hands re-read the system time and repaint. Lower = smoother second-hand sweep, slightly more CPU.",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 1,
+                            "min": 1,
+                            "max": 60,
+                            "step": 1,
+                            "suffix": "s"
+                        },
+                        {
+                            "id": "launchAppPath",
+                            "label": "Click to launch",
+                            "description": "Pick a .desktop file to launch when this card is clicked. Leave empty to disable.",
+                            "dataType": "string",
+                            "fieldType": "filepicker",
+                            "filters": [
+                                "*.desktop"
+                            ],
+                            "default": ""
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "shadow",
+            "label": "Shadow",
+            "description": "Drop shadow behind this widget.",
+            "groups": [
+                {
+                    "id": "shadow",
+                    "label": "Shadow effect",
+                    "description": "Off by default. Default color is black at 30% transparency.",
+                    "fields": [
+                        {
+                            "id": "shadowAngle",
+                            "label": "Shadow angle",
+                            "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 90,
+                            "min": 0,
+                            "max": 360,
+                            "step": 1,
+                            "suffix": "\u00b0",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowDistance",
+                            "label": "Shadow distance",
+                            "description": "How far the shadow is offset, in pixels",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 6,
+                            "min": 0,
+                            "max": 60,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "shadowEnabled"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

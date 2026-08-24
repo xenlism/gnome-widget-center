@@ -1,0 +1,28 @@
+/* widgets/_architect_template_/stylesheet.css
+ *
+ * Optional (see WIDGET_API.md §1). Namespace every class with your
+ * widget's own prefix, same rule as widgets/_template/stylesheet.css -
+ * this scaffold uses `architect-template-widget-`. TODO: rename the
+ * prefix to match your widget's id.
+ *
+ * As of this template, the host does not load a widget's stylesheet.css
+ * into the Shell's theme context automatically - style_class names are
+ * documentation/hooks, actual appearance comes from inline St
+ * properties in widget.js.
+ */
+
+.architect-template-widget-label {
+    padding: 12px 16px 4px 16px;
+    color: #ffffff;
+}
+
+.architect-template-widget-add-button {
+    padding: 6px 14px;
+    margin: 4px 0 12px 0;
+    border-radius: 8px;
+    color: #ffffff;
+}
+
+.architect-template-widget-name-entry {
+    min-width: 220px;
+}

@@ -1,17 +1,16 @@
 {
-  "id": "xenlism.github.io.network-monitor",
-  "name": "Network Monitor By Xenlism",
-  "description": "1x1 card showing live download/upload throughput with a two-line sparkline history graph.",
-  "version": "1.0.0",
-  "author": "Nattapong Pullkhow",
-  "api-version": 1,
-  "entry": "widget.js",
-  "block-type": "1x1",
-  "default-position": {
-    "x": 400,
-    "y": 40,
-    "monitor": 0
-  },
-  "screenshot": "screenshot.png",
-  "themeable": true
+    "id": "xenlism.github.io.network-monitor",
+    "name": "Network Monitor By Xenlism",
+    "description": "1x1 card showing live download/upload throughput with a two-line sparkline history graph.",
+    "version": "1.0.0",
+    "author": "Nattapong Pullkhow",
+    "api-version": 1,
+    "entry": "widget.js",
+    "block-type": "1x1",
+    "default-position": {
+        "x": 400,
+        "y": 40,
+        "monitor": 0
+    },
+    "screenshot": "screenshot.png"
 }

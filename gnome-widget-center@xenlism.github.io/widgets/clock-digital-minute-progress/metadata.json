@@ -1,0 +1,15 @@
+{
+    "id": "xenlism.github.io.clock-digital-minute-progress",
+    "name": "Clock (Digital Minute Progress) By Xenlism",
+    "description": "Digital HH:MM clock card with a ring of dash marks that fill in dark as the current minute passes - light dashes are minutes not reached yet. No hands, no numerals.",
+    "version": "1.0.0",
+    "author": "Nattapong Pullkhow",
+    "api-version": 1,
+    "entry": "widget.js",
+    "block-type": "1x1",
+    "default-position": {
+        "x": 40,
+        "y": 40,
+        "monitor": 0
+    }
+}

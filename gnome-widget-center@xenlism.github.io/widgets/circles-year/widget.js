@@ -12,6 +12,7 @@ import { SHADOW_DEFAULTS, hexToRgba as _hexToRgba, toCssColor as _toCssColor, pa
 
 import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
 
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 const RING_SIZE = 128;
 
 function _isLeapYear(year) {
@@ -88,21 +89,10 @@ export default class CirclesYearWidget {
     }
     getDefaultSettings() {
         return {
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
-            backgroundColor: "#FFFFFF00",
-            cornerRadius: 18,
-            yearFont: "Sans Bold 26",
-            yearColor: "#FFFFFFFF",
-            showDayCount: true,
-            dayFont: "Sans 11",
-            dayColor: "#FFFFFFB3",
-            circleBaseColor: "#FFFFFF26",
-            ringColor: "#33D17AFF",
-            ringThickness: 10,
-            refreshRateSeconds: 300,
-            launchAppPath: ""
         };
     }
     onSettingsChanged() {

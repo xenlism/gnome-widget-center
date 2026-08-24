@@ -1,0 +1,172 @@
+{
+    "version": "1.0",
+    "tabs": [
+        {
+            "id": "general",
+            "label": "Clock (Digital Dashed)",
+            "description": "Digital clock card settings",
+            "icon": "preferences-system-time-symbolic",
+            "groups": [
+                {
+                    "id": "card",
+                    "label": "Card",
+                    "description": "The square card the dashes and digits sit on.",
+                    "fields": [
+                        {
+                            "id": "backgroundColor",
+                            "label": "Card background color",
+                            "description": "Background of the card",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFFFF"
+                        },
+                        {
+                            "id": "cornerRadius",
+                            "label": "Corner radius",
+                            "description": "Roundness of the card's corners",
+                            "dataType": "number",
+                            "fieldType": "spinbutton",
+                            "default": 28,
+                            "min": 0,
+                            "max": 74,
+                            "step": 1,
+                            "suffix": "px"
+                        }
+                    ]
+                },
+                {
+                    "id": "dashes",
+                    "label": "Dash ring",
+                    "description": "The ring of short dash marks around the edge of the card.",
+                    "fields": [
+                        {
+                            "id": "showDashes",
+                            "label": "Show dash ring",
+                            "description": "",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": true
+                        },
+                        {
+                            "id": "dashColor",
+                            "label": "HH / MM line color",
+                            "description": "Color of the dash marks",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#1A1A1AFF",
+                            "visibleIf": "showDashes"
+                        }
+                    ]
+                },
+                {
+                    "id": "digits",
+                    "label": "Digits",
+                    "description": "The big HH:MM readout in the middle of the card.",
+                    "fields": [
+                        {
+                            "id": "format24h",
+                            "label": "24-hour format",
+                            "description": "Show 14:30 instead of 02:30",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": true
+                        },
+                        {
+                            "id": "digitFont",
+                            "label": "Digit font",
+                            "description": "Face and size used for the HH:MM digits",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "format": "font",
+                            "default": "Sans Bold 34"
+                        },
+                        {
+                            "id": "digitColor",
+                            "label": "Digit color",
+                            "description": "Color of the HH:MM digits",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#1A1A1AFF"
+                        }
+                    ]
+                },
+                {
+                    "id": "behavior",
+                    "label": "Behavior",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "refreshRateSeconds",
+                            "label": "Refresh rate",
+                            "description": "How often the readout re-reads the system time and repaints.",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 5,
+                            "min": 1,
+                            "max": 60,
+                            "step": 1,
+                            "suffix": "s"
+                        },
+                        {
+                            "id": "launchAppPath",
+                            "label": "Click to launch",
+                            "description": "Pick a .desktop file to launch when this card is clicked. Leave empty to disable.",
+                            "dataType": "string",
+                            "fieldType": "filepicker",
+                            "filters": [
+                                "*.desktop"
+                            ],
+                            "default": ""
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "shadow",
+            "label": "Shadow",
+            "description": "Drop shadow behind this widget.",
+            "groups": [
+                {
+                    "id": "shadow",
+                    "label": "Shadow effect",
+                    "description": "Off by default. Default color is black at 30% transparency.",
+                    "fields": [
+                        {
+                            "id": "shadowAngle",
+                            "label": "Shadow angle",
+                            "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 90,
+                            "min": 0,
+                            "max": 360,
+                            "step": 1,
+                            "suffix": "\u00b0",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowDistance",
+                            "label": "Shadow distance",
+                            "description": "How far the shadow is offset, in pixels",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 6,
+                            "min": 0,
+                            "max": 60,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "shadowEnabled"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

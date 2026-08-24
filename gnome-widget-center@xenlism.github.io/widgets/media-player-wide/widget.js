@@ -14,6 +14,9 @@ import { MprisMediaService } from "../../lib/mediaApi.js";
 
 import { SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor, BORDER_DEFAULTS, OPACITY_DEFAULTS } from "../../lib/widgetVisualKit.js";
 
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
+
+import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 const WIDTH = 368;
 
 const HEIGHT = 176;
@@ -52,16 +55,21 @@ export default class MediaPlayerWideWidget {
         this._repaintId = null;
     }
     buildActor() {
-        this._actor = new St.BoxLayout({
+        this._layers = createLayeredCard({});
+        this._actor = this._layers.root;
+        this._actor.width = WIDTH;
+        this._actor.height = HEIGHT;
+        this._content = new St.BoxLayout({
             width: WIDTH,
             height: HEIGHT
         });
+        this._layers.content.add_child(this._content);
         this._leftStack = new St.Widget({
             layout_manager: new Clutter.BinLayout,
             width: LEFT_WIDTH,
             height: HEIGHT
         });
-        this._actor.add_child(this._leftStack);
+        this._content.add_child(this._leftStack);
         this._coverStack = new St.Widget({
             layout_manager: new Clutter.BinLayout,
             width: COVER_SIZE,
@@ -108,7 +116,7 @@ export default class MediaPlayerWideWidget {
             y_expand: true
         });
         this._rightBox.set_style("padding: 16px;");
-        this._actor.add_child(this._rightBox);
+        this._content.add_child(this._rightBox);
         this._titleLabel = new St.Label({
             text: "No media playing"
         });
@@ -118,7 +126,9 @@ export default class MediaPlayerWideWidget {
         this._artistLabel = new St.Label({
             text: ""
         });
-        for (const label of [ this._titleLabel, this._albumLabel, this._artistLabel ]) label.clutter_text.set_ellipsize(3);
+        // Overflowing titles/album/artist text is hidden by the Content
+        // Layer's clip_to_allocation (Rule 4) - no ellipsize substitute.
+        for (const label of [ this._titleLabel, this._albumLabel, this._artistLabel ]) label.clutter_text.set_line_wrap(false);
         this._infoBox = new St.BoxLayout({
             vertical: true,
             y_expand: true
@@ -152,15 +162,10 @@ export default class MediaPlayerWideWidget {
     }
     getDefaultSettings() {
         return {
+            ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
-            backgroundColor: "#FFFFFF00",
-            cornerRadius: 18,
-            infoFont: "Sans Bold 18",
-            infoColor: "#FFFFFFFF",
-            buttonColor: "#EAEAEAFF",
-            desktopFilePath: ""
         };
     }
     onSettingsChanged() {
@@ -201,9 +206,9 @@ export default class MediaPlayerWideWidget {
         }
     }
     _render() {
-        this._actor.set_style((this._api.resolveCardCss?.() ?? _cardStyleCss(this._settings, {
+        applyLayeredCardStyle(this._layers, this._settings, {
             cornerRadiusFallback: 18
-        })));
+        }, false);
         this._coverStack.set_style(`background-color: rgba(255,255,255,0.05); border-radius: ${COVER_RADIUS}px;`);
         this._artIcon.set_style(`border-radius: ${COVER_RADIUS}px; background-size: cover; background-position: center;`);
         const infoColor = _toCssColor(this._settings.infoColor, "#FFFFFFFF");
