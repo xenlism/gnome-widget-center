@@ -20,7 +20,7 @@
                             "fieldType": "colorpicker",
                             "format": "color",
                             "alpha": true,
-                            "default": "#bf404000"
+                            "default": "#000000d9"
                         }
                     ]
                 },
@@ -37,7 +37,7 @@
                             "fieldType": "colorpicker",
                             "format": "color",
                             "alpha": true,
-                            "default": "#000000e0",
+                            "default": "#FFFFFF33",
                             "visibleIf": "borderEnabled"
                         }
                     ]
@@ -213,7 +213,7 @@
                             "min": 0,
                             "max": 360,
                             "step": 1,
-                            "suffix": "\u00b0",
+                            "suffix": "°",
                             "visibleIf": "shadowEnabled"
                         },
                         {

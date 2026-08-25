@@ -216,7 +216,7 @@
                             "min": 0,
                             "max": 360,
                             "step": 1,
-                            "suffix": "\u00b0",
+                            "suffix": "°",
                             "visibleIf": "textShadowEnabled"
                         },
                         {
@@ -269,7 +269,7 @@
                             "min": 0,
                             "max": 360,
                             "step": 1,
-                            "suffix": "\u00b0",
+                            "suffix": "°",
                             "visibleIf": "shadowEnabled"
                         },
                         {

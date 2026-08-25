@@ -20,7 +20,7 @@
                             "fieldType": "colorpicker",
                             "format": "color",
                             "alpha": true,
-                            "default": "#000000a9"
+                            "default": "#000000d9"
                         }
                     ]
                 },
@@ -170,7 +170,7 @@
                             "description": "Shadow opacity, 0-100%",
                             "dataType": "integer",
                             "fieldType": "slider",
-                            "default": 24.8,
+                            "default": 30,
                             "min": 0,
                             "max": 100,
                             "step": 1,
@@ -187,7 +187,7 @@
                             "min": 0,
                             "max": 360,
                             "step": 1,
-                            "suffix": "\u00b0",
+                            "suffix": "°",
                             "visibleIf": "shadowEnabled"
                         },
                         {
@@ -196,7 +196,7 @@
                             "description": "How far the shadow is offset, in pixels",
                             "dataType": "integer",
                             "fieldType": "spinbutton",
-                            "default": 2,
+                            "default": 6,
                             "min": 0,
                             "max": 60,
                             "step": 1,
@@ -209,7 +209,7 @@
                             "description": "Blur radius, in pixels",
                             "dataType": "integer",
                             "fieldType": "spinbutton",
-                            "default": 10,
+                            "default": 16,
                             "min": 0,
                             "max": 100,
                             "step": 1,

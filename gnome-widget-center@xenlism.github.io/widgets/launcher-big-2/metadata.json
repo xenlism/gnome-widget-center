@@ -8,8 +8,8 @@
     "entry": "widget.js",
     "block-type": "2x2",
     "default-position": {
-        "x": 1184,
-        "y": 336,
+        "x": 1176,
+        "y": 536,
         "monitor": 0
     },
     "screenshot": "screenshot.png"

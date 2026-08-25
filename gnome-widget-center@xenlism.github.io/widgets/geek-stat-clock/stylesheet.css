@@ -16,14 +16,6 @@
     padding: 0;
 }
 
-.geek-stat-clock-widget-add-button {
-    padding: 6px 14px;
-    margin: 10px 0 0 0;
-    border-radius: 8px;
-    color: #ffffff;
-    background-color: rgba(255, 255, 255, 0.12);
-}
-
 .geek-stat-clock-widget-name-entry {
     min-width: 220px;
 }

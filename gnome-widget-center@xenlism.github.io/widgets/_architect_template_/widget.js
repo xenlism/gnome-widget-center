@@ -13,9 +13,12 @@
 // lib/architectWidgetKit.js's createChildWidgetFromParent().
 //
 // XTile Architecture §9-10 (Add Child flow):
-//   + Add Widget button -> widget_add_child() -> Widget Preferences
-//   (Child Name + settings) -> generate Child ID -> copy child/
-//   template -> discovered/loaded as a normal widget.
+//   "Add Widget" icon in the edit-mode toolbar (right-click the
+//   widget) -> widget_add_child() -> Widget Preferences (Child Name +
+//   settings) -> generate Child ID -> copy child/ template ->
+//   discovered/loaded as a normal widget. The icon itself is added by
+//   the host, not painted by this widget - see the _addChild comment
+//   in the constructor below and lib/widgetEditMode.js.
 //
 // This scaffold's Add Widget flow is intentionally minimal (a single
 // GNOME Shell ModalDialog with one name field) so the mechanics are
@@ -50,6 +53,19 @@ export default class ArchitectTemplateWidget {
         // the same Gio-file-read + JSON.parse pattern widgetLoader.js
         // itself uses to read every widget's metadata.json.
         this._metadata = JSON.parse(readTextFile(GLib.build_filenamev([api.path.me, "metadata.json"])));
+
+        // "+ Add Widget" lives in the edit-mode toolbar (right-click
+        // the widget), not painted inline in the card - the host
+        // (extension.js) checks `typeof instance._addChild ===
+        // "function"` when attaching edit mode and, only when true,
+        // adds an "Add Widget" icon that calls _addChild() below (see
+        // lib/widgetEditMode.js). Only the top-level Architect (no
+        // "parent" field in its own metadata.json) offers this at
+        // all - a generated Child runs this exact same class
+        // (config-only pattern, see child/widget.js) but must not be
+        // able to spawn grandchildren of its own, so it has
+        // _addChild shadowed to undefined here.
+        if (this._metadata.parent) this._addChild = undefined;
     }
 
     buildActor() {
@@ -72,18 +88,6 @@ export default class ArchitectTemplateWidget {
             text: "Architect widget",
         });
         this._content.add_child(this._label);
-
-        // XTile Architecture §9: an action button, not an
-        // Enable/Disable switch, for "add a Child".
-        this._addButton = new St.Button({
-            style_class: "architect-template-widget-add-button",
-            reactive: true,
-            can_focus: true,
-            track_hover: true,
-            label: "+ Add Widget",
-        });
-        this._addButton.connect("clicked", () => this._addChild());
-        this._content.add_child(this._addButton);
 
         this._render();
         return this._actor;
@@ -109,7 +113,10 @@ export default class ArchitectTemplateWidget {
     // copying child/, wiring metadata.json's "parent" field) to the
     // generic kit — this method itself only decides WHAT to put in
     // configOverrides, which is the one part that's genuinely specific
-    // to your Architect Widget.
+    // to your Architect Widget. Invoked by the host from the edit-mode
+    // toolbar's "Add Widget" icon (extension.js's
+    // _addChildViaEditMode()), not by a button this widget paints
+    // itself.
     async _addChild() {
         const name = await this._promptChildName();
         if (!name) return;

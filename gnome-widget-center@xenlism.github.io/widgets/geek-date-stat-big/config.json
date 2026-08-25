@@ -187,7 +187,7 @@
                             "min": 0,
                             "max": 360,
                             "step": 1,
-                            "suffix": "\u00b0",
+                            "suffix": "°",
                             "visibleIf": "textShadowEnabled"
                         },
                         {
@@ -196,7 +196,7 @@
                             "description": "How far the shadow is offset, in pixels",
                             "dataType": "integer",
                             "fieldType": "spinbutton",
-                            "default": 2,
+                            "default": 5,
                             "min": 0,
                             "max": 30,
                             "step": 1,
@@ -209,7 +209,7 @@
                             "description": "Blur radius, in pixels",
                             "dataType": "integer",
                             "fieldType": "spinbutton",
-                            "default": 4,
+                            "default": 0,
                             "min": 0,
                             "max": 40,
                             "step": 1,
@@ -240,7 +240,7 @@
                             "min": 0,
                             "max": 360,
                             "step": 1,
-                            "suffix": "\u00b0",
+                            "suffix": "°",
                             "visibleIf": "shadowEnabled"
                         },
                         {

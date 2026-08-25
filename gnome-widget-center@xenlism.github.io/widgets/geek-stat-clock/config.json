@@ -1,606 +1,606 @@
 {
-  "version": "1.0",
-  "tabs": [
-    {
-      "id": "general",
-      "label": "Format & Layout",
-      "description": "Date/clock formats and text layout shared by all lines.",
-      "icon": "preferences-system-time-symbolic",
-      "groups": [
+    "version": "1.0",
+    "tabs": [
         {
-          "id": "clock-format",
-          "label": "Clock format",
-          "description": "Used by any line whose Source is \"Clock\".",
-          "fields": [
-            {
-              "id": "clockFormat",
-              "label": "Time format",
-              "description": "",
-              "dataType": "string",
-              "fieldType": "dropdown",
-              "default": "HH:MM:SS",
-              "options": [
+            "id": "general",
+            "label": "Format & Layout",
+            "description": "Date/clock formats and text layout shared by all lines.",
+            "icon": "preferences-system-time-symbolic",
+            "groups": [
                 {
-                  "value": "HH:MM:SS",
-                  "label": "HH:MM:SS"
+                    "id": "clock-format",
+                    "label": "Clock format",
+                    "description": "Used by any line whose Source is \"Clock\".",
+                    "fields": [
+                        {
+                            "id": "clockFormat",
+                            "label": "Time format",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "dropdown",
+                            "default": "HH:MM:SS",
+                            "options": [
+                                {
+                                    "value": "HH:MM:SS",
+                                    "label": "HH:MM:SS"
+                                },
+                                {
+                                    "value": "HH:MM",
+                                    "label": "HH:MM"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "hourStyle",
+                            "label": "Hour style",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "dropdown",
+                            "default": "24",
+                            "options": [
+                                {
+                                    "value": "24",
+                                    "label": "24-hour"
+                                },
+                                {
+                                    "value": "12",
+                                    "label": "12-hour (AM/PM)"
+                                }
+                            ]
+                        }
+                    ]
                 },
                 {
-                  "value": "HH:MM",
-                  "label": "HH:MM"
-                }
-              ]
-            },
-            {
-              "id": "hourStyle",
-              "label": "Hour style",
-              "description": "",
-              "dataType": "string",
-              "fieldType": "dropdown",
-              "default": "24",
-              "options": [
-                {
-                  "value": "24",
-                  "label": "24-hour"
+                    "id": "date-format",
+                    "label": "Date formats",
+                    "description": "Used by any line whose Source is \"Long date\" or \"Short date\".",
+                    "fields": [
+                        {
+                            "id": "longDateFormat",
+                            "label": "Long date format",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "dropdown",
+                            "default": "DD MMM YYYY",
+                            "options": [
+                                {
+                                    "value": "DD MMM YYYY",
+                                    "label": "DD MMM YYYY"
+                                },
+                                {
+                                    "value": "MMM DD YYYY",
+                                    "label": "MMM DD YYYY"
+                                },
+                                {
+                                    "value": "DD MMMM YYYY",
+                                    "label": "DD MMMM YYYY"
+                                },
+                                {
+                                    "value": "MMMM DD YYYY",
+                                    "label": "MMMM DD YYYY"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "shortDateFormat",
+                            "label": "Short date format",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "dropdown",
+                            "default": "DD-MM-YY",
+                            "options": [
+                                {
+                                    "value": "DD-MM-YY",
+                                    "label": "DD-MM-YY"
+                                },
+                                {
+                                    "value": "MM-DD-YY",
+                                    "label": "MM-DD-YY"
+                                },
+                                {
+                                    "value": "DD-MMM-YY",
+                                    "label": "DD-MMM-YY"
+                                },
+                                {
+                                    "value": "MMM-DD-YY",
+                                    "label": "MMM-DD-YY"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "dayOfWeekFormat",
+                            "label": "Day of week format",
+                            "description": "Used when a line's Source is set to \"Day of week\".",
+                            "dataType": "string",
+                            "fieldType": "dropdown",
+                            "default": "DDDD",
+                            "options": [
+                                {
+                                    "value": "DDD",
+                                    "label": "DDD (Mon)"
+                                },
+                                {
+                                    "value": "DDDD",
+                                    "label": "DDDD (Monday)"
+                                }
+                            ]
+                        }
+                    ]
                 },
                 {
-                  "value": "12",
-                  "label": "12-hour (AM/PM)"
+                    "id": "stat",
+                    "label": "System stat",
+                    "description": "Used by any line whose Source is \"System stat\".",
+                    "fields": [
+                        {
+                            "id": "diskPath",
+                            "label": "Disk path",
+                            "description": "Filesystem path used to measure disk usage.",
+                            "dataType": "string",
+                            "fieldType": "text",
+                            "default": "/"
+                        },
+                        {
+                            "id": "updateInterval",
+                            "label": "Update interval",
+                            "description": "How often the clock/stat lines refresh. Use 1s if any line shows HH:MM:SS.",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 1,
+                            "min": 1,
+                            "max": 60,
+                            "step": 1,
+                            "suffix": "s"
+                        }
+                    ]
+                },
+                {
+                    "id": "layout",
+                    "label": "Layout",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "textAlign",
+                            "label": "Text align",
+                            "description": "Horizontal alignment of all lines.",
+                            "dataType": "string",
+                            "fieldType": "dropdown",
+                            "default": "center",
+                            "options": [
+                                {
+                                    "value": "left",
+                                    "label": "Left"
+                                },
+                                {
+                                    "value": "center",
+                                    "label": "Center"
+                                },
+                                {
+                                    "value": "right",
+                                    "label": "Right"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "lineSpacing",
+                            "label": "Line spacing",
+                            "description": "Vertical gap between the visible lines.",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 6,
+                            "min": 0,
+                            "max": 40,
+                            "step": 1,
+                            "suffix": "px"
+                        }
+                    ]
                 }
-              ]
-            }
-          ]
+            ]
         },
         {
-          "id": "date-format",
-          "label": "Date formats",
-          "description": "Used by any line whose Source is \"Long date\" or \"Short date\".",
-          "fields": [
-            {
-              "id": "longDateFormat",
-              "label": "Long date format",
-              "description": "",
-              "dataType": "string",
-              "fieldType": "dropdown",
-              "default": "DD MMM YYYY",
-              "options": [
+            "id": "line1",
+            "label": "Line 1",
+            "description": "The top line. Always shown.",
+            "icon": "go-top-symbolic",
+            "groups": [
                 {
-                  "value": "DD MMM YYYY",
-                  "label": "DD MMM YYYY"
+                    "id": "line1-text",
+                    "label": "Line 1 text",
+                    "description": "What line 1 shows and how it looks. Line 1 is always shown.",
+                    "fields": [
+                        {
+                            "id": "line1Source",
+                            "label": "Source",
+                            "description": "What this line displays.",
+                            "dataType": "string",
+                            "fieldType": "dropdown",
+                            "default": "clock",
+                            "options": [
+                                {
+                                    "value": "clock",
+                                    "label": "Clock"
+                                },
+                                {
+                                    "value": "dayOfWeek",
+                                    "label": "Day of week"
+                                },
+                                {
+                                    "value": "longDate",
+                                    "label": "Long date"
+                                },
+                                {
+                                    "value": "shortDate",
+                                    "label": "Short date"
+                                },
+                                {
+                                    "value": "stat",
+                                    "label": "System stat (CPU/MEM/DISK/NET)"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "line1Font",
+                            "label": "Font",
+                            "description": "Font face and size for this line.",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "format": "font",
+                            "default": "Sans Bold 28"
+                        },
+                        {
+                            "id": "line1Color",
+                            "label": "Color",
+                            "description": "Color of this line's text.",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#ffffffff"
+                        }
+                    ]
                 },
                 {
-                  "value": "MMM DD YYYY",
-                  "label": "MMM DD YYYY"
-                },
-                {
-                  "value": "DD MMMM YYYY",
-                  "label": "DD MMMM YYYY"
-                },
-                {
-                  "value": "MMMM DD YYYY",
-                  "label": "MMMM DD YYYY"
+                    "id": "line1-shadow",
+                    "label": "Line 1 text shadow",
+                    "description": "Off by default. Angle is intentionally not offered here - every text/card shadow in this widget always follows the single global Shadow Angle in Settings > Appearance, so every shadow in the desktop points the same direction.",
+                    "fields": [
+                        {
+                            "id": "line1ShadowEnabled",
+                            "label": "Enable text shadow",
+                            "description": "Add a shadow behind this line's text.",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": true
+                        },
+                        {
+                            "id": "line1ShadowColor",
+                            "label": "Shadow color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#000000",
+                            "visibleIf": "line1ShadowEnabled"
+                        },
+                        {
+                            "id": "line1ShadowOpacity",
+                            "label": "Shadow transparency",
+                            "description": "Shadow opacity, 0-100%.",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 60,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "suffix": "%",
+                            "visibleIf": "line1ShadowEnabled"
+                        },
+                        {
+                            "id": "line1ShadowDistance",
+                            "label": "Shadow distance",
+                            "description": "How far the shadow is offset, in pixels.",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 2,
+                            "min": 0,
+                            "max": 30,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "line1ShadowEnabled"
+                        },
+                        {
+                            "id": "line1ShadowBlur",
+                            "label": "Shadow blur",
+                            "description": "Blur radius, in pixels.",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 4,
+                            "min": 0,
+                            "max": 40,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "line1ShadowEnabled"
+                        }
+                    ]
                 }
-              ]
-            },
-            {
-              "id": "shortDateFormat",
-              "label": "Short date format",
-              "description": "",
-              "dataType": "string",
-              "fieldType": "dropdown",
-              "default": "DD-MM-YY",
-              "options": [
-                {
-                  "value": "DD-MM-YY",
-                  "label": "DD-MM-YY"
-                },
-                {
-                  "value": "MM-DD-YY",
-                  "label": "MM-DD-YY"
-                },
-                {
-                  "value": "DD-MMM-YY",
-                  "label": "DD-MMM-YY"
-                },
-                {
-                  "value": "MMM-DD-YY",
-                  "label": "MMM-DD-YY"
-                }
-              ]
-            },
-            {
-              "id": "dayOfWeekFormat",
-              "label": "Day of week format",
-              "description": "Used when a line's Source is set to \"Day of week\".",
-              "dataType": "string",
-              "fieldType": "dropdown",
-              "default": "DDDD",
-              "options": [
-                {
-                  "value": "DDD",
-                  "label": "DDD (Mon)"
-                },
-                {
-                  "value": "DDDD",
-                  "label": "DDDD (Monday)"
-                }
-              ]
-            }
-          ]
+            ]
         },
         {
-          "id": "stat",
-          "label": "System stat",
-          "description": "Used by any line whose Source is \"System stat\".",
-          "fields": [
-            {
-              "id": "diskPath",
-              "label": "Disk path",
-              "description": "Filesystem path used to measure disk usage.",
-              "dataType": "string",
-              "fieldType": "text",
-              "default": "/"
-            },
-            {
-              "id": "updateInterval",
-              "label": "Update interval",
-              "description": "How often the clock/stat lines refresh. Use 1s if any line shows HH:MM:SS.",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 1,
-              "min": 1,
-              "max": 60,
-              "step": 1,
-              "suffix": "s"
-            }
-          ]
+            "id": "line2",
+            "label": "Line 2",
+            "description": "The middle line. Can be turned off.",
+            "icon": "go-next-symbolic",
+            "groups": [
+                {
+                    "id": "line2-text",
+                    "label": "Line 2 text",
+                    "description": "What line 2 shows and how it looks.",
+                    "fields": [
+                        {
+                            "id": "line2Enabled",
+                            "label": "Show this line",
+                            "description": "Turn this line off entirely (line 1 can't be turned off).",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": true
+                        },
+                        {
+                            "id": "line2Source",
+                            "label": "Source",
+                            "description": "What this line displays.",
+                            "dataType": "string",
+                            "fieldType": "dropdown",
+                            "default": "longDate",
+                            "options": [
+                                {
+                                    "value": "clock",
+                                    "label": "Clock"
+                                },
+                                {
+                                    "value": "dayOfWeek",
+                                    "label": "Day of week"
+                                },
+                                {
+                                    "value": "longDate",
+                                    "label": "Long date"
+                                },
+                                {
+                                    "value": "shortDate",
+                                    "label": "Short date"
+                                },
+                                {
+                                    "value": "stat",
+                                    "label": "System stat (CPU/MEM/DISK/NET)"
+                                }
+                            ],
+                            "visibleIf": "line2Enabled"
+                        },
+                        {
+                            "id": "line2Font",
+                            "label": "Font",
+                            "description": "Font face and size for this line.",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "format": "font",
+                            "default": "Sans Bold 16",
+                            "visibleIf": "line2Enabled"
+                        },
+                        {
+                            "id": "line2Color",
+                            "label": "Color",
+                            "description": "Color of this line's text.",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#ffffffff",
+                            "visibleIf": "line2Enabled"
+                        }
+                    ]
+                },
+                {
+                    "id": "line2-shadow",
+                    "label": "Line 2 text shadow",
+                    "description": "Off by default. Angle is intentionally not offered here - every text/card shadow in this widget always follows the single global Shadow Angle in Settings > Appearance, so every shadow in the desktop points the same direction.",
+                    "fields": [
+                        {
+                            "id": "line2ShadowEnabled",
+                            "label": "Enable text shadow",
+                            "description": "Add a shadow behind this line's text.",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": false,
+                            "visibleIf": "line2Enabled"
+                        },
+                        {
+                            "id": "line2ShadowColor",
+                            "label": "Shadow color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#000000",
+                            "visibleIf": "line2ShadowEnabled"
+                        },
+                        {
+                            "id": "line2ShadowOpacity",
+                            "label": "Shadow transparency",
+                            "description": "Shadow opacity, 0-100%.",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 60,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "suffix": "%",
+                            "visibleIf": "line2ShadowEnabled"
+                        },
+                        {
+                            "id": "line2ShadowDistance",
+                            "label": "Shadow distance",
+                            "description": "How far the shadow is offset, in pixels.",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 2,
+                            "min": 0,
+                            "max": 30,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "line2ShadowEnabled"
+                        },
+                        {
+                            "id": "line2ShadowBlur",
+                            "label": "Shadow blur",
+                            "description": "Blur radius, in pixels.",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 4,
+                            "min": 0,
+                            "max": 40,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "line2ShadowEnabled"
+                        }
+                    ]
+                }
+            ]
         },
         {
-          "id": "layout",
-          "label": "Layout",
-          "description": "",
-          "fields": [
-            {
-              "id": "textAlign",
-              "label": "Text align",
-              "description": "Horizontal alignment of all lines.",
-              "dataType": "string",
-              "fieldType": "dropdown",
-              "default": "center",
-              "options": [
+            "id": "line3",
+            "label": "Line 3",
+            "description": "The bottom line. Can be turned off.",
+            "icon": "go-bottom-symbolic",
+            "groups": [
                 {
-                  "value": "left",
-                  "label": "Left"
+                    "id": "line3-text",
+                    "label": "Line 3 text",
+                    "description": "What line 3 shows and how it looks.",
+                    "fields": [
+                        {
+                            "id": "line3Enabled",
+                            "label": "Show this line",
+                            "description": "Turn this line off entirely (line 1 can't be turned off).",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": true
+                        },
+                        {
+                            "id": "line3Source",
+                            "label": "Source",
+                            "description": "What this line displays.",
+                            "dataType": "string",
+                            "fieldType": "dropdown",
+                            "default": "stat",
+                            "options": [
+                                {
+                                    "value": "clock",
+                                    "label": "Clock"
+                                },
+                                {
+                                    "value": "dayOfWeek",
+                                    "label": "Day of week"
+                                },
+                                {
+                                    "value": "longDate",
+                                    "label": "Long date"
+                                },
+                                {
+                                    "value": "shortDate",
+                                    "label": "Short date"
+                                },
+                                {
+                                    "value": "stat",
+                                    "label": "System stat (CPU/MEM/DISK/NET)"
+                                }
+                            ],
+                            "visibleIf": "line3Enabled"
+                        },
+                        {
+                            "id": "line3Font",
+                            "label": "Font",
+                            "description": "Font face and size for this line.",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "format": "font",
+                            "default": "Sans 14",
+                            "visibleIf": "line3Enabled"
+                        },
+                        {
+                            "id": "line3Color",
+                            "label": "Color",
+                            "description": "Color of this line's text.",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#e6e6e6ff",
+                            "visibleIf": "line3Enabled"
+                        }
+                    ]
                 },
                 {
-                  "value": "center",
-                  "label": "Center"
-                },
-                {
-                  "value": "right",
-                  "label": "Right"
+                    "id": "line3-shadow",
+                    "label": "Line 3 text shadow",
+                    "description": "Off by default. Angle is intentionally not offered here - every text/card shadow in this widget always follows the single global Shadow Angle in Settings > Appearance, so every shadow in the desktop points the same direction.",
+                    "fields": [
+                        {
+                            "id": "line3ShadowEnabled",
+                            "label": "Enable text shadow",
+                            "description": "Add a shadow behind this line's text.",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": false,
+                            "visibleIf": "line3Enabled"
+                        },
+                        {
+                            "id": "line3ShadowColor",
+                            "label": "Shadow color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#000000",
+                            "visibleIf": "line3ShadowEnabled"
+                        },
+                        {
+                            "id": "line3ShadowOpacity",
+                            "label": "Shadow transparency",
+                            "description": "Shadow opacity, 0-100%.",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 60,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "suffix": "%",
+                            "visibleIf": "line3ShadowEnabled"
+                        },
+                        {
+                            "id": "line3ShadowDistance",
+                            "label": "Shadow distance",
+                            "description": "How far the shadow is offset, in pixels.",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 2,
+                            "min": 0,
+                            "max": 30,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "line3ShadowEnabled"
+                        },
+                        {
+                            "id": "line3ShadowBlur",
+                            "label": "Shadow blur",
+                            "description": "Blur radius, in pixels.",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 4,
+                            "min": 0,
+                            "max": 40,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "line3ShadowEnabled"
+                        }
+                    ]
                 }
-              ]
-            },
-            {
-              "id": "lineSpacing",
-              "label": "Line spacing",
-              "description": "Vertical gap between the visible lines.",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 6,
-              "min": 0,
-              "max": 40,
-              "step": 1,
-              "suffix": "px"
-            }
-          ]
+            ]
         }
-      ]
-    },
-    {
-      "id": "line1",
-      "label": "Line 1",
-      "description": "The top line. Always shown.",
-      "icon": "go-top-symbolic",
-      "groups": [
-        {
-          "id": "line1-text",
-          "label": "Line 1 text",
-          "description": "What line 1 shows and how it looks. Line 1 is always shown.",
-          "fields": [
-            {
-              "id": "line1Source",
-              "label": "Source",
-              "description": "What this line displays.",
-              "dataType": "string",
-              "fieldType": "dropdown",
-              "default": "clock",
-              "options": [
-                {
-                  "value": "clock",
-                  "label": "Clock"
-                },
-                {
-                  "value": "dayOfWeek",
-                  "label": "Day of week"
-                },
-                {
-                  "value": "longDate",
-                  "label": "Long date"
-                },
-                {
-                  "value": "shortDate",
-                  "label": "Short date"
-                },
-                {
-                  "value": "stat",
-                  "label": "System stat (CPU/MEM/DISK/NET)"
-                }
-              ]
-            },
-            {
-              "id": "line1Font",
-              "label": "Font",
-              "description": "Font face and size for this line.",
-              "dataType": "string",
-              "fieldType": "fontpicker",
-              "format": "font",
-              "default": "Sans Bold 28"
-            },
-            {
-              "id": "line1Color",
-              "label": "Color",
-              "description": "Color of this line's text.",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "alpha": true,
-              "default": "#ffffffff"
-            }
-          ]
-        },
-        {
-          "id": "line1-shadow",
-          "label": "Line 1 text shadow",
-          "description": "Off by default. Angle is intentionally not offered here - every text/card shadow in this widget always follows the single global Shadow Angle in Settings > Appearance, so every shadow in the desktop points the same direction.",
-          "fields": [
-            {
-              "id": "line1ShadowEnabled",
-              "label": "Enable text shadow",
-              "description": "Add a shadow behind this line's text.",
-              "dataType": "boolean",
-              "fieldType": "switch",
-              "default": true
-            },
-            {
-              "id": "line1ShadowColor",
-              "label": "Shadow color",
-              "description": "",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "default": "#000000",
-              "visibleIf": "line1ShadowEnabled"
-            },
-            {
-              "id": "line1ShadowOpacity",
-              "label": "Shadow transparency",
-              "description": "Shadow opacity, 0-100%.",
-              "dataType": "integer",
-              "fieldType": "slider",
-              "default": 60,
-              "min": 0,
-              "max": 100,
-              "step": 1,
-              "suffix": "%",
-              "visibleIf": "line1ShadowEnabled"
-            },
-            {
-              "id": "line1ShadowDistance",
-              "label": "Shadow distance",
-              "description": "How far the shadow is offset, in pixels.",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 2,
-              "min": 0,
-              "max": 30,
-              "step": 1,
-              "suffix": "px",
-              "visibleIf": "line1ShadowEnabled"
-            },
-            {
-              "id": "line1ShadowBlur",
-              "label": "Shadow blur",
-              "description": "Blur radius, in pixels.",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 4,
-              "min": 0,
-              "max": 40,
-              "step": 1,
-              "suffix": "px",
-              "visibleIf": "line1ShadowEnabled"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "line2",
-      "label": "Line 2",
-      "description": "The middle line. Can be turned off.",
-      "icon": "go-next-symbolic",
-      "groups": [
-        {
-          "id": "line2-text",
-          "label": "Line 2 text",
-          "description": "What line 2 shows and how it looks.",
-          "fields": [
-            {
-              "id": "line2Enabled",
-              "label": "Show this line",
-              "description": "Turn this line off entirely (line 1 can't be turned off).",
-              "dataType": "boolean",
-              "fieldType": "switch",
-              "default": true
-            },
-            {
-              "id": "line2Source",
-              "label": "Source",
-              "description": "What this line displays.",
-              "dataType": "string",
-              "fieldType": "dropdown",
-              "default": "longDate",
-              "options": [
-                {
-                  "value": "clock",
-                  "label": "Clock"
-                },
-                {
-                  "value": "dayOfWeek",
-                  "label": "Day of week"
-                },
-                {
-                  "value": "longDate",
-                  "label": "Long date"
-                },
-                {
-                  "value": "shortDate",
-                  "label": "Short date"
-                },
-                {
-                  "value": "stat",
-                  "label": "System stat (CPU/MEM/DISK/NET)"
-                }
-              ],
-              "visibleIf": "line2Enabled"
-            },
-            {
-              "id": "line2Font",
-              "label": "Font",
-              "description": "Font face and size for this line.",
-              "dataType": "string",
-              "fieldType": "fontpicker",
-              "format": "font",
-              "default": "Sans Bold 16",
-              "visibleIf": "line2Enabled"
-            },
-            {
-              "id": "line2Color",
-              "label": "Color",
-              "description": "Color of this line's text.",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "alpha": true,
-              "default": "#ffffffff",
-              "visibleIf": "line2Enabled"
-            }
-          ]
-        },
-        {
-          "id": "line2-shadow",
-          "label": "Line 2 text shadow",
-          "description": "Off by default. Angle is intentionally not offered here - every text/card shadow in this widget always follows the single global Shadow Angle in Settings > Appearance, so every shadow in the desktop points the same direction.",
-          "fields": [
-            {
-              "id": "line2ShadowEnabled",
-              "label": "Enable text shadow",
-              "description": "Add a shadow behind this line's text.",
-              "dataType": "boolean",
-              "fieldType": "switch",
-              "default": false,
-              "visibleIf": "line2Enabled"
-            },
-            {
-              "id": "line2ShadowColor",
-              "label": "Shadow color",
-              "description": "",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "default": "#000000",
-              "visibleIf": "line2ShadowEnabled"
-            },
-            {
-              "id": "line2ShadowOpacity",
-              "label": "Shadow transparency",
-              "description": "Shadow opacity, 0-100%.",
-              "dataType": "integer",
-              "fieldType": "slider",
-              "default": 60,
-              "min": 0,
-              "max": 100,
-              "step": 1,
-              "suffix": "%",
-              "visibleIf": "line2ShadowEnabled"
-            },
-            {
-              "id": "line2ShadowDistance",
-              "label": "Shadow distance",
-              "description": "How far the shadow is offset, in pixels.",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 2,
-              "min": 0,
-              "max": 30,
-              "step": 1,
-              "suffix": "px",
-              "visibleIf": "line2ShadowEnabled"
-            },
-            {
-              "id": "line2ShadowBlur",
-              "label": "Shadow blur",
-              "description": "Blur radius, in pixels.",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 4,
-              "min": 0,
-              "max": 40,
-              "step": 1,
-              "suffix": "px",
-              "visibleIf": "line2ShadowEnabled"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "line3",
-      "label": "Line 3",
-      "description": "The bottom line. Can be turned off.",
-      "icon": "go-bottom-symbolic",
-      "groups": [
-        {
-          "id": "line3-text",
-          "label": "Line 3 text",
-          "description": "What line 3 shows and how it looks.",
-          "fields": [
-            {
-              "id": "line3Enabled",
-              "label": "Show this line",
-              "description": "Turn this line off entirely (line 1 can't be turned off).",
-              "dataType": "boolean",
-              "fieldType": "switch",
-              "default": true
-            },
-            {
-              "id": "line3Source",
-              "label": "Source",
-              "description": "What this line displays.",
-              "dataType": "string",
-              "fieldType": "dropdown",
-              "default": "stat",
-              "options": [
-                {
-                  "value": "clock",
-                  "label": "Clock"
-                },
-                {
-                  "value": "dayOfWeek",
-                  "label": "Day of week"
-                },
-                {
-                  "value": "longDate",
-                  "label": "Long date"
-                },
-                {
-                  "value": "shortDate",
-                  "label": "Short date"
-                },
-                {
-                  "value": "stat",
-                  "label": "System stat (CPU/MEM/DISK/NET)"
-                }
-              ],
-              "visibleIf": "line3Enabled"
-            },
-            {
-              "id": "line3Font",
-              "label": "Font",
-              "description": "Font face and size for this line.",
-              "dataType": "string",
-              "fieldType": "fontpicker",
-              "format": "font",
-              "default": "Sans 14",
-              "visibleIf": "line3Enabled"
-            },
-            {
-              "id": "line3Color",
-              "label": "Color",
-              "description": "Color of this line's text.",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "format": "color",
-              "alpha": true,
-              "default": "#e6e6e6ff",
-              "visibleIf": "line3Enabled"
-            }
-          ]
-        },
-        {
-          "id": "line3-shadow",
-          "label": "Line 3 text shadow",
-          "description": "Off by default. Angle is intentionally not offered here - every text/card shadow in this widget always follows the single global Shadow Angle in Settings > Appearance, so every shadow in the desktop points the same direction.",
-          "fields": [
-            {
-              "id": "line3ShadowEnabled",
-              "label": "Enable text shadow",
-              "description": "Add a shadow behind this line's text.",
-              "dataType": "boolean",
-              "fieldType": "switch",
-              "default": false,
-              "visibleIf": "line3Enabled"
-            },
-            {
-              "id": "line3ShadowColor",
-              "label": "Shadow color",
-              "description": "",
-              "dataType": "string",
-              "fieldType": "colorpicker",
-              "default": "#000000",
-              "visibleIf": "line3ShadowEnabled"
-            },
-            {
-              "id": "line3ShadowOpacity",
-              "label": "Shadow transparency",
-              "description": "Shadow opacity, 0-100%.",
-              "dataType": "integer",
-              "fieldType": "slider",
-              "default": 60,
-              "min": 0,
-              "max": 100,
-              "step": 1,
-              "suffix": "%",
-              "visibleIf": "line3ShadowEnabled"
-            },
-            {
-              "id": "line3ShadowDistance",
-              "label": "Shadow distance",
-              "description": "How far the shadow is offset, in pixels.",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 2,
-              "min": 0,
-              "max": 30,
-              "step": 1,
-              "suffix": "px",
-              "visibleIf": "line3ShadowEnabled"
-            },
-            {
-              "id": "line3ShadowBlur",
-              "label": "Shadow blur",
-              "description": "Blur radius, in pixels.",
-              "dataType": "integer",
-              "fieldType": "spinbutton",
-              "default": 4,
-              "min": 0,
-              "max": 40,
-              "step": 1,
-              "suffix": "px",
-              "visibleIf": "line3ShadowEnabled"
-            }
-          ]
-        }
-      ]
-    }
-  ]
+    ]
 }

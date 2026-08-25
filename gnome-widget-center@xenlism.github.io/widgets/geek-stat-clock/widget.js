@@ -10,6 +10,10 @@
 // thing that differs between the Parent and any Child is config.json
 // and metadata.json's block-type, never code.
 //
+// "+ Add Widget" lives in the edit-mode toolbar (right-click the
+// widget), not painted inline in the card - see the _addChild() comment
+// below and lib/widgetEditMode.js.
+//
 // Card styling (background/corner-radius/border/opacity/shadow) is
 // self-painted via applyLayeredCardStyle() in _render(), same as every
 // other widget (there's no more "themeable" system pulling this from a
@@ -91,6 +95,18 @@ export default class GeekStatClockWidget {
         // Read once here rather than via a JSON module import - see the
         // same pattern/rationale in widgets/_architect_template_/widget.js.
         this._metadata = JSON.parse(readTextFile(GLib.build_filenamev([ api.path.me, "metadata.json" ])));
+
+        // "+ Add Widget" is no longer painted inline in the card - the
+        // host (extension.js) checks `typeof instance._addChild ===
+        // "function"` when attaching edit mode and, only when true,
+        // adds an "Add Widget" icon to that widget's edit-mode toolbar
+        // (right-click the widget) which calls _addChild() below - see
+        // lib/widgetEditMode.js. Only the top-level Architect (no
+        // "parent" field in its own metadata.json) offers this at all -
+        // a generated Child runs this exact same class (config-only
+        // pattern) but must not be able to spawn grandchildren of its
+        // own, so it has _addChild shadowed to undefined here.
+        if (this._metadata.parent) this._addChild = undefined;
     }
 
     buildActor() {
@@ -146,22 +162,6 @@ export default class GeekStatClockWidget {
         this._innerPad.add_child(this._line1);
         this._innerPad.add_child(this._line2);
         this._innerPad.add_child(this._line3);
-
-        // Only the top-level Architect (no "parent" field in its own
-        // metadata.json) offers "+ Add Widget" - a generated Child runs
-        // this exact same class (config-only pattern) but must not be
-        // able to spawn grandchildren of its own.
-        if (!this._metadata.parent) {
-            this._addButton = new St.Button({
-                style_class: "geek-stat-clock-widget-add-button",
-                reactive: true,
-                can_focus: true,
-                track_hover: true,
-                label: "+ Add Widget"
-            });
-            this._addButton.connect("clicked", () => this._addChild());
-            this._innerPad.add_child(this._addButton);
-        }
 
         this._render();
         return this._actor;
@@ -330,6 +330,9 @@ export default class GeekStatClockWidget {
     // ever touches id/parent/name/config - it never picks a
     // block-type - so the chosen preset's block-type is patched into
     // the new Child's metadata.json separately, right after creation).
+    // Invoked by the host from the edit-mode toolbar's "Add Widget"
+    // icon (extension.js's _addChildViaEditMode()), not by a button
+    // this widget paints itself.
     async _addChild() {
         const result = await this._promptChildOptions();
         if (!result) return;

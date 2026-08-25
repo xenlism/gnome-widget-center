@@ -12,10 +12,13 @@ appear), then:
 1. **`metadata.json`** — change `"id"` and `"name"`, write a real
    `"description"`. This file must NOT have a `"parent"` field — that's
    only on Children.
-2. **`widget.js`** — rename the class, replace the label/button with
-   your actual content, and fill in `_addChild()`'s `configOverrides`
-   with whatever your Architect needs to hand each new Child (see the
-   TODO comment there).
+2. **`widget.js`** — rename the class, replace the label with your
+   actual content, and fill in `_addChild()`'s `configOverrides` with
+   whatever your Architect needs to hand each new Child (see the TODO
+   comment there). Don't paint your own "+ Add Widget" button — as
+   long as `_addChild()` exists (and isn't shadowed to `undefined` on
+   Children, see the constructor), the host adds an "Add Widget" icon
+   to this widget's edit-mode toolbar automatically.
 3. **`config.json`** — the Architect's OWN settings (rare — most
    Architects don't need any).
 4. **`child/`** — the actual template that gets copied per Child.
@@ -74,6 +77,28 @@ an older host without this hook just falls back to the user rescanning
 manually — nothing breaks either way. Pass `{rescan: false}` in
 `createChildWidgetFromParent()`'s options if you're creating several
 Children in a row and want to rescan once yourself at the end.
+
+## "+ Add Widget" lives in the edit-mode toolbar, not on the card
+
+Earlier versions of this scaffold painted their own "+ Add Widget"
+`St.Button` inline in the card. That's gone: `extension.js`'s
+`_placeEntry()` checks `typeof instance._addChild === "function"` when
+it attaches `lib/widgetEditMode.js` to each widget, and only when
+true does that widget's edit-mode toolbar (the row shown when you
+right-click the widget, alongside Settings/Reset/Remove/Uninstall)
+grow an extra "Add Widget" icon. Clicking it calls your `_addChild()`
+exactly like the old button did — `_addChild()`'s own job (prompt,
+`createChildWidgetFromParent()`, `configOverrides`) is unchanged.
+
+Consequences for your `widget.js`:
+- Don't create an `St.Button` for this in `buildActor()`.
+- Keep the constructor's `if (this._metadata.parent) this._addChild =
+  undefined;` line — it's what stops a Child from also showing an
+  "Add Widget" icon (Children must not spawn grandchildren).
+- If your Architect needs the icon to appear conditionally on
+  something other than "is this the top-level Parent", shadow
+  `_addChild` to `undefined` under that condition instead — the host
+  only ever looks at whether the method exists.
 
 ## Everything else is a normal widget
 

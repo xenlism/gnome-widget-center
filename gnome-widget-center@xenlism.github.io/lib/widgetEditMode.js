@@ -26,6 +26,7 @@ export class WidgetEditMode {
         this._onSettings = callbacks.onSettings ?? (() => {});
         this._onRemove = callbacks.onRemove ?? (() => {});
         this._onUninstall = callbacks.onUninstall ?? null;
+        this._onAddChild = callbacks.onAddChild ?? (() => {});
         this._onReset = callbacks.onReset ?? (widgetId => this._exitEdit(widgetId));
         this._onBackActorReady = callbacks.onBackActorReady ?? (() => {});
         this._logger = logger ?? {
@@ -64,6 +65,12 @@ export class WidgetEditMode {
             state: EditModeState.NORMAL,
             toolbar: null,
             isUserInstalled: options.isUserInstalled ?? false,
+            // Architect Widgets (lib/architectWidgetKit.js) expose an
+            // _addChild() the host can call - when true, the edit-mode
+            // toolbar gets an extra "Add Widget" icon (see
+            // _buildToolbar() below) instead of the widget painting its
+            // own "+ Add Widget" button inline in its card.
+            hasAddChild: options.hasAddChild ?? false,
             escId: null,
             toolbarGeneration: 0,
             signalIds: {
@@ -231,6 +238,9 @@ export class WidgetEditMode {
             row.add_child(button);
             entry.tooltipCleanups.push(this._attachTooltip(button, toolbar, row, label));
         };
+        if (entry.hasAddChild) {
+            addButton("list-add-symbolic", "Add Widget", "widget-edit-mode-action-add", () => this._onAddChild(widgetId));
+        }
         addButton("preferences-system-symbolic", "Settings", "widget-edit-mode-action-settings", () => this._onSettings(widgetId));
         addButton("view-refresh-symbolic", "Reset", "widget-edit-mode-action-reset", () => {
             this._storage?.resetWidgetSettings(widgetId);

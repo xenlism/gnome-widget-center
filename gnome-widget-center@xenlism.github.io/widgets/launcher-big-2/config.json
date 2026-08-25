@@ -21,8 +21,7 @@
                             "default": [
                                 "/usr/share/applications/org.gnome.Console.desktop",
                                 "/usr/share/applications/com.anthropic.Claude.desktop",
-                                "/usr/share/applications/GitKraken.desktop",
-                                "/usr/share/applications/code.desktop"
+                                "/usr/share/applications/GitKraken.desktop"
                             ],
                             "maxItems": 9,
                             "item": {
@@ -72,7 +71,7 @@
                             "min": 0,
                             "max": 360,
                             "step": 1,
-                            "suffix": "\u00b0",
+                            "suffix": "°",
                             "visibleIf": "shadowEnabled"
                         },
                         {

@@ -109,6 +109,10 @@ export default class WidgetCenterExtension extends Extension {
                 this._logger.debug("edit-mode", `onUninstall("${id}", isUserInstalled=${isUserInstalled})`);
                 this._uninstallWidget(id, isUserInstalled);
             },
+            onAddChild: id => {
+                this._logger.debug("edit-mode", `onAddChild("${id}")`);
+                this._addChildViaEditMode(id);
+            },
             onBackActorReady: (id, toolbarActor, dragArea) => {
                 this._logger.debug("edit-mode", `onBackActorReady("${id}")`);
                 this._editDrag?.armDragHandle(id, toolbarActor, dragArea);
@@ -305,7 +309,13 @@ export default class WidgetCenterExtension extends Extension {
             this._drag.attach(entry.id, entry.actor, monitorIndex);
             const isUserInstalled = this._userWidgetsPath != null && entry.path.startsWith(this._userWidgetsPath);
             this._editMode.attach(entry.id, entry.actor, {
-                isUserInstalled: isUserInstalled
+                isUserInstalled: isUserInstalled,
+                // Architect Widgets implement _addChild() (see
+                // lib/architectWidgetKit.js) - when present, the
+                // edit-mode toolbar shows an "Add Widget" icon that
+                // calls it, instead of the widget itself painting a
+                // "+ Add Widget" button inline in its own card.
+                hasAddChild: typeof entry.instance?._addChild === "function"
             });
             this._editDrag.attach(entry.id, entry.actor, monitorIndex);
             this._devWatcher?.watchWidget(entry.id, entry.path);
@@ -319,6 +329,18 @@ export default class WidgetCenterExtension extends Extension {
             Gio.Subprocess.new([ "gjs", "-m", scriptPath, `--widget-id=${widgetId}` ], Gio.SubprocessFlags.NONE);
         } catch (e) {
             console.error(`[widget-center] could not launch the widget Settings app for "${widgetId}"`, e);
+        }
+    }
+    async _addChildViaEditMode(widgetId) {
+        const entry = this._loader?.instances.find(e => e.id === widgetId);
+        if (typeof entry?.instance?._addChild !== "function") {
+            console.warn(`[widget-center] "${widgetId}" has no _addChild() - cannot add a widget from edit mode`);
+            return;
+        }
+        try {
+            await entry.instance._addChild();
+        } catch (e) {
+            console.error(`[widget-center] "${widgetId}" _addChild() failed`, e);
         }
     }
     async _resetWidgetViaEditMode(widgetId) {
@@ -353,7 +375,8 @@ export default class WidgetCenterExtension extends Extension {
             this._drag?.attach(widgetId, newEntry.actor, position.monitorIndex);
             const isUserInstalled = this._userWidgetsPath != null && newEntry.path.startsWith(this._userWidgetsPath);
             this._editMode?.attach(widgetId, newEntry.actor, {
-                isUserInstalled: isUserInstalled
+                isUserInstalled: isUserInstalled,
+                hasAddChild: typeof newEntry.instance?._addChild === "function"
             });
             this._editDrag?.attach(widgetId, newEntry.actor, position.monitorIndex);
         } catch (e) {
@@ -456,7 +479,8 @@ export default class WidgetCenterExtension extends Extension {
             this._drag?.attach(widgetId, newEntry.actor, position.monitorIndex);
             const isUserInstalled = this._userWidgetsPath != null && newEntry.path.startsWith(this._userWidgetsPath);
             this._editMode?.attach(widgetId, newEntry.actor, {
-                isUserInstalled: isUserInstalled
+                isUserInstalled: isUserInstalled,
+                hasAddChild: typeof newEntry.instance?._addChild === "function"
             });
             this._editDrag?.attach(widgetId, newEntry.actor, position.monitorIndex);
         } catch (e) {

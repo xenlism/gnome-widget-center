@@ -137,11 +137,11 @@
                             "options": [
                                 {
                                     "value": "celsius",
-                                    "label": "Celsius (\u00b0C)"
+                                    "label": "Celsius (°C)"
                                 },
                                 {
                                     "value": "fahrenheit",
-                                    "label": "Fahrenheit (\u00b0F)"
+                                    "label": "Fahrenheit (°F)"
                                 }
                             ]
                         }
@@ -169,7 +169,7 @@
                             "min": 0,
                             "max": 360,
                             "step": 1,
-                            "suffix": "\u00b0",
+                            "suffix": "°",
                             "visibleIf": "shadowEnabled"
                         },
                         {

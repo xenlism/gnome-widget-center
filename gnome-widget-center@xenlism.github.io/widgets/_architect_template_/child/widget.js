@@ -2,9 +2,10 @@
 //
 // This file is what actually gets copied to a new Child Widget's own
 // directory (~/.local/share/gnome-widget-center/widgets/<child-id>/)
-// when someone clicks "+ Add Widget" on the Architect Widget this
-// template belongs to. At copy time, lib/architectWidgetKit.js's
-// createChildWidgetFromParent() replaces the {{PARENT_ENTRY_URI}}
+// when someone clicks the "Add Widget" icon in the edit-mode toolbar
+// of the Architect Widget this template belongs to. At copy time,
+// lib/architectWidgetKit.js's createChildWidgetFromParent() replaces
+// the {{PARENT_ENTRY_URI}}
 // placeholder below with an absolute file:// URI to the Architect's
 // OWN widget.js — that's the one generated edit; nothing else in this
 // file is touched.

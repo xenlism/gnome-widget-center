@@ -40,7 +40,7 @@
                         {
                             "id": "downloadLineColor",
                             "label": "Download line color",
-                            "description": "Color of the download (\u2193) number and its sparkline",
+                            "description": "Color of the download (↓) number and its sparkline",
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
@@ -50,7 +50,7 @@
                         {
                             "id": "uploadLineColor",
                             "label": "Upload line color",
-                            "description": "Color of the upload (\u2191) number and its sparkline",
+                            "description": "Color of the upload (↑) number and its sparkline",
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
@@ -138,7 +138,7 @@
                             "min": 0,
                             "max": 360,
                             "step": 1,
-                            "suffix": "\u00b0",
+                            "suffix": "°",
                             "visibleIf": "shadowEnabled"
                         },
                         {

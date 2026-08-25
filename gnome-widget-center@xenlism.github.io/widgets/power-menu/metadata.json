@@ -1,11 +1,16 @@
 {
     "id": "xenlism.github.io.power-menu",
     "name": "Power Menu By Xenlism",
-    "description": "One-tap suspend, restart, power off, and log out \u2014 system icons, tooltips, no labels.",
+    "description": "One-tap suspend, restart, power off, and log out — system icons, tooltips, no labels.",
     "version": "1.0.0",
     "author": "Nattapong Pullkhow",
     "api-version": 1,
     "entry": "widget.js",
     "block-type": "1x1",
-    "screenshot": "screenshot.png"
+    "screenshot": "screenshot.png",
+    "default-position": {
+        "x": 967,
+        "y": 474,
+        "monitor": 0
+    }
 }

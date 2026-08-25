@@ -19,7 +19,7 @@
                             "dataType": "list",
                             "fieldType": "list",
                             "default": [
-                                "/usr/share/applications/gimp.desktop"
+                                "/usr/share/applications/org.kde.krita.desktop"
                             ],
                             "minItems": 0,
                             "maxItems": 1,

@@ -18,7 +18,12 @@
                             "description": "Quick-add a special folder, or browse for any other folder",
                             "dataType": "list",
                             "fieldType": "list",
-                            "default": [],
+                            "default": [
+                                "/home/xenatt/Downloads",
+                                "/home/xenatt/.config/gnome-widget-center",
+                                "/home/xenatt/Github",
+                                "/home/xenatt/.local/share/gnome-shell/extensions"
+                            ],
                             "maxItems": 4,
                             "item": {
                                 "dataType": "string",
@@ -60,7 +65,7 @@
                             "fieldType": "colorpicker",
                             "format": "color",
                             "alpha": true,
-                            "default": "#FFFFFF00"
+                            "default": "#000000d9"
                         }
                     ]
                 }
@@ -86,7 +91,7 @@
                             "min": 0,
                             "max": 360,
                             "step": 1,
-                            "suffix": "\u00b0",
+                            "suffix": "°",
                             "visibleIf": "shadowEnabled"
                         },
                         {

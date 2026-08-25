@@ -1,7 +1,8 @@
 // widgets/geek-stat-clock/child/widget.js
 //
 // Copied verbatim to each new Child's own directory when someone clicks
-// "+ Add Widget" on the Geek Stat Clock Architect Widget. At copy time,
+// the "Add Widget" icon in the Geek Stat Clock Architect Widget's
+// edit-mode toolbar. At copy time,
 // lib/architectWidgetKit.js's createChildWidgetFromParent() replaces
 // {{PARENT_ENTRY_URI}} below with an absolute file:// URI to the
 // Parent's own widget.js - the one generated edit; nothing else here is

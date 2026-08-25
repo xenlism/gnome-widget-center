@@ -19,7 +19,7 @@
                             "dataType": "list",
                             "fieldType": "list",
                             "default": [
-                                "/usr/share/applications/org.inkscape.Inkscape.desktop"
+                                "/usr/share/applications/code.desktop"
                             ],
                             "minItems": 0,
                             "maxItems": 1,
