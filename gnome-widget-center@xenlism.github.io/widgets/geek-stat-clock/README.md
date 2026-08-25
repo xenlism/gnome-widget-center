@@ -23,22 +23,46 @@ code per size or per line combination, ever.
    Bar (3), Big Bar (4), Card (3), Big Card (4)), click **Add**. Bar (2)
    starts with line 3 already turned off.
 3. Open the new Child's own Settings page (Control Center) to choose
-   each line's Source (Clock/Long date/Short date/System stat), font,
-   color, and text-shadow (color/opacity/distance/blur only - see
-   below), plus the shared clock/date formats. Lines 2 and 3 each have
-   a **Show this line** switch (`line2Enabled`/`line3Enabled`) - line 1
-   has no such switch and is always shown.
+   each line's Source (Clock/Day of week/Long date/Short date/System
+   stat), font, color, and text-shadow (color/opacity/distance/blur
+   only - see below), plus the shared clock/date/day-of-week formats.
+   Lines 2 and 3 each have a **Show this line** switch
+   (`line2Enabled`/`line3Enabled`) - line 1 has no such switch and is
+   always shown.
 4. Repeat for as many Children as you like - a "CPU+time" bar, a
    "full date+stat" big card, a 2-line "time only" bar, etc.
 
 ## Formats
 
 - **Clock**: `HH:MM:SS` or `HH:MM`, each in 24-hour or 12-hour (AM/PM).
+- **Day of week**: `DDD` (abbreviated, e.g. "Mon") or `DDDD` (full, e.g.
+  "Monday") - a standalone weekday-only line, independent of the Long
+  date/Short date lines below.
 - **Long date**: `DD MMM YYYY`, `MMM DD YYYY`, `DD MMMM YYYY`,
   `MMMM DD YYYY`.
 - **Short date**: `DD-MM-YY`, `MM-DD-YY`, `DD-MMM-YY`, `MMM-DD-YY`.
 - **System stat**: `CPU N%   MEM N%   DISK N%   NET ↓rate ↑rate` (the
   `NET` term is new versus the old geek-week-stat-* widgets).
+
+### Fixed this session: "Day of week" missing from newly-created Children
+
+`widget.js` (the Parent's own render logic, `case "dayOfWeek"` in
+`_sourceText()`) and the Parent's own `config.json` already had full
+"Day of week" support end-to-end - but `child/config.json`, the actual
+template `createChildWidgetFromParent()` copies onto every new Child
+when you click **+ Add Widget**, was never updated to match: it was
+still missing the `dayOfWeek` option on each line's Source dropdown
+and the `dayOfWeekFormat` field entirely. Any Child created before this
+fix simply had no way to pick "Day of week" from its own Settings page,
+even though the Parent card itself could. `child/config.json` now
+mirrors the Parent's `config.json` field-for-field (`dayOfWeek` inserted
+right after `clock` in all three `lineNSource` dropdowns, plus the
+`dayOfWeekFormat` dropdown in the `date-format` group) - verified with a
+script that diffs the two files' field/option lists, not just eyeballed.
+No `widget.js` changes were needed since `getDefaultSettings()` already
+reads its defaults generically from whatever `config.json` sits next to
+it (`configJsonDefaults()`), so a Child's own `config.json` is the only
+file that needed the field.
 
 ## Why there's no per-line Shadow Angle field
 

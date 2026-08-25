@@ -1,0 +1,15 @@
+{
+    "id": "daily-quote",
+    "name": "Daily Quote",
+    "description": "A short quote on a card, rotating on a timer.",
+    "version": "1.0.0",
+    "author": "your name",
+    "api-version": 1,
+    "entry": "widget.js",
+    "block-type": "2x1",
+    "default-position": {
+        "x": 80,
+        "y": 80,
+        "monitor": 0
+    }
+}

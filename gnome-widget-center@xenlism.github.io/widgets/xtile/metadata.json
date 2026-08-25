@@ -1,0 +1,16 @@
+{
+    "id": "xenlism.github.io.xtile",
+    "name": "Xtile By Xenlism",
+    "description": "1x1 app launcher tile: centered icon, app name at the bottom, and a card background auto-tinted from the app's own icon color. Type an app's name (e.g. \"firefox\", \"gimp\") in settings - no file browsing needed. Add this widget as many times as you like, one per app.",
+    "version": "1.0.0",
+    "author": "Nattapong Pullkhow",
+    "api-version": 1,
+    "entry": "widget.js",
+    "block-type": "1x1",
+    "default-position": {
+        "x": 40,
+        "y": 600,
+        "monitor": 0
+    },
+    "screenshot": "screenshot.png"
+}

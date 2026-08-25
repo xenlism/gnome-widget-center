@@ -53,7 +53,7 @@
                 {
                     "id": "date-format",
                     "label": "Date formats",
-                    "description": "Used by any line whose Source is \"Long date\" or \"Short date\".",
+                    "description": "Used by any line whose Source is \"Long date\", \"Short date\", or \"Day of week\".",
                     "fields": [
                         {
                             "id": "longDateFormat",
@@ -104,6 +104,24 @@
                                 {
                                     "value": "MMM-DD-YY",
                                     "label": "MMM-DD-YY"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "dayOfWeekFormat",
+                            "label": "Day of week format",
+                            "description": "Used when a line's Source is set to \"Day of week\".",
+                            "dataType": "string",
+                            "fieldType": "dropdown",
+                            "default": "DDDD",
+                            "options": [
+                                {
+                                    "value": "DDD",
+                                    "label": "DDD (Mon)"
+                                },
+                                {
+                                    "value": "DDDD",
+                                    "label": "DDDD (Monday)"
                                 }
                             ]
                         }
@@ -201,6 +219,10 @@
                                 {
                                     "value": "clock",
                                     "label": "Clock"
+                                },
+                                {
+                                    "value": "dayOfWeek",
+                                    "label": "Day of week"
                                 },
                                 {
                                     "value": "longDate",
@@ -332,6 +354,10 @@
                                 {
                                     "value": "clock",
                                     "label": "Clock"
+                                },
+                                {
+                                    "value": "dayOfWeek",
+                                    "label": "Day of week"
                                 },
                                 {
                                     "value": "longDate",
@@ -467,6 +493,10 @@
                                 {
                                     "value": "clock",
                                     "label": "Clock"
+                                },
+                                {
+                                    "value": "dayOfWeek",
+                                    "label": "Day of week"
                                 },
                                 {
                                     "value": "longDate",

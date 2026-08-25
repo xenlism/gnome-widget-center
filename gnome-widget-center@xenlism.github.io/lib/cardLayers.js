@@ -104,7 +104,13 @@ export function createLayeredCard(options = {}) {
     });
     card.add_child(cardBlur);
     const content = new St.Widget({
-        style_class: options.contentStyleClass,
+        // options.contentStyleClass is optional - media-player-wide (and
+        // any future caller) may call createLayeredCard({}) with no style
+        // class at all. GJS's object-initializer throws on an explicit
+        // `undefined` for style-class (unlike a plain property assignment,
+        // which tolerates it), so this must resolve to `null`, never be
+        // left as `undefined`.
+        style_class: options.contentStyleClass ?? null,
         layout_manager: new Clutter.BinLayout,
         x_expand: true,
         y_expand: true,

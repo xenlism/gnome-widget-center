@@ -54,6 +54,14 @@ export function fileExists(path) {
     return Gio.File.new_for_path(path).query_exists(null);
 }
 
+// True if `path` is `root` itself or sits somewhere inside it. Used to
+// tell a bundled widget/theme-pack's path apart from a user-installed
+// one living under e.g. ~/.local/share/gnome-widget-center/widgets.
+export function pathIsUnder(path, root) {
+    if (!path || !root) return false;
+    return path === root || path.startsWith(`${root}/`);
+}
+
 export function ensureDirectory(dirPath) {
     const dir = Gio.File.new_for_path(dirPath);
     if (!dir.query_exists(null)) dir.make_directory_with_parents(null);

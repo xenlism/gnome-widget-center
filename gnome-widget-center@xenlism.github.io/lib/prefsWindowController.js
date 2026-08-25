@@ -14,7 +14,7 @@ import { PrefsWindowController } from "./prefsWindowControllerBase.js";
 
 import { confirmOverwrite } from "./prefsDialogs.js";
 
-import { fileExists } from "./fsUtils.js";
+import { fileExists, pathIsUnder } from "./fsUtils.js";
 
 import { ThemePackRegistry } from "./themePackRegistry.js";
 
@@ -27,10 +27,6 @@ import { PrefsWidgetList } from "./prefsWidgetList.js";
 import { WidgetSettings } from "./widgetSettings.js";
 
 import { loadTranslations } from "../i18n/index.js";
-
-function pathIsUnder(path, root) {
-    return path === root || path.startsWith(`${root}/`);
-}
 
 const CARD_SORT_MODES = [ {
     id: "name",
@@ -313,7 +309,7 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
         });
         const flow = this._buildCardFlowBox();
         scroll.set_child(flow);
-        this.applyAutoEnablePolicy(settings, discovered.map(w => w.id));
+        this.applyAutoEnablePolicy(settings, discovered, this._userWidgetsPath);
         const disabled = new Set(settings.isReady ? settings.getGlobalValue("disabled-widgets") : []);
         if (discovered.length === 0) {
             flow.append(new Gtk.Label({

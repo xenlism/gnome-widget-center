@@ -58,6 +58,13 @@ const DASH_GEOMETRY = [
     [-0.85088, -0.38730, 114.48], [-0.84482, -0.48894, 120.06], [-0.83605, -0.58876, 125.15],
     [-0.80079, -0.68376, 130.49], [-0.73610, -0.76322, 136.04], [-0.64961, -0.81770, 141.53]
 ];
+// DASH_GEOMETRY[i] sits at clock-face angle (i - 6) * 6deg from 12
+// o'clock, i.e. it marks minute ((i + 54) % 60) of the hour - reference
+// SVG index 0 starts at the 54-minute mark rather than at 0, and index 6
+// is the first one that lands exactly on 12 o'clock/minute 0. Used by
+// _onRepaint() to color each dash elapsed vs upcoming for the current
+// minute.
+const DASH_INDEX_TO_MINUTE = DASH_GEOMETRY.map((_, i) => (i + 54) % 60);
 // Dash rect in the 176px reference frame: width 2, height 8, corner radius 1.
 const DASH_REF_CANVAS = 176;
 const DASH_REF_W = 2;
@@ -269,7 +276,19 @@ export default class ClockDigitalDashedWidget {
             cr.clip();
 
             this._setSourceHex(cr, s.dashColor, "#1A1A1AFF");
-            for (const [nx, ny, rotDeg] of DASH_GEOMETRY) {
+            const currentMinute = (this._now.dateTime ?? GLib.DateTime.new_now_local()).get_minute();
+            for (let i = 0; i < DASH_GEOMETRY.length; i++) {
+                const [nx, ny, rotDeg] = DASH_GEOMETRY[i];
+                // Elapsed minutes (including the one in progress) draw in
+                // dashColor; minutes later in the hour that haven't
+                // happened yet draw in dashColorUpcoming instead, so the
+                // ring reads as a per-minute progress indicator rather
+                // than a static decoration.
+                const minute = DASH_INDEX_TO_MINUTE[i];
+                if (minute <= currentMinute)
+                    this._setSourceHex(cr, s.dashColor, "#1A1A1AFF");
+                else
+                    this._setSourceHex(cr, s.dashColorUpcoming, "#9A999680");
                 cr.save();
                 cr.translate(cx + nx * (DASH_REF_CANVAS / 2) * scale, cy + ny * (DASH_REF_CANVAS / 2) * scale);
                 cr.rotate(rotDeg * Math.PI / 180);

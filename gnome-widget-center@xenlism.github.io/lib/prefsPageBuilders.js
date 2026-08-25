@@ -8,13 +8,15 @@ import Gtk from "gi://Gtk";
 
 import Gdk from "gi://Gdk";
 
+import GLib from "gi://GLib";
+
 import { showReportDialog, promptPassword, confirmOverwrite, chooseFile } from "./prefsDialogs.js";
 
 import { saveCurrentSettingsAsWidgetDefaults } from "./devConfigDefaults.js";
 
 import { ThemeService } from "./themeService.js";
 
-import { buildGwctDocument, writeGwctFile, readGwctFile, importGwctDocument } from "./exportService.js";
+import { buildGwctDocumentAsync, writeGwctFile, readGwctFile, importGwctDocument, installGwctAsThemePack } from "./exportService.js";
 
 import { createBackup, restoreBackup } from "./backupService.js";
 
@@ -206,6 +208,13 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
             subtitle: this._tr("importexport.export.subtitle", "Save the current appearance and widget settings to a .gwct file."),
             activatable: true
         });
+        const exportProgress = new Gtk.ProgressBar({
+            visible: false,
+            show_text: true,
+            hexpand: true,
+            valign: Gtk.Align.CENTER
+        });
+        exportRow.add_suffix(exportProgress);
         exportRow.add_suffix(new Gtk.Image({
             icon_name: "document-save-symbolic"
         }));
@@ -217,14 +226,37 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
                 pattern: "*.gwct"
             });
             if (!path) return;
+            exportRow.sensitive = false;
+            exportProgress.fraction = 0;
+            exportProgress.text = this._tr("importexport.export.progress_start", "Collecting widget settings…");
+            exportProgress.visible = true;
+            // Let the bar actually paint before the (potentially slow) work
+            // below starts - same reasoning as the Export Theme Pack…
+            // dialog's own idleTick(): without this the first frame never
+            // gets a chance to draw and the row looks frozen for however
+            // long the first chunk takes.
+            await new Promise(resolve => GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+                resolve();
+                return GLib.SOURCE_REMOVE;
+            }));
             try {
                 const theme = new ThemeService;
                 theme.init();
-                const {document: document, redactedFields: redactedFields} = buildGwctDocument(discoveredWidgets, {
+                // Async/chunked, same as the Export Theme Pack… dialog -
+                // a desktop with a lot of enabled widgets used to freeze
+                // this whole preferences window for the duration of one
+                // long synchronous pass here too. onProgress drives the
+                // bar above the same way it drives that dialog's.
+                const {document: document, redactedFields: redactedFields} = await buildGwctDocumentAsync(discoveredWidgets, {
                     storage: storage,
                     theme: theme,
                     settings: this._settings
+                }, (done, total) => {
+                    exportProgress.fraction = total > 0 ? done / total : 1;
+                    exportProgress.text = this._tr("importexport.export.progress_counted", "Collecting widget settings… ({done}/{total})").replace("{done}", done).replace("{total}", total);
                 });
+                exportProgress.fraction = 1;
+                exportProgress.text = this._tr("importexport.export.progress_writing", "Writing file…");
                 const finalPath = writeGwctFile(path, document);
                 const lines = [ this._tr("importexport.result.saved_to", "Saved to {path}").replace("{path}", finalPath), this._tr("importexport.result.widgets_exported", "Widgets exported: {count}").replace("{count}", document.widgets.length) ];
                 if (redactedFields.length > 0) {
@@ -235,6 +267,9 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
             } catch (e) {
                 logError(e, "[widget-center] prefs: theme export failed");
                 showReportDialog(window, this._tr("importexport.result.export_failed_heading", "Export failed"), e.message);
+            } finally {
+                exportRow.sensitive = true;
+                exportProgress.visible = false;
             }
         });
         group.add(exportRow);
@@ -309,9 +344,40 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
             });
         });
         packGroup.add(exportPackRow);
+        const importPackRow = new Adw.ActionRow({
+            title: this._tr("importexport.importpack.title", "Import Theme Pack…"),
+            subtitle: this._tr("importexport.importpack.subtitle", "Install a .gwct theme pack (with its name, description and screenshot) " + "so it shows up as a card in the Themes tab, ready to switch on."),
+            activatable: true
+        });
+        importPackRow.add_suffix(new Gtk.Image({
+            icon_name: "list-add-symbolic"
+        }));
+        importPackRow.connect("activated", async () => {
+            const path = await chooseFile(window, {
+                action: "open",
+                title: this._tr("importexport.importpack.filechooser_title", "Import theme pack"),
+                pattern: "*.gwct"
+            });
+            if (!path) return;
+            try {
+                const document = readGwctFile(path);
+                const meta = document.packMeta;
+                const heading = this._tr("importexport.importpack.confirm_heading", "Install this theme pack?");
+                const body = meta ? [ meta.name, meta.description, meta.author ? `by ${meta.author}` : null, `${(document.widgets ?? []).length} widget(s)` ].filter(Boolean).join("\n") : this._tr("importexport.importpack.confirm_body_nometa", `"${GLib.path_get_basename(path)}" doesn't carry a name/description (it wasn't ` + "made with Export Theme…), but it can still be installed — it'll show up " + "under its file name.");
+                const confirmed = await confirmOverwrite(window, heading, body, this._tr("importexport.importpack.confirm_button", "Install"));
+                if (!confirmed) return;
+                const userThemepacksDir = GLib.build_filenamev([ GLib.get_user_config_dir(), "gnome-widget-center", "themepacks" ]);
+                const installedPath = installGwctAsThemePack(document, userThemepacksDir);
+                showReportDialog(window, this._tr("importexport.importpack.result_heading", "Theme pack installed"), this._tr("importexport.importpack.result_body", "Installed to {path}.\nOpen the Themes tab to switch it on.").replace("{path}", installedPath));
+            } catch (e) {
+                logError(e, "[widget-center] prefs: theme pack import failed");
+                showReportDialog(window, this._tr("importexport.importpack.failed_heading", "Import failed"), e.message);
+            }
+        });
+        packGroup.add(importPackRow);
         const shareShortcutRow = new Adw.ActionRow({
             title: this._tr("importexport.sharekeybind.title", "Desktop share shortcut"),
-            subtitle: this._tr("importexport.sharekeybind.subtitle", "While Export Theme… is open, press this to capture the desktop as the " + "pack's screenshot (same as its \"Share desktop\" button)."),
+            subtitle: this._tr("importexport.sharekeybind.subtitle", "Press this any time — including while Export Theme… is open or closed — " + "to capture the desktop and attach it as the pack's screenshot."),
             sensitive: this._settings.isReady
         });
         const currentShareAccel = this._settings.isReady ? this._settings.getGlobalValue("theme-screenshot-keybinding")?.[0] ?? "" : "<Super>Delete";
@@ -560,12 +626,12 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         group.add(row);
         const widgetsGroup = new Adw.PreferencesGroup({
             title: "Widgets",
-            description: "What happens the first time a widget is found — installed manually, " + "dropped in by a theme pack, or newly bundled by an update."
+            description: "What happens the first time a widget you installed yourself — into " + "~/.local/share/gnome-widget-center/widgets/, or dropped in by a theme " + "pack — is found. Widgets bundled with the extension always start off " + "and wait for you to enable them from Overview, regardless of this " + "setting."
         });
         page.add(widgetsGroup);
         const autoEnableRow = new Adw.SwitchRow({
             title: "Load new widgets automatically",
-            subtitle: "On: a widget is enabled the first time it's found (previous behavior). " + "Off: it appears in Overview but stays off the desktop until you turn it on.",
+            subtitle: "For widgets you install yourself. On: enabled the first time it's found " + "(previous behavior). Off: it appears in Overview but stays off the " + "desktop until you turn it on.",
             active: ready ? !!settings.getGlobalValue("auto-enable-new-widgets") : true,
             sensitive: ready
         });

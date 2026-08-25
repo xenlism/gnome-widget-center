@@ -46,6 +46,8 @@ import { importGwctDocument } from "./lib/exportService.js";
 
 import { GlobalScreenshotKeybinding } from "./lib/globalScreenshotKeybinding.js";
 
+import { applyAutoEnablePolicy } from "./lib/autoEnablePolicy.js";
+
 export default class WidgetCenterExtension extends Extension {
     enable() {
         this._storage = new StorageService;
@@ -139,6 +141,12 @@ export default class WidgetCenterExtension extends Extension {
         this._userWidgetsPath = userWidgetsPath;
         const loader = new WidgetLoader([ bundledWidgetsPath, userWidgetsPath ], this._storage, this._logger, this._settings?.isReady ? this._settings.getGlobalValue("widget-spacing") : 0, this._settings, this._themeService, () => this._loadNewlyDiscoveredWidgets());
         this._loader = loader;
+        // Bundled widgets never auto-enable the first time they're seen
+        // (see lib/autoEnablePolicy.js) - without this, a fresh install/
+        // first run auto-loads and places all ~70 widgets shipped with
+        // the extension at once. Widgets under userWidgetsPath are
+        // unaffected and keep auto-loading same as before.
+        if (this._settings?.isReady) applyAutoEnablePolicy(this._settings, loader.discover(), userWidgetsPath, this._logger);
         const initialDisabled = new Set(this._settings?.isReady ? this._settings.getGlobalValue("disabled-widgets") : []);
         if (this._settings?.isReady) {
             this._disabledChangedId = this._settings.onChanged("disabled-widgets", ids => this._applyDisabledWidgets(new Set(ids)));
@@ -483,9 +491,19 @@ export default class WidgetCenterExtension extends Extension {
     _loadNewlyDiscoveredWidgets(disabledIds = null) {
         if (!this._loader || !this._layer) return;
         if (this._applyingThemePack) return;
-        const disabled = disabledIds ?? new Set(this._settings?.isReady ? this._settings.getGlobalValue("disabled-widgets") : []);
-        const loadedIds = new Set(this._loader.instances.map(e => e.id));
         const discovered = this._loader.discover();
+        let disabled = disabledIds ?? new Set(this._settings?.isReady ? this._settings.getGlobalValue("disabled-widgets") : []);
+        if (this._settings?.isReady) {
+            // Same first-ever-discovery policy as enable() - covers a
+            // bundled widget that only shows up after an extension
+            // update, not just the initial install. Merge the policy's
+            // result into whatever set the caller handed us, since a
+            // caller-provided `disabledIds` snapshot won't yet include
+            // an id the policy just newly disabled.
+            const reconciled = applyAutoEnablePolicy(this._settings, discovered, this._userWidgetsPath, this._logger);
+            disabled = disabledIds ? new Set([ ...disabledIds, ...reconciled ]) : reconciled;
+        }
+        const loadedIds = new Set(this._loader.instances.map(e => e.id));
         for (const widgetInfo of discovered) {
             if (disabled.has(widgetInfo.id) || loadedIds.has(widgetInfo.id)) continue;
             this._loader.loadOne(widgetInfo).then(entry => entry && this._placeEntry(entry)).catch(e => console.error(`[widget-center] "${widgetInfo.id}" failed to load`, e));

@@ -6,10 +6,7 @@
     "author": "Nattapong Pullkhow",
     "api-version": 1,
     "entry": "widget.js",
-    "block-type": {
-        "cols": 17,
-        "rows": 21
-    },
+    "block-type": "2x2",
     "default-position": {
         "x": 40,
         "y": 40,

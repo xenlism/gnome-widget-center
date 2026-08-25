@@ -31,6 +31,8 @@ import { loadTranslations } from "../i18n/index.js";
 
 import { buildAppearanceFieldsFlat } from "./appearanceFieldsSchema.js";
 
+import { applyAutoEnablePolicy } from "./autoEnablePolicy.js";
+
 // Same collision-safe fill-the-gaps merge readWidgetConfig() does for
 // config.json (see lib/widgetConfigReader.js) - only reached by a
 // widget with no config.json AND no prefs.js AND no settings.js, so
@@ -44,43 +46,14 @@ function mergeAppearanceFieldsFlat(fields) {
 }
 
 export const PrefsWidgetManagementMixin = Base => class extends Base {
-    applyAutoEnablePolicy(settings, discoveredIds) {
-        if (!settings?.isReady) return new Set;
-        let known, disabled;
-        try {
-            known = new Set(settings.getGlobalValue("known-widget-ids"));
-            disabled = new Set(settings.getGlobalValue("disabled-widgets"));
-        } catch (e) {
-            logError(e, "[widget-center] prefs: could not read known-widget-ids/disabled-widgets");
-            return new Set;
-        }
-        const autoEnable = !!settings.getGlobalValue("auto-enable-new-widgets");
-        let knownChanged = false;
-        let disabledChanged = false;
-        for (const id of discoveredIds) {
-            if (known.has(id)) continue;
-            known.add(id);
-            knownChanged = true;
-            if (!autoEnable && !disabled.has(id)) {
-                disabled.add(id);
-                disabledChanged = true;
-            }
-        }
-        if (knownChanged) {
-            try {
-                settings.setGlobalValue("known-widget-ids", Array.from(known));
-            } catch (e) {
-                logError(e, "[widget-center] prefs: could not save known-widget-ids");
-            }
-        }
-        if (disabledChanged) {
-            try {
-                settings.setGlobalValue("disabled-widgets", Array.from(disabled));
-            } catch (e) {
-                logError(e, "[widget-center] prefs: could not save disabled-widgets (auto-enable policy)");
-            }
-        }
-        return disabled;
+    // `discovered` is the full widget-info array (needs .path, not just
+    // .id) so the shared policy can tell bundled widgets apart from
+    // ones under `userWidgetsPath` - see autoEnablePolicy.js for the
+    // actual bundled-vs-user rule.
+    applyAutoEnablePolicy(settings, discovered, userWidgetsPath) {
+        return applyAutoEnablePolicy(settings, discovered, userWidgetsPath, {
+            error: (message, e) => logError(e, message)
+        });
     }
     jumpToWidget(window, widgetId) {
         this._jumpToWidgetPrefs(window, this._settings, this._storage, this._discovered, widgetId);

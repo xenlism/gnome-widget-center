@@ -4,6 +4,11 @@ import Gio from "gi://Gio";
 
 import { fileExists } from "./fsUtils.js";
 
+// St-free (only pulls in Pango), so - unlike cardLayers.js - this is safe
+// to import statically even though WidgetLoader is also loaded by the
+// standalone GTK4 prefs process (see _ensureCardPainted()'s header comment).
+import { deferUntilMapped } from "./widgetVisualKit.js";
+
 import { WidgetSettings } from "./widgetSettings.js";
 
 import { validateSettingsSchema, getSchemaDefaults } from "./settingsSchema.js";
@@ -203,33 +208,59 @@ export class WidgetLoader {
     // what happened to geek-stat-clock before it got fixed by hand). Never
     // overrides a widget that already painted its own card layer — St's
     // get_style() comes back non-empty the moment a widget's own _render()
-    // has called applyLayeredCardStyle()/set_style() on layers.card, which
-    // for every widget that remembers to do this always happens
-    // synchronously inside buildActor() (constructors call _render() once
-    // for the initial paint) — so by the time this runs, right after
-    // buildActor() returns, a normal widget's card is already styled and
-    // this is a no-op. Only fires (and only then, with a loud warning so
-    // it's obvious in logs) for a widget that forgot.
+    // has called applyLayeredCardStyle()/set_style() on layers.card.
     //
-    // cardLayers.js is imported lazily (dynamic import, not a static
-    // top-of-file import) because it pulls in St. St's typelib only
-    // resolves inside the gnome-shell process. WidgetLoader itself is
-    // also loaded by the standalone prefs app (widget-center-prefs-app.js,
-    // run under plain `gjs -m`), which only ever calls discover() — never
-    // loadOne() — but a static `import St from "gi://St"` anywhere in the
-    // module graph throws at import time regardless of whether it's used,
-    // crashing the whole prefs process before it can open a window.
-    async _ensureCardPainted(widgetInfo, instance, settings) {
+    // That paint doesn't necessarily happen synchronously inside
+    // buildActor() though: the established convention for a widget's
+    // _render() is to wrap its applyLayeredCardStyle() call in
+    // deferUntilMapped(this._actor, ...), which - per its own contract -
+    // only runs immediately if the actor is *already* mapped, and
+    // otherwise waits for 'notify::mapped'. The actor is never mapped yet
+    // at the point loadOne() calls this (it's called right after
+    // buildActor() returns, before the caller has added the actor to any
+    // container - see extension.js's loadAll().then()), so for every
+    // widget using that convention this check used to run before the
+    // real paint ever had a chance to fire, tripping a false-positive
+    // warning and clobbering the widget's own styling (icon-accent
+    // colors, etc.) with raw defaults in the process.
+    //
+    // Fix: piggyback on the exact same 'notify::mapped' event instead of
+    // checking synchronously now. A widget's own deferUntilMapped() call
+    // is wired up inside buildActor(), which already returned by the time
+    // loadOne() reaches this method - so our listener is always connected
+    // *after* the widget's, and GObject fires connected handlers in
+    // connection order. That guarantees a well-behaved widget's real
+    // paint has already run by the time our check does, so get_style()
+    // is no longer empty and this is a no-op for it. Only a widget that
+    // truly never calls applyLayeredCardStyle() at all still falls
+    // through to the warning + default-paint fallback below.
+    //
+    // cardLayers.js is still imported lazily (dynamic import) because it
+    // pulls in St, whose typelib only resolves inside the gnome-shell
+    // process - WidgetLoader is also loaded by the standalone prefs app
+    // (widget-center-prefs-app.js, run under plain `gjs -m`), which only
+    // ever calls discover(), never loadOne(), but a static
+    // `import St from "gi://St"` anywhere in the module graph throws at
+    // import time regardless of whether it's used, crashing the whole
+    // prefs process before it can open a window. deferUntilMapped() comes
+    // from widgetVisualKit.js instead, which only pulls in Pango, so it's
+    // safe as a static top-of-file import in both processes.
+    _ensureCardPainted(widgetInfo, instance, settings) {
         const card = instance?._layers?.card;
-        if (!card) return;
-        try {
-            if (card.get_style()) return;
-            const { applyLayeredCardStyle: applyLayeredCardStyle } = await import("./cardLayers.js");
-            applyLayeredCardStyle(instance._layers, settings);
-            this._logger.warn?.(`[widget-loader] "${widgetInfo.id}": never called applyLayeredCardStyle() in _render() — painted its card with defaults instead. Add the call in the widget's own _render().`);
-        } catch (e) {
-            this._recordError(widgetInfo, `_ensureCardPainted() failed: ${e.message}`);
-        }
+        const actor = instance?._actor ?? instance?._layers?.root;
+        if (!card || !actor) return;
+        deferUntilMapped(actor, () => {
+            (async () => {
+                try {
+                    if (card.get_style()) return;
+                    const { applyLayeredCardStyle: applyLayeredCardStyle } = await import("./cardLayers.js");
+                    applyLayeredCardStyle(instance._layers, settings);
+                    this._logger.warn?.(`[widget-loader] "${widgetInfo.id}": never called applyLayeredCardStyle() in _render() — painted its card with defaults instead. Add the call in the widget's own _render().`);
+                } catch (e) {
+                    this._recordError(widgetInfo, `_ensureCardPainted() failed: ${e.message}`);
+                }
+            })();
+        });
     }
     async loadOne(widgetInfo) {
         if (this._instances.has(widgetInfo.id)) return this._instances.get(widgetInfo.id);
@@ -256,7 +287,13 @@ export class WidgetLoader {
             this._recordError(widgetInfo, `buildActor() threw: ${e.message}`);
             return null;
         }
-        await this._ensureCardPainted(widgetInfo, instance, settings);
+        // Not awaited: for any widget using the deferUntilMapped() paint
+        // convention this now genuinely waits on 'notify::mapped', which
+        // won't fire until well after loadOne() (and loadAll()) return -
+        // see this method's own header comment. It's a warn-only safety
+        // net, not something later steps depend on, so it runs in the
+        // background instead of blocking the rest of the load pipeline.
+        this._ensureCardPainted(widgetInfo, instance, settings);
         await this._enforceBlockSize(widgetInfo, actor);
         try {
             instance.enable?.();

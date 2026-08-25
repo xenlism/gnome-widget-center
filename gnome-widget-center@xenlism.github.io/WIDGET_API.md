@@ -17,8 +17,14 @@ folder) first — it's the condensed, task-oriented version of this file.
 my-widget/
 ├── metadata.json      # required
 ├── widget.js          # required — runs in the Shell process, draws on the desktop
-├── prefs.js           # optional — this widget's own settings UI
-├── settings.js        # optional, rarely used — see §6.3, NOT currently wired up
+├── config.json        # recommended default — declarative settings UI, see §6.4. Every
+│                       #   bundled widget (73/73 as of this writing) ships one.
+├── prefs.js           # optional — hand-written settings UI for anything config.json
+│                       #   can't express (file pickers, custom layout). Only 4 bundled
+│                       #   widgets use this today, alongside their own config.json.
+├── settings.js        # optional, effectively unused — see §6.3. The code path is wired
+│                       #   up and functional, but zero bundled widgets ship one; prefer
+│                       #   config.json for new widgets.
 ├── stylesheet.css      # optional — documentation only, see the note in §3
 └── icon.svg            # optional — shown in the Control Center
 ```
@@ -39,7 +45,6 @@ folder instead, discovered the same way.
   "author": "your name",
   "api-version": 1,
   "entry": "widget.js",
-  "prefs": "prefs.js",
   "block-type": "1x1",
   "default-position": { "x": 40, "y": 40, "monitor": 0 }
 }
@@ -251,21 +256,36 @@ can always do more than a schema (file pickers, custom layout, anything
 ## 6. Settings — four systems, in order of precedence
 
 This codebase has four declarative-or-semi-declarative settings
-mechanisms. Widget authors should default to §6.4 `config.json` (or a
-hand-written §6.2 `prefs.js` for anything §6.4 can't express). §6.3
-`settings.js` is fully wired up but rarely needed since `config.json`
-covers more ground with no code at all. §6.1's flat `settings` array is
-legacy — kept for widgets that predate `config.json`.
+mechanisms. **Use `config.json` (§6.4) for new widgets — it's the
+default every bundled widget uses, and covers more ground with no
+handwritten GTK/Adw code at all.** Fall back to a hand-written §6.2
+`prefs.js` only for what `config.json` can't express (file pickers,
+custom layout, conditional logic beyond `showIf`). §6.3 `settings.js`
+is functional (the loading code is wired up and works) but is a
+**dead path in practice — no bundled widget ships one** — so don't
+reach for it for a new widget; treat it as legacy/experimental. §6.1's
+flat `settings` array is also legacy — kept for widgets that predate
+`config.json`.
 
 Precedence when a widget somehow ships more than one: `config.json`
 (§6.4) > hand-written `prefs.js` (§6.2) > `settings.js` (§6.3) > the
 legacy `metadata.json` `settings` array (§6.1). In practice a widget
-should only ever have ONE of these.
+should only ever have ONE of these (`config.json` alone, or
+`config.json` + `prefs.js` together).
 
-Most bundled widgets (`clock`, `clock-modern`, `calendar-modern`,
-`calendar-header`, `calendar-minimal`, `media-player`) ship a
-`config.json`. `mini-notes` and `system-stats` still use §6.1's legacy
-`settings` array.
+**Current state of the bundled widget set (73 real widgets, excluding the
+two `_template`/`_architect_template_` scaffolds):** **all 73 already
+ship a `config.json` — the migration to config.json is complete, no
+widget is left on §6.1's legacy array or §6.3's `settings.js`.** Four
+widgets (`calendar-modern`, `calendar-minimal`, `clock-modern`,
+`calendar-header`) also ship a hand-written `prefs.js` alongside their
+`config.json`, for the specific rows `config.json`'s field types can't
+express. Verified by scanning every widget folder directly rather than
+trusting this file's own older text — the previous revision of this
+paragraph counted 71 real widgets; `daily-quote` and `github-repo-stats`
+have since been filled in (both previously existed only as empty/partial
+folders — no `widget.js` yet) and are now complete, bringing the count
+to 73.
 
 ### 6.1 Legacy flat path: `metadata.json`'s `settings` array
 
@@ -320,15 +340,17 @@ like a broken `metadata.json` (see `WidgetLoader.discover()`).
 overridable by) `getDefaultSettings()` if a key appears in both — same
 merge behavior as defaults that only come from `getDefaultSettings()`.
 
-### 6.2 Hand-written `prefs.js` (recommended for anything §6.1 can't express)
+### 6.2 Hand-written `prefs.js` (fallback for anything §6.4 can't express)
 
-Every bundled widget so far (`clock`, `calendar-modern`, `clock-modern`)
-actually ships a hand-written `prefs.js` instead of a `metadata.json`
-`settings` array — it's the more common real-world path today, not just a
-fallback, and it's the only option for file pickers, custom validation,
-conditional rows beyond `showIf` (§6.3), or anything with a "Browse…"
-button. See §4 for the contract, and `widgets/clock-modern/prefs.js` for a
-full example including a `Gtk.FileDialog` filtered to `.desktop` entries.
+Four bundled widgets (`calendar-modern`, `calendar-minimal`,
+`clock-modern`, `calendar-header`) ship a hand-written `prefs.js`
+*alongside* their `config.json`, for the specific rows `config.json`'s
+field types can't cover — it's the only option for file pickers, custom
+validation, conditional rows beyond `showIf`, or anything with a
+"Browse…" button. It is not the default path — start from `config.json`
+(§6.4) and only add `prefs.js` for the parts that need it. See §4 for the
+contract, and `widgets/clock-modern/prefs.js` for a full example
+including a `Gtk.FileDialog` filtered to `.desktop` entries.
 
 ### 6.3 `lib/settingsApi.js`'s fluent builder
 
@@ -788,7 +810,7 @@ this._timerId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 2, () => {
 | `sample()` | all four combined in one call — convenient for a single timer |
 
 **Path restriction:** the relative import above only works for widgets
-bundled inside this extension (like `system-stats`). Third-party widgets
+bundled inside this extension (like `system-monitor`). Third-party widgets
 installed under `~/.local/share/gnome-widget-center/widgets/` **cannot**
 import this file — there's no path connecting the two folders (same
 restriction as `lib/mediaApi.js` in §9.1), and it isn't exposed as
@@ -797,7 +819,8 @@ addition (`widgetLoader.js`'s `_buildApi()` + this doc, together), not a
 side effect of something else.
 
 Must-follow: never call these from a timer tighter than actually needed
-(each call re-reads `/proc/*`; 1–10s, like `system-stats`'s own default,
+(each call re-reads `/proc/*`; 1–10s, like `system-monitor`'s own
+default,
 is the right ballpark); one `SystemMetricsService` per widget *instance*
 (sharing one across widgets corrupts the CPU%/network delta state); the
 first `getCpuUsage()`/`getNetworkUsage()` call always returns 0 (no prior

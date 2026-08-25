@@ -8,11 +8,9 @@ import GLib from "gi://GLib";
 
 import { chooseFile, showReportDialog } from "./prefsDialogs.js";
 
-import { buildGwctDocument, writeGwctFile, ensureGwctExtension } from "./exportService.js";
+import { buildGwctDocumentAsync, writeGwctFile, ensureGwctExtension } from "./exportService.js";
 
 import { readBytesFile } from "./fsUtils.js";
-
-import { captureDesktopScreenshotViaPortal } from "./screenshotPortal.js";
 
 const SCREENSHOT_KEYBINDING_KEY = "theme-screenshot-keybinding";
 
@@ -29,19 +27,11 @@ function buildTimestampedThemeId(rawName) {
     return `${slug}-${timestamp}`;
 }
 
-/**
- * Hides `window` and waits a beat before resolving, so the compositor has
- * actually unmapped/redrawn behind it before a screenshot is taken. Without
- * this, the export dialog - being the top-most window at the moment the
- * shortcut/button fires - ends up baked into its own "desktop" screenshot
- * instead of the clean desktop underneath it. Caller is responsible for
- * calling `window.present()` again afterward (in a `finally`, so the dialog
- * always comes back even if the capture itself fails).
- */
-function hideWindowDuringCapture(window) {
+/** One tick of the main loop, so a progress-bar update actually paints
+ * before the next chunk of (synchronous) work runs. */
+function idleTick() {
     return new Promise(resolve => {
-        window.set_visible(false);
-        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 150, () => {
+        GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
             resolve();
             return GLib.SOURCE_REMOVE;
         });
@@ -148,28 +138,6 @@ export function openThemePackExportDialog(parentWindow, services, prefill = {}) 
         };
         screenshotRow.subtitle = GLib.markup_escape_text(GLib.path_get_basename(path), -1);
     };
-    const runDesktopShare = async () => {
-        try {
-            // Just hide this dialog (so it isn't baked into its own
-            // "desktop" screenshot) then capture via the portal - no
-            // Show-Desktop/minimize-other-windows dance, no D-Bus service
-            // beyond the portal itself. The capture may include whatever
-            // other windows are on screen; that's expected now.
-            await hideWindowDuringCapture(window);
-            let path;
-            try {
-                path = await captureDesktopScreenshotViaPortal();
-            } finally {
-                window.present();
-            }
-            const bytes = readBytesFile(path);
-            if (!bytes) throw new Error("could not read the captured screenshot");
-            applyScreenshotPick(path, bytes, "image/png");
-        } catch (e) {
-            logError(e, "[widget-center] themePackExportDialog: desktop share capture failed");
-            showReportDialog(window, "Could not capture the desktop", `${e.message}\n\nMake sure the desktop portal (xdg-desktop-portal) is running ` + "on this session, or use Browse… instead.");
-        }
-    };
     const screenshotButton = new Gtk.Button({
         label: "Browse…",
         valign: Gtk.Align.CENTER
@@ -193,27 +161,23 @@ export function openThemePackExportDialog(parentWindow, services, prefill = {}) 
         }
     });
     screenshotRow.add_suffix(screenshotButton);
-    const shareDesktopButton = new Gtk.Button({
-        label: "Share desktop",
-        valign: Gtk.Align.CENTER,
-        tooltip_text: `Capture the desktop now (shortcut: ${screenshotAccelLabel}, works even when this window isn't open)`
-    });
-    shareDesktopButton.connect("clicked", () => runDesktopShare());
-    screenshotRow.add_suffix(shareDesktopButton);
     group.add(screenshotRow);
-    // NOTE: the actual ${screenshotAccel} keypress is handled by a real
-    // system-wide Mutter grab (lib/globalScreenshotKeybinding.js, added
-    // via Main.wm.addKeybinding from extension.js) - not by a
-    // Gtk.ShortcutController here. A GTK-level shortcut can only ever be
-    // "global to this window", and the default accel is Super-modified,
-    // which the Shell reserves for itself before any client app would
-    // see the event - so a window-scoped shortcut could never actually
-    // fire for it. See globalScreenshotKeybinding.js for the full
-    // capture -> restore -> launch/focus-this-dialog flow; if this
-    // dialog is already open when the shortcut fires, that flow re-runs
-    // captureDesktopScreenshot/hideWindowDuringCapture from this same
-    // process rather than this button's runDesktopShare, so both paths
-    // share the "hide dialog, wait for redraw" behavior independently.
+    // There is deliberately no "capture now" button here anymore - it used
+    // to call captureDesktopScreenshotViaPortal() directly from this
+    // dialog's own process while also hiding/re-presenting this window,
+    // which could race with lib/globalScreenshotKeybinding.js's own
+    // capture flow (same portal call, same "hide the window that's on top
+    // during capture" trick, but running from the Shell process) if the
+    // shortcut was pressed while this dialog was already open - the two
+    // capture requests could interleave and leave one of them hung
+    // waiting on a portal Response signal that was already consumed by
+    // the other. The shortcut itself (<Super>Delete by default,
+    // recorded via a real system-wide Mutter grab - see
+    // globalScreenshotKeybinding.js) still works on its own, including
+    // while this dialog isn't open: it captures, then launches/focuses
+    // this dialog with the result already attached via `prefill`
+    // below. Browse… (readBytesFile above) remains the only in-dialog way
+    // to attach a screenshot.
     if (prefill.screenshotPath) {
         try {
             const bytes = readBytesFile(prefill.screenshotPath);
@@ -222,6 +186,14 @@ export function openThemePackExportDialog(parentWindow, services, prefill = {}) 
             logError(e, "[widget-center] themePackExportDialog: could not attach prefilled screenshot");
         }
     }
+    const progressBar = new Gtk.ProgressBar({
+        show_text: true,
+        visible: false,
+        margin_top: 4,
+        margin_bottom: 4,
+        margin_start: 12,
+        margin_end: 12
+    });
     const bottomBar = new Gtk.Box({
         orientation: Gtk.Orientation.HORIZONTAL,
         spacing: 8,
@@ -262,12 +234,25 @@ export function openThemePackExportDialog(parentWindow, services, prefill = {}) 
             pattern: "*.gwct"
         });
         if (!savePath) return;
+        exportButton.sensitive = false;
+        closeButton.sensitive = false;
+        progressBar.fraction = 0;
+        progressBar.text = "Collecting widget settings…";
+        progressBar.visible = true;
+        // Let the bar actually paint before the (potentially slow) work
+        // below starts - without this the first frame never gets a
+        // chance to draw and the window looks frozen for however long the
+        // first chunk takes.
+        await idleTick();
         try {
             const candidates = prefill.widgetIds ? discoveredWidgets.filter(w => prefill.widgetIds.includes(w.id)) : discoveredWidgets;
-            const {document: document} = buildGwctDocument(candidates, {
+            const {document: document} = await buildGwctDocumentAsync(candidates, {
                 storage: storage,
                 theme: theme,
                 settings: settings
+            }, (done, total) => {
+                progressBar.fraction = total > 0 ? done / total : 1;
+                progressBar.text = `Collecting widget settings… (${done}/${total})`;
             });
             document.packMeta = {
                 id: buildTimestampedThemeId(nameRow.text),
@@ -283,16 +268,28 @@ export function openThemePackExportDialog(parentWindow, services, prefill = {}) 
                     base64: GLib.base64_encode(screenshotPick.bytes)
                 };
             }
+            progressBar.fraction = 1;
+            progressBar.text = "Writing file…";
+            await idleTick();
             const finalPath = writeGwctFile(ensureGwctExtension(savePath), document);
             showReportDialog(window, "Theme pack exported", `Saved to ${finalPath}\nWidgets included: ${document.widgets.length}`);
             window.close();
         } catch (e) {
             logError(e, "[widget-center] themePackExportDialog: export failed");
             showReportDialog(window, "Export failed", e.message);
+        } finally {
+            progressBar.visible = false;
+            exportButton.sensitive = true;
+            closeButton.sensitive = true;
         }
     });
     bottomBar.append(exportButton);
-    toolbarView.add_bottom_bar(bottomBar);
+    const bottomBox = new Gtk.Box({
+        orientation: Gtk.Orientation.VERTICAL
+    });
+    bottomBox.append(progressBar);
+    bottomBox.append(bottomBar);
+    toolbarView.add_bottom_bar(bottomBox);
     toolbarView.set_content(new Gtk.ScrolledWindow({
         child: page,
         vexpand: true

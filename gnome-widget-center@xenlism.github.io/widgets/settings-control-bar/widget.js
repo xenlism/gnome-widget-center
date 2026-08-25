@@ -418,22 +418,32 @@ export default class SettingsControlBarWidget {
 
     /** @private only called when no Bluetooth adapter was found. Same
      * GSettings schema GNOME's own rfkill handling reads/writes - see
-     * RFKILL_SCHEMA's comment for why this replaced a DBus proxy. */
+     * RFKILL_SCHEMA's comment for why this replaced a DBus proxy.
+     *
+     * The button/icon switch to Airplane Mode unconditionally here, even
+     * if the GSettings schema itself turns out to be missing (no
+     * gnome-settings-daemon installed, non-GNOME session, etc.) - only
+     * the live toggle functionality depends on _rfkillSettings being
+     * non-null (see _toggleBluetooth()'s 'airplane' branch). Previously
+     * a missing schema reset this._btMode back to 'bluetooth', which,
+     * combined with no adapter ever being found either, left the button
+     * permanently stuck showing a dead Bluetooth icon - this now matches
+     * widgets/settings-control's equivalent fallback, which always shows
+     * the Airplane Mode icon once no adapter is present. */
     _enableAirplaneModeFallback() {
+        this._btMode = 'airplane';
+        this._bluetoothTooltipText = 'Airplane Mode';
+
         try {
             this._rfkillSettings = new Gio.Settings({schema_id: RFKILL_SCHEMA});
             this._rfkillSignalId = this._rfkillSettings.connect('changed::airplane-mode', () => this._renderBluetooth());
-            this._btMode = 'airplane';
-            this._bluetoothTooltipText = 'Airplane Mode';
         } catch (e) {
             this._api.logger.error(`settings-control-bar: could not reach ${RFKILL_SCHEMA}: ${e.message}`);
             this._rfkillSettings = null;
-            // Neither Bluetooth nor rfkill available - leave the button
-            // inert, same "missing service" convention as every other
-            // toggle in this widget, but keep the Bluetooth label/icon
-            // rather than claiming an Airplane Mode toggle that doesn't work.
-            this._btMode = 'bluetooth';
-            this._bluetoothTooltipText = 'Bluetooth';
+            // Schema unavailable - the icon still switches to Airplane
+            // Mode (set above) so the button doesn't look stuck; only
+            // the click handler stays inert (see _toggleBluetooth()),
+            // logging on click same as every other toggle in this widget.
         }
     }
 

@@ -52,12 +52,23 @@
                         {
                             "id": "dashColor",
                             "label": "HH / MM line color",
-                            "description": "Color of the dash marks",
+                            "description": "Color of the dash marks for minutes that have already elapsed this hour",
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
                             "alpha": true,
                             "default": "#1A1A1AFF",
+                            "visibleIf": "showDashes"
+                        },
+                        {
+                            "id": "dashColorUpcoming",
+                            "label": "Upcoming minute color",
+                            "description": "Color of the dash marks for minutes later in the hour that haven't happened yet",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#9A999680",
                             "visibleIf": "showDashes"
                         }
                     ]

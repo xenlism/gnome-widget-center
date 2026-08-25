@@ -207,18 +207,30 @@
       <default>true</default>
       <summary>Automatically enable a widget the first time it's discovered</summary>
       <description>
-        2026-08-08, General category. When on (the default, matches
-        every prior behavior of this extension), a widget id seen for
-        the first time - installed manually into
-        ~/.local/share/gnome-widget-center/widgets/, dropped in by a
-        theme pack, or newly bundled by an extension update - is left
-        enabled, same as disabled-widgets' own "anything discovered and
-        NOT in this list is enabled by default" rule always meant. When
-        off, a widget seen for the first time is instead added straight
-        to disabled-widgets so it shows up in Overview but stays off the
-        desktop until the user turns it on manually. Only affects a
-        widget id's FIRST-EVER discovery - see known-widget-ids below;
-        toggling this key does nothing to widgets already known either
+        2026-08-25, General category. Only governs a widget installed
+        manually into ~/.local/share/gnome-widget-center/widgets/ (or
+        dropped in by a theme pack there) - a widget bundled with the
+        extension itself is never covered by this key; see below. When
+        on (the default, matches every prior behavior of this extension
+        for user-installed widgets), a user-widget id seen for the
+        first time is left enabled, same as disabled-widgets' own
+        "anything discovered and NOT in this list is enabled by
+        default" rule always meant. When off, a user-widget id seen for
+        the first time is instead added straight to disabled-widgets so
+        it shows up in Overview but stays off the desktop until the
+        user turns it on manually.
+
+        A widget bundled with the extension (products/extension/widgets/)
+        is ALWAYS added to disabled-widgets the first time its id is
+        ever seen, regardless of this key - a fresh install ships ~70
+        of them, and auto-placing all of them on the desktop at once
+        was the actual bug this key's own "off" behavior was meant to
+        prevent in the first place. The user opts each one in from
+        Overview instead.
+
+        Either way, only affects a widget id's FIRST-EVER discovery -
+        see known-widget-ids below; toggling this key does nothing to
+        widgets already known either
         way.
       </description>
     </key>
@@ -227,12 +239,15 @@
       <default>[]</default>
       <summary>Widget ids this install has seen at least once before</summary>
       <description>
-        Bookkeeping only, not directly user-facing - written by the
-        Control Center (lib/prefsWidgetManagement.js's
-        applyAutoEnablePolicy()) the first time each widget id is
-        discovered, so a later Control Center open doesn't mistake an
+        Bookkeeping only, not directly user-facing - written by
+        lib/autoEnablePolicy.js's applyAutoEnablePolicy() the first
+        time each widget id is discovered, from both the Shell process
+        (extension.js, on enable() and whenever a new widget directory
+        is picked up) and the Control Center
+        (lib/prefsWidgetManagement.js), so neither mistakes an
         already-known, user-disabled widget for a brand new one and
-        re-apply auto-enable-new-widgets to it again.
+        re-applies the bundled/auto-enable-new-widgets policy to it
+        again.
       </description>
     </key>
 
