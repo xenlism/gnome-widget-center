@@ -8,9 +8,9 @@ import { SystemMetricsService } from "../../lib/systemMetricsApi.js";
 
 import { SHADOW_DEFAULTS, toCssColor as _toCssColor, parseFontDescription as _parseFontDescription, BORDER_DEFAULTS, OPACITY_DEFAULTS } from "../../lib/widgetVisualKit.js";
 
-import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/shell/cardLayers.js";
 
-import { HalfCircleGauge, CARD_PADDING } from "../../lib/halfCircleGaugeKit.js";
+import { HalfCircleGauge, CARD_PADDING } from "../../lib/shell/halfCircleGaugeKit.js";
 
 import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 const MIN_DYNAMIC_SCALE_BYTES_PER_SEC = 8 * 1024;

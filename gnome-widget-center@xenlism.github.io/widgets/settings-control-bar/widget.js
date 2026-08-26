@@ -3,8 +3,8 @@ import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, BORDER_DEFAULTS, OPACITY_DEFAULTS, BLUR_DEFAULTS} from '../../lib/widgetVisualKit.js';
-import {createLayeredCard, applyLayeredCardStyle} from '../../lib/cardLayers.js';
-import {attachTooltip} from '../../lib/widgetTooltip.js';
+import {createLayeredCard, applyLayeredCardStyle} from '../../lib/shell/cardLayers.js';
+import {attachTooltip} from '../../lib/shell/widgetTooltip.js';
 import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 
 const ICON_SIZE = 24;

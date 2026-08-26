@@ -4,7 +4,7 @@ import Clutter from "gi://Clutter";
 
 import GLib from "gi://GLib";
 
-import {hasAllocation, insertChildAboveSafely, isMappedActor} from "./actorLifecycle.js";
+import {hasAllocation, insertChildAboveSafely, isMappedActor} from "../actorLifecycle.js";
 
 export const EditModeState = Object.freeze({
     NORMAL: "normal",

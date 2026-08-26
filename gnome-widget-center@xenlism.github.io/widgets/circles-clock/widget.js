@@ -10,7 +10,7 @@ import Cairo from "cairo";
 
 import { SHADOW_DEFAULTS, hexToRgba as _hexToRgba, toCssColor as _toCssColor, parseFontDescription as _parseFontDescription, BORDER_DEFAULTS, OPACITY_DEFAULTS } from "../../lib/widgetVisualKit.js";
 
-import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/shell/cardLayers.js";
 
 import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 const STACK_SIZE = 148;

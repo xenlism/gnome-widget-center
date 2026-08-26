@@ -5,7 +5,7 @@ import Gio from "gi://Gio";
 import { ModalDialog } from "resource:///org/gnome/shell/ui/modalDialog.js";
 import { SystemMetricsService } from "../../lib/systemMetricsApi.js";
 import { parseFontDescription as _parseFontDescription, toCssColor as _toCssColor, textShadowCss as _textShadowCss } from "../../lib/widgetVisualKit.js";
-import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/shell/cardLayers.js";
 import { configJsonDefaults } from "../../lib/widgetConfigDefaults.js";
 import { readTextFile, writeJsonFile } from "../../lib/fsUtils.js";
 import { createChildWidgetFromParent } from "../../lib/architectWidgetKit.js";

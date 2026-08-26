@@ -8,7 +8,7 @@ import {
     hexToRgba as _hexToRgba,
     parseFontDescription as _parseFontDescription,
 } from "../../lib/widgetVisualKit.js";
-import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/shell/cardLayers.js";
 import { configJsonDefaults } from "../../lib/widgetConfigDefaults.js";
 
 const FACE_SIZE = 176;

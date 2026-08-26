@@ -2,7 +2,7 @@ import St from "gi://St";
 import Clutter from "gi://Clutter";
 import GLib from "gi://GLib";
 import {ModalDialog} from "resource:///org/gnome/shell/ui/modalDialog.js";
-import {createLayeredCard, applyLayeredCardStyle} from "../../lib/cardLayers.js";
+import {createLayeredCard, applyLayeredCardStyle} from "../../lib/shell/cardLayers.js";
 import {configJsonDefaults} from "../../lib/widgetConfigDefaults.js";
 import {readTextFile} from "../../lib/fsUtils.js";
 import {createChildWidgetFromParent} from "../../lib/architectWidgetKit.js";

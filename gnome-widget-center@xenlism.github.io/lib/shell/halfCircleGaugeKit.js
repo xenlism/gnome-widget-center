@@ -6,7 +6,7 @@ import Meta from "gi://Meta";
 
 import Cairo from "cairo";
 
-import { hexToRgba as _hexToRgba } from "./widgetVisualKit.js";
+import { hexToRgba as _hexToRgba } from "../widgetVisualKit.js";
 
 export const RING_COLUMN_WIDTH = 74;
 

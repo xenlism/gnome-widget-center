@@ -2,7 +2,7 @@ import GLib from "gi://GLib";
 import Clutter from "gi://Clutter";
 import St from "gi://St";
 
-import { isMappedActor, hasAllocation } from "./actorLifecycle.js";
+import { isMappedActor, hasAllocation } from "../actorLifecycle.js";
 
 const TOOLTIP_SHOW_DELAY_MS = 400;
 

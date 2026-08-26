@@ -6,7 +6,7 @@ import GLib from "gi://GLib";
 
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
-import { SnapManager } from "./snapManager.js";
+import { SnapManager } from "../snapManager.js";
 
 import { GuideRenderer } from "./guideRenderer.js";
 

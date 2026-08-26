@@ -6,7 +6,7 @@ import Clutter from "gi://Clutter";
 
 import { SHADOW_DEFAULTS, BLUR_DEFAULTS, BORDER_DEFAULTS, OPACITY_DEFAULTS, cardStyleCss, parseFontDescription } from "../../lib/widgetVisualKit.js";
 
-import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/shell/cardLayers.js";
 
 import { buildMonthGrid, weekdayLabels } from "../../lib/calendarGridKit.js";
 

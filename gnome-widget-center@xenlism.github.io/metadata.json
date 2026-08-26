@@ -1,10 +1,13 @@
 {
   "uuid": "gnome-widget-center@xenlism.github.io",
   "name": "GNOME Widget Center",
-  "description": "Desktop widget platform for GNOME Shell — a plugin loader, per-widget JSON settings, drag & drop, and a Control Center for managing widgets. Ships with clock and media-player (MPRIS) example widgets. See development/tasks/ROADMAP.md and development/tests/e2e-checklist.md for current verification status — core (tasks 00-09) is code-complete but not yet confirmed end-to-end on real GNOME Shell hardware.",
+  "description": "GNOME Widget Center is a simple and flexible way to add useful widgets to your GNOME desktop.It lets you easily manage, arrange, and customize different widgets in one place.You can add tools such as clocks, system information, media controls, shortcuts, and more.Each widget is designed to be lightweight, clean, and easy to configure. Make your desktop more useful and personal without changing the way GNOME works.",
   "shell-version": [
     "50"
   ],
   "url": "https://github.com/xenlism/gnome-widget-center",
+    "screenshots": [
+    "screenshot.png"
+  ],
   "version": 1
 }

@@ -1,6 +1,6 @@
 import Clutter from "gi://Clutter";
 
-import { MonitorLockManager } from "./monitorLockManager.js";
+import { MonitorLockManager } from "../monitorLockManager.js";
 
 export class DragController {
     constructor(widgetLayer, storageService) {

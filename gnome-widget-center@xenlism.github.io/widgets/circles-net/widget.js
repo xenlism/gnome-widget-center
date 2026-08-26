@@ -12,7 +12,7 @@ import { SystemMetricsService } from "../../lib/systemMetricsApi.js";
 
 import { SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, toCssColor as _toCssColor, parseFontDescription as _parseFontDescription, BORDER_DEFAULTS, OPACITY_DEFAULTS } from "../../lib/widgetVisualKit.js";
 
-import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/shell/cardLayers.js";
 
 import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 const RING_SIZE = 128;

@@ -10,7 +10,7 @@ import { chooseFile, showReportDialog } from "./prefsDialogs.js";
 
 import { buildGwctDocumentAsync, writeGwctFile, ensureGwctExtension } from "./exportService.js";
 
-import { readBytesFile } from "./fsUtils.js";
+import { readBytesFileAsync } from "./fsUtils.js";
 
 const SCREENSHOT_KEYBINDING_KEY = "theme-screenshot-keybinding";
 
@@ -129,7 +129,7 @@ export function openThemePackExportDialog(parentWindow, services, prefill = {}) 
         });
         if (!path) return;
         try {
-            const bytes = readBytesFile(path);
+            const bytes = await readBytesFileAsync(path);
             if (!bytes) throw new Error("could not read the chosen file");
             const ext = path.slice(path.lastIndexOf(".")).toLowerCase();
             const mime = MIME_BY_EXTENSION[ext] ?? "application/octet-stream";
@@ -142,12 +142,14 @@ export function openThemePackExportDialog(parentWindow, services, prefill = {}) 
     screenshotRow.add_suffix(screenshotButton);
     group.add(screenshotRow);
     if (prefill.screenshotPath) {
-        try {
-            const bytes = readBytesFile(prefill.screenshotPath);
-            if (bytes) applyScreenshotPick(prefill.screenshotPath, bytes, "image/png");
-        } catch (e) {
-            logError(e, "[widget-center] themePackExportDialog: could not attach prefilled screenshot");
-        }
+        (async () => {
+            try {
+                const bytes = await readBytesFileAsync(prefill.screenshotPath);
+                if (bytes) applyScreenshotPick(prefill.screenshotPath, bytes, "image/png");
+            } catch (e) {
+                logError(e, "[widget-center] themePackExportDialog: could not attach prefilled screenshot");
+            }
+        })();
     }
     const progressBar = new Gtk.ProgressBar({
         show_text: true,

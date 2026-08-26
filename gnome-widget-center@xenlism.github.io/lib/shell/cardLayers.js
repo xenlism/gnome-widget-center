@@ -4,7 +4,7 @@ import Clutter from "gi://Clutter";
 
 import Shell from "gi://Shell";
 
-import { cardStyleCss, applyCardOpacity, getBlurSettings, toCssColor, resolveCornerRadius } from "./widgetVisualKit.js";
+import { cardStyleCss, applyCardOpacity, getBlurSettings, toCssColor, resolveCornerRadius } from "../widgetVisualKit.js";
 
 const BLUR_EFFECT_NAME = "wc-card-blur";
 

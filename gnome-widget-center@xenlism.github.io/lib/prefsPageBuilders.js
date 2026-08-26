@@ -433,7 +433,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
                 const theme = new ThemeService;
                 theme.init();
                 const userWidgets = discoveredWidgets.filter(w => w.path.startsWith(widgetPaths.userWidgetsPath));
-                const finalPath = createBackup(path, password, userWidgets, {
+                const finalPath = await createBackup(path, password, userWidgets, {
                     storage: storage,
                     theme: theme,
                     settings: settings
@@ -466,7 +466,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
             try {
                 const theme = new ThemeService;
                 theme.init();
-                const {restoredWidgetIds: restoredWidgetIds, restoredWidgetFileIds: restoredWidgetFileIds, dependencyWarnings: dependencyWarnings} = restoreBackup(path, password, {
+                const {restoredWidgetIds: restoredWidgetIds, restoredWidgetFileIds: restoredWidgetFileIds, dependencyWarnings: dependencyWarnings} = await restoreBackup(path, password, {
                     storage: storage,
                     theme: theme,
                     settings: settings,
@@ -627,7 +627,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         widgetsGroup.add(autoEnableRow);
         const shortcutGroup = new Adw.PreferencesGroup({
             title: "Keyboard shortcut",
-            description: "Opens/closes the Widget Center Overlay (lib/widgetCenterOverlay.js). " + "Also editable live from the overlay's own Preferences tab."
+            description: "Opens/closes the Widget Center Overlay (lib/shell/widgetCenterOverlay.js). " + "Also editable live from the overlay's own Preferences tab."
         });
         page.add(shortcutGroup);
         const currentAccel = ready ? settings.getGlobalValue("widget-center-overlay-keybinding")?.[0] ?? "" : "<Super>F12";
@@ -843,7 +843,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
                         y: rawPosition.y,
                         monitor: rawPosition.monitorIndex ?? 0
                     } : null;
-                    const result = saveCurrentSettingsAsWidgetDefaults(widget.path, currentValues, position);
+                    const result = await saveCurrentSettingsAsWidgetDefaults(widget.path, currentValues, position);
                     if (result.configUpdated) configUpdated++;
                     if (result.positionUpdated) positionUpdated++;
                     for (const err of result.errors) errors.push(`${widget.id}: ${err}`);

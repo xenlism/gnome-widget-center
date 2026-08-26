@@ -5,7 +5,7 @@ import Clutter from "gi://Clutter";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
 import { SHADOW_DEFAULTS, BLUR_DEFAULTS, shadowBoxShadowCss, borderCss, toCssColor, parseFontDescription, resolveCornerRadius } from "../../lib/widgetVisualKit.js";
-import { applyCardBlur } from "../../lib/cardLayers.js";
+import { applyCardBlur } from "../../lib/shell/cardLayers.js";
 
 const _DEMO_NOTIFICATIONS = [ {
     appName: "Fitness",

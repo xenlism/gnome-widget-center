@@ -8,13 +8,13 @@ import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
 
 import { WidgetLoader } from "./lib/widgetLoader.js";
 
-import { WidgetLayer } from "./lib/widgetLayer.js";
+import { WidgetLayer } from "./lib/shell/widgetLayer.js";
 
 import { StorageService } from "./lib/storageService.js";
 
 import { SettingsService } from "./lib/settingsService.js";
 
-import { DragController } from "./lib/dragController.js";
+import { DragController } from "./lib/shell/dragController.js";
 
 import { MonitorWatcher } from "./lib/monitorWatcher.js";
 
@@ -22,9 +22,9 @@ import { DevWatcher } from "./lib/devWatcher.js";
 
 import { LayoutEngine } from "./lib/layoutEngine.js";
 
-import { WidgetEditMode } from "./lib/widgetEditMode.js";
+import { WidgetEditMode } from "./lib/shell/widgetEditMode.js";
 
-import { EditModeDragController } from "./lib/editModeDragController.js";
+import { EditModeDragController } from "./lib/shell/editModeDragController.js";
 
 import { BlockSizeManager } from "./lib/blockSizeManager.js";
 
@@ -32,11 +32,11 @@ import { ThemeService } from "./lib/themeService.js";
 
 import { setGlobalShadowHelper, applyCardOpacity } from "./lib/widgetVisualKit.js";
 
-import { applyCardBlur } from "./lib/cardLayers.js";
+import { applyCardBlur } from "./lib/shell/cardLayers.js";
 
 import { GlobalShadowHelper } from "./lib/globalShadowHelper.js";
 
-import { WidgetCenterOverlay } from "./lib/widgetCenterOverlay.js";
+import { WidgetCenterOverlay } from "./lib/shell/widgetCenterOverlay.js";
 
 import { ThemePackRegistry } from "./lib/themePackRegistry.js";
 
@@ -44,7 +44,7 @@ import { createLogger } from "./lib/logger.js";
 
 import { importGwctDocument } from "./lib/exportService.js";
 
-import { GlobalScreenshotKeybinding } from "./lib/globalScreenshotKeybinding.js";
+import { GlobalScreenshotKeybinding } from "./lib/shell/globalScreenshotKeybinding.js";
 
 import { applyAutoEnablePolicy } from "./lib/autoEnablePolicy.js";
 
@@ -111,7 +111,7 @@ export default class WidgetCenterExtension extends Extension {
         this._devWatcher = new DevWatcher(id => this._reloadWidget(id));
         if (this._settings?.isReady) {
             this._devChangedId = this._settings.onChanged("dev-mode", enabled => {
-                console.log(`[widget-center] Development Mode ${enabled ? "ON" : "OFF"}`);
+                this._logger?.log(`Development Mode ${enabled ? "ON" : "OFF"}`);
                 if (enabled) this._devWatcher.start(this._loader?.instances.map(e => ({
                     id: e.id,
                     path: e.path
@@ -138,7 +138,7 @@ export default class WidgetCenterExtension extends Extension {
         if (this._settings?.isReady) {
             this._disabledChangedId = this._settings.onChanged("disabled-widgets", ids => this._applyDisabledWidgets(new Set(ids)));
             this._languageChangedId = this._settings.onChanged("language", lang => loader.notifyHostLanguageChanged(lang ?? ""));
-            this._activeThemePackChangedId = this._settings.onChanged("active-theme-pack", id => this._applyActiveThemePack(id).catch(e => console.error(`[widget-center] failed to apply theme pack "${id}"`, e)));
+            this._activeThemePackChangedId = this._settings.onChanged("active-theme-pack", id => this._applyActiveThemePack(id).catch(e => this._logger?.error(`failed to apply theme pack "${id}"`, e)));
         }
         let cancelled = false;
         this._cancelLoad = () => {
@@ -146,7 +146,7 @@ export default class WidgetCenterExtension extends Extension {
         };
         loader.loadAll(initialDisabled).then(started => {
             this._logger.log(`[widget-center] loaded ${started.length} widget(s)`);
-            for (const err of loader.errors) console.warn(`[widget-center] "${err.id}" failed: ${err.reason}`);
+            for (const err of loader.errors) this._logger?.warn(`"${err.id}" failed: ${err.reason}`);
             if (cancelled) {
                 loader.unloadAll();
                 return;
@@ -157,7 +157,7 @@ export default class WidgetCenterExtension extends Extension {
                 id: e.id,
                 path: e.path
             })));
-        }).catch(e => console.error("[widget-center] loadAll() failed", e));
+        }).catch(e => this._logger?.error("loadAll() failed", e));
         this._widgetCenterOverlay = new WidgetCenterOverlay(this, {
             widgetLoader: this._loader,
             logger: this._logger,
@@ -171,7 +171,7 @@ export default class WidgetCenterExtension extends Extension {
             this._globalScreenshotKeybinding = new GlobalScreenshotKeybinding(this, keybindingGSettings, this._logger);
             this._globalScreenshotKeybinding.enable();
         } catch (e) {
-            console.error("[widget-center] could not set up the global screenshot keybinding", e);
+            this._logger?.error("could not set up the global screenshot keybinding", e);
             this._globalScreenshotKeybinding = null;
         }
     }
@@ -234,7 +234,7 @@ export default class WidgetCenterExtension extends Extension {
                 spacing: this._settings.getGlobalValue("widget-spacing")
             };
         } catch (e) {
-            console.error("[widget-center] could not read layout settings, using defaults", e);
+            this._logger?.error("could not read layout settings, using defaults", e);
             return {};
         }
     }
@@ -247,7 +247,7 @@ export default class WidgetCenterExtension extends Extension {
             try {
                 entry.instance?._render?.();
             } catch (e) {
-                console.error(`[widget-center] Failed to nudge shadow angle for "${entry.id}"`, e);
+                this._logger?.error(`Failed to nudge shadow angle for "${entry.id}"`, e);
             }
         }
     }
@@ -257,12 +257,12 @@ export default class WidgetCenterExtension extends Extension {
         try {
             applyCardOpacity(entry.actor, entry.settings);
         } catch (e) {
-            console.error(`[widget-center] Failed to apply opacity for "${entry.id}"`, e);
+            this._logger?.error(`Failed to apply opacity for "${entry.id}"`, e);
         }
         try {
             applyCardBlur(entry.actor, entry.settings);
         } catch (e) {
-            console.error(`[widget-center] Failed to apply blur for "${entry.id}"`, e);
+            this._logger?.error(`Failed to apply blur for "${entry.id}"`, e);
         }
     }
     _placeEntry(entry) {
@@ -274,7 +274,7 @@ export default class WidgetCenterExtension extends Extension {
         try {
             BlockSizeManager.applyBlockSize(entry.metadata, entry.actor);
         } catch (e) {
-            console.error(`[widget-center] Failed to apply block size for "${entry.id}"`, e);
+            this._logger?.error(`Failed to apply block size for "${entry.id}"`, e);
         }
         this._applyCardEffects(entry);
         try {
@@ -289,7 +289,7 @@ export default class WidgetCenterExtension extends Extension {
             this._editDrag.attach(entry.id, entry.actor, monitorIndex);
             this._devWatcher?.watchWidget(entry.id, entry.path);
         } catch (e) {
-            console.error(`[widget-center] "${entry.id}" could not be placed in the layer`, e);
+            this._logger?.error(`"${entry.id}" could not be placed in the layer`, e);
         }
     }
     _openWidgetSettings(widgetId) {
@@ -297,19 +297,19 @@ export default class WidgetCenterExtension extends Extension {
         try {
             Gio.Subprocess.new([ "gjs", "-m", scriptPath, `--widget-id=${widgetId}` ], Gio.SubprocessFlags.NONE);
         } catch (e) {
-            console.error(`[widget-center] could not launch the widget Settings app for "${widgetId}"`, e);
+            this._logger?.error(`could not launch the widget Settings app for "${widgetId}"`, e);
         }
     }
     async _addChildViaEditMode(widgetId) {
         const entry = this._loader?.instances.find(e => e.id === widgetId);
         if (typeof entry?.instance?._addChild !== "function") {
-            console.warn(`[widget-center] "${widgetId}" has no _addChild() - cannot add a widget from edit mode`);
+            this._logger?.warn(`"${widgetId}" has no _addChild() - cannot add a widget from edit mode`);
             return;
         }
         try {
             await entry.instance._addChild();
         } catch (e) {
-            console.error(`[widget-center] "${widgetId}" _addChild() failed`, e);
+            this._logger?.error(`"${widgetId}" _addChild() failed`, e);
         }
     }
     async _resetWidgetViaEditMode(widgetId) {
@@ -325,7 +325,7 @@ export default class WidgetCenterExtension extends Extension {
         this._layer.removeWidgetActor(widgetId);
         const newEntry = await this._loader.reloadWidget(widgetId);
         if (!newEntry) {
-            console.error(`[widget-center] "${widgetId}" could not be reloaded after Reset`);
+            this._logger?.error(`"${widgetId}" could not be reloaded after Reset`);
             return;
         }
 
@@ -337,7 +337,7 @@ export default class WidgetCenterExtension extends Extension {
         try {
             BlockSizeManager.applyBlockSize(newEntry.metadata, newEntry.actor);
         } catch (e) {
-            console.error(`[widget-center] Failed to apply block size for "${widgetId}" after Reset`, e);
+            this._logger?.error(`Failed to apply block size for "${widgetId}" after Reset`, e);
         }
         try {
             this._layer.addWidgetActor(widgetId, newEntry.actor, position);
@@ -349,12 +349,12 @@ export default class WidgetCenterExtension extends Extension {
             });
             this._editDrag?.attach(widgetId, newEntry.actor, position.monitorIndex);
         } catch (e) {
-            console.error(`[widget-center] "${widgetId}" could not be re-placed after Reset`, e);
+            this._logger?.error(`"${widgetId}" could not be re-placed after Reset`, e);
         }
     }
     _removeWidgetViaEditMode(widgetId) {
         if (!this._settings?.isReady) {
-            console.warn(`[widget-center] "${widgetId}" could not be removed — SettingsService unavailable`);
+            this._logger?.warn(`"${widgetId}" could not be removed — SettingsService unavailable`);
             return;
         }
         try {
@@ -362,12 +362,12 @@ export default class WidgetCenterExtension extends Extension {
             current.add(widgetId);
             this._settings.setGlobalValue("disabled-widgets", Array.from(current));
         } catch (e) {
-            console.error(`[widget-center] "${widgetId}" could not be removed via disabled-widgets`, e);
+            this._logger?.error(`"${widgetId}" could not be removed via disabled-widgets`, e);
         }
     }
     _uninstallWidget(widgetId, isUserInstalled) {
         if (!isUserInstalled) {
-            console.warn(`[widget-center] refusing to uninstall bundled widget "${widgetId}"`);
+            this._logger?.warn(`refusing to uninstall bundled widget "${widgetId}"`);
             return;
         }
         const entry = this._loader?.instances.find(e => e.id === widgetId);
@@ -377,10 +377,10 @@ export default class WidgetCenterExtension extends Extension {
             this._storage?.resetWidgetSettings(widgetId);
             this._storage?.removeWidgetLayoutEntry(widgetId);
         } catch (e) {
-            console.error(`[widget-center] failed to clear config for "${widgetId}"`, e);
+            this._logger?.error(`failed to clear config for "${widgetId}"`, e);
         }
         if (!widgetPath || !this._userWidgetsPath || !widgetPath.startsWith(this._userWidgetsPath)) {
-            console.warn(`[widget-center] "${widgetId}" has no known user-installed path — skipping file move`);
+            this._logger?.warn(`"${widgetId}" has no known user-installed path — skipping file move`);
             return;
         }
         try {
@@ -396,7 +396,7 @@ export default class WidgetCenterExtension extends Extension {
             const source = Gio.File.new_for_path(widgetPath);
             source.move(dest, Gio.FileCopyFlags.NONE, null, null);
         } catch (e) {
-            console.error(`[widget-center] failed to move files for "${widgetId}" to uninstalled/`, e);
+            this._logger?.error(`failed to move files for "${widgetId}" to uninstalled/`, e);
         }
     }
     _deleteRecursively(file) {
@@ -451,7 +451,7 @@ export default class WidgetCenterExtension extends Extension {
             });
             this._editDrag?.attach(widgetId, newEntry.actor, position.monitorIndex);
         } catch (e) {
-            console.error(`[widget-center] "${widgetId}" could not be re-placed after hot-reload`, e);
+            this._logger?.error(`"${widgetId}" could not be re-placed after hot-reload`, e);
         }
     }
     _applyDisabledWidgets(disabledIds) {
@@ -481,7 +481,7 @@ export default class WidgetCenterExtension extends Extension {
         const loadedIds = new Set(this._loader.instances.map(e => e.id));
         for (const widgetInfo of discovered) {
             if (disabled.has(widgetInfo.id) || loadedIds.has(widgetInfo.id)) continue;
-            this._loader.loadOne(widgetInfo).then(entry => entry && this._placeEntry(entry)).catch(e => console.error(`[widget-center] "${widgetInfo.id}" failed to load`, e));
+            this._loader.loadOne(widgetInfo).then(entry => entry && this._placeEntry(entry)).catch(e => this._logger?.error(`"${widgetInfo.id}" failed to load`, e));
         }
     }
     _discoverThemePackById(id) {
@@ -500,7 +500,7 @@ export default class WidgetCenterExtension extends Extension {
         if (!id || !this._loader || !this._layer || !this._storage || !this._themeService) return;
         const entry = this._discoverThemePackById(id);
         if (!entry) {
-            console.warn(`[widget-center] active theme pack "${id}" not found on disk`);
+            this._logger?.warn(`active theme pack "${id}" not found on disk`);
             return;
         }
         this._applyingThemePack = true;

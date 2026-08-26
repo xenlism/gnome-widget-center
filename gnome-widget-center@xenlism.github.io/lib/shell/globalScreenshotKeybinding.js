@@ -8,7 +8,7 @@ import Shell from "gi://Shell";
 
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
-import { captureDesktopScreenshotViaPortal } from "./screenshotPortal.js";
+import { captureDesktopScreenshotViaPortal } from "../screenshotPortal.js";
 
 const MINIMIZE_SETTLE_MS = 300;
 
@@ -42,7 +42,7 @@ export class GlobalScreenshotKeybinding {
             Main.wm.addKeybinding(KEYBINDING_KEY, this._gsettings, Meta.KeyBindingFlags.NONE, Shell.ActionMode.ALL, () => this._onTriggered());
             this._added = true;
         } catch (e) {
-            console.error("[widget-center] global-screenshot: addKeybinding failed", e);
+            this._logger?.error("global-screenshot: addKeybinding failed", e);
         }
     }
     _removeKeybinding() {
@@ -50,7 +50,7 @@ export class GlobalScreenshotKeybinding {
         try {
             Main.wm.removeKeybinding(KEYBINDING_KEY);
         } catch (e) {
-            console.error("[widget-center] global-screenshot: removeKeybinding failed", e);
+            this._logger?.error("global-screenshot: removeKeybinding failed", e);
         }
         this._added = false;
     }
@@ -58,7 +58,7 @@ export class GlobalScreenshotKeybinding {
         try {
             return global.workspace_manager.get_active_workspace().list_windows().filter(w => !w.minimized && !w.is_skip_taskbar() && w.get_window_type() === Meta.WindowType.NORMAL);
         } catch (e) {
-            console.error("[widget-center] global-screenshot: could not list windows to minimize", e);
+            this._logger?.error("global-screenshot: could not list windows to minimize", e);
             return [];
         }
     }
@@ -68,7 +68,7 @@ export class GlobalScreenshotKeybinding {
             try {
                 w.minimize();
             } catch (e) {
-                console.error("[widget-center] global-screenshot: failed to minimize a window", e);
+                this._logger?.error("global-screenshot: failed to minimize a window", e);
             }
         }
         return windows;
@@ -78,7 +78,7 @@ export class GlobalScreenshotKeybinding {
             try {
                 w.unminimize();
             } catch (e) {
-                console.error("[widget-center] global-screenshot: failed to restore a window", e);
+                this._logger?.error("global-screenshot: failed to restore a window", e);
             }
         }
     }
@@ -92,7 +92,7 @@ export class GlobalScreenshotKeybinding {
             const path = await this._capture();
             this._launchExportDialog(path);
         } catch (e) {
-            console.error("[widget-center] global-screenshot: capture flow failed", e);
+            this._logger?.error("global-screenshot: capture flow failed", e);
             this._launchExportDialog(null);
         } finally {
             this._restoreWindows(minimized);
@@ -109,7 +109,7 @@ export class GlobalScreenshotKeybinding {
         try {
             Gio.Subprocess.new(args, Gio.SubprocessFlags.NONE);
         } catch (e) {
-            console.error("[widget-center] global-screenshot: could not launch the prefs app", e);
+            this._logger?.error("global-screenshot: could not launch the prefs app", e);
         }
     }
 }

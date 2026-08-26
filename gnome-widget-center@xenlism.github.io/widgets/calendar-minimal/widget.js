@@ -6,7 +6,7 @@ import GLib from "gi://GLib";
 
 import { SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss } from "../../lib/widgetVisualKit.js";
 
-import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/shell/cardLayers.js";
 
 import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 export default class CalendarMinimalWidget {

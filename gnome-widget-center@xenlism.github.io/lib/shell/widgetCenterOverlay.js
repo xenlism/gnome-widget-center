@@ -14,7 +14,7 @@ import St from "gi://St";
 
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
-import { ThemePackRegistry } from "./themePackRegistry.js";
+import { ThemePackRegistry } from "../themePackRegistry.js";
 
 const SCHEMA_ID = "org.gnome.shell.extensions.widget-center";
 
@@ -77,7 +77,7 @@ export class WidgetCenterOverlay {
         try {
             this._gsettings = this._extension.getSettings(SCHEMA_ID);
         } catch (e) {
-            console.error("[widget-center] overlay: could not resolve settings schema", e);
+            this._logger?.error("overlay: could not resolve settings schema", e);
             return;
         }
         this._addKeybinding();
@@ -112,7 +112,7 @@ export class WidgetCenterOverlay {
                 actionMode: Shell.ActionMode.POPUP
             });
         } catch (e) {
-            console.error("[widget-center] overlay: pushModal failed, continuing non-modal", e);
+            this._logger?.error("overlay: pushModal failed, continuing non-modal", e);
             this._modalGrab = null;
         }
         this._keyPressId = global.stage.connect("key-press-event", (actor, event) => this._onStageKeyPress(event));
@@ -129,7 +129,7 @@ export class WidgetCenterOverlay {
             try {
                 Main.popModal(this._modalGrab);
             } catch (e) {
-                console.error("[widget-center] overlay: popModal failed", e);
+                this._logger?.error("overlay: popModal failed", e);
             }
             this._modalGrab = null;
         }
@@ -145,7 +145,7 @@ export class WidgetCenterOverlay {
             Main.wm.addKeybinding(KEYBINDING_KEY, this._gsettings, Meta.KeyBindingFlags.NONE, Shell.ActionMode.ALL, () => this.toggle());
             this._keybindingAdded = true;
         } catch (e) {
-            console.error("[widget-center] overlay: addKeybinding failed", e);
+            this._logger?.error("overlay: addKeybinding failed", e);
         }
     }
     _removeKeybinding() {
@@ -153,7 +153,7 @@ export class WidgetCenterOverlay {
         try {
             Main.wm.removeKeybinding(KEYBINDING_KEY);
         } catch (e) {
-            console.error("[widget-center] overlay: removeKeybinding failed", e);
+            this._logger?.error("overlay: removeKeybinding failed", e);
         }
         this._keybindingAdded = false;
     }
@@ -164,7 +164,7 @@ export class WidgetCenterOverlay {
             this._dbusImpl.export(Gio.DBus.session, DBUS_PATH);
             this._ownerId = Gio.bus_own_name(Gio.BusType.SESSION, DBUS_NAME, Gio.BusNameOwnerFlags.NONE, null, null, null);
         } catch (e) {
-            console.error("[widget-center] overlay: D-Bus export failed (.desktop launch won't work, shortcut still will)", e);
+            this._logger?.error("overlay: D-Bus export failed (.desktop launch won't work, shortcut still will)", e);
         }
     }
     _unexportDBus() {
@@ -353,7 +353,7 @@ export class WidgetCenterOverlay {
             try {
                 entries = this._services.widgetLoader.discover();
             } catch (e) {
-                console.error("[widget-center] overlay: injected widgetLoader.discover() failed, falling back", e);
+                this._logger?.error("overlay: injected widgetLoader.discover() failed, falling back", e);
             }
         }
         if (!entries) entries = this._scanMetadataFolders(GLib.build_filenamev([ this._path, "widgets" ]));
@@ -509,7 +509,7 @@ export class WidgetCenterOverlay {
             this._gsettings.set_string(ACTIVE_THEME_PACK_KEY, entry.id);
             Gio.Settings.sync();
         } catch (e) {
-            console.error("[widget-center] overlay: could not save active theme pack", e);
+            this._logger?.error("overlay: could not save active theme pack", e);
         }
         this._renderTab("themes");
     }
@@ -518,7 +518,7 @@ export class WidgetCenterOverlay {
             this._gsettings.set_string(ACTIVE_THEME_PACK_KEY, "");
             Gio.Settings.sync();
         } catch (e) {
-            console.error("[widget-center] overlay: could not clear active theme pack", e);
+            this._logger?.error("overlay: could not clear active theme pack", e);
         }
         this._renderTab("themes");
     }
@@ -544,7 +544,7 @@ export class WidgetCenterOverlay {
             const info = target.query_info("standard::type", Gio.FileQueryInfoFlags.NONE, null);
             if (info.get_file_type() === Gio.FileType.DIRECTORY) this._deleteRecursive(target); else target.delete(null);
         } catch (e) {
-            console.error(`[widget-center] overlay: could not remove theme pack "${entry.id}"`, e);
+            this._logger?.error(`overlay: could not remove theme pack "${entry.id}"`, e);
         }
         this._themePackRegistry = null;
         this._renderTab(this._activeTab);
@@ -635,7 +635,7 @@ export class WidgetCenterOverlay {
         try {
             Gio.Subprocess.new([ "gjs", "-m", scriptPath, ...args ], Gio.SubprocessFlags.NONE);
         } catch (e) {
-            console.error("[widget-center] overlay: could not launch the external prefs window", e);
+            this._logger?.error("overlay: could not launch the external prefs window", e);
             return;
         }
         this.close();
@@ -807,7 +807,7 @@ export class WidgetCenterOverlay {
             GLib.file_set_contents(cachePath, bytes);
             return cachePath;
         } catch (e) {
-            console.error(`[widget-center] overlay: could not decode screenshot for "${manifest.id}"`, e);
+            this._logger?.error(`overlay: could not decode screenshot for "${manifest.id}"`, e);
             return null;
         }
     }
@@ -880,7 +880,7 @@ export class WidgetCenterOverlay {
             this._gsettings.set_strv(DISABLED_KEY, [ ...idSet ]);
             Gio.Settings.sync();
         } catch (e) {
-            console.error("[widget-center] overlay: could not write disabled-widgets", e);
+            this._logger?.error("overlay: could not write disabled-widgets", e);
         }
     }
     _scanMetadataFolders(root) {
@@ -912,7 +912,7 @@ export class WidgetCenterOverlay {
                     path: path
                 });
             } catch (e) {
-                console.error(`[widget-center] overlay: could not read ${path}/metadata.json`, e);
+                this._logger?.error(`overlay: could not read ${path}/metadata.json`, e);
             }
         }
         return results;

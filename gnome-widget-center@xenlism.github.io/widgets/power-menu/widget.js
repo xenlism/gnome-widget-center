@@ -3,8 +3,8 @@ import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, borderCss as _borderCss, BORDER_DEFAULTS, OPACITY_DEFAULTS, BLUR_DEFAULTS, applyCardOpacity, resolveCornerRadius} from '../../lib/widgetVisualKit.js';
-import {createLayeredCard, applyCardBlur} from '../../lib/cardLayers.js';
-import {attachTooltip} from '../../lib/widgetTooltip.js';
+import {createLayeredCard, applyCardBlur} from '../../lib/shell/cardLayers.js';
+import {attachTooltip} from '../../lib/shell/widgetTooltip.js';
 import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 
 const TOOLTIP_SHOW_DELAY_MS = 400;

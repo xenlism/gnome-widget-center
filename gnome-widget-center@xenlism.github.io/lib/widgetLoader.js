@@ -185,7 +185,7 @@ export class WidgetLoader {
             (async () => {
                 try {
                     if (card.get_style()) return;
-                    const { applyLayeredCardStyle: applyLayeredCardStyle } = await import("./cardLayers.js");
+                    const { applyLayeredCardStyle: applyLayeredCardStyle } = await import("./shell/cardLayers.js");
                     applyLayeredCardStyle(instance._layers, settings);
                     this._logger.warn?.(`[widget-loader] "${widgetInfo.id}": never called applyLayeredCardStyle() in _render() — painted its card with defaults instead. Add the call in the widget's own _render().`);
                 } catch (e) {

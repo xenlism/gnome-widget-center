@@ -12,7 +12,7 @@ import {
     toCssColor as _toCssColor,
     deferUntilMapped as _deferUntilMapped
 } from "../../lib/widgetVisualKit.js";
-import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/shell/cardLayers.js";
 import { getAccentColorForApp } from "../../lib/iconAccentColor.js";
 import { configJsonDefaults } from "../../lib/widgetConfigDefaults.js";
 

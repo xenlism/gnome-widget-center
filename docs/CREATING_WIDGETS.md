@@ -11,7 +11,7 @@ unique, lower-case folder name:
 
 ```bash
 mkdir -p ~/.local/share/gnome-widget-center/widgets
-cp -a gnome-widget-center@xenlism.github.io/widgets/_template \
+cp -a development/widget-templates/template \
   ~/.local/share/gnome-widget-center/widgets/my-widget
 ```
 

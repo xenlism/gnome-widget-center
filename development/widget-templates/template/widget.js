@@ -1,7 +1,7 @@
 import St from "gi://St";
 import Clutter from "gi://Clutter";
 import GLib from "gi://GLib";
-import {createLayeredCard, applyLayeredCardStyle} from "../../lib/cardLayers.js";
+import {createLayeredCard, applyLayeredCardStyle} from "../../lib/shell/cardLayers.js";
 import {configJsonDefaults} from "../../lib/widgetConfigDefaults.js";
 
 export default class TemplateWidget {

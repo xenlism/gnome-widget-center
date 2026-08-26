@@ -6,7 +6,7 @@ import GLib from "gi://GLib";
 
 import { SHADOW_DEFAULTS, BLUR_DEFAULTS, BORDER_DEFAULTS, OPACITY_DEFAULTS, cardStyleCss, toCssColor, parseFontDescription } from "../../lib/widgetVisualKit.js";
 
-import { createLayeredCard, applyLayeredCardStyle, applyCardBlur } from "../../lib/cardLayers.js";
+import { createLayeredCard, applyLayeredCardStyle, applyCardBlur } from "../../lib/shell/cardLayers.js";
 
 import { SystemCalendarEvents } from "../../lib/systemCalendarEvents.js";
 

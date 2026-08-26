@@ -2,7 +2,7 @@ import Gio from "gi://Gio";
 
 import GLib from "gi://GLib";
 
-import { ensureDirectory, readTextFile, readBytesFile, writeBytesFile, writeJsonFile } from "./fsUtils.js";
+import { ensureDirectory, readTextFileAsync, readBytesFileAsync, writeBytesFileAsync, writeJsonFileAsync } from "./fsUtils.js";
 
 import { verifyWidgetDependencies } from "./dependencyChecker.js";
 
@@ -118,7 +118,7 @@ function _concatBytes(...arrays) {
     return out;
 }
 
-export function createBackup(destPath, password, userWidgets, {storage: storage, theme: theme, settings: settings}) {
+export async function createBackup(destPath, password, userWidgets, {storage: storage, theme: theme, settings: settings}) {
     if (!password) throw new Error("A password is required to create a .gwcbak backup.");
     const {ok: ok, missing: missing} = checkBackupToolsAvailable();
     if (!ok) throw new Error(`Missing required tool(s) for backup: ${missing.join(", ")}. Install them first.`);
@@ -153,35 +153,35 @@ export function createBackup(destPath, password, userWidgets, {storage: storage,
             },
             widgets: widgetEntries
         };
-        writeJsonFile(GLib.build_filenamev([ stagingPath, "manifest.json" ]), manifest, 2);
+        await writeJsonFileAsync(GLib.build_filenamev([ stagingPath, "manifest.json" ]), manifest, 2);
         const gsettingsDump = {};
         if (settings?.isReady) {
             for (const key of BACKUP_GSCHEMA_KEYS) gsettingsDump[key] = settings.getGlobalValue(key);
         }
-        writeJsonFile(GLib.build_filenamev([ stagingPath, "gsettings.json" ]), gsettingsDump, 2);
+        await writeJsonFileAsync(GLib.build_filenamev([ stagingPath, "gsettings.json" ]), gsettingsDump, 2);
         const widgetsStagingDir = GLib.build_filenamev([ stagingPath, "widgets" ]);
         ensureDirectory(widgetsStagingDir);
         for (const widget of userWidgets) _copyDirRecursive(widget.path, GLib.build_filenamev([ widgetsStagingDir, widget.id ]));
         _runSync([ "tar", "-czf", tarPath, "-C", stagingPath, "." ]);
-        const tarBytes = readBytesFile(tarPath);
+        const tarBytes = await readBytesFileAsync(tarPath);
         const salt = randomBytes(SALT_LEN);
         const iv = randomBytes(IV_LEN);
         const {encKey: encKey, macKey: macKey} = _deriveKeys(password, salt);
         const ciphertext = aes256CtrTransform(tarBytes, encKey, iv);
         const authTag = hmacSha256(macKey, _concatBytes(salt, iv, ciphertext));
         const fileBytes = _concatBytes(MAGIC, new Uint8Array([ GWCBAK_VERSION ]), salt, iv, authTag, ciphertext);
-        writeBytesFile(finalPath, fileBytes);
+        await writeBytesFileAsync(finalPath, fileBytes);
         return finalPath;
     } finally {
         _runSync([ "rm", "-rf", stagingPath, tarPath ]);
     }
 }
 
-export function restoreBackup(srcPath, password, {storage: storage, theme: theme, settings: settings, userWidgetsDir: userWidgetsDir}) {
+export async function restoreBackup(srcPath, password, {storage: storage, theme: theme, settings: settings, userWidgetsDir: userWidgetsDir}) {
     if (!password) throw new Error("A password is required to restore a .gwcbak backup.");
     const {ok: ok, missing: missing} = checkBackupToolsAvailable();
     if (!ok) throw new Error(`Missing required tool(s) for restore: ${missing.join(", ")}. Install them first.`);
-    const fileBytes = readBytesFile(srcPath);
+    const fileBytes = await readBytesFileAsync(srcPath);
     if (fileBytes === null) throw new Error(`File not found: ${srcPath}`);
     if (fileBytes.length < HEADER_LEN) throw new Error("Not a valid GNOME Widget Center backup (.gwcbak) — file is too short.");
     const magic = fileBytes.slice(0, MAGIC.length);
@@ -204,14 +204,14 @@ export function restoreBackup(srcPath, password, {storage: storage, theme: theme
     const tarPath = `${stagingPath}.tar.gz`;
     ensureDirectory(stagingPath);
     try {
-        writeBytesFile(tarPath, tarBytes);
+        await writeBytesFileAsync(tarPath, tarBytes);
         _validateTarEntries(tarPath);
         _runSync([ "tar", "-xzf", tarPath, "-C", stagingPath ]);
-        const manifestText = readTextFile(GLib.build_filenamev([ stagingPath, "manifest.json" ]));
+        const manifestText = await readTextFileAsync(GLib.build_filenamev([ stagingPath, "manifest.json" ]));
         if (manifestText === null) throw new Error("Not a valid GNOME Widget Center backup (.gwcbak) — missing manifest.json.");
         const manifest = JSON.parse(manifestText);
         if (manifest.format !== GWCBAK_FORMAT) throw new Error("Not a GNOME Widget Center backup file (.gwcbak).");
-        const gsettingsText = settings?.isReady ? readTextFile(GLib.build_filenamev([ stagingPath, "gsettings.json" ])) : null;
+        const gsettingsText = settings?.isReady ? await readTextFileAsync(GLib.build_filenamev([ stagingPath, "gsettings.json" ])) : null;
         if (gsettingsText !== null) {
             const gsDump = JSON.parse(gsettingsText);
             for (const key of BACKUP_GSCHEMA_KEYS) {
@@ -256,7 +256,7 @@ export function restoreBackup(srcPath, password, {storage: storage, theme: theme
             });
             restoredWidgetIds.push(entry.id);
             const widgetPath = GLib.build_filenamev([ userWidgetsDir, entry.id ]);
-            const metadataText = readTextFile(GLib.build_filenamev([ widgetPath, "metadata.json" ]));
+            const metadataText = await readTextFileAsync(GLib.build_filenamev([ widgetPath, "metadata.json" ]));
             if (metadataText !== null) {
                 const metadata = JSON.parse(metadataText);
                 const {missing: missingDeps} = verifyWidgetDependencies(metadata);

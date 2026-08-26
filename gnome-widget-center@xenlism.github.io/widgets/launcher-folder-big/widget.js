@@ -8,8 +8,8 @@ import GLib from "gi://GLib";
 
 import { SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS, BLUR_DEFAULTS, deferUntilMapped as _deferUntilMapped } from "../../lib/widgetVisualKit.js";
 
-import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
-import { attachTooltip } from "../../lib/widgetTooltip.js";
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/shell/cardLayers.js";
+import { attachTooltip } from "../../lib/shell/widgetTooltip.js";
 
 import { getSpecialFolderInfo } from "../../lib/fsUtils.js";
 
