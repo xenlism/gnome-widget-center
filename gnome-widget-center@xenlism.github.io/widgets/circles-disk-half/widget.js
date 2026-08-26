@@ -138,10 +138,6 @@ export default class CirclesDiskHalfWidget {
         if (this._gauge.ringArea) this._gauge.ringArea.queue_repaint();
     }
     _onRepaint() {
-        // Two concentric half-rings, both showing the same disk value.
-        // Mirrors circles-net-half's two-ring look; unlike net (two
-        // distinct metrics, download+upload), disk only has one metric,
-        // so both ring entries share the same fraction/color.
         const color = this._settings.hddRingColor ?? "#F5C211FF";
         this._gauge.paintRings({
             settings: this._settings,

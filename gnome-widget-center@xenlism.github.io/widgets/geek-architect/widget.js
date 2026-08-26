@@ -1,33 +1,3 @@
-// widgets/geek-stat-clock/widget.js
-//
-// Architect Widget (see lib/architectWidgetKit.js / development docs:
-// XTile Architecture) for the "Geek" series: an up-to-3-line card where
-// each line independently shows a Clock, a Long date, a Short date, or
-// a System stat readout. Line 1 is always on; lines 2 and 3 can each be
-// turned off individually (lineNEnabled in config.json - there is no
-// such field for line 1, it's permanent). This class is shared verbatim
-// by every Child (config-only pattern, see child/widget.js) - the ONLY
-// thing that differs between the Parent and any Child is config.json
-// and metadata.json's block-type, never code.
-//
-// "+ Add Widget" lives in the edit-mode toolbar (right-click the
-// widget), not painted inline in the card - see the _addChild() comment
-// below and lib/widgetEditMode.js.
-//
-// Card styling (background/corner-radius/border/opacity/shadow) is
-// self-painted via applyLayeredCardStyle() in _render(), same as every
-// other widget (there's no more "themeable" system pulling this from a
-// global theme) — it just falls back to widgetVisualKit.js's built-in
-// defaults for now since this widget has no Appearance fields of its
-// own in config.json yet.
-//
-// Per-line text shadow deliberately has NO angle field anywhere in
-// config.json - textShadowCss() (lib/widgetVisualKit.js) always pulls
-// the shadow angle from the single global shadow-angle value, exactly
-// like every card shadow does, so every shadow on the desktop points
-// the same direction. Every OTHER text shadow property (enable/color/
-// opacity/distance/blur) is still fully per-line.
-
 import St from "gi://St";
 import Clutter from "gi://Clutter";
 import GLib from "gi://GLib";
@@ -40,9 +10,6 @@ import { configJsonDefaults } from "../../lib/widgetConfigDefaults.js";
 import { readTextFile, writeJsonFile } from "../../lib/fsUtils.js";
 import { createChildWidgetFromParent } from "../../lib/architectWidgetKit.js";
 
-// source -> GLib.DateTime.format() spec. Keyed exactly by config.json's
-// dropdown option values so _sourceText() below never needs a second
-// translation table.
 const CLOCK_FORMATS = {
     "HH:MM:SS": { 24: "%H:%M:%S", 12: "%I:%M:%S %p" },
     "HH:MM": { 24: "%H:%M", 12: "%I:%M %p" }
@@ -60,22 +27,10 @@ const SHORT_DATE_FORMATS = {
     "MMM-DD-YY": "%b-%d-%y"
 };
 const DAY_OF_WEEK_FORMATS = {
-    // DDD = abbreviated weekday ("Mon"), DDDD = full weekday ("Monday") -
-    // same DDD/DDDD token convention as the long/short date dropdowns
-    // above, just for a standalone weekday-only line.
     DDD: "%a",
     DDDD: "%A"
 };
 
-// "2 bar / 3 bar / big bar" block-type presets offered in the + Add
-// Widget dialog (XTile Architecture §9-10's Child Name prompt, extended
-// with a size choice). fontOverrides become the new Child's
-// configOverrides (see createChildWidgetFromParent()) so a Bar-sized
-// Child starts with smaller text than a Card-sized one instead of
-// everyone inheriting the Parent's own defaults verbatim. Bar (2) also
-// overrides line3Enabled:false, since a 2-line preset is meant to start
-// with line 3 already off (the user can still turn it back on from the
-// Child's own Settings page - this is only the created default).
 const BLOCK_TYPE_PRESETS = [
     { id: "barx2", label: "Tiny 2", blockType: "barx2", fontOverrides: { line1Font: "Sans Bold 30", line2Font: "Sans 11", line3Font: "Sans 11", line3Enabled: false } },
     { id: "barx3", label: "Tiny 3", blockType: "barx3", fontOverrides: { line1Font: "Sans Bold 30", line2Font: "Sans 12", line3Font: "Sans 12" } },
@@ -93,20 +48,8 @@ export default class GeekStatClockWidget {
         this._logger = api.logger;
         this._timeoutId = null;
         this._metrics = new SystemMetricsService;
-        // Read once here rather than via a JSON module import - see the
-        // same pattern/rationale in widgets/_architect_template_/widget.js.
         this._metadata = JSON.parse(readTextFile(GLib.build_filenamev([ api.path.me, "metadata.json" ])));
 
-        // "+ Add Widget" is no longer painted inline in the card - the
-        // host (extension.js) checks `typeof instance._addChild ===
-        // "function"` when attaching edit mode and, only when true,
-        // adds an "Add Widget" icon to that widget's edit-mode toolbar
-        // (right-click the widget) which calls _addChild() below - see
-        // lib/widgetEditMode.js. Only the top-level Architect (no
-        // "parent" field in its own metadata.json) offers this at all -
-        // a generated Child runs this exact same class (config-only
-        // pattern) but must not be able to spawn grandchildren of its
-        // own, so it has _addChild shadowed to undefined here.
         if (this._metadata.parent) this._addChild = undefined;
     }
 
@@ -116,37 +59,16 @@ export default class GeekStatClockWidget {
         });
         this._actor = this._layers.root;
 
-        // R1: content always matches blocksize (createLayeredCard()
-        // already wires the BindConstraint + clip_to_allocation for us
-        // on this._layers.content, the outermost layer here).
         this._content = new St.BoxLayout({
             vertical: true,
             x_expand: true,
             y_expand: true,
             x_align: Clutter.ActorAlign.CENTER,
             y_align: Clutter.ActorAlign.CENTER,
-            // No overflow, ever: this widget lets the user pick
-            // arbitrarily large fonts per line, and a line's natural
-            // (unclipped) height/width can exceed what's left inside
-            // the card once padding + the other 1-2 lines take their
-            // share. this._layers.content already clips at the card's
-            // outer edge (R1/R4), but clip_to_allocation only clips
-            // PAINT, not layout - an St.BoxLayout still hands each
-            // non-expanding child its own natural request size even
-            // when the sum exceeds what's available, so without a
-            // clip here too, an oversized line's paint can bleed past
-            // its own row and visually overlap a neighboring line
-            // before ever reaching the card's outer edge. Clipping
-            // right here as well means any part of ANY line that
-            // doesn't fit is simply cut off (never ellipsis, never
-            // spilling into another line or past the card) regardless
-            // of how large the chosen font is.
             clip_to_allocation: true
         });
         this._layers.content.add_child(this._content);
 
-        // R5: padding/spacing lives on a child wrapper, not on _content
-        // itself. Same "no overflow" reasoning as above - clipped too.
         this._innerPad = new St.BoxLayout({
             vertical: true,
             x_expand: true,
@@ -192,10 +114,6 @@ export default class GeekStatClockWidget {
     }
 
     _setupTimer() {
-        // Default 1s (not the older geek-week-stat-*'s 2s) since a
-        // Clock line showing HH:MM:SS needs per-second updates - the
-        // user can raise it in Settings if every line on this instance
-        // is a date/stat line that doesn't need second-level ticking.
         const interval = Math.max(1, Math.round(this._settings.updateInterval ?? 1));
         this._timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, interval, () => {
             this._render();
@@ -281,10 +199,6 @@ export default class GeekStatClockWidget {
 
     _renderLine(label, index, now) {
         const s = this._settings;
-        // Line 1 has no lineEnabled field at all (config.json) - it can
-        // never be turned off. Lines 2/3 default to enabled (true) when
-        // the field is simply absent (e.g. an older Child created
-        // before this field existed).
         const enabled = index === 1 || (s[`line${index}Enabled`] ?? true);
         if (!enabled) {
             label.hide();
@@ -295,10 +209,6 @@ export default class GeekStatClockWidget {
         const { family: family, size: size } = _parseFontDescription(s[`line${index}Font`] ?? "Sans 16", "Sans", 16);
         const color = _toCssColor(s[`line${index}Color`], "#ffffffff");
         const textAlign = [ "left", "center", "right" ].includes(s.textAlign) ? s.textAlign : "center";
-        // Every text-shadow property here is per-line EXCEPT angle -
-        // there is no lineNShadowAngle field in config.json at all;
-        // textShadowCss() always resolves the angle from the shared
-        // global Force Settings value (see widgetVisualKit.js).
         const shadowCss = _textShadowCss({
             textShadowEnabled: s[`line${index}ShadowEnabled`],
             textShadowColor: s[`line${index}ShadowColor`],
@@ -312,12 +222,6 @@ export default class GeekStatClockWidget {
 
     _render() {
         if (!this._actor) return;
-        // Every widget always paints its own card now — this one never
-        // had its own Appearance settings (background/corner-radius/
-        // shadow/border/opacity), it relied on ThemeService for that
-        // while themeable:true. Falls back to widgetVisualKit.js's
-        // built-in card defaults until per-widget Appearance fields get
-        // added to config.json (tracked for later, not blocking).
         applyLayeredCardStyle(this._layers, this._settings);
         this._innerPad.set_style("padding: 18px; " + `spacing: ${Math.max(0, Math.round(this._settings.lineSpacing ?? 6))}px;`);
         const now = GLib.DateTime.new_now_local();
@@ -326,14 +230,6 @@ export default class GeekStatClockWidget {
         this._renderLine(this._line3, 3, now);
     }
 
-    // widget_add_child() from XTile Architecture §9, extended with a
-    // block-type/size choice (createChildWidgetFromParent() itself only
-    // ever touches id/parent/name/config - it never picks a
-    // block-type - so the chosen preset's block-type is patched into
-    // the new Child's metadata.json separately, right after creation).
-    // Invoked by the host from the edit-mode toolbar's "Add Widget"
-    // icon (extension.js's _addChildViaEditMode()), not by a button
-    // this widget paints itself.
     async _addChild() {
         const result = await this._promptChildOptions();
         if (!result) return;
@@ -341,10 +237,6 @@ export default class GeekStatClockWidget {
         try {
             const { id: id, path: path } = createChildWidgetFromParent(this._api, this._metadata, result.name, {
                 configOverrides: { ...preset.fontOverrides },
-                // Rescan once ourselves, after the block-type patch
-                // below, so the Child is placed with its real size the
-                // very first time it's discovered instead of briefly
-                // appearing at the template's default 3x1 and resizing.
                 rescan: false
             });
             this._patchChildBlockType(path, preset.blockType);
@@ -362,12 +254,6 @@ export default class GeekStatClockWidget {
         writeJsonFile(metaPath, meta);
     }
 
-    // Minimal GNOME Shell modal prompt: Child Name + a vertical list of
-    // preset buttons for the block-type/size choice (was a cramped
-    // horizontal row before - see stylesheet.css's header comment for why
-    // that row's CSS spacing never actually applied). Returns
-    // {name, presetId} or null on Cancel/empty name - same shape
-    // _addChild() above expects.
     _promptChildOptions() {
         return new Promise(resolve => {
             const dialog = new ModalDialog({ styleClass: "geek-stat-clock-widget-dialog" });
@@ -384,11 +270,6 @@ export default class GeekStatClockWidget {
                 text: "Size"
             });
             dialog.contentLayout.add_child(sizeLabel);
-            // Vertical list, not a horizontal button row: widgets/geek-stat-clock/
-            // stylesheet.css is documentation-only (this host doesn't load a
-            // widget's stylesheet.css into the Shell theme context - see that
-            // file's header comment), so every visual here has to be an inline
-            // St style, not a CSS class/pseudo-class rule.
             const UNSELECTED_STYLE = "padding: 10px 14px; border-radius: 8px; color: #e6e6e6; background-color: rgba(255, 255, 255, 0.06);";
             const SELECTED_STYLE = "padding: 10px 14px; border-radius: 8px; color: #ffffff; background-color: rgba(90, 160, 255, 0.55); font-weight: bold;";
             const presetList = new St.BoxLayout({

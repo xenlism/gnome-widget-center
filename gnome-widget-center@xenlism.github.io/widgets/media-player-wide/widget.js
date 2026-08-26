@@ -126,8 +126,6 @@ export default class MediaPlayerWideWidget {
         this._artistLabel = new St.Label({
             text: ""
         });
-        // Overflowing titles/album/artist text is hidden by the Content
-        // Layer's clip_to_allocation (Rule 4) - no ellipsize substitute.
         for (const label of [ this._titleLabel, this._albumLabel, this._artistLabel ]) label.clutter_text.set_line_wrap(false);
         this._infoBox = new St.BoxLayout({
             vertical: true,

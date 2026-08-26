@@ -163,8 +163,6 @@ export default class WeatherMinimalWidget {
             contentStyleClass: "weather-minimal-widget-root"
         });
         this._actor = this._layers.root;
-        // this._content is a plain wrapper - padding/spacing live here,
-        // never the Content Layer itself (Rule 5).
         this._content = new St.BoxLayout({
             vertical: true
         });

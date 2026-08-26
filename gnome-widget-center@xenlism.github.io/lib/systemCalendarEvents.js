@@ -1,19 +1,3 @@
-// Thin, defensive wrapper around GNOME Shell's own calendar event source
-// (js/ui/calendar.js's DBusEventSource - the same class Shell's built-in
-// date/calendar popup uses to talk to the org.gnome.evolution.dataserver
-// calendar-factory over D-Bus). Bundled widgets that want to show "today's
-// events" should go through this helper rather than importing
-// resource:///org/gnome/shell/ui/calendar.js directly, so a renamed/missing
-// export on some Shell version degrades to "no events" instead of taking
-// the whole widget down.
-//
-// Usage (inside a widget.js):
-//   import { SystemCalendarEvents } from '../../lib/systemCalendarEvents.js';
-//   this._cal = new SystemCalendarEvents(() => this._render());
-//   await this._cal.init();      // call once, e.g. from enable()
-//   const events = this._cal.getEventsForDay(GLib.DateTime.new_now_local());
-//   this._cal.destroy();         // call from disable()
-
 export class SystemCalendarEvents {
     constructor(onChanged) {
         this._onChanged = typeof onChanged === "function" ? onChanged : () => {};
@@ -44,10 +28,6 @@ export class SystemCalendarEvents {
         return this._initPromise;
     }
 
-    /**
-     * @param {GLib.DateTime} day
-     * @returns {Array<{summary: string, allDay: boolean, date: GLib.DateTime, end: GLib.DateTime}>}
-     */
     getEventsForDay(day) {
         if (!this.available || !day) return [];
         try {
@@ -70,7 +50,6 @@ export class SystemCalendarEvents {
             try {
                 this._source.disconnect(this._changedId);
             } catch (e) {
-                // already gone
             }
         }
         this._source?.destroy?.();

@@ -62,13 +62,11 @@ export default class MediaPlayerPosterWidget {
             y_expand: true,
             clip_to_allocation: true
         });
-        // R1: content always matches blocksize.
         this._actor.add_child(this._content);
         this._content.add_constraint(new Clutter.BindConstraint({
             source: this._actor,
             coordinate: Clutter.BindCoordinate.SIZE,
         }));
-        // R5: padding lives on a child wrapper, not on _content itself.
         this._innerPad = new St.BoxLayout({
             vertical: true,
             x_expand: true,
@@ -119,8 +117,6 @@ export default class MediaPlayerPosterWidget {
         this._artistLabel = new St.Label({
             text: ""
         });
-        // Overflowing titles/artists are hidden by the Content Layer's
-        // clip_to_allocation (Rule 4) - no ellipsize substitute.
         for (const label of [ this._titleLabel, this._artistLabel ]) label.clutter_text.set_line_wrap(false);
         this._titleLabel.set_style("margin-top: 12px;");
         this._artistLabel.set_style("margin-top: 3px;");

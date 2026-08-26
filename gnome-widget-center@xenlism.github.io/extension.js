@@ -54,23 +54,11 @@ export default class WidgetCenterExtension extends Extension {
         this._storage.init();
         this._themeService = new ThemeService;
         this._themeService.init();
-        // theme.json (global background/drop-shadow) only drives the edit
-        // mode toolbar's own styling now — see _reapplyTheme() below. Widget
-        // cards are never painted from it; each widget always owns its own
-        // card styling from its own settings.
         this._themeService.watch(() => this._reapplyTheme());
         try {
             const shadowGSettings = this.getSettings("org.gnome.shell.extensions.widget-center");
             this._globalShadowHelper = new GlobalShadowHelper(shadowGSettings);
             setGlobalShadowHelper(this._globalShadowHelper);
-            // shadow-distance/shadow-angle are the only appearance values
-            // shared globally — every widget still owns everything else
-            // about its own card (background/corner-radius/blur/shadow
-            // color+opacity+blur) from its own settings. On a change here,
-            // nudge every widget to re-derive its own card by calling its
-            // OWN _render() (never by writing to entry.actor directly —
-            // that would paint a stray duplicate card on top of the
-            // widget's own).
             this._globalShadowChangedId = this._globalShadowHelper.watch(() => {
                 this._nudgeShadowAngle();
             });
@@ -145,11 +133,6 @@ export default class WidgetCenterExtension extends Extension {
         this._userWidgetsPath = userWidgetsPath;
         const loader = new WidgetLoader([ bundledWidgetsPath, userWidgetsPath ], this._storage, this._logger, this._settings?.isReady ? this._settings.getGlobalValue("widget-spacing") : 0, this._settings, this._themeService, () => this._loadNewlyDiscoveredWidgets());
         this._loader = loader;
-        // Bundled widgets never auto-enable the first time they're seen
-        // (see lib/autoEnablePolicy.js) - without this, a fresh install/
-        // first run auto-loads and places all ~70 widgets shipped with
-        // the extension at once. Widgets under userWidgetsPath are
-        // unaffected and keep auto-loading same as before.
         if (this._settings?.isReady) applyAutoEnablePolicy(this._settings, loader.discover(), userWidgetsPath, this._logger);
         const initialDisabled = new Set(this._settings?.isReady ? this._settings.getGlobalValue("disabled-widgets") : []);
         if (this._settings?.isReady) {
@@ -179,15 +162,10 @@ export default class WidgetCenterExtension extends Extension {
             widgetLoader: this._loader,
             logger: this._logger,
             onWidgetSettings: id => this._openWidgetSettings(id),
-            onWidgetRemove: id => this._removeWidgetViaEditMode(id)
+            onWidgetRemove: id => this._removeWidgetViaEditMode(id),
+            onWidgetUninstall: id => this._uninstallWidget(id, true)
         });
         this._widgetCenterOverlay.enable();
-        // Reuses the same schema/key (theme-screenshot-keybinding) that
-        // themePackExportDialog.js already reads for the accelerator
-        // label - this is what actually claims that keybinding at the
-        // compositor level. See lib/globalScreenshotKeybinding.js for
-        // why a GTK-side shortcut on the dialog window alone can't do
-        // this.
         try {
             const keybindingGSettings = this.getSettings("org.gnome.shell.extensions.widget-center");
             this._globalScreenshotKeybinding = new GlobalScreenshotKeybinding(this, keybindingGSettings, this._logger);
@@ -261,10 +239,6 @@ export default class WidgetCenterExtension extends Extension {
         }
     }
     _reapplyTheme() {
-        // theme.json only drives the edit-mode toolbar's own background/
-        // drop-shadow now (applyGlobalStyle()) — widget cards are always
-        // self-painted from each widget's own settings, never from
-        // ThemeService, so there's nothing to touch here per-widget.
         this._editMode?.reapplyTheme();
     }
     _nudgeShadowAngle() {
@@ -310,11 +284,6 @@ export default class WidgetCenterExtension extends Extension {
             const isUserInstalled = this._userWidgetsPath != null && entry.path.startsWith(this._userWidgetsPath);
             this._editMode.attach(entry.id, entry.actor, {
                 isUserInstalled: isUserInstalled,
-                // Architect Widgets implement _addChild() (see
-                // lib/architectWidgetKit.js) - when present, the
-                // edit-mode toolbar shows an "Add Widget" icon that
-                // calls it, instead of the widget itself painting a
-                // "+ Add Widget" button inline in its own card.
                 hasAddChild: typeof entry.instance?._addChild === "function"
             });
             this._editDrag.attach(entry.id, entry.actor, monitorIndex);
@@ -359,7 +328,7 @@ export default class WidgetCenterExtension extends Extension {
             console.error(`[widget-center] "${widgetId}" could not be reloaded after Reset`);
             return;
         }
-        
+
         const fallback = newEntry.metadata["default-position"] ?? {
             x: 40,
             y: 40
@@ -463,16 +432,15 @@ export default class WidgetCenterExtension extends Extension {
             y: oldEntry.actor.get_y(),
             monitorIndex: this._layer.getMonitorIndexFor(widgetId)
         };
-        
-        // === สลับลำดับตรงนี้: ให้ Detach ตัวเก่าออกจากระบบก่อนเสมอ ===
+
         this._drag?.detach(widgetId);
         this._editDrag?.detach(widgetId);
         this._editMode?.detach(widgetId);
         this._layer.removeWidgetActor(widgetId);
-        
+
         const newEntry = await this._loader.reloadWidget(widgetId);
         if (!newEntry) return;
-        
+
         try {
             this._layer.addWidgetActor(widgetId, newEntry.actor, position);
             this._drag?.attach(widgetId, newEntry.actor, position.monitorIndex);
@@ -501,28 +469,12 @@ export default class WidgetCenterExtension extends Extension {
         }
         this._loadNewlyDiscoveredWidgets(disabledIds);
     }
-    // Discovers any widget directory not yet loaded (and not disabled)
-    // and places it in the running layer - the "pick up a widget that
-    // just appeared on disk" half of _applyDisabledWidgets(), pulled out
-    // so it can also run on its own. Two callers today: the
-    // disabled-widgets settings watcher above (with the ids it already
-    // has fresh from the change signal), and api.host.rescan() (see
-    // lib/widgetLoader.js's _buildApi()) - the hook an Architect Widget
-    // calls right after writing a new Child's files to disk (see
-    // lib/architectWidgetKit.js), where `disabledIds` isn't already at
-    // hand so it's re-read from settings instead.
     _loadNewlyDiscoveredWidgets(disabledIds = null) {
         if (!this._loader || !this._layer) return;
         if (this._applyingThemePack) return;
         const discovered = this._loader.discover();
         let disabled = disabledIds ?? new Set(this._settings?.isReady ? this._settings.getGlobalValue("disabled-widgets") : []);
         if (this._settings?.isReady) {
-            // Same first-ever-discovery policy as enable() - covers a
-            // bundled widget that only shows up after an extension
-            // update, not just the initial install. Merge the policy's
-            // result into whatever set the caller handed us, since a
-            // caller-provided `disabledIds` snapshot won't yet include
-            // an id the policy just newly disabled.
             const reconciled = applyAutoEnablePolicy(this._settings, discovered, this._userWidgetsPath, this._logger);
             disabled = disabledIds ? new Set([ ...disabledIds, ...reconciled ]) : reconciled;
         }

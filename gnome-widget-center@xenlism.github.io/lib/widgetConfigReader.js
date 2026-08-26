@@ -11,15 +11,6 @@ export function widgetHasConfigJson(widgetPath) {
     return fileExists(configPath);
 }
 
-// Folds in whichever of the shared Card/Blur/Shadow/Border/Opacity
-// fields (lib/appearanceFieldsSchema.js) this widget's own config.json
-// doesn't already declare, so every widget always has an Appearance
-// section - never mutates/duplicates a field the widget already
-// defines under a matching id (a widget's own definition, wherever it
-// lives in its tabs, always wins). Runs on the already-validated
-// config, so it never needs to fail the widget's own load - if
-// something about the merge itself goes wrong, the widget's own config
-// still loads untouched.
 function mergeAppearanceFields(config) {
     try {
         const existingIds = new Set;

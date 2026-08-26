@@ -93,8 +93,6 @@ export class EditModeDragController {
             parent?.set_child_above_sibling(actor, null);
             parent?.set_child_above_sibling(backActor, null);
             const placeholder = this._buildPlaceholder(width, height);
-            // The drag can start while monitor reconciliation is moving the
-            // actor. Insert only when actor is still this parent's child.
             if (!parent?.get_stage?.() || actor.get_parent() !== parent) {
                 placeholder.destroy();
                 return Clutter.EVENT_STOP;

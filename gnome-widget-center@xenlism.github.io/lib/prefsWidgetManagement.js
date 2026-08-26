@@ -24,7 +24,6 @@ import { SettingsStore } from "./settingsStore.js";
 
 import { buildGroup as buildSettingsJsGroup } from "./settingsRenderer.js";
 
-
 import { rgbaToHex } from "./colorUtils.js";
 
 import { loadTranslations } from "../i18n/index.js";
@@ -35,12 +34,6 @@ import { applyAutoEnablePolicy } from "./autoEnablePolicy.js";
 
 import { PrefsWidgetList } from "./prefsWidgetList.js";
 
-// Same collision-safe fill-the-gaps merge readWidgetConfig() does for
-// config.json (see lib/widgetConfigReader.js) - only reached by a
-// widget with no config.json AND no prefs.js AND no settings.js, so
-// nothing in the current widget set actually hits this (every widget
-// here has a config.json) - future-proofing for a plain
-// metadata.json-only widget.
 function mergeAppearanceFieldsFlat(fields) {
     const existingIds = new Set(fields.map(f => f.id));
     const missing = buildAppearanceFieldsFlat().filter(f => !existingIds.has(f.id));
@@ -48,10 +41,6 @@ function mergeAppearanceFieldsFlat(fields) {
 }
 
 export const PrefsWidgetManagementMixin = Base => class extends Base {
-    // `discovered` is the full widget-info array (needs .path, not just
-    // .id) so the shared policy can tell bundled widgets apart from
-    // ones under `userWidgetsPath` - see autoEnablePolicy.js for the
-    // actual bundled-vs-user rule.
     applyAutoEnablePolicy(settings, discovered, userWidgetsPath) {
         return applyAutoEnablePolicy(settings, discovered, userWidgetsPath, {
             error: (message, e) => logError(e, message)
@@ -71,22 +60,6 @@ export const PrefsWidgetManagementMixin = Base => class extends Base {
         }
         this._jumpToWidgetPrefs(window, settings, storage, discovered, requestedId);
     }
-    // [FIX] wc-jump-to-widget-stale-discovery: `discovered` here can be a
-    // SNAPSHOT taken whenever this controller/window was first built
-    // (widget-center-prefs-app.js only calls controller.build() once per
-    // process - see presentWindow()'s `if (!controller)` guard - and reuses
-    // the same controller/window for every later `--widget-id=` command-line
-    // invocation as long as the Settings window is still open). A widget
-    // created AFTER that snapshot - e.g. an Architect Widget's freshly
-    // created Child (lib/architectWidgetKit.js's createChildWidgetFromParent(),
-    // which stamps a brand-new on-disk widget id like
-    // "xtile-Keyboard-20260826152040" and immediately asks to jump straight
-    // to its settings) - is genuinely on disk by the time this runs, just
-    // not yet in the stale in-memory `discovered` array. A plain
-    // `discovered.find()` here would report it "not found" and give up even
-    // though a fresh disk scan would find it right away - so retry once
-    // against a fresh scan before concluding the widget really doesn't
-    // exist.
     _rescanDiscovered() {
         const bundledWidgetsPath = this._bundledWidgetsPath ?? GLib.build_filenamev([ this.path, "widgets" ]);
         const userWidgetsPath = this._userWidgetsPath ?? GLib.build_filenamev([ GLib.get_user_data_dir(), "gnome-widget-center", "widgets" ]);
@@ -103,8 +76,6 @@ export const PrefsWidgetManagementMixin = Base => class extends Base {
         }
         let widget = discovered.find(w => w.id === requestedId);
         if (!widget) {
-            // Stale snapshot - see the comment on _rescanDiscovered() above.
-            // Re-scan disk once and retry before giving up for real.
             const fresh = this._rescanDiscovered();
             widget = fresh.find(w => w.id === requestedId);
         }

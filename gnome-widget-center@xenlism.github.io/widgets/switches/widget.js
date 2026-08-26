@@ -191,8 +191,6 @@ export default class SwitchesWidget {
             contentStyleClass: "switches-widget-content",
         });
         this._actor = this._layers.root;
-        // this._content is a plain wrapper - the Content Layer itself
-        // (this._layers.content) carries no style of its own (Rule 5).
         this._content = new St.Bin({
             x_align: Clutter.ActorAlign.CENTER,
             y_align: Clutter.ActorAlign.CENTER,
@@ -367,12 +365,6 @@ export default class SwitchesWidget {
         if (!this._defaultSink) return;
         this._defaultSink.change_is_muted(!this._defaultSink.is_muted);
     }
-    /** @private Prefers GNOME Shell's own Main.brightnessManager (the same
-     * BrightnessScale machinery the hardware brightness keys use), since it
-     * covers external/DisplayPort/HDMI monitor backlights too. Falls back
-     * to the org.gnome.SettingsDaemon.Power.Screen DBus proxy (built-in
-     * panel only) when brightnessManager isn't available - older GNOME
-     * versions, or a session type where it never got instantiated. */
     _connectBrightness() {
         const globalScale = Main.brightnessManager?.scales?.find(s => !s.monitor);
         if (globalScale) {
@@ -418,11 +410,6 @@ export default class SwitchesWidget {
             return;
         }
         if (!this._brightnessProxy) {
-            // The proxy can fail to connect once (e.g. gsd-power isn't up
-            // yet right after login) and, without this, would stay null
-            // for the widget's whole lifetime - silently doing nothing on
-            // every future drag with no way to recover except toggling
-            // the widget off/on. Retry lazily here instead.
             this._connectBrightness();
             if (!this._brightnessProxy) return;
         }

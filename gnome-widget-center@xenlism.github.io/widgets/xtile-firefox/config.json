@@ -3,9 +3,9 @@
     "tabs": [
         {
             "id": "general",
-            "label": "Xtile",
+            "label": "Xtile Firefox",
             "description": "App launcher tile - icon centered, app name at the bottom.",
-            "icon": "view-grid-symbolic",
+            "icon": "web-browser-symbolic",
             "groups": [
                 {
                     "id": "app",
@@ -66,10 +66,10 @@
                         {
                             "id": "labelText",
                             "label": "Custom label",
-                            "description": "Leave blank to use the app's own name from its .desktop file. Set automatically from the name you typed when this tile was created.",
+                            "description": "Leave blank to use the app's own name from its .desktop file",
                             "dataType": "string",
                             "fieldType": "text",
-                            "default": "firefox",
+                            "default": "",
                             "visibleIf": "showLabel"
                         },
                         {

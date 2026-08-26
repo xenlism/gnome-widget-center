@@ -4,14 +4,6 @@ import Gtk from "gi://Gtk";
 
 import Gio from "gi://Gio";
 
-// `onClose` (optional) fires once the user dismisses this dialog - use it
-// to close/destroy `window` *after* that, never before. `window` is this
-// dialog's transient_for, and closing it out from under a still-open
-// modal child leaves that child dangling with no live parent, which can
-// hang the whole prefs process instead of just closing it (see
-// themePackExportDialog.js's export-success handler, which used to call
-// window.close() immediately after present() here - that was the actual
-// cause of "prefs freezes after Export Theme Pack…").
 export function showReportDialog(window, title, bodyText, onClose) {
     const dialog = new Adw.MessageDialog({
         transient_for: window,

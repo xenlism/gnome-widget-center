@@ -19,14 +19,12 @@ import {
 
 import { configJsonDefaults } from "../../lib/widgetConfigDefaults.js";
 
-
 const SIZE = 176;
 
 const RING_SIZE = 153;
 const RING_THICKNESS = 6;
 
 const COVER_SIZE = 104;
-
 
 function _parseFontDescription(fontStr, fallbackFamily, fallbackSize) {
     try {
@@ -54,7 +52,6 @@ function _parseFontDescription(fontStr, fallbackFamily, fallbackSize) {
     }
 }
 
-
 export default class MediaPlayerCircleWidget {
 
     constructor(api) {
@@ -77,22 +74,8 @@ export default class MediaPlayerCircleWidget {
         this._hoverId = null;
     }
 
-
     buildActor() {
 
-        /*
-         * Main widget
-         *
-         * Use fixed SIZE instead of BindConstraint.
-         * This gives us a reliable coordinate system:
-         *
-         * 0,0 ---------------- 176,0
-         *  |                    |
-         *  |       CENTER       |
-         *  |      (88,88)       |
-         *  |                    |
-         * 0,176 -------------- 176,176
-         */
         this._actor = new St.Widget({
             layout_manager: new Clutter.BinLayout(),
             width: SIZE,
@@ -100,13 +83,6 @@ export default class MediaPlayerCircleWidget {
             reactive: true
         });
 
-
-        /*
-         * Content layer
-         *
-         * Fixed size = widget size.
-         * This makes manual x/y centering predictable.
-         */
         this._content = new St.Widget({
             layout_manager: new Clutter.BinLayout(),
             width: SIZE,
@@ -116,20 +92,6 @@ export default class MediaPlayerCircleWidget {
 
         this._actor.add_child(this._content);
 
-
-        /*
-         * =========================
-         * Progress Ring
-         * =========================
-         *
-         * Center manually.
-         *
-         * (176 - 153) / 2 = 11.5
-         *
-         * Using Math.round gives:
-         * x = 12
-         * y = 12
-         */
         this._ringArea = new St.DrawingArea({
             width: RING_SIZE,
             height: RING_SIZE,
@@ -147,20 +109,6 @@ export default class MediaPlayerCircleWidget {
             () => this._onRingRepaint()
         );
 
-
-        /*
-         * =========================
-         * Cover Stack
-         * =========================
-         *
-         * Center manually.
-         *
-         * (176 - 104) / 2 = 36
-         *
-         * So:
-         * x = 36
-         * y = 36
-         */
         this._coverStack = new St.Widget({
             layout_manager: new Clutter.BinLayout(),
 
@@ -180,7 +128,6 @@ export default class MediaPlayerCircleWidget {
 
         this._content.add_child(this._coverStack);
 
-
         this._fallbackArea = new St.DrawingArea({
             width: COVER_SIZE,
             height: COVER_SIZE
@@ -193,10 +140,6 @@ export default class MediaPlayerCircleWidget {
             () => this._onFallbackRepaint()
         );
 
-
-        /*
-         * Fallback icon
-         */
         this._fallbackIcon = new St.Icon({
             icon_name: "audio-x-generic-symbolic",
             icon_size: 40,
@@ -208,7 +151,6 @@ export default class MediaPlayerCircleWidget {
         });
 
         this._coverStack.add_child(this._fallbackIcon);
-
 
         this._artIcon = new St.Widget({
             width: COVER_SIZE,
@@ -228,7 +170,6 @@ export default class MediaPlayerCircleWidget {
 
         this._coverStack.add_child(this._artIcon);
 
-
         this._titleLabel = new St.Label({
             text: "No media playing"
         });
@@ -237,19 +178,12 @@ export default class MediaPlayerCircleWidget {
             text: ""
         });
 
-
-        /*
-         * Do not ellipsize.
-         *
-         * Content layer clips anything that overflows.
-         */
         for (const label of [
             this._titleLabel,
             this._artistLabel
         ]) {
             label.clutter_text.set_line_wrap(false);
         }
-
 
         this._textBox = new St.BoxLayout({
             vertical: true,
@@ -269,7 +203,6 @@ export default class MediaPlayerCircleWidget {
 
         this._content.add_child(this._textBox);
 
-
         this._coverButton = new St.Button({
             x_expand: true,
             y_expand: true,
@@ -287,7 +220,6 @@ export default class MediaPlayerCircleWidget {
 
         this._content.add_child(this._coverButton);
 
-
         this._prevButton = this._makeButton(
             "media-skip-backward-symbolic",
             () => this._media.previous()
@@ -302,7 +234,6 @@ export default class MediaPlayerCircleWidget {
             "media-skip-forward-symbolic",
             () => this._media.next()
         );
-
 
         this._controls = new St.BoxLayout({
             x_align: Clutter.ActorAlign.CENTER,
@@ -321,7 +252,6 @@ export default class MediaPlayerCircleWidget {
 
         this._content.add_child(this._controls);
 
-
         this._actor.set_track_hover(true);
 
         this._hoverId = this._actor.connect(
@@ -331,13 +261,11 @@ export default class MediaPlayerCircleWidget {
             }
         );
 
-
         this._render();
         this._renderState(null);
 
         return this._actor;
     }
-
 
     enable() {
         this._media.start(
@@ -345,13 +273,11 @@ export default class MediaPlayerCircleWidget {
         );
     }
 
-
     disable() {
 
         this._media.stop();
 
         this._stopTicker();
-
 
         if (
             this._ringRepaintId !== null &&
@@ -364,7 +290,6 @@ export default class MediaPlayerCircleWidget {
             this._ringRepaintId = null;
         }
 
-
         if (
             this._fallbackRepaintId !== null &&
             this._fallbackArea
@@ -375,7 +300,6 @@ export default class MediaPlayerCircleWidget {
 
             this._fallbackRepaintId = null;
         }
-
 
         if (
             this._hoverId !== null &&
@@ -389,7 +313,6 @@ export default class MediaPlayerCircleWidget {
         }
     }
 
-
     getDefaultSettings() {
         return {
             ...configJsonDefaults(import.meta.url),
@@ -399,11 +322,9 @@ export default class MediaPlayerCircleWidget {
         };
     }
 
-
     onSettingsChanged() {
         this._render();
     }
-
 
     _makeButton(iconName, onClicked) {
 
@@ -422,7 +343,6 @@ export default class MediaPlayerCircleWidget {
         return button;
     }
 
-
     _onPlayClicked() {
 
         if (!this._state) {
@@ -433,7 +353,6 @@ export default class MediaPlayerCircleWidget {
         this._media.playPause();
     }
 
-
     _onCoverClicked() {
 
         if (this._state) {
@@ -443,7 +362,6 @@ export default class MediaPlayerCircleWidget {
 
         this._launchApp();
     }
-
 
     _launchApp() {
 
@@ -476,12 +394,8 @@ export default class MediaPlayerCircleWidget {
         }
     }
 
-
     _render() {
 
-        /*
-         * Card style
-         */
         this._actor.set_style(
             this._api.resolveCardCss?.() ??
             _cardStyleCss(
@@ -492,10 +406,6 @@ export default class MediaPlayerCircleWidget {
             )
         );
 
-
-        /*
-         * Text colors / fonts
-         */
         const infoColor = _toCssColor(
             this._settings.infoColor,
             "#FFFFFFFF"
@@ -507,7 +417,6 @@ export default class MediaPlayerCircleWidget {
             11
         );
 
-
         this._titleLabel.set_style(
             `color: ${infoColor}; ` +
             `font-family: ${infoFont.family}; ` +
@@ -515,7 +424,6 @@ export default class MediaPlayerCircleWidget {
             `font-weight: bold; ` +
             `text-align: center;`
         );
-
 
         this._artistLabel.set_style(
             `color: ${infoColor}; ` +
@@ -525,15 +433,10 @@ export default class MediaPlayerCircleWidget {
             `text-align: center;`
         );
 
-
-        /*
-         * Control buttons
-         */
         const buttonColor = _toCssColor(
             this._settings.buttonColor,
             "#FFFFFFFF"
         );
-
 
         for (const button of [
             this._prevButton,
@@ -553,10 +456,6 @@ export default class MediaPlayerCircleWidget {
             );
         }
 
-
-        /*
-         * Repaint custom drawing areas
-         */
         if (this._ringArea)
             this._ringArea.queue_repaint();
 
@@ -564,11 +463,9 @@ export default class MediaPlayerCircleWidget {
             this._fallbackArea.queue_repaint();
     }
 
-
     _renderState(state) {
 
         this._state = state;
-
 
         if (!state) {
 
@@ -592,7 +489,6 @@ export default class MediaPlayerCircleWidget {
             return;
         }
 
-
         this._textBox.show();
 
         this._titleLabel.set_text(
@@ -603,16 +499,11 @@ export default class MediaPlayerCircleWidget {
             state.artist
         );
 
-
         this._playPauseButton.child.icon_name =
             state.status === "Playing"
                 ? "media-playback-pause-symbolic"
                 : "media-playback-start-symbolic";
 
-
-        /*
-         * Album art
-         */
         if (state.artUrl.length > 0) {
 
             try {
@@ -621,7 +512,6 @@ export default class MediaPlayerCircleWidget {
                     state.artUrl.startsWith("file://")
                         ? Gio.File.new_for_uri(state.artUrl)
                         : Gio.File.new_for_path(state.artUrl);
-
 
                 this._artIcon.set_style(
                     this._coverBackgroundStyle(file)
@@ -639,21 +529,15 @@ export default class MediaPlayerCircleWidget {
             this._showFallbackArt();
         }
 
-
-        /*
-         * Position tracking
-         */
         this._baseMonotonicUs =
             GLib.get_monotonic_time();
 
         this._basePositionMs =
             state.positionMs;
 
-
         this._updateFraction(
             state.lengthMs
         );
-
 
         if (state.status === "Playing") {
 
@@ -665,12 +549,10 @@ export default class MediaPlayerCircleWidget {
         }
     }
 
-
     _startTicker() {
 
         if (this._tickTimerId !== null)
             return;
-
 
         this._tickTimerId =
             GLib.timeout_add_seconds(
@@ -687,7 +569,6 @@ export default class MediaPlayerCircleWidget {
             );
     }
 
-
     _stopTicker() {
 
         if (this._tickTimerId !== null) {
@@ -700,7 +581,6 @@ export default class MediaPlayerCircleWidget {
         }
     }
 
-
     _updateFraction(lengthMs) {
 
         const elapsedMs =
@@ -709,11 +589,9 @@ export default class MediaPlayerCircleWidget {
                 this._baseMonotonicUs
             ) / 1e3;
 
-
         const positionMs =
             this._basePositionMs +
             elapsedMs;
-
 
         this._fraction =
             lengthMs > 0
@@ -726,11 +604,9 @@ export default class MediaPlayerCircleWidget {
                 )
                 : 0;
 
-
         if (this._ringArea)
             this._ringArea.queue_repaint();
     }
-
 
     _showArt() {
 
@@ -741,20 +617,9 @@ export default class MediaPlayerCircleWidget {
         this._fallbackIcon.hide();
     }
 
-
-    /**
-     * St's CSS engine doesn't actually center a
-     * "background-size: cover; background-position: center;"
-     * declaration the way a browser would.
-     *
-     * Compute explicit pixel background-size and
-     * background-position so non-square artwork is
-     * scaled to cover and centered correctly.
-     */
     _coverBackgroundStyle(file) {
 
         const uri = file.get_uri();
-
 
         const fallback =
             `border-radius: 999px; ` +
@@ -762,16 +627,13 @@ export default class MediaPlayerCircleWidget {
             `background-position: 0px 0px; ` +
             `background-image: url("${uri}");`;
 
-
         const path = file.get_path();
 
         if (!path)
             return fallback;
 
-
         let width;
         let height;
-
 
         try {
 
@@ -786,20 +648,14 @@ export default class MediaPlayerCircleWidget {
             return fallback;
         }
 
-
         if (!width || !height)
             return fallback;
 
-
-        /*
-         * Scale image to cover the entire circle.
-         */
         const scale =
             Math.max(
                 COVER_SIZE / width,
                 COVER_SIZE / height
             );
-
 
         const scaledWidth =
             Math.ceil(width * scale);
@@ -807,10 +663,6 @@ export default class MediaPlayerCircleWidget {
         const scaledHeight =
             Math.ceil(height * scale);
 
-
-        /*
-         * Center the scaled image.
-         */
         const offsetX =
             -Math.round(
                 (scaledWidth - COVER_SIZE) / 2
@@ -821,7 +673,6 @@ export default class MediaPlayerCircleWidget {
                 (scaledHeight - COVER_SIZE) / 2
             );
 
-
         return (
             `border-radius: 999px; ` +
             `background-size: ${scaledWidth}px ${scaledHeight}px; ` +
@@ -829,7 +680,6 @@ export default class MediaPlayerCircleWidget {
             `background-image: url("${uri}");`
         );
     }
-
 
     _showFallbackArt() {
 
@@ -840,31 +690,21 @@ export default class MediaPlayerCircleWidget {
         this._fallbackIcon.show();
     }
 
-
     _onRingRepaint() {
 
         const cr =
             this._ringArea.get_context();
 
-
-        /*
-         * Clear canvas
-         */
         cr.setOperator(
             Cairo.Operator.CLEAR
         );
 
         cr.paint();
 
-
         cr.setOperator(
             Cairo.Operator.OVER
         );
 
-
-        /*
-         * Colors
-         */
         const baseColor =
             _hexToRgba("#FFFFFF26");
 
@@ -874,27 +714,17 @@ export default class MediaPlayerCircleWidget {
                 "#F5A623FF"
             );
 
-
-        /*
-         * Ring coordinate system is 153x153.
-         *
-         * Therefore the ring itself is perfectly
-         * centered inside _ringArea.
-         */
         const cx =
             RING_SIZE / 2;
 
         const cy =
             RING_SIZE / 2;
 
-
         const radius =
             (RING_SIZE - RING_THICKNESS) / 2 - 2;
 
-
         const startAngle =
             -Math.PI / 2;
-
 
         const fraction =
             Math.max(
@@ -905,15 +735,10 @@ export default class MediaPlayerCircleWidget {
                 )
             );
 
-
         const endAngle =
             startAngle +
             fraction * 2 * Math.PI;
 
-
-        /*
-         * Base ring
-         */
         cr.setLineWidth(
             RING_THICKNESS
         );
@@ -929,7 +754,6 @@ export default class MediaPlayerCircleWidget {
             baseColor.a
         );
 
-
         cr.arc(
             cx,
             cy,
@@ -940,10 +764,6 @@ export default class MediaPlayerCircleWidget {
 
         cr.stroke();
 
-
-        /*
-         * Progress ring
-         */
         if (fraction > 0) {
 
             cr.setSourceRGBA(
@@ -952,7 +772,6 @@ export default class MediaPlayerCircleWidget {
                 ringColor.b,
                 ringColor.a
             );
-
 
             cr.arc(
                 cx,
@@ -965,16 +784,13 @@ export default class MediaPlayerCircleWidget {
             cr.stroke();
         }
 
-
         cr.$dispose();
     }
-
 
     _onFallbackRepaint() {
 
         const cr =
             this._fallbackArea.get_context();
-
 
         const w =
             COVER_SIZE;
@@ -982,35 +798,22 @@ export default class MediaPlayerCircleWidget {
         const h =
             COVER_SIZE;
 
-
-        /*
-         * Clear
-         */
         cr.setOperator(
             Cairo.Operator.CLEAR
         );
 
         cr.paint();
 
-
         cr.setOperator(
             Cairo.Operator.OVER
         );
 
-
-        /*
-         * Gradient colors
-         */
         const start =
             _hexToRgba("#FF8A00FF");
 
         const end =
             _hexToRgba("#B3260AFF");
 
-
-        /*
-         * Gradient
-         */
         const gradient =
             new Cairo.LinearGradient(
                 0,
@@ -1018,7 +821,6 @@ export default class MediaPlayerCircleWidget {
                 w,
                 h
             );
-
 
         gradient.addColorStopRGBA(
             0,
@@ -1028,7 +830,6 @@ export default class MediaPlayerCircleWidget {
             start.a
         );
 
-
         gradient.addColorStopRGBA(
             1,
             end.r,
@@ -1037,10 +838,6 @@ export default class MediaPlayerCircleWidget {
             end.a
         );
 
-
-        /*
-         * Circle
-         */
         cr.arc(
             w / 2,
             h / 2,
@@ -1049,13 +846,11 @@ export default class MediaPlayerCircleWidget {
             2 * Math.PI
         );
 
-
         cr.setSource(
             gradient
         );
 
         cr.fill();
-
 
         cr.$dispose();
     }

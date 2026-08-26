@@ -16,11 +16,6 @@ const FACE_MARGIN = 4;
 
 const HOUR_NUMERALS = [ "12", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11" ];
 
-// Strip weight/style keywords out of a Pango-style family string so
-// Cairo's toy font-face selection gets a plain family name - passing
-// "Sans Bold" straight through to selectFontFace() is unreliable across
-// fontconfig setups, so the weight is applied via Cairo.FontWeight
-// instead of being left in the family string.
 function _splitFamilyAndWeight(family) {
     const isBold = /\bbold\b/i.test(family ?? "");
     const plain = (family ?? "Sans").replace(/\b(bold|italic|oblique|light|medium|regular)\b/gi, "").trim() || "Sans";
@@ -188,12 +183,10 @@ export default class ClockAnalogClassicWidget {
         const cy = FACE_SIZE / 2;
         const radius = FACE_SIZE / 2 - FACE_MARGIN;
 
-        // Face
         this._setSourceHex(cr, s.faceColor, "#FFFFFFFF");
         cr.arc(cx, cy, radius, 0, 2 * Math.PI);
         cr.fill();
 
-        // Tick marks (60 positions, hour ticks longer/thicker)
         const showMinuteTicks = s.showMinuteTicks ?? true;
         for (let i = 0; i < 60; i++) {
             const isHourTick = i % 5 === 0;
@@ -209,7 +202,6 @@ export default class ClockAnalogClassicWidget {
             cr.stroke();
         }
 
-        // Numerals - classic face always shows all 12
         {
             const { family, size } = _parseFontDescription(s.numberFont ?? "Sans Bold 13", "Sans Bold", 13);
             const { family: cairoFamily, bold } = _splitFamilyAndWeight(family);
@@ -225,7 +217,6 @@ export default class ClockAnalogClassicWidget {
             }
         }
 
-        // Hands
         const hourInSpan = this._now.hour % 12;
         const hourAngle = ((hourInSpan + this._now.minute / 60) / 12) * 2 * Math.PI - Math.PI / 2;
         const minuteAngle = ((this._now.minute + this._now.second / 60) / 60) * 2 * Math.PI - Math.PI / 2;
@@ -237,7 +228,6 @@ export default class ClockAnalogClassicWidget {
             this._drawHand(cr, cx, cy, secondAngle, radius * 0.8, 1.4, s.secondHandColor, "#D81F26FF");
         }
 
-        // Center pivot
         this._setSourceHex(cr, s.hourHandColor, "#1A1A1AFF");
         cr.arc(cx, cy, 3, 0, 2 * Math.PI);
         cr.fill();

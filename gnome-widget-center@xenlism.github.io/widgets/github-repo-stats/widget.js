@@ -14,17 +14,8 @@ import { configJsonDefaults } from "../../lib/widgetConfigDefaults.js";
 
 const API_BASE = "https://api.github.com";
 
-// Unauthenticated GitHub REST calls are capped at 60/hour per IP - the
-// config.json min for refreshInterval is 5 minutes, but keep a hard
-// floor here too in case settings ever end up with something smaller
-// or non-numeric.
 const MIN_REFRESH_MINUTES = 5;
 
-// How long to wait, after the user stops typing in owner/repo (or the
-// token field), before actually firing a fetch - see WIDGET_API.md §3
-// and the brief for why: config.json's "text"/"password" fields save on
-// every keystroke, and re-fetching on every one of those would burn
-// through the unauthenticated rate limit almost immediately.
 const SETTINGS_DEBOUNCE_MS = 800;
 
 const REPO_PATH_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
@@ -45,7 +36,6 @@ export default class GithubRepoStatsWidget {
         this._httpSession = null;
         this._lastRepoPath = null;
         this._lastToken = null;
-        // "loading" | "error" | "loaded"
         this._state = "loading";
         this._errorMessage = "";
         this._data = {
@@ -90,9 +80,6 @@ export default class GithubRepoStatsWidget {
         this._content.add_child(this._repoLabel);
         this._content.add_child(this._statsRow);
         this._content.add_child(this._statusLabel);
-        // buildActor() must never throw and must never block on the
-        // network (WIDGET_API.md §3) - render the placeholder/loading
-        // state synchronously first, kick the actual fetch off async.
         this._render();
         this._refresh();
         return this._actor;
@@ -155,8 +142,6 @@ export default class GithubRepoStatsWidget {
         const session = this._getHttpSession();
         const message = Soup.Message.new("GET", url);
         if (!message) throw new Error(`invalid URL: ${url}`);
-        // GitHub's REST API always requires a User-Agent, and rejects
-        // requests without one.
         message.get_request_headers().append("User-Agent", "gnome-widget-center-github-repo-stats");
         if (token) message.get_request_headers().append("Authorization", `Bearer ${token}`);
         const bytes = await session.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null);
@@ -187,10 +172,6 @@ export default class GithubRepoStatsWidget {
             this._data.stars = repo.stargazers_count ?? null;
             this._data.forks = repo.forks_count ?? null;
             this._data.issues = repo.open_issues_count ?? null;
-            // A separate call, on purpose (WIDGET_API.md brief): a repo
-            // with no releases 404s here even though the repo itself
-            // loaded fine, so this must never throw out of _refresh() -
-            // just hide the release row.
             try {
                 const release = await this._fetchJson(`${API_BASE}/repos/${repoPath}/releases/latest`, token);
                 this._data.releaseTag = release.tag_name ?? null;

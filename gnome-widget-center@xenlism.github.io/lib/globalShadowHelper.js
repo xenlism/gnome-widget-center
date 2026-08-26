@@ -17,14 +17,6 @@ function coerceAngle(value) {
     return SHADOW_ANGLE_STEPS.includes(n) ? n : DEFAULT_ANGLE;
 }
 
-// Force Settings (the old GSettings force-* switches that could pin
-// every widget's background/corner-radius/blur/shadow to one global
-// value) has been removed. The only thing that's still global is the
-// shadow's light-source direction - shadow-distance/shadow-angle -
-// which every widget's own drop shadow always uses, on top of whatever
-// else the widget sets for itself (color/opacity/blur/spread stay
-// per-widget). This class just reads those two GSettings keys and
-// notifies on change.
 export class GlobalShadowHelper {
     constructor(settings) {
         this._settings = settings;

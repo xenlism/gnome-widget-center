@@ -24,8 +24,6 @@ export default class CalendarMiniEventsWidget {
             contentStyleClass: "calendar-mini-events-widget-root"
         });
         this._actor = this._layers.root;
-        // this._content is a plain wrapper - padding/spacing live here,
-        // never the Content Layer itself (Rule 5).
         this._content = new St.BoxLayout({
             vertical: true
         });
@@ -126,13 +124,6 @@ export default class CalendarMiniEventsWidget {
         const bg = toCssColor(s.eventCardBgColor ?? "#2C2C2EFF", "#2C2C2EFF");
         const cornerRadius = Number.isFinite(s.eventCardCornerRadius) ? s.eventCardCornerRadius : 12;
 
-        // Same inset-blur structure as widgets/calendar-events/widget.js's
-        // _buildEventCard() - see that function's comment for the full
-        // reasoning. `rowOuter` (BinLayout) holds background-color +
-        // border-radius only; `rowBlurInset`, inset by cornerRadius+2px,
-        // holds the actual blur; the original `row` BoxLayout (tab +
-        // text columns) goes on top of both, transparent, unchanged
-        // otherwise.
         const rowOuter = new St.Widget({
             layout_manager: new Clutter.BinLayout,
             x_expand: true,

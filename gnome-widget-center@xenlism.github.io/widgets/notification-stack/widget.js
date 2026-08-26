@@ -7,9 +7,6 @@ import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import { SHADOW_DEFAULTS, BLUR_DEFAULTS, shadowBoxShadowCss, borderCss, toCssColor, parseFontDescription, resolveCornerRadius } from "../../lib/widgetVisualKit.js";
 import { applyCardBlur } from "../../lib/cardLayers.js";
 
-// Sample content shown until a real notification arrives, so the widget
-// never renders empty on first placement (see WIDGET_API.md §3:
-// buildActor() must never throw / never look broken with no data yet).
 const _DEMO_NOTIFICATIONS = [ {
     appName: "Fitness",
     isTimeSensitive: false,
@@ -58,7 +55,6 @@ export default class NotificationStackWidget {
                 if (ids.notificationAdded !== null) source.disconnect(ids.notificationAdded);
                 if (ids.destroy !== null) source.disconnect(ids.destroy);
             } catch (e) {
-                // source already gone
             }
         }
         this._notificationIds.clear();
@@ -137,15 +133,6 @@ export default class NotificationStackWidget {
         const cornerRadius = resolveCornerRadius(s, 20);
         const bg = toCssColor(s.cardBgColor ?? "#3A3A3CC2", "#3A3A3CC2");
 
-        // Same inset-blur structure as widgets/calendar-events/widget.js's
-        // _buildEventCard() - see that function's comment for the full
-        // reasoning. `cardOuter` (BinLayout) carries background-color,
-        // border-radius, border and shadow (all plain CSS, correctly
-        // rounded); `cardBlurInset`, inset by cornerRadius+2px, carries
-        // the actual blur; the original `card` BoxLayout (icon + text
-        // columns) goes on top of both, transparent, unchanged otherwise
-        // apart from moving the padding onto it instead of the old single
-        // combined actor.
         const cardOuter = new St.Widget({
             layout_manager: new Clutter.BinLayout,
             style_class: "notification-stack-widget-card",

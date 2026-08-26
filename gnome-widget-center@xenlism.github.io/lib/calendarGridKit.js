@@ -1,19 +1,8 @@
 import GLib from "gi://GLib";
 
-// Shared month-grid logic for calendar-style bundled widgets
-// (calendar-events, calendar-mini-events, calendar-plain). Avoids each
-// widget carrying its own byte-identical copy of "build a 6x7 month
-// matrix" - see WIDGET_API.md §9.3 for the same rationale applied to
-// widgetVisualKit.js.
-
 export const WEEKDAY_LABELS_SUN_START = [ "Su", "Mo", "Tu", "We", "Th", "Fr", "Sa" ];
 export const WEEKDAY_LABELS_MON_START = [ "Mo", "Tu", "We", "Th", "Fr", "Sa", "Su" ];
 
-/**
- * @param {GLib.DateTime} refDate any date inside the month to render
- * @param {boolean} mondayStart true = week starts on Monday
- * @returns {{ year: number, month: number, monthLabel: string, weeks: Array<Array<{day: number, inMonth: boolean, isToday: boolean, date: GLib.DateTime}>> }}
- */
 export function buildMonthGrid(refDate, mondayStart = false) {
     const year = refDate.get_year();
     const month = refDate.get_month();
@@ -22,7 +11,6 @@ export function buildMonthGrid(refDate, mondayStart = false) {
     const monthLabel = first.format("%B") ?? "";
     const daysInMonth = _daysInMonth(year, month);
 
-    // GLib's get_day_of_week(): 1 = Monday .. 7 = Sunday.
     const firstDow = first.get_day_of_week();
     const leading = mondayStart ? firstDow - 1 : firstDow % 7;
 

@@ -1,8 +1,3 @@
-/* Card preview (screenshot and non-screenshot/fallback) is locked to a
- * 3:1 width:height ratio - see _buildScreenshot(). The
- * wc-overlay-card-screenshot CSS height (stylesheet.css) is kept in sync
- * with that ratio. */
-
 import Clutter from "gi://Clutter";
 
 import GdkPixbuf from "gi://GdkPixbuf";
@@ -64,6 +59,7 @@ export class WidgetCenterOverlay {
         this._overlay = null;
         this._contentBin = null;
         this._tabButtons = {};
+        this._activeSearchEntry = null;
         this._activeTab = "overview";
         this._keyPressId = 0;
         this._modalGrab = null;
@@ -112,17 +108,6 @@ export class WidgetCenterOverlay {
         this._buildUI();
         Main.layoutManager.addChrome(this._overlay);
         try {
-            // actionMode must be passed explicitly - system-wide shortcuts
-            // that are meant to always work (e.g. Super+Space / "switch
-            // input source", which GNOME Shell itself registers with
-            // Shell.ActionMode.ALL) still get resolved against whatever
-            // Main.actionMode is current while a modal grab is up. Leaving
-            // this unset let it fall back to a mode that doesn't reliably
-            // OR against ALL-tagged bindings, which is what made Super+Space
-            // stop switching keyboard layout while this overlay was open.
-            // Shell.ActionMode.POPUP is the same mode GNOME Shell's own
-            // popup-style modals (menus, app switchers) use, and is known to
-            // still let ActionMode.ALL system bindings through.
             this._modalGrab = Main.pushModal(this._overlay, {
                 actionMode: Shell.ActionMode.POPUP
             });
@@ -131,7 +116,7 @@ export class WidgetCenterOverlay {
             this._modalGrab = null;
         }
         this._keyPressId = global.stage.connect("key-press-event", (actor, event) => this._onStageKeyPress(event));
-        this._overlay.grab_key_focus();
+        if (this._activeSearchEntry) this._activeSearchEntry.grab_key_focus(); else this._overlay.grab_key_focus();
     }
     close() {
         if (!this._overlay) return;
@@ -153,6 +138,7 @@ export class WidgetCenterOverlay {
         this._overlay = null;
         this._contentBin = null;
         this._tabButtons = {};
+        this._activeSearchEntry = null;
     }
     _addKeybinding() {
         try {
@@ -265,6 +251,7 @@ export class WidgetCenterOverlay {
     _renderTab(tab) {
         this._activeTab = tab;
         for (const [id, button] of Object.entries(this._tabButtons)) button.set_style_class_name(id === tab ? "wc-overlay-tab wc-overlay-tab-active" : "wc-overlay-tab");
+        this._activeSearchEntry = null;
         let content;
         switch (tab) {
           case "themes":
@@ -277,6 +264,7 @@ export class WidgetCenterOverlay {
             break;
         }
         this._contentBin.set_child(content);
+        if (this._overlay && this._activeSearchEntry) this._activeSearchEntry.grab_key_focus();
     }
     _buildOverviewTab() {
         const outer = new St.BoxLayout({
@@ -298,14 +286,6 @@ export class WidgetCenterOverlay {
         }));
         outer.add_child(bar);
         outer.add_child(gridBin);
-        // Discovered once per tab render, not once per keystroke - see
-        // _refreshOverviewGrid() below. _discoverWidgets() reads every
-        // widget's metadata.json plus a mtime stat off disk, so re-running
-        // it on every "text-changed" (i.e. every keystroke in the search
-        // box) was the actual cause of the overlay's widget search feeling
-        // very slow with a lot of bundled widgets - typing didn't get
-        // slower because of the *filtering*, it got slower because each
-        // keystroke re-scanned the whole widgets folder from scratch first.
         this._widgetDiscoveryCache = this._discoverWidgets();
         this._refreshOverviewGrid(gridBin);
         return outer;
@@ -357,7 +337,7 @@ export class WidgetCenterOverlay {
         }));
         controls.add_child(this._buildIconTextButton("emblem-system-symbolic", "Settings", () => this._openWidgetSettings(id)));
         if (entry.source === "user") {
-            controls.add_child(this._buildIconTextButton("trash-symbolic", "Uninstall", () => this._removeWidget(id)));
+            controls.add_child(this._buildIconTextButton("trash-symbolic", "Uninstall", () => this._uninstallUserWidget(id)));
         }
         card.add_child(controls);
         return card;
@@ -419,6 +399,16 @@ export class WidgetCenterOverlay {
         this._setWidgetEnabled(id, false);
         this._renderTab(this._activeTab);
     }
+    _uninstallUserWidget(id) {
+        if (this._services.onWidgetUninstall) {
+            this._services.onWidgetUninstall(id);
+        } else if (this._services.onWidgetRemove) {
+            this._services.onWidgetRemove(id);
+        } else {
+            this._setWidgetEnabled(id, false);
+        }
+        this._renderTab(this._activeTab);
+    }
     _buildThemesTab() {
         const outer = new St.BoxLayout({
             vertical: true,
@@ -440,8 +430,6 @@ export class WidgetCenterOverlay {
         }));
         outer.add_child(bar);
         outer.add_child(gridBin);
-        // Same reasoning as _widgetDiscoveryCache above: discover once per
-        // tab render, not once per keystroke.
         this._themePackDiscoveryCache = this._discoverThemePacks();
         this._refreshThemesGrid(gridBin);
         return outer;
@@ -634,6 +622,7 @@ export class WidgetCenterOverlay {
         }));
         if (initialText) entry.set_text(initialText);
         entry.clutter_text.connect("text-changed", () => onChange(entry.get_text()));
+        this._activeSearchEntry = entry;
         return entry;
     }
     _filterEntries(entries, query, fieldsFn) {
@@ -780,10 +769,6 @@ export class WidgetCenterOverlay {
     _coverBackgroundStyle(shotPath, uri, boxWidth, boxHeight) {
         const fallback = `background-image: url("${uri}"); background-size: ${boxWidth}px ${boxHeight}px; background-position: 0px 0px;`;
         let width, height;
-        // Screenshot files don't change while the overlay is open, so their
-        // pixel dimensions don't either - cache them instead of re-reading
-        // the file's header via GdkPixbuf on every card rebuild (every
-        // sort/filter change, i.e. every keystroke in the search box).
         if (!this._imageDimsCache) this._imageDimsCache = new Map;
         const cached = this._imageDimsCache.get(shotPath);
         if (cached) {

@@ -26,12 +26,6 @@ export default class CalendarEventsWidget {
             contentStyleClass: "calendar-events-widget-root"
         });
         this._actor = this._layers.root;
-        // this._content is a plain wrapper - the Content Layer itself
-        // (this._layers.content) already clips (Rule 4), so the manual
-        // clip_to_allocation this widget used to carry on its own root is
-        // now redundant and has been dropped; per-child ellipsization
-        // below still keeps content readable rather than just chopping it
-        // off (Rule 5: no style of its own on the Content Layer).
         this._content = new St.BoxLayout({
             vertical: false
         });
@@ -166,20 +160,6 @@ export default class CalendarEventsWidget {
         const bg = toCssColor(s.eventCardBgColor ?? "#FFFFFFFF", "#FFFFFFFF");
         const cornerRadius = Number.isFinite(s.eventCardCornerRadius) ? s.eventCardCornerRadius : 14;
 
-        // Same inset-blur structure as the main widget card (see
-        // lib/cardLayers.js's applyLayeredCardStyle() for the full
-        // reasoning): Shell.BlurEffect has no idea about `border-radius`,
-        // so it can't sit directly on a rounded, rounded-corner actor
-        // without its square corners peeking past the curve. Here the
-        // real content (title/subtitle) also has to keep living in its
-        // own BoxLayout for vertical stacking, so that BoxLayout can't be
-        // the blurred actor either - hence three actors instead of one:
-        // `cardOuter` (BinLayout, background-color + border-radius, no
-        // blur/effect at all) at the bottom; `cardBlurInset`, a plain
-        // rect inset by cornerRadius+2px with the same background-color
-        // and the actual blur effect, on top of that; and the original
-        // content BoxLayout (transparent background) on top of both,
-        // filling the same bounds.
         const cardOuter = new St.Widget({
             layout_manager: new Clutter.BinLayout,
             x_expand: true,
@@ -206,10 +186,6 @@ export default class CalendarEventsWidget {
             x_expand: true,
             style: `color: ${s.eventTextColor ?? "#1A1A1A"}; font-family: ${fontFamily}; font-size: ${fontSize}px; font-weight: bold;`
         });
-        // Long event titles must not be allowed to run past the card's
-        // right edge. The Content Layer already clips (Rule 4), so a
-        // single-line label that overflows is simply cut off at the
-        // block boundary - no ellipsize substitute needed or wanted.
         titleLabel.clutter_text.set_line_wrap(false);
         card.add_child(titleLabel);
         if (subtitle) {

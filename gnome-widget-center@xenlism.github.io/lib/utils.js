@@ -10,12 +10,6 @@ export function getAppInfoFromFilename(path) {
     }
 }
 
-// Resolves a plain-text app name (e.g. "firefox", "gimp") to an
-// installed app's Gio.DesktopAppInfo using the same fuzzy search GNOME
-// Shell's own app search uses (matches display name, generic name,
-// exec, and keywords) - no .desktop file path or file-browse dialog
-// required. Returns the best-ranked match, or null if nothing matches
-// or the query is blank.
 export function findAppInfoByQuery(query) {
     const trimmed = (query ?? "").trim();
     if (!trimmed) return null;

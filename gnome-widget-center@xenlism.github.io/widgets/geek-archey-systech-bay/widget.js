@@ -86,8 +86,6 @@ export default class GeekArcheySystechBayWidget {
         this._actor = this._layers.root;
         this._actor.x_align = Clutter.ActorAlign.CENTER;
         this._actor.y_align = Clutter.ActorAlign.CENTER;
-        // content is a plain wrapper - padding lives here, never the
-        // Content Layer itself (Rule 5).
         const content = new St.BoxLayout({
             vertical: false
         });

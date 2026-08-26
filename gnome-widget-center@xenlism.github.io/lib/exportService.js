@@ -20,11 +20,6 @@ export function ensureGwctExtension(path) {
     return path.endsWith(GWCT_EXTENSION) ? path : `${path}${GWCT_EXTENSION}`;
 }
 
-// Shared by the sync and async builders below: everything that has to
-// happen per enabled widget (read its config.json off disk, redact
-// secrets from its stored settings, look up its position/theme). This is
-// the part that gets slow with a lot of enabled widgets, since
-// readWidgetConfig() is a synchronous disk read done once per widget.
 function _buildWidgetEntry(widget, {storage: storage, theme: theme}, redactedFields) {
     const {config: config} = readWidgetConfig(widget.path);
     const rawSettings = storage.getWidgetSettings(widget.id);
@@ -110,17 +105,6 @@ export function buildGwctDocument(widgets, {storage: storage, theme: theme, sett
     };
 }
 
-/**
- * Same result as buildGwctDocument(), but processes widgets a few at a
- * time and yields to the main loop in between via GLib.idle_add - so a
- * desktop with a lot of enabled widgets doesn't block GTK's event loop for
- * one long synchronous pass. That was the actual cause of the Export
- * Theme… dialog appearing to hang: readWidgetConfig() is a synchronous
- * disk read done once per widget, and with ~70 bundled widgets enabled
- * that could add up to a multi-second freeze with no feedback at all.
- * `onProgress(done, total)` is called after every widget so a caller can
- * drive a progress bar.
- */
 export async function buildGwctDocumentAsync(widgets, {storage: storage, theme: theme, settings: settings}, onProgress) {
     const redactedFields = [];
     const enabledWidgets = _enabledWidgets(widgets, storage, settings);
@@ -205,31 +189,10 @@ export function importGwctDocument(document, {storage: storage, theme: theme, se
         appliedWidgetIds: appliedWidgetIds,
         missingWidgets: missingWidgets,
         dependencyWarnings: dependencyWarnings,
-        // Present when the file came from the Export Theme Pack… dialog
-        // (lib/themePackExportDialog.js) rather than the plain Export
-        // theme… row - {id, name, description, author, email, url}. Not
-        // consumed above (applying settings doesn't need it); surfaced so
-        // callers can show it or hand it to installGwctAsThemePack().
         packMeta: document.packMeta ?? null
     };
 }
 
-/**
- * Import counterpart to themePackExportDialog.js's Export Theme Pack…
- * flow: copies a .gwct document into the user's themepacks folder as a
- * flat file (the same on-disk shape Export Theme Pack… itself produces),
- * so ThemePackRegistry._discoverFlatPack() picks it up on the next
- * Themes-tab render - packMeta and the embedded screenshot included, the
- * same way they already work for a pack authored on this machine. Unlike
- * importGwctDocument(), this never touches the live desktop; it just
- * makes the pack available as a card to switch on later.
- *
- * A plain settings-only export (no packMeta) installs fine too - it just
- * takes ThemePackRegistry's existing filename-based fallback name, same
- * as it would if someone manually dropped such a file into that folder.
- *
- * Returns the path the file was written to.
- */
 export function installGwctAsThemePack(document, userThemepacksDir) {
     ensureDirectory(userThemepacksDir);
     const baseSlug = (document.packMeta?.name || document.packMeta?.id || "imported-theme").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "imported-theme";

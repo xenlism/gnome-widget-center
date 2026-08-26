@@ -24,24 +24,6 @@ export default class CalendarPlainWidget {
         });
         this._actor = this._layers.root;
 
-        // BlockSizeManager force-sets this._actor to a fixed cols*16 x
-        // rows*16px size from metadata.json's block-type, but the
-        // calendar's actual content (month title + weekday row + 6 week
-        // rows of fixed-size day cells) has its own natural, roughly-
-        // portrait shape that rarely matches the chosen block exactly.
-        // The old code added header/weekday/grid rows straight onto the
-        // root actor, which top-left-anchors natural-sized children -
-        // that left a large, asymmetric strip of bare card background
-        // on the right and bottom of every block-type wider/taller than
-        // the content's natural size ("not a good ratio"). Wrapping
-        // everything in one inner column and centering *that* within the
-        // Content Layer (rather than stretching individual day cells -
-        // which would turn the circular "today" highlight into an oval
-        // unless every cell happened to end up perfectly square) gives
-        // even margins on all sides instead, regardless of which
-        // block-type is picked. this._innerColumn also carries the
-        // widget's padding/spacing (Rule 5: the Content Layer itself,
-        // this._layers.content, carries no style of its own).
         this._innerColumn = new St.BoxLayout({
             vertical: true,
             x_expand: true,

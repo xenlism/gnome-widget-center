@@ -12,8 +12,6 @@ import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.j
 
 import { configJsonDefaults } from "../../lib/widgetConfigDefaults.js";
 
-// Hardcoded, no network access required (see WIDGET_API.md §3 - this
-// widget never calls _fetchJson/Soup at all).
 const QUOTES = [
     "Small steps, taken daily, outrun big plans taken never.",
     "Done is better than perfect - ship it, then improve it.",
@@ -51,10 +49,6 @@ export default class DailyQuoteWidget {
             x_align: Clutter.ActorAlign.CENTER,
             y_align: Clutter.ActorAlign.CENTER
         });
-        // Unlike most single-line labels in this codebase, a quote is
-        // long enough that clipping it at the card edge (the usual
-        // convention - see widgets/calendar-events/widget.js) would make
-        // it unreadable, so this label wraps and centers instead.
         this._quoteLabel.clutter_text.set_line_wrap(true);
         this._quoteLabel.clutter_text.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR);
         this._quoteLabel.clutter_text.set_ellipsize(Pango.EllipsizeMode.NONE);
@@ -86,7 +80,6 @@ export default class DailyQuoteWidget {
     _randomIndex() {
         if (QUOTES.length <= 1) return 0;
         let next = Math.floor(Math.random() * QUOTES.length);
-        // Avoid repeating the same quote back-to-back when rotating.
         if (next === this._quoteIndex) next = (next + 1) % QUOTES.length;
         return next;
     }

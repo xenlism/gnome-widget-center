@@ -155,8 +155,6 @@ export default class CirclesNetHalfWidget {
         if (this._gauge.ringArea) this._gauge.ringArea.queue_repaint();
     }
     _onRepaint() {
-        // Two concentric half-rings for two distinct metrics: outer ring
-        // is download, inner ring is upload.
         this._gauge.paintRings({
             settings: this._settings,
             rings: [ {

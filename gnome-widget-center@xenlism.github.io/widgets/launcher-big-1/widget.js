@@ -43,8 +43,6 @@ export default class LauncherBig {
         });
         this._actor = this._layers.root;
         this._actor.reactive = true;
-        // this._content is a plain wrapper - the Content Layer itself
-        // (this._layers.content) carries no style of its own (Rule 5).
         this._content = new St.Bin({
             x_align: Clutter.ActorAlign.CENTER,
             y_align: Clutter.ActorAlign.CENTER,
@@ -85,8 +83,6 @@ export default class LauncherBig {
             }
             grid.add_child(rowBox);
         }
-        // R5: card visual styling (background-color, corner-radius) goes on
-        // the dedicated Background Layer; _content stays a pure wrapper.
         this._content.set_child(grid);
         this._render();
         return this._actor;

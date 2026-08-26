@@ -167,8 +167,6 @@ export default class WeatherDarkWidget {
         this._actor = this._layers.root;
         this._actor.x_align = Clutter.ActorAlign.START;
         this._actor.y_align = Clutter.ActorAlign.CENTER;
-        // this._content is a plain wrapper - padding/spacing live here,
-        // never the Content Layer itself (Rule 5).
         this._content = new St.BoxLayout({
             vertical: false
         });
@@ -366,8 +364,6 @@ export default class WeatherDarkWidget {
             }, false);
             this._content.set_style("padding: 20px 26px; spacing: 20px;");
         });
-        // spacing: 20px between textBox and iconBin is on _actor (card) via padding shorthand above.
-        // _content and _textBox spacings are fixed in their constructors (Rule 5: no style on content layer).
         const iconKey = this._weather?.icon ?? "weather-cloud";
         const iconFile = this._getColoredIconFile(iconKey, iconColor);
         if (iconFile) {

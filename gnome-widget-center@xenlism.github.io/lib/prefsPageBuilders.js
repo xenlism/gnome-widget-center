@@ -1,7 +1,3 @@
-/* Each Force group (Radius/Blur/Shadow) exposes exactly one SwitchRow.
- * For Shadow, opacity 0 already means no visible shadow - matching
- * Blur's spin-to-0 convention - so there is no separate "Enabled" toggle. */
-
 import Adw from "gi://Adw";
 
 import Gtk from "gi://Gtk";
@@ -230,11 +226,6 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
             exportProgress.fraction = 0;
             exportProgress.text = this._tr("importexport.export.progress_start", "Collecting widget settings…");
             exportProgress.visible = true;
-            // Let the bar actually paint before the (potentially slow) work
-            // below starts - same reasoning as the Export Theme Pack…
-            // dialog's own idleTick(): without this the first frame never
-            // gets a chance to draw and the row looks frozen for however
-            // long the first chunk takes.
             await new Promise(resolve => GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
                 resolve();
                 return GLib.SOURCE_REMOVE;
@@ -242,11 +233,6 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
             try {
                 const theme = new ThemeService;
                 theme.init();
-                // Async/chunked, same as the Export Theme Pack… dialog -
-                // a desktop with a lot of enabled widgets used to freeze
-                // this whole preferences window for the duration of one
-                // long synchronous pass here too. onProgress drives the
-                // bar above the same way it drives that dialog's.
                 const {document: document, redactedFields: redactedFields} = await buildGwctDocumentAsync(discoveredWidgets, {
                     storage: storage,
                     theme: theme,
@@ -540,14 +526,6 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         const ready = settings?.isReady;
         const page = new Adw.PreferencesPage;
 
-        // Force Settings (the old global switches that could pin every
-        // widget's background/corner-radius/blur/shadow appearance to one
-        // value) has been removed. Each widget always owns its own card
-        // styling (background color, blur, shadow, border, opacity) from
-        // its own Appearance settings. The one exception is the shadow's
-        // light-source direction - distance and angle - which stays global
-        // so every widget's shadow falls the same way; everything else
-        // about the shadow (color/opacity/blur) is still per-widget.
         const shadowGroup = new Adw.PreferencesGroup({
             title: "Global Shadow",
             description: "Distance and angle apply to every widget's drop shadow. Each " + "widget still sets its own shadow color, opacity, and blur in its own " + "Appearance settings."

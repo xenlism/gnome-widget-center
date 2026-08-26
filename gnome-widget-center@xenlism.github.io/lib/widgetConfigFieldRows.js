@@ -859,9 +859,6 @@ export function _listRow(field, current, set) {
             spacing: 6,
             valign: Gtk.Align.CENTER
         });
-        // Quick-pick popover for XDG special folders (Downloads, Documents,
-        // Music, Pictures, Videos, Desktop, Public, Templates, Home) - added
-        // so those don't require navigating the file dialog every time.
         const specialDirs = [ GLib.UserDirectory.DIRECTORY_DOWNLOAD, GLib.UserDirectory.DIRECTORY_DOCUMENTS, GLib.UserDirectory.DIRECTORY_MUSIC, GLib.UserDirectory.DIRECTORY_PICTURES, GLib.UserDirectory.DIRECTORY_VIDEOS, GLib.UserDirectory.DIRECTORY_DESKTOP, GLib.UserDirectory.DIRECTORY_PUBLIC_SHARE, GLib.UserDirectory.DIRECTORY_TEMPLATES ];
         const quickPaths = [];
         try {

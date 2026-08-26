@@ -18,13 +18,11 @@ import {
 
 import { configJsonDefaults } from "../../lib/widgetConfigDefaults.js";
 
-
 const SIZE = 176;
 
 const COVER_SIZE = 154;
 
 const COVER_RADIUS = 18;
-
 
 function _parseFontDescription(fontStr, fallbackFamily, fallbackSize) {
     try {
@@ -52,7 +50,6 @@ function _parseFontDescription(fontStr, fallbackFamily, fallbackSize) {
     }
 }
 
-
 export default class MediaPlayerSquareWidget {
 
     constructor(api) {
@@ -68,12 +65,8 @@ export default class MediaPlayerSquareWidget {
         this._repaintId = null;
     }
 
-
     buildActor() {
 
-        /*
-         * Main widget
-         */
         this._actor = new St.Widget({
             layout_manager: new Clutter.BinLayout,
 
@@ -83,14 +76,6 @@ export default class MediaPlayerSquareWidget {
             reactive: true
         });
 
-
-        /*
-         * Content
-         *
-         * Force this layer to occupy the complete widget.
-         * This prevents the cover from being positioned relative
-         * to a smaller/natural-size allocation.
-         */
         this._content = new St.Widget({
             layout_manager: new Clutter.BinLayout,
 
@@ -100,23 +85,13 @@ export default class MediaPlayerSquareWidget {
             clip_to_allocation: true
         });
 
-
         this._content.add_constraint(new Clutter.BindConstraint({
             source: this._actor,
             coordinate: Clutter.BindCoordinate.SIZE
         }));
 
-
         this._actor.add_child(this._content);
 
-
-        /*
-         * Cover
-         *
-         * IMPORTANT:
-         * Do not use x/y here.
-         * Let BinLayout center the cover inside _content.
-         */
         this._coverStack = new St.Widget({
             layout_manager: new Clutter.BinLayout,
 
@@ -129,13 +104,8 @@ export default class MediaPlayerSquareWidget {
             clip_to_allocation: true
         });
 
-
         this._content.add_child(this._coverStack);
 
-
-        /*
-         * Fallback artwork
-         */
         this._fallbackArea = new St.DrawingArea({
             width: COVER_SIZE,
             height: COVER_SIZE
@@ -143,12 +113,10 @@ export default class MediaPlayerSquareWidget {
 
         this._coverStack.add_child(this._fallbackArea);
 
-
         this._repaintId = this._fallbackArea.connect(
             "repaint",
             () => this._onFallbackRepaint()
         );
-
 
         this._fallbackIcon = new St.Icon({
             icon_name: "audio-x-generic-symbolic",
@@ -163,10 +131,6 @@ export default class MediaPlayerSquareWidget {
 
         this._coverStack.add_child(this._fallbackIcon);
 
-
-        /*
-         * Album artwork
-         */
         this._artIcon = new St.Widget({
             width: COVER_SIZE,
             height: COVER_SIZE,
@@ -179,10 +143,6 @@ export default class MediaPlayerSquareWidget {
 
         this._coverStack.add_child(this._artIcon);
 
-
-        /*
-         * Bottom scrim
-         */
         this._scrim = new St.Widget({
             width: COVER_SIZE,
             height: 58,
@@ -195,10 +155,6 @@ export default class MediaPlayerSquareWidget {
 
         this._coverStack.add_child(this._scrim);
 
-
-        /*
-         * Text labels
-         */
         this._titleLabel = new St.Label({
             text: "No media playing"
         });
@@ -211,11 +167,6 @@ export default class MediaPlayerSquareWidget {
             text: ""
         });
 
-
-        /*
-         * Do not ellipsize.
-         * The content layer clips overflowing text.
-         */
         for (const label of [
             this._titleLabel,
             this._albumLabel,
@@ -224,10 +175,6 @@ export default class MediaPlayerSquareWidget {
             label.clutter_text.set_line_wrap(false);
         }
 
-
-        /*
-         * Text container
-         */
         this._textBox = new St.BoxLayout({
             vertical: true,
 
@@ -239,20 +186,12 @@ export default class MediaPlayerSquareWidget {
 
         this._textBox.set_style("padding: 8px;");
 
-
         this._textBox.add_child(this._titleLabel);
         this._textBox.add_child(this._albumLabel);
         this._textBox.add_child(this._artistLabel);
 
-
         this._coverStack.add_child(this._textBox);
 
-
-        /*
-         * Cover click area
-         *
-         * Keep this centered/full-size over the widget.
-         */
         this._coverButton = new St.Button({
             x_expand: true,
             y_expand: true,
@@ -270,31 +209,21 @@ export default class MediaPlayerSquareWidget {
 
         this._content.add_child(this._coverButton);
 
-
-        /*
-         * Playback buttons
-         */
         this._prevButton = this._makeButton(
             "media-skip-backward-symbolic",
             () => this._media.previous()
         );
-
 
         this._playPauseButton = this._makeButton(
             "media-playback-start-symbolic",
             () => this._onPlayClicked()
         );
 
-
         this._nextButton = this._makeButton(
             "media-skip-forward-symbolic",
             () => this._media.next()
         );
 
-
-        /*
-         * Controls container
-         */
         this._controls = new St.BoxLayout({
             x_align: Clutter.ActorAlign.CENTER,
             y_align: Clutter.ActorAlign.CENTER,
@@ -304,20 +233,13 @@ export default class MediaPlayerSquareWidget {
 
         this._controls.set_style("spacing: 10px;");
 
-
         this._controls.add_child(this._prevButton);
         this._controls.add_child(this._playPauseButton);
         this._controls.add_child(this._nextButton);
 
-
         this._content.add_child(this._controls);
 
-
-        /*
-         * Hover controls
-         */
         this._actor.set_track_hover(true);
-
 
         this._hoverId = this._actor.connect(
             "notify::hover",
@@ -326,18 +248,12 @@ export default class MediaPlayerSquareWidget {
             }
         );
 
-
-        /*
-         * Initial render
-         */
         this._render();
 
         this._renderState(null);
 
-
         return this._actor;
     }
-
 
     enable() {
         this._media.start(
@@ -345,11 +261,9 @@ export default class MediaPlayerSquareWidget {
         );
     }
 
-
     disable() {
 
         this._media.stop();
-
 
         if (this._repaintId !== null && this._fallbackArea) {
             this._fallbackArea.disconnect(this._repaintId);
@@ -357,14 +271,12 @@ export default class MediaPlayerSquareWidget {
             this._repaintId = null;
         }
 
-
         if (this._hoverId !== null && this._actor) {
             this._actor.disconnect(this._hoverId);
 
             this._hoverId = null;
         }
     }
-
 
     getDefaultSettings() {
         return {
@@ -376,11 +288,9 @@ export default class MediaPlayerSquareWidget {
         };
     }
 
-
     onSettingsChanged() {
         this._render();
     }
-
 
     _makeButton(iconName, onClicked) {
 
@@ -391,16 +301,13 @@ export default class MediaPlayerSquareWidget {
             })
         });
 
-
         button.connect(
             "clicked",
             onClicked
         );
 
-
         return button;
     }
-
 
     _onPlayClicked() {
 
@@ -409,10 +316,8 @@ export default class MediaPlayerSquareWidget {
             return;
         }
 
-
         this._media.playPause();
     }
-
 
     _onCoverClicked() {
 
@@ -421,10 +326,8 @@ export default class MediaPlayerSquareWidget {
             return;
         }
 
-
         this._launchApp();
     }
-
 
     _launchApp() {
 
@@ -433,11 +336,9 @@ export default class MediaPlayerSquareWidget {
         if (!path)
             return;
 
-
         try {
 
             const appInfo = Gio.DesktopAppInfo.new_from_filename(path);
-
 
             if (appInfo) {
                 appInfo.launch([], null);
@@ -455,7 +356,6 @@ export default class MediaPlayerSquareWidget {
         }
     }
 
-
     _applyArtStyle() {
 
         if (this._artIcon) {
@@ -467,12 +367,8 @@ export default class MediaPlayerSquareWidget {
         }
     }
 
-
     _render() {
 
-        /*
-         * Main card styling
-         */
         this._actor.set_style(
             this._api.resolveCardCss?.() ??
             _cardStyleCss(this._settings, {
@@ -480,34 +376,23 @@ export default class MediaPlayerSquareWidget {
             })
         );
 
-
-        /*
-         * Cover background
-         */
         this._coverStack.set_style(
             `background-color: rgba(255,255,255,0.05); ` +
             `border-radius: ${COVER_RADIUS}px;`
         );
 
-
         this._applyArtStyle();
 
-
-        /*
-         * Text
-         */
         const infoColor = _toCssColor(
             this._settings.infoColor,
             "#FFFFFFFF"
         );
-
 
         const infoFont = _parseFontDescription(
             this._settings.infoFont ?? "Sans Bold 13",
             "Sans Bold",
             13
         );
-
 
         this._titleLabel.set_style(
             `color: ${infoColor}; ` +
@@ -516,14 +401,12 @@ export default class MediaPlayerSquareWidget {
             `font-weight: bold;`
         );
 
-
         this._albumLabel.set_style(
             `color: ${infoColor}; ` +
             `font-family: ${infoFont.family}; ` +
             `font-size: ${Math.max(8, infoFont.size - 3)}px; ` +
             `opacity: 0.85;`
         );
-
 
         this._artistLabel.set_style(
             `color: ${infoColor}; ` +
@@ -532,15 +415,10 @@ export default class MediaPlayerSquareWidget {
             `opacity: 0.85;`
         );
 
-
-        /*
-         * Playback buttons
-         */
         const buttonColor = _toCssColor(
             this._settings.buttonColor,
             "#FFFFFFFF"
         );
-
 
         for (const button of [
             this._prevButton,
@@ -555,26 +433,19 @@ export default class MediaPlayerSquareWidget {
                 `color: ${buttonColor};`
             );
 
-
             button.child.set_style(
                 `color: ${buttonColor};`
             );
         }
 
-
         if (this._fallbackArea)
             this._fallbackArea.queue_repaint();
     }
-
 
     _renderState(state) {
 
         this._state = state;
 
-
-        /*
-         * No media
-         */
         if (!state) {
 
             this._titleLabel.set_text("");
@@ -584,38 +455,26 @@ export default class MediaPlayerSquareWidget {
             this._textBox.hide();
             this._scrim.hide();
 
-
             this._playPauseButton.child.icon_name =
                 "media-playback-start-symbolic";
-
 
             this._showFallbackArt();
 
             return;
         }
 
-
-        /*
-         * Media exists
-         */
         this._textBox.show();
         this._scrim.show();
-
 
         this._titleLabel.set_text(state.title);
         this._albumLabel.set_text(state.album);
         this._artistLabel.set_text(state.artist);
-
 
         this._playPauseButton.child.icon_name =
             state.status === "Playing"
                 ? "media-playback-pause-symbolic"
                 : "media-playback-start-symbolic";
 
-
-        /*
-         * Artwork
-         */
         if (state.artUrl.length > 0) {
 
             try {
@@ -625,14 +484,12 @@ export default class MediaPlayerSquareWidget {
                         ? Gio.File.new_for_uri(state.artUrl)
                         : Gio.File.new_for_path(state.artUrl);
 
-
                 this._artIcon.set_style(
                     `border-radius: ${COVER_RADIUS}px; ` +
                     `background-size: cover; ` +
                     `background-position: center; ` +
                     `background-image: url("${file.get_uri()}");`
                 );
-
 
                 this._showArt();
 
@@ -647,7 +504,6 @@ export default class MediaPlayerSquareWidget {
         }
     }
 
-
     _showArt() {
 
         this._artIcon.show();
@@ -655,7 +511,6 @@ export default class MediaPlayerSquareWidget {
         this._fallbackArea.hide();
         this._fallbackIcon.hide();
     }
-
 
     _showFallbackArt() {
 
@@ -665,7 +520,6 @@ export default class MediaPlayerSquareWidget {
         this._fallbackIcon.show();
     }
 
-
     _onFallbackRepaint() {
 
         const cr = this._fallbackArea.get_context();
@@ -673,23 +527,13 @@ export default class MediaPlayerSquareWidget {
         const w = COVER_SIZE;
         const h = COVER_SIZE;
 
-
-        /*
-         * Clear
-         */
         cr.setOperator(Cairo.Operator.CLEAR);
         cr.paint();
 
-
         cr.setOperator(Cairo.Operator.OVER);
 
-
-        /*
-         * Gradient colors
-         */
         const start = _hexToRgba("#FF8A00FF");
         const end = _hexToRgba("#B3260AFF");
-
 
         const gradient = new Cairo.LinearGradient(
             0,
@@ -697,7 +541,6 @@ export default class MediaPlayerSquareWidget {
             w,
             h
         );
-
 
         gradient.addColorStopRGBA(
             0,
@@ -707,7 +550,6 @@ export default class MediaPlayerSquareWidget {
             start.a
         );
 
-
         gradient.addColorStopRGBA(
             1,
             end.r,
@@ -716,15 +558,9 @@ export default class MediaPlayerSquareWidget {
             end.a
         );
 
-
-        /*
-         * Rounded rectangle
-         */
         const radius = COVER_RADIUS;
 
-
         cr.newSubPath();
-
 
         cr.arc(
             w - radius,
@@ -734,7 +570,6 @@ export default class MediaPlayerSquareWidget {
             0
         );
 
-
         cr.arc(
             w - radius,
             h - radius,
@@ -742,7 +577,6 @@ export default class MediaPlayerSquareWidget {
             0,
             Math.PI / 2
         );
-
 
         cr.arc(
             radius,
@@ -752,7 +586,6 @@ export default class MediaPlayerSquareWidget {
             Math.PI
         );
 
-
         cr.arc(
             radius,
             radius,
@@ -761,14 +594,11 @@ export default class MediaPlayerSquareWidget {
             3 * Math.PI / 2
         );
 
-
         cr.closePath();
-
 
         cr.setSource(gradient);
 
         cr.fill();
-
 
         cr.$dispose();
     }

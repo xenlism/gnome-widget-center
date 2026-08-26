@@ -12,30 +12,8 @@ import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.j
 import { configJsonDefaults } from "../../lib/widgetConfigDefaults.js";
 
 const FACE_SIZE = 176;
-const FACE_MARGIN = 5; // proportional to the old 4px-at-148 margin, used by the circular fallback below
+const FACE_MARGIN = 5;
 
-// Dash-ring geometry, ported 1:1 from a reference asset (clock_176x176_60dash_square_close_1_.svg,
-// a 176x176 design with 60 dashes tracing a rounded-square path) rather than the
-// old generic "N dashes evenly spaced on a circle" formula - a circle doesn't
-// reproduce the square-with-rounded-corners look the reference actually has
-// (dashes hug the corners tighter than the flat edges; a circle can't do that).
-//
-// Each entry is [nx, ny, rotationDeg]: nx/ny are the dash's center position as a
-// fraction of the half-canvas (so ±1.0 = the canvas edge in the 176px reference
-// frame), and rotationDeg is copied directly from the reference SVG's own
-// per-dash `rotate()` transform - i.e. this is each dash's *actual* local
-// outward-normal direction, not a recomputed approximation, which matters right
-// at the corners where "pointing away from the ring's own center" and "the true
-// outward normal of the rounded-square path" are not the same direction.
-//
-// Positions are already shifted outward from the reference file by the amount
-// needed to put the (flat-edge) dashes 8px from the card edge in the 176px
-// frame, per spec - the near-corner dashes in the reference path sit much
-// closer to the edge than the flat-edge ones to begin with (2.6px vs ~20px),
-// so that same outward shift pushes a handful of them slightly past the outer
-// edge; _onRepaint() clips dash drawing to the card's own rounded-rect outline
-// so that overshoot is simply cropped clean rather than floating outside the
-// visible card.
 const DASH_GEOMETRY = [
     [-0.55178, -0.84083, 146.73], [-0.45137, -0.84714, 151.95], [-0.34906, -0.85297, 157.74],
     [-0.24516, -0.85786, 164.05], [-0.13972, -0.86134, 170.78], [-0.03344, -0.86299, 177.78],
@@ -58,33 +36,18 @@ const DASH_GEOMETRY = [
     [-0.85088, -0.38730, 114.48], [-0.84482, -0.48894, 120.06], [-0.83605, -0.58876, 125.15],
     [-0.80079, -0.68376, 130.49], [-0.73610, -0.76322, 136.04], [-0.64961, -0.81770, 141.53]
 ];
-// DASH_GEOMETRY[i] sits at clock-face angle (i - 6) * 6deg from 12
-// o'clock, i.e. it marks minute ((i + 54) % 60) of the hour - reference
-// SVG index 0 starts at the 54-minute mark rather than at 0, and index 6
-// is the first one that lands exactly on 12 o'clock/minute 0. Used by
-// _onRepaint() to color each dash elapsed vs upcoming for the current
-// minute.
 const DASH_INDEX_TO_MINUTE = DASH_GEOMETRY.map((_, i) => (i + 54) % 60);
-// Dash rect in the 176px reference frame: width 2, height 8, corner radius 1.
 const DASH_REF_CANVAS = 176;
 const DASH_REF_W = 2;
 const DASH_REF_H = 8;
 const DASH_REF_RX = 1;
 
-// Strip weight/style keywords out of a Pango-style family string so
-// Cairo's toy font-face selection gets a plain family name - passing
-// "Sans Bold" straight through to selectFontFace() is unreliable across
-// fontconfig setups, so the weight is applied via Cairo.FontWeight
-// instead of being left in the family string.
 function _splitFamilyAndWeight(family) {
     const isBold = /\bbold\b/i.test(family ?? "");
     const plain = (family ?? "Sans").replace(/\b(bold|italic|oblique|light|medium|regular)\b/gi, "").trim() || "Sans";
     return { family: plain, bold: isBold };
 }
 
-// Traces a rounded-rect path (does not fill/stroke/clip - call cr.fill(),
-// cr.stroke(), or cr.clip() after) with top-left corner (x,y), size w x h,
-// and corner radius r. Cairo has no built-in rounded-rect primitive.
 function _roundedRectPath(cr, x, y, w, h, r) {
     const rr = Math.max(0, Math.min(r, Math.min(w, h) / 2));
     cr.moveTo(x + rr, y);
@@ -120,12 +83,6 @@ export default class ClockDigitalDashedWidget {
             y_expand: true
         });
         this._layers.content.add_child(outerBox);
-        // No padding here anymore - the dash ring is now drawn using the
-        // reference design's own coordinates, which assume the Cairo
-        // canvas spans the whole card (see FACE_SIZE above: it grew from
-        // 148 to 176 - the old 14px padding - specifically so this still
-        // adds up to the same overall widget footprint as before; only
-        // the split between "St padding" and "Cairo canvas" moved).
 
         this._stack = new St.Widget({
             layout_manager: new Clutter.BinLayout(),
@@ -261,15 +218,9 @@ export default class ClockDigitalDashedWidget {
         const cy = FACE_SIZE / 2;
         const radius = FACE_SIZE / 2 - FACE_MARGIN;
 
-        // Dash ring - ported from a reference SVG asset rather than drawn as a
-        // generic circle; see the DASH_GEOMETRY comment above for why.
         if (s.showDashes ?? true) {
             const scale = FACE_SIZE / DASH_REF_CANVAS;
             cr.save();
-            // Clip to the card's own rounded-rect outline before drawing, so
-            // the handful of near-corner dashes whose reference position
-            // overshoots the reference canvas edge (see DASH_GEOMETRY comment)
-            // get cropped cleanly against the card instead of floating past it.
             const cornerRadius = Math.max(0, Math.min(radius, (s.cornerRadius ?? 28) * scale));
             cr.newSubPath();
             _roundedRectPath(cr, cx - radius, cy - radius, radius * 2, radius * 2, cornerRadius);
@@ -279,11 +230,6 @@ export default class ClockDigitalDashedWidget {
             const currentMinute = (this._now.dateTime ?? GLib.DateTime.new_now_local()).get_minute();
             for (let i = 0; i < DASH_GEOMETRY.length; i++) {
                 const [nx, ny, rotDeg] = DASH_GEOMETRY[i];
-                // Elapsed minutes (including the one in progress) draw in
-                // dashColor; minutes later in the hour that haven't
-                // happened yet draw in dashColorUpcoming instead, so the
-                // ring reads as a per-minute progress indicator rather
-                // than a static decoration.
                 const minute = DASH_INDEX_TO_MINUTE[i];
                 if (minute <= currentMinute)
                     this._setSourceHex(cr, s.dashColor, "#1A1A1AFF");
@@ -299,7 +245,6 @@ export default class ClockDigitalDashedWidget {
             cr.restore();
         }
 
-        // Big HH:MM digital readout, centered
         const format24h = s.format24h ?? true;
         const dt = this._now.dateTime ?? GLib.DateTime.new_now_local();
         const text = format24h ? (dt.format("%H:%M") ?? "") : (dt.format("%I:%M") ?? "");

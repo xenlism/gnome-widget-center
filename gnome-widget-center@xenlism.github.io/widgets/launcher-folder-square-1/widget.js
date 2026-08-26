@@ -1,27 +1,3 @@
-// widgets/launcher-folder-square-1/widget.js
-//
-// A compact 1x1 card holding a 2x2 grid of FOLDER shortcuts - the
-// "square" folder counterpart to widgets/launcher-square-1 (which does
-// the same 2x2-icons-in-a-1x1-card layout for apps) and the small-card
-// counterpart to widgets/launcher-folder-big (which is a 2x2 BLOCK
-// holding a 3x3 folder grid). Clicking a folder opens it in the
-// configured file manager (Nautilus by default).
-//
-// Recognizes XDG special folders (Downloads, Documents, Music, Pictures,
-// Videos, Desktop, Public, Templates, plus $HOME) via
-// lib/fsUtils.js's getSpecialFolderInfo() and shows the matching system
-// icon + proper name instead of a generic "folder" icon/raw path
-// basename - same lookup widgets/launcher-folder-big uses.
-//
-// Root actor (this._actor) is a plain St.Widget with Clutter.FixedLayout,
-// holding a single St.Bin child (this._content) that does the actual
-// centering/painting - lib/blockSizeManager.js's applyBlockSize()
-// force-sets the root actor to an exact cols*16 x rows*16px size from
-// metadata.json's block-type (1x1 = 176x176px) regardless of anything
-// set here, so this._content is bound to that size via a
-// Clutter.BindConstraint rather than a hardcoded pixel size - same
-// pattern as widgets/launcher-square-1 and widgets/launcher-folder-big.
-
 import Clutter from "gi://Clutter";
 
 import St from "gi://St";
@@ -67,8 +43,6 @@ export default class LauncherFolderSquare1 {
         });
         this._actor = this._layers.root;
         this._actor.reactive = true;
-        // this._content is a plain wrapper - the Content Layer itself
-        // (this._layers.content) carries no style of its own (Rule 5).
         this._content = new St.Bin({
             x_align: Clutter.ActorAlign.CENTER,
             y_align: Clutter.ActorAlign.CENTER,
@@ -110,8 +84,6 @@ export default class LauncherFolderSquare1 {
             }
             grid.add_child(rowBox);
         }
-        // R5: card visual styling (background-color, corner-radius) goes on
-        // the dedicated Background Layer; _content stays a pure wrapper.
         this._content.set_child(grid);
         this._render();
         return this._actor;

@@ -10,13 +10,6 @@ export function angleDistanceToOffset(angleDeg, distance) {
     };
 }
 
-// Registered by extension.js at enable() with a GlobalShadowHelper
-// instance (see lib/globalShadowHelper.js). shadow-distance/shadow-angle
-// are the one appearance value every widget's drop shadow always shares
-// - everything else (color/opacity/blur/spread) is purely per-widget,
-// read straight from that widget's own settings below. There is no more
-// "Force Settings" system pinning background/corner-radius/blur/shadow
-// to a global value - each widget always owns its own card styling.
 let _globalShadowHelper = null;
 
 export function setGlobalShadowHelper(helper) {
@@ -55,9 +48,6 @@ export function getBlurSettings(settings) {
 export function shadowBoxShadowCss(settings) {
     const s = settings ?? {};
     if (!(s.shadowEnabled ?? SHADOW_DEFAULTS.shadowEnabled)) return "";
-    // shadow-distance/shadow-angle are always-global (see
-    // lib/globalShadowHelper.js) - every other shadow property still
-    // comes from the widget's own settings.
     const globalDistanceAngle = _globalShadowHelper?.getGlobalShadowDistanceAngle?.();
     return boxShadowCss({
         color: s.shadowColor ?? SHADOW_DEFAULTS.shadowColor,
@@ -89,12 +79,6 @@ export function textShadowCss(settings) {
     const s = settings ?? {};
     if (!(s.textShadowEnabled ?? TEXT_SHADOW_DEFAULTS.textShadowEnabled)) return "";
     const opacityPercent = Number.isFinite(s.textShadowOpacity) ? s.textShadowOpacity : TEXT_SHADOW_DEFAULTS.textShadowOpacity;
-    // Angle is never a real per-widget choice for text shadows either -
-    // same "one global light source direction" rule as card shadows
-    // (see shadowBoxShadowCss() above / GlobalShadowHelper.
-    // getGlobalShadowDistanceAngle()). Distance/blur/color/opacity stay
-    // fully per-widget; only angle always comes from the shared global
-    // value when one is registered.
     const globalAngle = _globalShadowHelper?.getGlobalShadowDistanceAngle?.();
     const angleDeg = globalAngle?.angle ?? (Number.isFinite(s.textShadowAngle) ? s.textShadowAngle : TEXT_SHADOW_DEFAULTS.textShadowAngle);
     const distance = Number.isFinite(s.textShadowDistance) ? s.textShadowDistance : TEXT_SHADOW_DEFAULTS.textShadowDistance;
@@ -113,35 +97,9 @@ export function textShadowCss(settings) {
 export const BORDER_DEFAULTS = {
     borderEnabled: false,
     borderWidth: 1,
-    // Absolute last-resort fallback only - used when borderCss() has
-    // neither a settings.borderColor NOR a background color to fall
-    // back to (see borderCss() below). Every normal call path goes
-    // through cardStyleCss(), which always has a background color to
-    // pass in, so this rarely fires in practice.
     borderColor: "#FFFFFF33"
 };
 
-// Border color priority (see extension.js's Layer Lab "card A" /
-// resolveBorderColor() - same policy, transplanted here):
-//   1. settings.borderColor - the widget's own config.json default AND
-//      any later user override both live here, in that order of
-//      precedence, because WidgetSettings.applyDefaults() (see
-//      lib/widgetSettings.js) bakes a widget's config.json default for
-//      this field straight into settings the very first time it loads
-//      - a user pick simply overwrites that same key afterward. So by
-//      the time borderCss() runs, settings.borderColor already IS
-//      "user setting, or failing that, this widget's config.json
-//      default" - there's no separate tier to check for that.
-//   2. backgroundColorCss - the card's own resolved background color,
-//      passed in by cardStyleCss() below. Only reached if settings
-//      truly has no borderColor key at all (e.g. a bare/partial
-//      settings object that never went through the defaults merge).
-//   3. BORDER_DEFAULTS.borderColor, only if neither of the above exist.
-//
-// Falling through to the background when tier 1 is genuinely empty
-// means an enabled border reads as a soft rim on the glass instead of
-// an outline in an unrelated color that draws the eye to the live-blur
-// layer's square corners (see cardLayers.js's applyLayeredCardStyle()).
 export function borderCss(settings, backgroundColorCss = null) {
     const s = settings ?? {};
     if (!(s.borderEnabled ?? BORDER_DEFAULTS.borderEnabled)) return "";
@@ -170,28 +128,10 @@ export const BLUR_DEFAULTS = {
     blurRadius: 24
 };
 
-// NOTE: this used to also emit a `-st-background-blur` CSS declaration
-// here for cardStyleCss() to include. Dropped it - St's CSS parser
-// doesn't actually recognize that property (confirmed: it wasn't doing
-// anything, just quietly parsed-and-ignored - which is also liable to
-// spam "unknown property" warnings into the Shell's log on every
-// style update, i.e. every _render() call, for widgets like clocks that
-// re-render every second). Real background blur for this extension's
-// widgets goes entirely through the actual Shell.BlurEffect Clutter
-// effect now - see lib/cardLayers.js's applyCardBlur().
 export function blurCss() {
     return "";
 }
 
-// Shared by cardStyleCss() below and by lib/cardLayers.js's
-// applyLayeredCardStyle() (for the Blur Layer, which needs the exact
-// same radius as the visible card or the two layers' corners would
-// mismatch), and reusable directly by any widget that builds its own
-// card CSS by hand instead of going through cardStyleCss() (e.g.
-// widgets/power-menu, widgets/settings-control,
-// widgets/notification-stack) - see cornerRadiusEnabled's doc comment
-// in lib/appearanceFieldsSchema.js for why a widget can't just read
-// settings.cornerRadius directly anymore.
 export function resolveCornerRadius(settings, cornerRadiusFallback = 18, cornerRadiusKey = "cornerRadius") {
     const s = settings ?? {};
     if (!(s.cornerRadiusEnabled ?? true)) return 0;
@@ -208,7 +148,6 @@ export function cardStyleCss(settings, options = {}) {
     if (includeShadow) css += shadowBoxShadowCss(settings);
     return css;
 }
-
 
 export function hexToRgba(hex) {
     const m = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.exec(hex ?? "");

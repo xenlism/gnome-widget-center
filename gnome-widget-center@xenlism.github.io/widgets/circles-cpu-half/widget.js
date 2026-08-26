@@ -115,10 +115,6 @@ export default class CirclesCpuHalfWidget {
         if (this._gauge.ringArea) this._gauge.ringArea.queue_repaint();
     }
     _onRepaint() {
-        // Two concentric half-rings, both showing the same CPU value.
-        // Mirrors circles-net-half's two-ring look; unlike net (two
-        // distinct metrics, download+upload), CPU only has one metric,
-        // so both ring entries share the same fraction/color.
         const color = this._settings.cpuRingColor ?? "#33D17AFF";
         this._gauge.paintRings({
             settings: this._settings,

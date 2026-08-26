@@ -4,9 +4,6 @@ import Gio from "gi://Gio";
 
 import { fileExists } from "./fsUtils.js";
 
-// St-free (only pulls in Pango), so - unlike cardLayers.js - this is safe
-// to import statically even though WidgetLoader is also loaded by the
-// standalone GTK4 prefs process (see _ensureCardPainted()'s header comment).
 import { deferUntilMapped } from "./widgetVisualKit.js";
 
 import { WidgetSettings } from "./widgetSettings.js";
@@ -30,13 +27,6 @@ export class WidgetLoader {
         this._logger = logger;
         this._instances = new Map;
         this._errors = [];
-        // Optional host-provided callback so a widget's own `api.host.rescan()`
-        // (see _buildApi() below) can ask the host to discover + load any
-        // widget directories that showed up on disk since the last load,
-        // without the loader needing to know anything about the host's
-        // layer/placement logic itself. Used by Architect Widgets (see
-        // lib/architectWidgetKit.js) right after writing a new Child's
-        // files, but generic to any widget that creates files on disk.
         this._onRescanRequested = onRescanRequested;
         this._shadowOverflowMargin = Math.max(0, Number(shadowOverflowMargin) || 0);
         this._hostSettings = hostSettings;
@@ -164,12 +154,6 @@ export class WidgetLoader {
         }
         return started;
     }
-    // Reads widgets/<id>/config.json (the settings-PANEL schema - tabs of
-    // fields with a `default` each, distinct from metadata.json's flatter
-    // "settings" array) and flattens every field's `default` into a plain
-    // {fieldId: value} map, so those defaults can be merged into a
-    // widget's actual persisted settings rather than only ever being used
-    // as a display fallback when rendering the settings panel.
     _configJsonDefaults(widgetInfo) {
         try {
             const { config } = readWidgetConfig(widgetInfo.path);
@@ -179,16 +163,6 @@ export class WidgetLoader {
             return {};
         }
     }
-    // Merges config.json defaults + metadata.json "settings" defaults +
-    // the widget's own getDefaultSettings(), then applies whichever of
-    // those keys are still missing from `settings` (WidgetSettings.
-    // applyDefaults() only fills in keys that don't already exist - it
-    // never overwrites a real saved/user value). Called both at initial
-    // widget load and after WidgetSettings.reloadFromDisk(), so that a
-    // Reset (which deletes the widget's settings file and lets
-    // reloadFromDisk() sync the live settings object down to the now-empty
-    // disk file) ends up restored to defaults rather than left with a
-    // genuinely empty settings object.
     _applyDefaults(widgetInfo, instance, settings) {
         try {
             const configJsonDefaults = this._configJsonDefaults(widgetInfo);
@@ -203,48 +177,6 @@ export class WidgetLoader {
             this._recordError(widgetInfo, `getDefaultSettings() threw: ${e.message}`);
         }
     }
-    // Safety net for the "createLayeredCard() but never actually calls
-    // applyLayeredCardStyle() in _render()" bug class (this is exactly
-    // what happened to geek-stat-clock before it got fixed by hand). Never
-    // overrides a widget that already painted its own card layer — St's
-    // get_style() comes back non-empty the moment a widget's own _render()
-    // has called applyLayeredCardStyle()/set_style() on layers.card.
-    //
-    // That paint doesn't necessarily happen synchronously inside
-    // buildActor() though: the established convention for a widget's
-    // _render() is to wrap its applyLayeredCardStyle() call in
-    // deferUntilMapped(this._actor, ...), which - per its own contract -
-    // only runs immediately if the actor is *already* mapped, and
-    // otherwise waits for 'notify::mapped'. The actor is never mapped yet
-    // at the point loadOne() calls this (it's called right after
-    // buildActor() returns, before the caller has added the actor to any
-    // container - see extension.js's loadAll().then()), so for every
-    // widget using that convention this check used to run before the
-    // real paint ever had a chance to fire, tripping a false-positive
-    // warning and clobbering the widget's own styling (icon-accent
-    // colors, etc.) with raw defaults in the process.
-    //
-    // Fix: piggyback on the exact same 'notify::mapped' event instead of
-    // checking synchronously now. A widget's own deferUntilMapped() call
-    // is wired up inside buildActor(), which already returned by the time
-    // loadOne() reaches this method - so our listener is always connected
-    // *after* the widget's, and GObject fires connected handlers in
-    // connection order. That guarantees a well-behaved widget's real
-    // paint has already run by the time our check does, so get_style()
-    // is no longer empty and this is a no-op for it. Only a widget that
-    // truly never calls applyLayeredCardStyle() at all still falls
-    // through to the warning + default-paint fallback below.
-    //
-    // cardLayers.js is still imported lazily (dynamic import) because it
-    // pulls in St, whose typelib only resolves inside the gnome-shell
-    // process - WidgetLoader is also loaded by the standalone prefs app
-    // (widget-center-prefs-app.js, run under plain `gjs -m`), which only
-    // ever calls discover(), never loadOne(), but a static
-    // `import St from "gi://St"` anywhere in the module graph throws at
-    // import time regardless of whether it's used, crashing the whole
-    // prefs process before it can open a window. deferUntilMapped() comes
-    // from widgetVisualKit.js instead, which only pulls in Pango, so it's
-    // safe as a static top-of-file import in both processes.
     _ensureCardPainted(widgetInfo, instance, settings) {
         const card = instance?._layers?.card;
         const actor = instance?._actor ?? instance?._layers?.root;
@@ -287,12 +219,6 @@ export class WidgetLoader {
             this._recordError(widgetInfo, `buildActor() threw: ${e.message}`);
             return null;
         }
-        // Not awaited: for any widget using the deferUntilMapped() paint
-        // convention this now genuinely waits on 'notify::mapped', which
-        // won't fire until well after loadOne() (and loadAll()) return -
-        // see this method's own header comment. It's a warn-only safety
-        // net, not something later steps depend on, so it runs in the
-        // background instead of blocking the rest of the load pipeline.
         this._ensureCardPainted(widgetInfo, instance, settings);
         await this._enforceBlockSize(widgetInfo, actor);
         try {
@@ -313,14 +239,6 @@ export class WidgetLoader {
             const changed = WidgetSettings.reloadFromDisk(widgetInfo.id, this._storageService);
             if (!changed) return;
             const current = this._instances.get(widgetInfo.id);
-            // reloadFromDisk() is a pure disk-sync - it deletes any key
-            // no longer present in the file (which is every key, right
-            // after a Reset deletes the file entirely) and applies no
-            // defaults of its own. Re-fill anything now missing the same
-            // way initial load does, or Reset leaves the widget with a
-            // genuinely empty settings object. applyDefaults() only fills
-            // keys that are still absent, so this never overwrites a
-            // value that legitimately came from the disk sync.
             if (this._storageService) this._applyDefaults(widgetInfo, current?.instance, settings);
             try {
                 current?.instance.onSettingsChanged?.(current.settings);
@@ -471,26 +389,12 @@ export class WidgetLoader {
     }
     _buildApi(widgetInfo, settings) {
         const hostSettings = this._hostSettings;
-        
+
         return {
             settings: settings,
-            // Every widget always manages its own card styling from its
-            // own settings — there's no more "Force Settings"/"themeable"
-            // system that can override a widget's background/corner-radius/
-            // blur/shadow from a global switch. The one thing that's still
-            // shared globally is the shadow's angle/distance (see
-            // widgetVisualKit.js's shadowBoxShadowCss() and
-            // lib/globalShadowHelper.js) — everything else always comes
-            // straight from the widget's own config.json/settings.
             monitorInfo: null,
             position: this._buildPositionApi(widgetInfo),
             host: {
-                // Best-effort: discover + load any newly-appeared widget
-                // directory (e.g. one this widget just created on disk)
-                // and place it in the running layer. No-op if the host
-                // didn't wire a callback (older host build, or a widget
-                // being loaded outside the normal extension - e.g. a
-                // future test harness). Never throws into caller code.
                 rescan: () => {
                     try {
                         this._onRescanRequested?.();
@@ -516,13 +420,6 @@ export class WidgetLoader {
                 }
             },
             logger: {
-                // Gated behind Development Mode, same as every other
-                // routine/debug-level log in the extension - a widget
-                // calling `this._api.logger.info(...)` during normal
-                // operation (e.g. "no Bluetooth adapter found") shouldn't
-                // keep writing to the journal once Development Mode is
-                // switched off. warn/error stay unconditional since those
-                // indicate an actual problem the widget hit.
                 info: (...args) => {
                     if (hostSettings?.isReady && hostSettings.getGlobalValue("dev-mode")) console.log(`[${widgetInfo.id}]`, ...args);
                 },

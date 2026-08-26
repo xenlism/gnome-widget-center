@@ -14,11 +14,6 @@ import { configJsonDefaults } from "../../lib/widgetConfigDefaults.js";
 const FACE_SIZE = 148;
 const FACE_MARGIN = 4;
 
-// Strip weight/style keywords out of a Pango-style family string so
-// Cairo's toy font-face selection gets a plain family name - passing
-// "Sans Bold" straight through to selectFontFace() is unreliable across
-// fontconfig setups, so the weight is applied via Cairo.FontWeight
-// instead of being left in the family string.
 function _splitFamilyAndWeight(family) {
     const isBold = /\bbold\b/i.test(family ?? "");
     const plain = (family ?? "Sans").replace(/\b(bold|italic|oblique|light|medium|regular)\b/gi, "").trim() || "Sans";
@@ -183,16 +178,6 @@ export default class ClockDigitalMinuteProgressWidget {
         const radius = FACE_SIZE / 2 - FACE_MARGIN;
         const dt = this._now.dateTime ?? GLib.DateTime.new_now_local();
 
-        // Minute progress ring - a ring of short radial dashes near the
-        // edge, same "gapped ticks" look as clock-digital-dashed, but
-        // two-toned: each dash stands for a slice of the current hour.
-        // Dashes whose slice has already started (elapsed minutes, plus
-        // the current minute itself) paint in the dark/"elapsed" color;
-        // dashes for minutes still to come this hour paint in the
-        // light/"remaining" color. Deliberately drawn as separate
-        // segments rather than one stroked circle with a Cairo dash
-        // pattern - that's what keeps the gapped-tick look instead of a
-        // continuous dashed circle.
         if (s.showDashes ?? true) {
             const dashCount = Math.max(4, Math.round(s.dashCount ?? 60));
             const outer = radius - 2;
@@ -202,8 +187,6 @@ export default class ClockDigitalMinuteProgressWidget {
             cr.setLineWidth(2);
             cr.setLineCap(Cairo.LineCap.ROUND);
             for (let i = 0; i < dashCount; i++) {
-                // Minute this dash represents (each dash covers 60/dashCount
-                // minutes when dashCount < 60).
                 const minuteForDash = Math.floor(i * 60 / dashCount);
                 const elapsed = minuteForDash <= currentMinute;
                 this._setSourceHex(
@@ -218,7 +201,6 @@ export default class ClockDigitalMinuteProgressWidget {
             }
         }
 
-        // Big HH:MM digital readout, centered
         const format24h = s.format24h ?? true;
         const text = format24h ? (dt.format("%H:%M") ?? "") : (dt.format("%I:%M") ?? "");
         const { family, size } = _parseFontDescription(s.digitFont ?? "Sans Bold 34", "Sans Bold", 34);

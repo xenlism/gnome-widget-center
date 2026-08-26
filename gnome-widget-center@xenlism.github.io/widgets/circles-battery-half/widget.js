@@ -168,10 +168,6 @@ export default class CirclesBatteryHalfWidget {
         if (this._gauge.ringArea) this._gauge.ringArea.queue_repaint();
     }
     _onRepaint() {
-        // Two concentric half-rings, both showing the same battery value.
-        // This mirrors circles-net-half's two-ring look; unlike net (which
-        // has two distinct metrics, download+upload), battery only has one
-        // metric, so both ring entries share the same fraction/color.
         const ringColorKey = this._currentRingColorSetting();
         const color = this._settings[ringColorKey] ?? RING_COLOR_DEFAULTS[ringColorKey];
         this._gauge.paintRings({

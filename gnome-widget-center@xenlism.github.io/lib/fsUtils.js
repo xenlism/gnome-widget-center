@@ -2,11 +2,6 @@ import Gio from "gi://Gio";
 
 import GLib from "gi://GLib";
 
-// XDG special folders (Downloads, Documents, Music, Pictures, Videos,
-// Desktop, Public, Templates) plus $HOME itself, mapped to the same
-// icon names GNOME's own file manager/sidebar uses for them. Built once
-// on import - GLib.get_user_special_dir()/get_home_dir() are cheap
-// synchronous lookups of already-resolved XDG user-dirs.
 const _SPECIAL_FOLDERS = (() => {
     const entries = [
         [ GLib.UserDirectory.DIRECTORY_DOWNLOAD, "folder-download", "Downloads" ],
@@ -38,13 +33,6 @@ const _SPECIAL_FOLDERS = (() => {
     return map;
 })();
 
-/**
- * Looks up a path against the user's XDG special folders (Downloads,
- * Documents, Music, Pictures, Videos, Desktop, Public, Templates, Home).
- * Returns {icon, label} for a recognized special folder, or null for any
- * other directory - callers should fall back to a generic folder icon
- * and the path's own basename in that case.
- */
 export function getSpecialFolderInfo(path) {
     if (!path) return null;
     return _SPECIAL_FOLDERS.get(path) ?? null;
@@ -54,9 +42,6 @@ export function fileExists(path) {
     return Gio.File.new_for_path(path).query_exists(null);
 }
 
-// True if `path` is `root` itself or sits somewhere inside it. Used to
-// tell a bundled widget/theme-pack's path apart from a user-installed
-// one living under e.g. ~/.local/share/gnome-widget-center/widgets.
 export function pathIsUnder(path, root) {
     if (!path || !root) return false;
     return path === root || path.startsWith(`${root}/`);

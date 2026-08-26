@@ -1,42 +1,3 @@
-// lib/appearanceFieldsSchema.js
-//
-// Single source of truth for the "Card" settings every widget's own
-// card is styled from — background color, background blur, shadow,
-// border, opacity. These are the exact fields lib/widgetVisualKit.js's
-// cardStyleCss()/blurCss()/shadowBoxShadowCss()/borderCss()/
-// opacityValue() read off a widget's own settings (see
-// lib/cardLayers.js's applyLayeredCardStyle()).
-//
-// Previously ~44 widgets each hand-rolled a copy of these fields in
-// their own config.json (same ids, same defaults, copy-pasted), and
-// any widget that didn't (e.g. an old themeable:true widget) had no
-// Appearance tab at all. lib/widgetConfigReader.js's
-// mergeAppearanceFields() now folds these in automatically for every
-// widget, filling in only what a widget's own config.json doesn't
-// already declare - a widget that already has its own copy of a field
-// (id match) always keeps its own definition untouched. shadow-angle/
-// shadow-distance are deliberately NOT here - those stay global (see
-// lib/globalShadowHelper.js), a widget's own settings for them are
-// never read.
-//
-// cornerRadiusEnabled: most widgets never read this directly - they call
-// cardStyleCss()/applyLayeredCardStyle() (lib/widgetVisualKit.js /
-// lib/cardLayers.js), which already resolve it via resolveCornerRadius()
-// and pick this field up automatically the moment it's declared here.
-// The exception is any widget that builds its own card CSS by hand
-// instead of delegating to those helpers - currently widgets/power-menu,
-// widgets/settings-control, and widgets/notification-stack - which must
-// each call resolveCornerRadius() themselves, or this toggle shows up in
-// their settings UI (added automatically, see mergeAppearanceFields()
-// below) but silently does nothing - the same bug that previously hit
-// "Enable background blur" on that same set of hand-rolled widgets.
-//
-// NOT exported for third-party widgets to import directly (they live
-// outside this extension's directory and can't reach lib/*.js - see
-// CLAUDE.md "Architecture facts"). A third-party widget that wants
-// these fields still has to declare its own copies in its own
-// config.json, same as before.
-
 export const APPEARANCE_FIELD_IDS = Object.freeze([
     "backgroundColor", "cornerRadius", "cornerRadiusEnabled", "blurEnabled", "blurRadius",
     "shadowEnabled", "shadowColor", "shadowOpacity", "shadowBlur",
@@ -47,18 +8,6 @@ function field(def) {
     return Object.freeze(def);
 }
 
-// Grouped the same way the hand-rolled copies typically were: Card
-// (background+corner-radius), Background Blur, Shadow, Border, Opacity.
-// Same 12 fields as buildAppearanceGroups() above, but in the flat
-// {id, type, label, default, ...} shape lib/settingsSchemaUI.js's
-// buildSettingsPage() expects (the fallback settings renderer used
-// when a widget has no config.json/prefs.js/settings.js at all - see
-// lib/prefsWidgetManagement.js's _openWidgetPrefs()). Kept as a
-// separate function rather than converting buildAppearanceGroups()'s
-// shape at call time because the two renderers' field shapes really
-// are different enough (dataType+fieldType+tabs/groups vs a flat
-// type string) that a lossy on-the-fly conversion would be harder to
-// keep correct than just declaring both directly.
 export function buildAppearanceFieldsFlat() {
     return [
         field({

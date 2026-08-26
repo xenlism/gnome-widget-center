@@ -65,11 +65,6 @@ export class WidgetEditMode {
             state: EditModeState.NORMAL,
             toolbar: null,
             isUserInstalled: options.isUserInstalled ?? false,
-            // Architect Widgets (lib/architectWidgetKit.js) expose an
-            // _addChild() the host can call - when true, the edit-mode
-            // toolbar gets an extra "Add Widget" icon (see
-            // _buildToolbar() below) instead of the widget painting its
-            // own "+ Add Widget" button inline in its card.
             hasAddChild: options.hasAddChild ?? false,
             escId: null,
             toolbarGeneration: 0,
