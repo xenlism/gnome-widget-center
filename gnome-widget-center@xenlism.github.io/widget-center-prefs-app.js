@@ -22,6 +22,24 @@ const app = new Adw.Application({
     flags: Gio.ApplicationFlags.HANDLES_COMMAND_LINE
 });
 
+// Make our own assets/ directory available as an icon lookup location so we
+// can reference our bundled icon.svg / icon.png by name ("icon") instead of
+// relying on the icon being installed into the system's hicolor theme.
+function registerAppIconSearchPath() {
+    try {
+        const display = Gdk.Display.get_default();
+        if (!display) return;
+        const iconTheme = Gtk.IconTheme.get_for_display(display);
+        iconTheme.add_search_path(GLib.build_filenamev([ EXTENSION_PATH, "assets" ]));
+    } catch (e) {
+        logError(e, "[widget-center] widget-center-prefs-app: could not register icon search path");
+    }
+}
+
+app.connect("startup", () => {
+    registerAppIconSearchPath();
+});
+
 let window = null;
 
 let controller = null;
@@ -31,7 +49,8 @@ let buildPromise = null;
 async function presentWindow(requestedWidgetId, focusTarget = null, exportThemeId = null, exportThemeNew = false, attachScreenshotPath = null) {
     if (!controller) {
         window = new Adw.PreferencesWindow({
-            application: app
+            application: app,
+            icon_name: "icon"
         });
         controller = new PrefsWindowControllerV2(EXTENSION_PATH);
         buildPromise = controller.build(window).catch(e => {

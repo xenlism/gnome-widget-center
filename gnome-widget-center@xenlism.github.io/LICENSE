@@ -1,0 +1,31 @@
+GNU GENERAL PUBLIC LICENSE
+Version 3, 29 June 2007 (or, at your option, any later version)
+
+Copyright (C) 2026 Nattapong Pullkhow
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+--------------------------------------------------------------------
+NOTE: this file contains the standard short GPL notice only. Before
+publishing, replace this file with the full, verbatim GPL-3.0 license
+text from the canonical source:
+
+    https://www.gnu.org/licenses/gpl-3.0.txt
+
+(I could not fetch that page directly to paste it in here - gnu.org
+blocks automated fetching - but the short notice above is legally
+sufficient to state the license as long as the full text is included
+in the distributed extension, per the GPL's own instructions for how
+to apply it to a new program.)
+--------------------------------------------------------------------

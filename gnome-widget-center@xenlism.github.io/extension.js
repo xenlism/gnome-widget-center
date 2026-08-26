@@ -6,7 +6,7 @@ import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
 import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
 
-import { WidgetLoader } from "./lib/widgetLoader.js";
+import { WidgetRuntimeLoader } from "./lib/shell/widgetRuntimeLoader.js";
 
 import { WidgetLayer } from "./lib/shell/widgetLayer.js";
 
@@ -77,7 +77,7 @@ export default class WidgetCenterExtension extends Extension {
         this._monitors = new MonitorWatcher;
         this._layer = new WidgetLayer(this._storage);
         this._layer.init(this._monitors.getMonitors(), this._monitors.primaryIndex);
-        this._monitors.connect((monitors, primaryIndex) => this._layer.reconcileMonitors(monitors, primaryIndex));
+        this._monitors.watch((monitors, primaryIndex) => this._layer.reconcileMonitors(monitors, primaryIndex));
         this._drag = new DragController(this._layer, this._storage);
         this._layout = new LayoutEngine(this._readLayoutSettings());
         this._editMode = new WidgetEditMode(this._storage, {
@@ -131,7 +131,7 @@ export default class WidgetCenterExtension extends Extension {
         const bundledWidgetsPath = GLib.build_filenamev([ this.path, "widgets" ]);
         const userWidgetsPath = GLib.build_filenamev([ GLib.get_user_data_dir(), "gnome-widget-center", "widgets" ]);
         this._userWidgetsPath = userWidgetsPath;
-        const loader = new WidgetLoader([ bundledWidgetsPath, userWidgetsPath ], this._storage, this._logger, this._settings?.isReady ? this._settings.getGlobalValue("widget-spacing") : 0, this._settings, this._themeService, () => this._loadNewlyDiscoveredWidgets());
+        const loader = new WidgetRuntimeLoader([ bundledWidgetsPath, userWidgetsPath ], this._storage, this._logger, this._settings?.isReady ? this._settings.getGlobalValue("widget-spacing") : 0, this._settings, this._themeService, () => this._loadNewlyDiscoveredWidgets());
         this._loader = loader;
         if (this._settings?.isReady) applyAutoEnablePolicy(this._settings, loader.discover(), userWidgetsPath, this._logger);
         const initialDisabled = new Set(this._settings?.isReady ? this._settings.getGlobalValue("disabled-widgets") : []);

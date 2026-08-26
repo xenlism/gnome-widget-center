@@ -5,7 +5,7 @@ export class MonitorWatcher {
         this._signalId = null;
         this._callback = null;
     }
-    connect(callback) {
+    watch(callback) {
         this.destroy();
         this._callback = callback;
         this._signalId = Main.layoutManager.connect("monitors-changed", () => {

@@ -627,7 +627,7 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
             margin_top: 24,
             margin_bottom: 12
         });
-        const logoPath = GLib.build_filenamev([ this.path, "assets", "wc-about-icon.svg" ]);
+        const logoPath = GLib.build_filenamev([ this.path, "assets", "icon.svg" ]);
         if (fileExists(logoPath)) {
             const logo = new Gtk.Picture({
                 content_fit: Gtk.ContentFit.CONTAIN,
