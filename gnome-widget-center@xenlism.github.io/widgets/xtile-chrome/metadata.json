@@ -1,16 +1,16 @@
 {
     "id": "xenlism.github.io.xtile-chrome",
-    "name": "Xtile Chrome By Xenlism",
-    "description": "1x1 app launcher tile for Google Chrome - same Xtile widget as Xtile Firefox (shares its widget.js class via `extends XtileBaseWidget`), only the default .desktop in this widget's own config.json differs. Centered icon, app name at the bottom, card background auto-tinted from the app's own icon color.",
+    "name": "chrome",
+    "parent": "xenlism.github.io.xtile",
+    "description": "An Xtile app-launcher tile created from the Xtile Architect widget.",
     "version": "1.0.0",
     "author": "Nattapong Pullkhow",
     "api-version": 1,
     "entry": "widget.js",
     "block-type": "1x1",
     "default-position": {
-        "x": 1083,
-        "y": 761,
+        "x": 40,
+        "y": 40,
         "monitor": 0
-    },
-    "screenshot": "screenshot.png"
+    }
 }

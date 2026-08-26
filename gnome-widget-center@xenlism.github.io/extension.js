@@ -469,7 +469,6 @@ export default class WidgetCenterExtension extends Extension {
         this._editDrag?.detach(widgetId);
         this._editMode?.detach(widgetId);
         this._layer.removeWidgetActor(widgetId);
-        // ========================================================
         
         const newEntry = await this._loader.reloadWidget(widgetId);
         if (!newEntry) return;

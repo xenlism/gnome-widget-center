@@ -1,0 +1,23 @@
+/* widgets/xtile/stylesheet.css
+ *
+ * Optional (see WIDGET_API.md §1) - documents style_class hooks used
+ * by widget.js's _promptNameAndApp() dialog. As with other widgets in
+ * this codebase, the host does not auto-load this into the Shell's
+ * theme context; appearance comes from inline St properties.
+ */
+
+.xtile-architect-dialog-box {
+    spacing: 8px;
+    padding: 4px 0 8px 0;
+}
+
+.xtile-architect-name-entry,
+.xtile-architect-app-entry {
+    min-width: 260px;
+}
+
+.xtile-architect-app-result {
+    color: #b3b3b3;
+    font-size: 0.9em;
+    padding-top: 2px;
+}

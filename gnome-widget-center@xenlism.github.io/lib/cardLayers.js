@@ -4,7 +4,7 @@ import Clutter from "gi://Clutter";
 
 import Shell from "gi://Shell";
 
-import { cardStyleCss, applyCardOpacity, getBlurSettings, toCssColor } from "./widgetVisualKit.js";
+import { cardStyleCss, applyCardOpacity, getBlurSettings, toCssColor, resolveCornerRadius } from "./widgetVisualKit.js";
 
 const BLUR_EFFECT_NAME = "wc-card-blur";
 
@@ -164,8 +164,7 @@ export function applyLayeredCardStyle(layers, settings, cardStyleOptions = {}) {
     // available here without a shader or a native library, so the
     // square corners are simply accepted now rather than papered over.
     const cornerRadiusKey = cardStyleOptions.cornerRadiusKey ?? "cornerRadius";
-    const cornerRadiusRaw = settings?.[cornerRadiusKey];
-    const cornerRadius = Number.isFinite(cornerRadiusRaw) ? cornerRadiusRaw : (cardStyleOptions.cornerRadiusFallback ?? 18);
+    const cornerRadius = resolveCornerRadius(settings, cardStyleOptions.cornerRadiusFallback ?? 18, cornerRadiusKey);
     const bgKey = cardStyleOptions.backgroundColorKey ?? "backgroundColor";
     const bgFallback = cardStyleOptions.backgroundColorFallback ?? "#000000F5";
     const bgColor = toCssColor(settings?.[bgKey], bgFallback);

@@ -8,9 +8,9 @@ import GLib from "gi://GLib";
 
 import { getAppInfoFromFilename } from "../../lib/utils.js";
 
-import { SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS, deferUntilMapped as _deferUntilMapped } from "../../lib/widgetVisualKit.js";
+import { SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS, BLUR_DEFAULTS, deferUntilMapped as _deferUntilMapped } from "../../lib/widgetVisualKit.js";
 
-import { createLayeredCard } from "../../lib/cardLayers.js";
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
 import { attachTooltip } from "../../lib/widgetTooltip.js";
 
 import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
@@ -101,6 +101,7 @@ export default class LauncherSquare {
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
+            ...BLUR_DEFAULTS,
         };
     }
     onSettingsChanged() {
@@ -119,9 +120,9 @@ export default class LauncherSquare {
     _render() {
         const apps = (this._settings.apps ?? []).slice(0, MAX_APPS);
         _deferUntilMapped(this._actor, () => {
-            this._layers.card.set_style(_cardStyleCss(this._settings, {
+            applyLayeredCardStyle(this._layers, this._settings, {
                 cornerRadiusFallback: 18
-            }));
+            });
             this._content.set_style(`padding: ${CARD_PADDING}px;`);
         });
         for (let i = 0; i < this._cells.length; i++) {

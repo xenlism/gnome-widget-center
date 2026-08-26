@@ -75,6 +75,7 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
         this._settings = settings;
         this._storage = storage;
         this._discovered = ok;
+        this._bundledWidgetsPath = bundledWidgetsPath;
         this._userWidgetsPath = userWidgetsPath;
         const display = Gdk.Display.get_default();
         const monitor = display.get_monitors().get_item(0);

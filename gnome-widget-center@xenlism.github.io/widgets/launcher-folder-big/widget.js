@@ -6,9 +6,9 @@ import Gio from "gi://Gio";
 
 import GLib from "gi://GLib";
 
-import { SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS, deferUntilMapped as _deferUntilMapped } from "../../lib/widgetVisualKit.js";
+import { SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS, BLUR_DEFAULTS, deferUntilMapped as _deferUntilMapped } from "../../lib/widgetVisualKit.js";
 
-import { createLayeredCard } from "../../lib/cardLayers.js";
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
 import { attachTooltip } from "../../lib/widgetTooltip.js";
 
 import { getSpecialFolderInfo } from "../../lib/fsUtils.js";
@@ -102,6 +102,7 @@ export default class LauncherFolderSquareBig {
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
+            ...BLUR_DEFAULTS,
         };
     }
     onSettingsChanged() {
@@ -120,9 +121,9 @@ export default class LauncherFolderSquareBig {
     _render() {
         const folders = (this._settings.folders ?? []).slice(0, MAX_FOLDERS);
         _deferUntilMapped(this._actor, () => {
-            this._layers.card.set_style(_cardStyleCss(this._settings, {
+            applyLayeredCardStyle(this._layers, this._settings, {
                 cornerRadiusFallback: 18
-            }));
+            });
             this._content.set_style(`padding: ${CARD_PADDING}px;`);
         });
         for (let i = 0; i < this._cells.length; i++) {

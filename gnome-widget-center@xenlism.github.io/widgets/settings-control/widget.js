@@ -53,8 +53,8 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
-import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, borderCss as _borderCss, BORDER_DEFAULTS, OPACITY_DEFAULTS} from '../../lib/widgetVisualKit.js';
-import {createLayeredCard} from '../../lib/cardLayers.js';
+import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, borderCss as _borderCss, BORDER_DEFAULTS, OPACITY_DEFAULTS, BLUR_DEFAULTS, applyCardOpacity, resolveCornerRadius} from '../../lib/widgetVisualKit.js';
+import {createLayeredCard, applyCardBlur} from '../../lib/cardLayers.js';
 import {attachTooltip} from '../../lib/widgetTooltip.js';
 import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 
@@ -109,7 +109,7 @@ export default class SettingsControlWidget {
     // actor is placed in the Widget Layer.
     buildActor() {
         const backgroundColor = this._settings?.backgroundColor ?? '#070000a5';
-        const cornerRadius = this._settings?.cornerRadius ?? 18;
+        const cornerRadius = resolveCornerRadius(this._settings);
         this._iconOnColor = this._settings?.iconOnColor ?? '#3584e4';
         this._iconOffColor = this._settings?.iconOffColor ?? '#9a9996';
 
@@ -128,6 +128,9 @@ export default class SettingsControlWidget {
         this._actor.reactive = true;
 
         this._layers.card.set_style(this._cardStyle(backgroundColor, cornerRadius));
+        applyCardOpacity(this._layers.card, this._settings);
+        this._layers.cardBlur.set_style(this._cardBlurStyle(backgroundColor, cornerRadius));
+        applyCardBlur(this._layers.cardBlur, this._settings);
 
         // this._content is a plain wrapper - padding lives here, never the
         // Content Layer itself (Rule 5).
@@ -282,6 +285,7 @@ export default class SettingsControlWidget {
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
+            ...BLUR_DEFAULTS,
         };
     }
 
@@ -294,8 +298,11 @@ export default class SettingsControlWidget {
             return;
 
         const backgroundColor = settings?.backgroundColor ?? '#070000a5';
-        const cornerRadius = settings?.cornerRadius ?? 18;
+        const cornerRadius = resolveCornerRadius(settings);
         this._layers.card.set_style(this._cardStyle(backgroundColor, cornerRadius));
+        applyCardOpacity(this._layers.card, settings);
+        this._layers.cardBlur.set_style(this._cardBlurStyle(backgroundColor, cornerRadius));
+        applyCardBlur(this._layers.cardBlur, settings);
 
         this._iconOnColor = settings?.iconOnColor ?? '#3584e4';
         this._iconOffColor = settings?.iconOffColor ?? '#9a9996';
@@ -308,7 +315,6 @@ export default class SettingsControlWidget {
         this._renderTheme();
     }
 
-    // ---- Wi-Fi / Ethernet (org.freedesktop.NetworkManager) ----------------
 
     /** @private */
     _enableNetwork() {
@@ -356,7 +362,6 @@ export default class SettingsControlWidget {
         );
     }
 
-    // ---- Bluetooth (org.bluez) ---------------------------------------------
 
     /** @private */
     _enableBluetooth() {
@@ -513,7 +518,6 @@ export default class SettingsControlWidget {
         }
     }
 
-    // ---- Do Not Disturb (GSettings) ----------------------------------------
 
     /** @private */
     _enableDnd() {
@@ -547,7 +551,6 @@ export default class SettingsControlWidget {
         this._notifSettings.set_boolean('show-banners', !showBanners);
     }
 
-    // ---- Dark / Light mode (GSettings) -------------------------------------
 
     /** @private */
     _enableTheme() {
@@ -646,6 +649,12 @@ export default class SettingsControlWidget {
         return `background-color: rgba(${r}, ${g}, ${b}, ${a}); border-radius: ${cornerRadius}px; ` +
             _borderCss(this._settings) +
             _shadowBoxShadowCss(this._settings);
+    }
+
+    /** @private just background-color + border-radius, for the Blur Layer - border/shadow stay on `card` only, or they'd be drawn twice. */
+    _cardBlurStyle(hexColor, cornerRadius) {
+        const {r, g, b, a} = this._hexToRgba(hexColor);
+        return `background-color: rgba(${r}, ${g}, ${b}, ${a}); border-radius: ${cornerRadius}px;`;
     }
 
     /** @private "#rrggbb" / "#rrggbbaa" (or 3/4-digit shorthand) -> {r, g, b} 0-255 each, {a} 0-1. */

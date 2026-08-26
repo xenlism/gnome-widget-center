@@ -181,11 +181,6 @@ export default class MediaPlayerCircleWidget {
         this._content.add_child(this._coverStack);
 
 
-        /*
-         * =========================
-         * Fallback Artwork
-         * =========================
-         */
         this._fallbackArea = new St.DrawingArea({
             width: COVER_SIZE,
             height: COVER_SIZE
@@ -215,11 +210,6 @@ export default class MediaPlayerCircleWidget {
         this._coverStack.add_child(this._fallbackIcon);
 
 
-        /*
-         * =========================
-         * Album Art
-         * =========================
-         */
         this._artIcon = new St.Widget({
             width: COVER_SIZE,
             height: COVER_SIZE,
@@ -239,11 +229,6 @@ export default class MediaPlayerCircleWidget {
         this._coverStack.add_child(this._artIcon);
 
 
-        /*
-         * =========================
-         * Text
-         * =========================
-         */
         this._titleLabel = new St.Label({
             text: "No media playing"
         });
@@ -285,11 +270,6 @@ export default class MediaPlayerCircleWidget {
         this._content.add_child(this._textBox);
 
 
-        /*
-         * =========================
-         * Cover Button
-         * =========================
-         */
         this._coverButton = new St.Button({
             x_expand: true,
             y_expand: true,
@@ -308,11 +288,6 @@ export default class MediaPlayerCircleWidget {
         this._content.add_child(this._coverButton);
 
 
-        /*
-         * =========================
-         * Controls
-         * =========================
-         */
         this._prevButton = this._makeButton(
             "media-skip-backward-symbolic",
             () => this._media.previous()
@@ -347,11 +322,6 @@ export default class MediaPlayerCircleWidget {
         this._content.add_child(this._controls);
 
 
-        /*
-         * =========================
-         * Hover
-         * =========================
-         */
         this._actor.set_track_hover(true);
 
         this._hoverId = this._actor.connect(
@@ -600,11 +570,6 @@ export default class MediaPlayerCircleWidget {
         this._state = state;
 
 
-        /*
-         * =========================
-         * No media
-         * =========================
-         */
         if (!state) {
 
             this._titleLabel.set_text("");
@@ -628,11 +593,6 @@ export default class MediaPlayerCircleWidget {
         }
 
 
-        /*
-         * =========================
-         * Media exists
-         * =========================
-         */
         this._textBox.show();
 
         this._titleLabel.set_text(

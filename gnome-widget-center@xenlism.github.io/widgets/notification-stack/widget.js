@@ -4,7 +4,7 @@ import Clutter from "gi://Clutter";
 
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
-import { SHADOW_DEFAULTS, BLUR_DEFAULTS, shadowBoxShadowCss, borderCss, toCssColor, parseFontDescription } from "../../lib/widgetVisualKit.js";
+import { SHADOW_DEFAULTS, BLUR_DEFAULTS, shadowBoxShadowCss, borderCss, toCssColor, parseFontDescription, resolveCornerRadius } from "../../lib/widgetVisualKit.js";
 import { applyCardBlur } from "../../lib/cardLayers.js";
 
 // Sample content shown until a real notification arrives, so the widget
@@ -72,6 +72,7 @@ export default class NotificationStackWidget {
             cardSpacing: 8,
             cardBgColor: "#3A3A3CC2",
             cornerRadius: 20,
+            cornerRadiusEnabled: true,
             borderEnabled: false,
             borderColor: "#FFFFFF26",
             borderWidth: 1,
@@ -133,7 +134,7 @@ export default class NotificationStackWidget {
 
     _buildCard(item) {
         const s = this._settings;
-        const cornerRadius = Number.isFinite(s.cornerRadius) ? s.cornerRadius : 20;
+        const cornerRadius = resolveCornerRadius(s, 20);
         const bg = toCssColor(s.cardBgColor ?? "#3A3A3CC2", "#3A3A3CC2");
 
         // Same inset-blur structure as widgets/calendar-events/widget.js's

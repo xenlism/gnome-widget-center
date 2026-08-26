@@ -37,7 +37,7 @@ import St from "gi://St";
 import Clutter from "gi://Clutter";
 import GLib from "gi://GLib";
 import {ModalDialog} from "resource:///org/gnome/shell/ui/modalDialog.js";
-import {createLayeredCard} from "../../lib/cardLayers.js";
+import {createLayeredCard, applyLayeredCardStyle} from "../../lib/cardLayers.js";
 import {configJsonDefaults} from "../../lib/widgetConfigDefaults.js";
 import {readTextFile} from "../../lib/fsUtils.js";
 import {createChildWidgetFromParent} from "../../lib/architectWidgetKit.js";
@@ -105,6 +105,15 @@ export default class ArchitectTemplateWidget {
 
     _render() {
         if (!this._actor) return;
+        // Same as widgets/_template/widget.js's R2: every widget always
+        // paints its own card straight from its own settings (background
+        // color/blur/shadow/border/opacity/corner-radius) - this scaffold
+        // used to skip this call entirely, so its config.json's
+        // auto-injected Appearance tab (see mergeAppearanceFields() in
+        // lib/widgetConfigReader.js) showed working-looking toggles that
+        // silently did nothing, the same bug fixed on the bundled widgets
+        // that hand-rolled their own card CSS.
+        applyLayeredCardStyle(this._layers, this._settings);
         this._label.set_text(this._settings.labelText ?? "Architect widget");
     }
 

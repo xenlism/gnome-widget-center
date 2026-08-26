@@ -33,6 +33,8 @@ import { buildAppearanceFieldsFlat } from "./appearanceFieldsSchema.js";
 
 import { applyAutoEnablePolicy } from "./autoEnablePolicy.js";
 
+import { PrefsWidgetList } from "./prefsWidgetList.js";
+
 // Same collision-safe fill-the-gaps merge readWidgetConfig() does for
 // config.json (see lib/widgetConfigReader.js) - only reached by a
 // widget with no config.json AND no prefs.js AND no settings.js, so
@@ -69,6 +71,29 @@ export const PrefsWidgetManagementMixin = Base => class extends Base {
         }
         this._jumpToWidgetPrefs(window, settings, storage, discovered, requestedId);
     }
+    // [FIX] wc-jump-to-widget-stale-discovery: `discovered` here can be a
+    // SNAPSHOT taken whenever this controller/window was first built
+    // (widget-center-prefs-app.js only calls controller.build() once per
+    // process - see presentWindow()'s `if (!controller)` guard - and reuses
+    // the same controller/window for every later `--widget-id=` command-line
+    // invocation as long as the Settings window is still open). A widget
+    // created AFTER that snapshot - e.g. an Architect Widget's freshly
+    // created Child (lib/architectWidgetKit.js's createChildWidgetFromParent(),
+    // which stamps a brand-new on-disk widget id like
+    // "xtile-Keyboard-20260826152040" and immediately asks to jump straight
+    // to its settings) - is genuinely on disk by the time this runs, just
+    // not yet in the stale in-memory `discovered` array. A plain
+    // `discovered.find()` here would report it "not found" and give up even
+    // though a fresh disk scan would find it right away - so retry once
+    // against a fresh scan before concluding the widget really doesn't
+    // exist.
+    _rescanDiscovered() {
+        const bundledWidgetsPath = this._bundledWidgetsPath ?? GLib.build_filenamev([ this.path, "widgets" ]);
+        const userWidgetsPath = this._userWidgetsPath ?? GLib.build_filenamev([ GLib.get_user_data_dir(), "gnome-widget-center", "widgets" ]);
+        const { ok } = new PrefsWidgetList([ bundledWidgetsPath, userWidgetsPath ]).list();
+        this._discovered = ok;
+        return ok;
+    }
     _jumpToWidgetPrefs(window, settings, storage, discovered, requestedId) {
         if (!requestedId) return;
         try {
@@ -76,7 +101,13 @@ export const PrefsWidgetManagementMixin = Base => class extends Base {
         } catch (e) {
             logError(e, "[widget-center] prefs: could not clear requested-widget-id");
         }
-        const widget = discovered.find(w => w.id === requestedId);
+        let widget = discovered.find(w => w.id === requestedId);
+        if (!widget) {
+            // Stale snapshot - see the comment on _rescanDiscovered() above.
+            // Re-scan disk once and retry before giving up for real.
+            const fresh = this._rescanDiscovered();
+            widget = fresh.find(w => w.id === requestedId);
+        }
         if (!widget) {
             logError(new Error(`requested-widget-id "${requestedId}" not found among discovered widgets`));
             return;

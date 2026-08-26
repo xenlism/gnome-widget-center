@@ -3,9 +3,9 @@
     "tabs": [
         {
             "id": "general",
-            "label": "Xtile Chrome",
+            "label": "Xtile",
             "description": "App launcher tile - icon centered, app name at the bottom.",
-            "icon": "web-browser-symbolic",
+            "icon": "view-grid-symbolic",
             "groups": [
                 {
                     "id": "app",
@@ -66,10 +66,10 @@
                         {
                             "id": "labelText",
                             "label": "Custom label",
-                            "description": "Leave blank to use the app's own name from its .desktop file",
+                            "description": "Leave blank to use the app's own name from its .desktop file. Set automatically from the name you typed when this tile was created.",
                             "dataType": "string",
                             "fieldType": "text",
-                            "default": "",
+                            "default": "chrome",
                             "visibleIf": "showLabel"
                         },
                         {

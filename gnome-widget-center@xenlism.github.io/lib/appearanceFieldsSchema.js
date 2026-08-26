@@ -19,6 +19,18 @@
 // lib/globalShadowHelper.js), a widget's own settings for them are
 // never read.
 //
+// cornerRadiusEnabled: most widgets never read this directly - they call
+// cardStyleCss()/applyLayeredCardStyle() (lib/widgetVisualKit.js /
+// lib/cardLayers.js), which already resolve it via resolveCornerRadius()
+// and pick this field up automatically the moment it's declared here.
+// The exception is any widget that builds its own card CSS by hand
+// instead of delegating to those helpers - currently widgets/power-menu,
+// widgets/settings-control, and widgets/notification-stack - which must
+// each call resolveCornerRadius() themselves, or this toggle shows up in
+// their settings UI (added automatically, see mergeAppearanceFields()
+// below) but silently does nothing - the same bug that previously hit
+// "Enable background blur" on that same set of hand-rolled widgets.
+//
 // NOT exported for third-party widgets to import directly (they live
 // outside this extension's directory and can't reach lib/*.js - see
 // CLAUDE.md "Architecture facts"). A third-party widget that wants
@@ -26,7 +38,7 @@
 // config.json, same as before.
 
 export const APPEARANCE_FIELD_IDS = Object.freeze([
-    "backgroundColor", "cornerRadius", "blurEnabled", "blurRadius",
+    "backgroundColor", "cornerRadius", "cornerRadiusEnabled", "blurEnabled", "blurRadius",
     "shadowEnabled", "shadowColor", "shadowOpacity", "shadowBlur",
     "borderEnabled", "borderColor", "borderWidth", "opacity"
 ]);
@@ -55,6 +67,13 @@ export function buildAppearanceFieldsFlat() {
             label: "Background color",
             description: "Card background. Use the alpha slider for transparency.",
             default: "#000000F5"
+        }),
+        field({
+            id: "cornerRadiusEnabled",
+            type: "boolean",
+            label: "Round card corners",
+            description: "Turn off for square corners regardless of the radius below.",
+            default: true
         }),
         field({
             id: "cornerRadius",
@@ -172,6 +191,14 @@ export function buildAppearanceGroups() {
                     default: "#000000F5"
                 }),
                 field({
+                    id: "cornerRadiusEnabled",
+                    label: "Round card corners",
+                    description: "Turn off for square corners regardless of the radius below.",
+                    dataType: "boolean",
+                    fieldType: "switch",
+                    default: true
+                }),
+                field({
                     id: "cornerRadius",
                     label: "Corner radius",
                     description: "Roundness of the card corners",
@@ -181,7 +208,8 @@ export function buildAppearanceGroups() {
                     min: 0,
                     max: 64,
                     step: 1,
-                    suffix: "px"
+                    suffix: "px",
+                    visibleIf: "cornerRadiusEnabled"
                 })
             ]
         },

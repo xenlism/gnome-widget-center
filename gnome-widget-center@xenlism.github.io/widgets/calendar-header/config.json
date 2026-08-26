@@ -15,11 +15,12 @@
                         {
                             "id": "headerColor",
                             "label": "Header background",
-                            "description": "Band behind month/weekday",
+                            "description": "Band behind month/weekday. Use the alpha slider for transparency.",
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
-                            "default": "#2563eb"
+                            "alpha": true,
+                            "default": "#2563ebFF"
                         },
                         {
                             "id": "headerTextColor",
@@ -33,11 +34,12 @@
                         {
                             "id": "bodyColor",
                             "label": "Body background",
-                            "description": "Panel behind the day number",
+                            "description": "Panel behind the day number. Use the alpha slider for transparency.",
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
-                            "default": "#ffffff"
+                            "alpha": true,
+                            "default": "#ffffffFF"
                         },
                         {
                             "id": "dayColor",

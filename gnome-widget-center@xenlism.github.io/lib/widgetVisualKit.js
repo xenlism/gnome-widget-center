@@ -183,11 +183,26 @@ export function blurCss() {
     return "";
 }
 
+// Shared by cardStyleCss() below and by lib/cardLayers.js's
+// applyLayeredCardStyle() (for the Blur Layer, which needs the exact
+// same radius as the visible card or the two layers' corners would
+// mismatch), and reusable directly by any widget that builds its own
+// card CSS by hand instead of going through cardStyleCss() (e.g.
+// widgets/power-menu, widgets/settings-control,
+// widgets/notification-stack) - see cornerRadiusEnabled's doc comment
+// in lib/appearanceFieldsSchema.js for why a widget can't just read
+// settings.cornerRadius directly anymore.
+export function resolveCornerRadius(settings, cornerRadiusFallback = 18, cornerRadiusKey = "cornerRadius") {
+    const s = settings ?? {};
+    if (!(s.cornerRadiusEnabled ?? true)) return 0;
+    const raw = s[cornerRadiusKey];
+    return Number.isFinite(raw) ? raw : cornerRadiusFallback;
+}
+
 export function cardStyleCss(settings, options = {}) {
     const { backgroundColorKey: backgroundColorKey = "backgroundColor", backgroundColorFallback: backgroundColorFallback = "#000000F5", cornerRadiusKey: cornerRadiusKey = "cornerRadius", cornerRadiusFallback: cornerRadiusFallback = 18, includeShadow: includeShadow = true, includeBorder: includeBorder = true, includeBlur: includeBlur = true} = options;
     const backgroundColor = toCssColor(settings?.[backgroundColorKey], backgroundColorFallback);
-    const cornerRadiusRaw = settings?.[cornerRadiusKey];
-    const cornerRadius = Number.isFinite(cornerRadiusRaw) ? cornerRadiusRaw : cornerRadiusFallback;
+    const cornerRadius = resolveCornerRadius(settings, cornerRadiusFallback, cornerRadiusKey);
     let css = `background-color: ${backgroundColor}; border-radius: ${cornerRadius}px;`;
     if (includeBorder) css += borderCss(settings, backgroundColor);
     if (includeShadow) css += shadowBoxShadowCss(settings);

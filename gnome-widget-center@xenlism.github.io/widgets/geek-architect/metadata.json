@@ -1,0 +1,16 @@
+{
+    "id": "xenlism.github.io.geek-architect",
+    "name": "Geek Stat Clock Architect By Xenlism",
+    "description": "Architect Widget for the Geek series: a themeable 3-line clock/date/stat card. Click + Add Widget to spawn Child cards in Bar or Card sizes, each independently configurable.",
+    "version": "1.0.0",
+    "author": "Nattapong Pullkhow",
+    "api-version": 1,
+    "entry": "widget.js",
+    "block-type": "3x1",
+    "default-position": {
+        "x": 60,
+        "y": 60,
+        "monitor": 0
+    },
+    "screenshot": "screenshot.png"
+}

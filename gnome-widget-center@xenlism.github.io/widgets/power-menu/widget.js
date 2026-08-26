@@ -33,8 +33,8 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
-import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, borderCss as _borderCss, BORDER_DEFAULTS, OPACITY_DEFAULTS} from '../../lib/widgetVisualKit.js';
-import {createLayeredCard} from '../../lib/cardLayers.js';
+import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, borderCss as _borderCss, BORDER_DEFAULTS, OPACITY_DEFAULTS, BLUR_DEFAULTS, applyCardOpacity, resolveCornerRadius} from '../../lib/widgetVisualKit.js';
+import {createLayeredCard, applyCardBlur} from '../../lib/cardLayers.js';
 import {attachTooltip} from '../../lib/widgetTooltip.js';
 import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 
@@ -62,7 +62,7 @@ export default class PowerMenuWidget {
     // no-ops via the `?.` guards in the *_call* helpers below).
     buildActor() {
         const backgroundColor = this._settings?.backgroundColor ?? '#070000a5';
-        const cornerRadius = this._settings?.cornerRadius ?? 18;
+        const cornerRadius = resolveCornerRadius(this._settings);
         const iconColor = this._settings?.iconColor ?? '#2e2e2e';
 
         // Plain (non-layout-managed-by-parent) root so tooltip labels can
@@ -84,6 +84,9 @@ export default class PowerMenuWidget {
         // helper, not the shared applyLayeredCardStyle) now targets the
         // dedicated Background Layer instead of a hand-rolled inner Bin.
         this._layers.card.set_style(this._cardStyle(backgroundColor, cornerRadius));
+        applyCardOpacity(this._layers.card, this._settings);
+        this._layers.cardBlur.set_style(this._cardBlurStyle(backgroundColor, cornerRadius));
+        applyCardBlur(this._layers.cardBlur, this._settings);
 
         // this._content is a plain wrapper - padding lives here, never the
         // Content Layer itself (Rule 5).
@@ -176,6 +179,7 @@ export default class PowerMenuWidget {
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
+            ...BLUR_DEFAULTS,
         };
     }
 
@@ -187,8 +191,15 @@ export default class PowerMenuWidget {
             return;
 
         const backgroundColor = settings?.backgroundColor ?? '#070000a5';
-        const cornerRadius = settings?.cornerRadius ?? 18;
+        const cornerRadius = resolveCornerRadius(settings);
         this._layers.card.set_style(this._cardStyle(backgroundColor, cornerRadius));
+        applyCardOpacity(this._layers.card, settings);
+        // Background Blur lives on the dedicated Blur Layer, not `card`
+        // itself - see lib/cardLayers.js's createLayeredCard()/applyCardBlur().
+        // This was previously never called here, so the "Enable background
+        // blur" toggle in this widget's settings had no visible effect.
+        this._layers.cardBlur.set_style(this._cardBlurStyle(backgroundColor, cornerRadius));
+        applyCardBlur(this._layers.cardBlur, settings);
 
         const iconColor = settings?.iconColor ?? '#2e2e2e';
         for (const icon of this._icons)
@@ -210,6 +221,17 @@ export default class PowerMenuWidget {
         return `background-color: rgba(${r}, ${g}, ${b}, ${a}); border-radius: ${cornerRadius}px; ` +
             _borderCss(this._settings) +
             _shadowBoxShadowCss(this._settings);
+    }
+
+    /**
+     * @private just the background-color + border-radius part of
+     * _cardStyle(), for the Blur Layer - border/shadow stay on the
+     * visible `card` layer only (see onSettingsChanged() above), or
+     * they'd be drawn twice.
+     */
+    _cardBlurStyle(hexColor, cornerRadius) {
+        const {r, g, b, a} = this._hexToRgba(hexColor);
+        return `background-color: rgba(${r}, ${g}, ${b}, ${a}); border-radius: ${cornerRadius}px;`;
     }
 
     /**

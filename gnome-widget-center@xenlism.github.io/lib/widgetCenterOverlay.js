@@ -112,7 +112,20 @@ export class WidgetCenterOverlay {
         this._buildUI();
         Main.layoutManager.addChrome(this._overlay);
         try {
-            this._modalGrab = Main.pushModal(this._overlay);
+            // actionMode must be passed explicitly - system-wide shortcuts
+            // that are meant to always work (e.g. Super+Space / "switch
+            // input source", which GNOME Shell itself registers with
+            // Shell.ActionMode.ALL) still get resolved against whatever
+            // Main.actionMode is current while a modal grab is up. Leaving
+            // this unset let it fall back to a mode that doesn't reliably
+            // OR against ALL-tagged bindings, which is what made Super+Space
+            // stop switching keyboard layout while this overlay was open.
+            // Shell.ActionMode.POPUP is the same mode GNOME Shell's own
+            // popup-style modals (menus, app switchers) use, and is known to
+            // still let ActionMode.ALL system bindings through.
+            this._modalGrab = Main.pushModal(this._overlay, {
+                actionMode: Shell.ActionMode.POPUP
+            });
         } catch (e) {
             console.error("[widget-center] overlay: pushModal failed, continuing non-modal", e);
             this._modalGrab = null;
@@ -285,12 +298,21 @@ export class WidgetCenterOverlay {
         }));
         outer.add_child(bar);
         outer.add_child(gridBin);
+        // Discovered once per tab render, not once per keystroke - see
+        // _refreshOverviewGrid() below. _discoverWidgets() reads every
+        // widget's metadata.json plus a mtime stat off disk, so re-running
+        // it on every "text-changed" (i.e. every keystroke in the search
+        // box) was the actual cause of the overlay's widget search feeling
+        // very slow with a lot of bundled widgets - typing didn't get
+        // slower because of the *filtering*, it got slower because each
+        // keystroke re-scanned the whole widgets folder from scratch first.
+        this._widgetDiscoveryCache = this._discoverWidgets();
         this._refreshOverviewGrid(gridBin);
         return outer;
     }
     _refreshOverviewGrid(gridBin) {
         const disabled = new Set(this._getDisabledWidgets());
-        let entries = this._sortEntries(this._discoverWidgets(), this._widgetSort, {
+        let entries = this._sortEntries(this._widgetDiscoveryCache ?? this._discoverWidgets(), this._widgetSort, {
             name: e => e.metadata?.name ?? e.id,
             size: e => this._blockSizeCells(e.metadata?.["block-type"]),
             mtime: e => e.mtimeUnix ?? 0
@@ -418,11 +440,14 @@ export class WidgetCenterOverlay {
         }));
         outer.add_child(bar);
         outer.add_child(gridBin);
+        // Same reasoning as _widgetDiscoveryCache above: discover once per
+        // tab render, not once per keystroke.
+        this._themePackDiscoveryCache = this._discoverThemePacks();
         this._refreshThemesGrid(gridBin);
         return outer;
     }
     _refreshThemesGrid(gridBin) {
-        let entries = this._sortEntries(this._discoverThemePacks(), this._themeSort, {
+        let entries = this._sortEntries(this._themePackDiscoveryCache ?? this._discoverThemePacks(), this._themeSort, {
             name: e => e.manifest?.name ?? e.id,
             size: e => e.widgetCount ?? (e.manifest?.widgets?.length ?? 0),
             mtime: e => e.mtimeUnix ?? 0
@@ -755,10 +780,21 @@ export class WidgetCenterOverlay {
     _coverBackgroundStyle(shotPath, uri, boxWidth, boxHeight) {
         const fallback = `background-image: url("${uri}"); background-size: ${boxWidth}px ${boxHeight}px; background-position: 0px 0px;`;
         let width, height;
-        try {
-            [, width, height] = GdkPixbuf.Pixbuf.get_file_info(shotPath);
-        } catch (e) {
-            console.warn(`[widget-center] could not read screenshot dimensions for "${shotPath}", falling back to a stretched fit`, e);
+        // Screenshot files don't change while the overlay is open, so their
+        // pixel dimensions don't either - cache them instead of re-reading
+        // the file's header via GdkPixbuf on every card rebuild (every
+        // sort/filter change, i.e. every keystroke in the search box).
+        if (!this._imageDimsCache) this._imageDimsCache = new Map;
+        const cached = this._imageDimsCache.get(shotPath);
+        if (cached) {
+            ({width, height} = cached);
+        } else {
+            try {
+                [, width, height] = GdkPixbuf.Pixbuf.get_file_info(shotPath);
+            } catch (e) {
+                console.warn(`[widget-center] could not read screenshot dimensions for "${shotPath}", falling back to a stretched fit`, e);
+            }
+            this._imageDimsCache.set(shotPath, { width, height });
         }
         if (!width || !height) return fallback;
         const scale = Math.max(boxWidth / width, boxHeight / height);

@@ -13,6 +13,51 @@ machine" guarantee.
 
 ## [Unreleased] — version 1
 
+### 2026-08-26 — export-dialog hang, overlay search perf, blur/opacity/corner-radius bug sweep
+
+**Verification status for everything below: code-complete, syntax-checked
+(`node --check`), NOT yet confirmed on real GNOME Shell hardware.**
+
+- **Fixed:** `lib/themePackExportDialog.js`'s Export Theme Pack… success handler called
+  `window.close()` immediately after `showReportDialog(window, ...)` presented a modal
+  dialog transient to that same window — closing the parent out from under its own
+  still-open modal child, which hung the whole prefs process instead of just closing it.
+  `lib/prefsDialogs.js`'s `showReportDialog()` now takes an optional `onClose` callback,
+  fired on the dialog's own `response` signal, so the window only closes after the user
+  dismisses the report.
+- **Fixed:** the overlay's widget/theme search (`lib/widgetCenterOverlay.js`) re-ran full
+  disk discovery (`_discoverWidgets()`/`_discoverThemePacks()` — a `metadata.json` read +
+  mtime `stat()` per widget) on every keystroke in the search box, plus a synchronous
+  `GdkPixbuf.Pixbuf.get_file_info()` per visible card's screenshot on every rebuild. Both
+  are now cached: discovery once per tab render (`_widgetDiscoveryCache`/
+  `_themePackDiscoveryCache`), and screenshot dimensions once per file path
+  (`_imageDimsCache`) instead of once per keystroke.
+- **Fixed — "Enable background blur" silently did nothing** on 11 bundled widgets that
+  built their own card CSS by hand instead of going through the shared
+  `applyLayeredCardStyle()`/`applyCardBlur()` helpers (`lib/cardLayers.js`), so their
+  Blur Layer was never styled or given a `Shell.BlurEffect` at all:
+  `power-menu`, `power-menu-bar`, `settings-control`, `settings-control-bar`,
+  `launcher-big-1`, `launcher-big-2`, `launcher-square-1`, `launcher-square-2`,
+  `launcher-folder-big`, `launcher-folder-square-1`, `switches`. The same widgets were
+  also missing `applyCardOpacity()`, so the "Opacity" slider had no effect either — fixed
+  in the same pass.
+- **Added:** a "Round card corners" toggle (`cornerRadiusEnabled`, default `true`) next to
+  every widget's existing corner-radius slider (`lib/appearanceFieldsSchema.js`), resolved
+  through a new shared `resolveCornerRadius()` helper (`lib/widgetVisualKit.js`) that
+  `cardStyleCss()` and `applyLayeredCardStyle()` (`lib/cardLayers.js`) both now use. The
+  same 3 widgets that hand-roll their card CSS for a different reason (opacity, not this
+  feature) — `power-menu`, `settings-control`, `notification-stack` — needed an explicit
+  switch to `resolveCornerRadius()` too, or this toggle would have shown in their settings
+  UI (auto-injected by `mergeAppearanceFields()`) and done nothing, same failure mode as
+  the blur bug above.
+- **Fixed:** `widgets/_architect_template_/widget.js` (the Architect scaffold, separate
+  from `widgets/_template/`) never called any card-styling helper at all, so its
+  auto-injected Appearance tab was entirely inert. Now calls `applyLayeredCardStyle()` in
+  `_render()`, matching `widgets/_template/widget.js`'s existing pattern.
+- **Not addressed / explicitly out of scope this pass:** `calendar-events`'s
+  `eventCardCornerRadius`/`eventCardBlurEnabled` fields control that widget's *inner*
+  event cards and are unrelated to the shared per-widget-card toggle above.
+
 ### 2026-07-16 — first real-hardware confirmation + bugfix
 
 - **Confirmed on real GNOME Shell hardware for the first time:** widget discovery/load

@@ -12,9 +12,9 @@ import Cairo from "cairo";
 
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
-import { SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, BORDER_DEFAULTS, OPACITY_DEFAULTS, deferUntilMapped as _deferUntilMapped } from "../../lib/widgetVisualKit.js";
+import { SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, BORDER_DEFAULTS, OPACITY_DEFAULTS, BLUR_DEFAULTS, deferUntilMapped as _deferUntilMapped } from "../../lib/widgetVisualKit.js";
 
-import { createLayeredCard } from "../../lib/cardLayers.js";
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
 
 import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 const BUTTON_WIDTH = 64;
@@ -201,10 +201,10 @@ export default class SwitchesWidget {
         });
         this._layers.content.add_child(this._content);
         _deferUntilMapped(this._actor, () => {
-            this._layers.card.set_style(_cardStyleCss(this._settings, {
+            applyLayeredCardStyle(this._layers, this._settings, {
                 backgroundColorFallback: "#FFFFFF00",
                 cornerRadiusFallback: 18
-            }));
+            });
             this._content.set_style(`padding: ${PADDING}px;`);
         });
         const row = new St.BoxLayout({
@@ -277,13 +277,14 @@ export default class SwitchesWidget {
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
+            ...BLUR_DEFAULTS,
         };
     }
     onSettingsChanged() {
-        if (this._layers?.card) this._layers.card.set_style(_cardStyleCss(this._settings, {
+        if (this._layers?.card) applyLayeredCardStyle(this._layers, this._settings, {
             backgroundColorFallback: "#FFFFFF00",
             cornerRadiusFallback: 18
-        }));
+        });
         this._applyColors();
         this._startTimer();
     }

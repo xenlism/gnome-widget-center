@@ -1,0 +1,15 @@
+{
+    "id": "xenlism.github.io.xtile",
+    "name": "Xtile By Xenlism",
+    "description": "Architect widget for the Xtile family: an empty launcher tile whose edit-mode toolbar gains an \"Add Widget\" icon. Clicking it opens a dialog to name a new tile and search for an installed app, then creates a real Xtile Child configured for that app - no manual .desktop path editing needed. Xtile Firefox/Chrome/Terminal/GIMP/Inkscape remain separate bundled presets; this is the generic version for any app.",
+    "version": "1.0.0",
+    "author": "Nattapong Pullkhow",
+    "api-version": 1,
+    "entry": "widget.js",
+    "block-type": "1x1",
+    "default-position": {
+        "x": 40,
+        "y": 40,
+        "monitor": 0
+    }
+}

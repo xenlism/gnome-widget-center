@@ -19,6 +19,7 @@
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
+                            "alpha": true,
                             "default": "#070000FF"
                         },
                         {

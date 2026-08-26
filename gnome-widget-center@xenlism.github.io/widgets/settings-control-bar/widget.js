@@ -61,8 +61,8 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
-import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, BORDER_DEFAULTS, OPACITY_DEFAULTS,} from '../../lib/widgetVisualKit.js';
-import {createLayeredCard} from '../../lib/cardLayers.js';
+import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, hexToRgba as _hexToRgba, BORDER_DEFAULTS, OPACITY_DEFAULTS, BLUR_DEFAULTS} from '../../lib/widgetVisualKit.js';
+import {createLayeredCard, applyLayeredCardStyle} from '../../lib/cardLayers.js';
 import {attachTooltip} from '../../lib/widgetTooltip.js';
 import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 
@@ -149,9 +149,7 @@ export default class SettingsControlBarWidget {
         this._actor = this._layers.root;
         this._actor.reactive = true;
 
-        this._layers.card.set_style(
-            _cardStyleCss(this._settings, {backgroundColorFallback: '#070000a5', cornerRadiusFallback: 18})
-        );
+        applyLayeredCardStyle(this._layers, this._settings, {backgroundColorFallback: '#070000a5', cornerRadiusFallback: 18});
 
         // this._content is a plain wrapper - padding lives here, never the
         // Content Layer itself (Rule 5).
@@ -294,6 +292,7 @@ export default class SettingsControlBarWidget {
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
+            ...BLUR_DEFAULTS,
         };
     }
 
@@ -306,9 +305,7 @@ export default class SettingsControlBarWidget {
             return;
 
         // R5: style goes on the Card Layer, not Content (clip wrapper).
-        this._layers.card.set_style(
-            _cardStyleCss(settings, {backgroundColorFallback: '#070000a5', cornerRadiusFallback: 18})
-        );
+        applyLayeredCardStyle(this._layers, settings, {backgroundColorFallback: '#070000a5', cornerRadiusFallback: 18});
 
         this._iconOnColor = settings?.iconOnColor ?? '#3584e4';
         this._iconOffColor = settings?.iconOffColor ?? '#9a9996';
@@ -321,7 +318,6 @@ export default class SettingsControlBarWidget {
         this._renderTheme();
     }
 
-    // ---- Wi-Fi / Ethernet (org.freedesktop.NetworkManager) ----------------
 
     /** @private */
     _enableNetwork() {
@@ -495,7 +491,6 @@ export default class SettingsControlBarWidget {
         );
     }
 
-    // ---- Do Not Disturb (GSettings) -----------------------------------------
 
     /** @private */
     _enableDnd() {
@@ -529,7 +524,6 @@ export default class SettingsControlBarWidget {
         this._notifSettings.set_boolean('show-banners', !showBanners);
     }
 
-    // ---- Dark / Light mode (GSettings) -------------------------------------
 
     /** @private */
     _enableTheme() {

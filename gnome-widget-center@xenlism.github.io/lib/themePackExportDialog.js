@@ -272,8 +272,21 @@ export function openThemePackExportDialog(parentWindow, services, prefill = {}) 
             progressBar.text = "Writing file…";
             await idleTick();
             const finalPath = writeGwctFile(ensureGwctExtension(savePath), document);
-            showReportDialog(window, "Theme pack exported", `Saved to ${finalPath}\nWidgets included: ${document.widgets.length}`);
-            window.close();
+            // Close `window` only once the user dismisses this dialog, not
+            // immediately after present() - `window` is this dialog's own
+            // transient_for, and closing it first left the still-open modal
+            // dialog with no live parent, which hung the whole prefs window
+            // instead of just closing it.
+            //
+            // On success, also close the prefs window itself (`parentWindow`)
+            // once the user dismisses this report - not before, for the same
+            // reason as above: closing the grandparent while this modal (or
+            // the export dialog it's transient-for) is still on screen would
+            // leave an orphaned modal with no live ancestor.
+            showReportDialog(window, "Theme pack exported", `Saved to ${finalPath}\nWidgets included: ${document.widgets.length}`, () => {
+                window.close();
+                parentWindow.close();
+            });
         } catch (e) {
             logError(e, "[widget-center] themePackExportDialog: export failed");
             showReportDialog(window, "Export failed", e.message);

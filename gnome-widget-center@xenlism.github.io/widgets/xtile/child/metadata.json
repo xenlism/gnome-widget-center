@@ -1,0 +1,16 @@
+{
+    "id": "PLACEHOLDER-REPLACED-AT-CREATION-TIME",
+    "name": "Xtile",
+    "parent": "PLACEHOLDER-REPLACED-AT-CREATION-TIME",
+    "description": "An Xtile app-launcher tile created from the Xtile Architect widget.",
+    "version": "1.0.0",
+    "author": "Nattapong Pullkhow",
+    "api-version": 1,
+    "entry": "widget.js",
+    "block-type": "1x1",
+    "default-position": {
+        "x": 40,
+        "y": 40,
+        "monitor": 0
+    }
+}

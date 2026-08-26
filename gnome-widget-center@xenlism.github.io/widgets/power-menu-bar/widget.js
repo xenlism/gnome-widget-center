@@ -39,8 +39,8 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
-import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS,} from '../../lib/widgetVisualKit.js';
-import {createLayeredCard} from '../../lib/cardLayers.js';
+import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS, BLUR_DEFAULTS} from '../../lib/widgetVisualKit.js';
+import {createLayeredCard, applyLayeredCardStyle} from '../../lib/cardLayers.js';
 import {attachTooltip} from '../../lib/widgetTooltip.js';
 import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 
@@ -79,9 +79,7 @@ export default class PowerMenuBarWidget {
         this._actor = this._layers.root;
         this._actor.reactive = true;
 
-        this._layers.card.set_style(
-            _cardStyleCss(this._settings, {backgroundColorFallback: '#070000a5', cornerRadiusFallback: 18})
-        );
+        applyLayeredCardStyle(this._layers, this._settings, {backgroundColorFallback: '#070000a5', cornerRadiusFallback: 18});
 
         // this._content is a plain wrapper - padding lives here, never the
         // Content Layer itself (Rule 5).
@@ -177,6 +175,7 @@ export default class PowerMenuBarWidget {
             ...SHADOW_DEFAULTS,
             ...BORDER_DEFAULTS,
             ...OPACITY_DEFAULTS,
+            ...BLUR_DEFAULTS,
         };
     }
 
@@ -187,9 +186,7 @@ export default class PowerMenuBarWidget {
         if (!this._actor)
             return;
 
-        this._layers.card.set_style(
-            _cardStyleCss(settings, {backgroundColorFallback: '#070000a5', cornerRadiusFallback: 18})
-        );
+        applyLayeredCardStyle(this._layers, settings, {backgroundColorFallback: '#070000a5', cornerRadiusFallback: 18});
 
         const iconColor = settings?.iconColor ?? '#2e2e2e';
         for (const icon of this._icons)

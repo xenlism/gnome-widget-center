@@ -4,9 +4,11 @@ import GLib from "gi://GLib";
 
 import St from "gi://St";
 
-import { SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS } from "../../lib/widgetVisualKit.js";
+import { SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS, toCssColor } from "../../lib/widgetVisualKit.js";
 
 import { createLayeredCard, applyLayeredCardStyle } from "../../lib/cardLayers.js";
+
+import { resolveCornerRadius } from "../../lib/widgetVisualKit.js";
 
 import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
 export default class CalendarHeaderWidget {
@@ -100,20 +102,45 @@ export default class CalendarHeaderWidget {
     }
     _render() {
         const now = GLib.DateTime.new_now_local();
-        const headerColor = this._settings.headerColor ?? "#2563eb";
+        // [FIX] wc-calendar-header-body-header-alpha: headerColor/bodyColor
+        // used to be handed straight to set_style() as raw hex. St's CSS
+        // parser doesn't understand 8-digit #RRGGBBAA, so even though the
+        // color picker (config.json: "alpha": true) let the user drag the
+        // alpha slider below 100%, the resulting 8-digit hex was silently
+        // ignored/misrendered instead of blending - the band/panel behind
+        // it painted fully opaque regardless of the slider. Every other
+        // widget with a background alpha field converts through
+        // toCssColor(), which turns #RRGGBBAA into an rgba(...) string St
+        // can actually render - so header/body now do the same instead of
+        // being the one calendar widget left out of that convention.
+        const headerColor = toCssColor(this._settings.headerColor, "#2563ebFF");
         const headerTextColor = this._settings.headerTextColor ?? "#ffffff";
-        const bodyColor = this._settings.bodyColor ?? "#ffffff";
+        const bodyColor = toCssColor(this._settings.bodyColor, "#ffffffFF");
         const dayColor = this._settings.dayColor ?? "#1a1a1a";
+        // [FIX] wc-calendar-header-double-radius: header/body used to hard-code
+        // "22px" independently of the card's own corner radius. The card/cardBlur
+        // layers already read `cornerRadius` from settings (via
+        // applyLayeredCardStyle below), so as soon as the user changed the
+        // Corner Radius setting in prefs, the card layer's radius moved but
+        // header/body's hard-coded 22px did not - two different radii stacked
+        // on top of each other at the same corner, visible as a doubled/nested
+        // rounded-corner ring. Resolving the SAME value once here and reusing
+        // it for both the card layer and header/body keeps them as a single,
+        // consistent radius (content itself is never styled - Rule 5 - so
+        // header's top corners / body's bottom corners are what actually
+        // render the rounded shape; they must always match the card's radius,
+        // not carry their own).
+        const cornerRadius = resolveCornerRadius(this._settings, 22, "cornerRadius");
         applyLayeredCardStyle(this._layers, this._settings, {
             cornerRadiusFallback: 22
         }, false);
         this._content.set_style("spacing: 0px;");
-        this._header.set_style(`background-color: ${headerColor}; ` + "border-radius: 22px 22px 0 0; " + "padding: 14px 12px 10px 12px; " + "spacing: 2px;");
+        this._header.set_style(`background-color: ${headerColor}; ` + `border-radius: ${cornerRadius}px ${cornerRadius}px 0 0; ` + "padding: 14px 12px 10px 12px; " + "spacing: 2px;");
         this._monthLabel.set_text((now.format("%B") ?? "").toUpperCase());
         this._monthLabel.set_style(`color: ${headerTextColor}; font-weight: bold; font-size: 14px; ` + "text-align: center;");
         this._weekdayLabel.set_text((now.format("%A") ?? "").toUpperCase());
         this._weekdayLabel.set_style(`color: ${headerTextColor}; font-weight: bold; font-size: 18px; ` + "text-align: center;");
-        this._body.set_style(`background-color: ${bodyColor}; ` + "border-radius: 0 0 22px 22px; " + "padding: 14px 12px;");
+        this._body.set_style(`background-color: ${bodyColor}; ` + `border-radius: 0 0 ${cornerRadius}px ${cornerRadius}px; ` + "padding: 14px 12px;");
         this._dayLabel.set_text(`${now.get_day_of_month()}`);
         this._dayLabel.set_style(`color: ${dayColor}; font-weight: bold; font-size: 56px; ` + "text-align: center;");
     }
