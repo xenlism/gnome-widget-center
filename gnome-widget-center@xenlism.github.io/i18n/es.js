@@ -1,4 +1,7 @@
+import en from "./en.js";
+
 export default {
+    ...en,
     "tab.overview.label": "Resumen",
     "tab.store.label": "Tienda",
     "tab.preferences.label": "Preferencias",

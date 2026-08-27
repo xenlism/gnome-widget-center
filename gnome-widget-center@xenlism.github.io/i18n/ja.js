@@ -1,4 +1,7 @@
+import en from "./en.js";
+
 export default {
+    ...en,
     "tab.overview.label": "概要",
     "tab.store.label": "ストア",
     "tab.preferences.label": "環境設定",

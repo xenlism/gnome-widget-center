@@ -1,4 +1,7 @@
+import en from "./en.js";
+
 export default {
+    ...en,
     "tab.overview.label": "ภาพรวม",
     "tab.store.label": "สโตร์",
     "tab.preferences.label": "การตั้งค่า",

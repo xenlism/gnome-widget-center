@@ -1,4 +1,7 @@
+import en from "./en.js";
+
 export default {
+    ...en,
     "tab.overview.label": "总览",
     "tab.store.label": "商店",
     "tab.preferences.label": "首选项",
