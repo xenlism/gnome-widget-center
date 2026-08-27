@@ -20,8 +20,8 @@ import { WidgetLoader } from "../widgetLoader.js";
 
 // Shell-only widget runtime: instantiates widget.js modules into live actors.
 // This is the ONLY place allowed to (dynamically) import ./cardLayers.js,
-// which pulls in St/Clutter/Shell — keep it out of lib/widgetLoader.js so the
-// prefs process (which only needs WidgetLoader.discover()) never reaches it.
+// since that pulls in St/Clutter/Shell. Keep it out of lib/widgetLoader.js so
+// the prefs process (which only needs WidgetLoader.discover()) never reaches it.
 export class WidgetRuntimeLoader extends WidgetLoader {
     constructor(searchPaths, storageService = null, logger = console, shadowOverflowMargin = 0, hostSettings = null, themeService = null, onRescanRequested = null) {
         super(searchPaths);
@@ -80,7 +80,7 @@ export class WidgetRuntimeLoader extends WidgetLoader {
         }
     }
     async loadAll(disabledIds = new Set) {
-        const widgets = this.discover().filter(w => !disabledIds.has(w.id));
+        const widgets = (await this.discover()).filter(w => !disabledIds.has(w.id));
         const started = [];
         for (const widgetInfo of widgets) {
             const entry = await this.loadOne(widgetInfo);
@@ -341,7 +341,17 @@ export class WidgetRuntimeLoader extends WidgetLoader {
                 me: widgetInfo.path,
                 id: otherId => {
                     if (otherId === widgetInfo.id) return widgetInfo.path;
-                    if (!this._pathById) this.discover();
+                    if (!this._pathById) {
+                        // discover() is async now (EGO-X-004); by the time widgets
+                        // are actually running, loadAll()/loadOne() has already
+                        // awaited discover() at least once and populated
+                        // _pathById. This is only a defensive fallback for a
+                        // widget calling api.path.id() unusually early - it can't
+                        // block synchronously, so it kicks off a background
+                        // discover() (for next time) and returns null for now.
+                        this.discover().catch(e => this._logger?.error?.("widgetRuntimeLoader: background discover() failed", e));
+                        return null;
+                    }
                     return this._pathById.get(otherId) ?? null;
                 }
             },

@@ -14,6 +14,8 @@ import St from "gi://St";
 
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
+import * as Animation from "resource:///org/gnome/shell/ui/animation.js";
+
 import { ThemePackRegistry } from "../themePackRegistry.js";
 
 const SCHEMA_ID = "org.gnome.shell.extensions.widget-center";
@@ -286,8 +288,13 @@ export class WidgetCenterOverlay {
         }));
         outer.add_child(bar);
         outer.add_child(gridBin);
+        const hadCache = this._widgetDiscoveryCache !== undefined;
         this._widgetDiscoveryCache = this._discoverWidgets();
-        this._refreshOverviewGrid(gridBin);
+        if (!hadCache) {
+            gridBin.set_child(this._buildLoadingSpinner("Loading widgets…"));
+        } else {
+            this._refreshOverviewGrid(gridBin);
+        }
         return outer;
     }
     _refreshOverviewGrid(gridBin) {
@@ -348,24 +355,46 @@ export class WidgetCenterOverlay {
         return roots;
     }
     _discoverWidgets() {
-        let entries;
-        if (this._services.widgetLoader?.discover) {
-            try {
-                entries = this._services.widgetLoader.discover();
-            } catch (e) {
-                this._logger?.error("overlay: injected widgetLoader.discover() failed, falling back", e);
+        // NOTE: metadata.json reads are now async under the hood (EGO-X-004).
+        // GNOME Shell UI construction in this file is single-pass/synchronous
+        // (_renderTab and friends build an St actor tree in one go), so we
+        // keep this method's public shape synchronous: it returns the latest
+        // known results immediately from cache, and kicks off a background
+        // refresh (if one isn't already running) that updates the cache and
+        // re-renders the currently visible tab once the async scan finishes.
+        this._refreshWidgetDiscovery();
+        return this._widgetDiscoveryCache ?? [];
+    }
+    async _refreshWidgetDiscovery() {
+        if (this._widgetDiscoveryInFlight) return;
+        this._widgetDiscoveryInFlight = true;
+        try {
+            let entries;
+            if (this._services.widgetLoader?.discover) {
+                try {
+                    entries = await this._services.widgetLoader.discover();
+                } catch (e) {
+                    this._logger?.error("overlay: injected widgetLoader.discover() failed, falling back", e);
+                }
             }
+            if (!entries) entries = await this._scanMetadataFolders(GLib.build_filenamev([ this._path, "widgets" ]));
+            const userRoots = this._userWidgetsRoots();
+            const resolved = entries.map(entry => {
+                const isUser = userRoots.some(root => entry.path === root || entry.path.startsWith(`${root}/`));
+                return {
+                    ...entry,
+                    source: isUser ? "user" : "bundled",
+                    mtimeUnix: this._pathMtimeUnix(entry.path)
+                };
+            });
+            const changed = JSON.stringify(resolved.map(e => e.id)) !== JSON.stringify((this._widgetDiscoveryCache ?? []).map(e => e.id));
+            this._widgetDiscoveryCache = resolved;
+            if (changed && this._activeTab === "overview") this._renderTab(this._activeTab);
+        } catch (e) {
+            this._logger?.error("overlay: widget discovery refresh failed", e);
+        } finally {
+            this._widgetDiscoveryInFlight = false;
         }
-        if (!entries) entries = this._scanMetadataFolders(GLib.build_filenamev([ this._path, "widgets" ]));
-        const userRoots = this._userWidgetsRoots();
-        return entries.map(entry => {
-            const isUser = userRoots.some(root => entry.path === root || entry.path.startsWith(`${root}/`));
-            return {
-                ...entry,
-                source: isUser ? "user" : "bundled",
-                mtimeUnix: this._pathMtimeUnix(entry.path)
-            };
-        });
     }
     _pathMtimeUnix(path) {
         try {
@@ -430,8 +459,13 @@ export class WidgetCenterOverlay {
         }));
         outer.add_child(bar);
         outer.add_child(gridBin);
+        const hadCache = this._themePackDiscoveryCache !== undefined;
         this._themePackDiscoveryCache = this._discoverThemePacks();
-        this._refreshThemesGrid(gridBin);
+        if (!hadCache) {
+            gridBin.set_child(this._buildLoadingSpinner("Loading themes…"));
+        } else {
+            this._refreshThemesGrid(gridBin);
+        }
         return outer;
     }
     _refreshThemesGrid(gridBin) {
@@ -449,6 +483,8 @@ export class WidgetCenterOverlay {
         return roots;
     }
     _discoverThemePacks() {
+        // Same stale-while-revalidate approach as _discoverWidgets() above -
+        // ThemePackRegistry.discover() is now async (EGO-X-004).
         const bundledPath = GLib.build_filenamev([ this._path, "themepacks" ]);
         const searchPaths = [ {
             path: bundledPath,
@@ -457,8 +493,24 @@ export class WidgetCenterOverlay {
             path: path,
             source: "user"
         })) ];
-        this._themePackRegistry = new ThemePackRegistry(searchPaths);
-        return this._themePackRegistry.discover();
+        if (!this._themePackRegistry) this._themePackRegistry = new ThemePackRegistry(searchPaths);
+        this._refreshThemePackDiscovery(searchPaths);
+        return this._themePackDiscoveryCache ?? [];
+    }
+    async _refreshThemePackDiscovery(searchPaths) {
+        if (this._themePackDiscoveryInFlight) return;
+        this._themePackDiscoveryInFlight = true;
+        try {
+            this._themePackRegistry = new ThemePackRegistry(searchPaths);
+            const resolved = await this._themePackRegistry.discover();
+            const changed = JSON.stringify(resolved.map(e => e.id)) !== JSON.stringify((this._themePackDiscoveryCache ?? []).map(e => e.id));
+            this._themePackDiscoveryCache = resolved;
+            if (changed && this._activeTab === "themes") this._renderTab(this._activeTab);
+        } catch (e) {
+            this._logger?.error("overlay: theme pack discovery refresh failed", e);
+        } finally {
+            this._themePackDiscoveryInFlight = false;
+        }
     }
     _buildThemePackCard(entry) {
         const {id: id, path: path, manifest: manifest} = entry;
@@ -704,6 +756,27 @@ export class WidgetCenterOverlay {
         this._prefsWatchUnmanagedId = 0;
         this._prefsWatchWindow = null;
     }
+    _buildLoadingSpinner(label = "Loading…") {
+        const box = new St.BoxLayout({
+            vertical: true,
+            x_expand: true,
+            y_expand: true,
+            x_align: Clutter.ActorAlign.CENTER,
+            y_align: Clutter.ActorAlign.CENTER,
+            style_class: "wc-overlay-loading"
+        });
+        const spinner = new Animation.Spinner(32, {
+            animate: true,
+            hideOnStop: false
+        });
+        spinner.play();
+        box.add_child(spinner);
+        box.add_child(new St.Label({
+            text: label,
+            style_class: "wc-overlay-loading-label"
+        }));
+        return box;
+    }
     _buildGrid(entries, buildCard) {
         const scroll = new St.ScrollView({
             style_class: "wc-overlay-scroll",
@@ -883,7 +956,7 @@ export class WidgetCenterOverlay {
             this._logger?.error("overlay: could not write disabled-widgets", e);
         }
     }
-    _scanMetadataFolders(root) {
+    async _scanMetadataFolders(root) {
         const results = [];
         const dir = Gio.File.new_for_path(root);
         if (!dir.query_exists(null)) return results;
@@ -903,8 +976,20 @@ export class WidgetCenterOverlay {
             const metadataFile = folder.get_child("metadata.json");
             if (!metadataFile.query_exists(null)) continue;
             try {
-                const [ok, contents] = metadataFile.load_contents(null);
-                if (!ok) continue;
+                const contents = await new Promise((resolve, reject) => {
+                    metadataFile.load_contents_async(null, (source, result) => {
+                        try {
+                            const [ok, bytes] = source.load_contents_finish(result);
+                            if (!ok) {
+                                reject(new Error("could not read metadata.json"));
+                                return;
+                            }
+                            resolve(bytes);
+                        } catch (e) {
+                            reject(e);
+                        }
+                    });
+                });
                 const metadata = JSON.parse(new TextDecoder("utf-8").decode(contents));
                 results.push({
                     id: metadata.id ?? name,

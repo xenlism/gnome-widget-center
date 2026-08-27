@@ -78,7 +78,7 @@ async function presentWindow(requestedWidgetId, focusTarget = null, exportThemeI
     if (!window) return;
     if (requestedWidgetId) controller.jumpToWidget(window, requestedWidgetId); else if (focusTarget === "backup") controller.showBackupPage(window); else if (focusTarget === "preferences") controller.showPreferencesPage(window);
     window.present();
-    if (exportThemeId) controller.openExportThemeDialogForPack(window, exportThemeId); else if (exportThemeNew) controller.openExportThemeDialog(window, attachScreenshotPath ? {
+    if (exportThemeId) await controller.openExportThemeDialogForPack(window, exportThemeId); else if (exportThemeNew) controller.openExportThemeDialog(window, attachScreenshotPath ? {
         screenshotPath: attachScreenshotPath
     } : {});
 }

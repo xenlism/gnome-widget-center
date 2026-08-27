@@ -46,7 +46,7 @@ uses.
 If you've never set `location` (it's still the hardcoded
 `13.756331,100.501762` default), `widget.js` tries once, on first load, to
 replace it with your approximate location from a free IP-geolocation
-lookup - in order: `ip-api.com`, `freeipapi.com`, then `ipwhois.io`,
+lookup - in order: `freeipapi.com`, then `ipwhois.io`,
 stopping at the first one that answers. This runs from the Shell process
 (same as the weather fetch itself), not the prefs page, and is gated by
 an internal `locationAutoDetected` flag so it only ever runs once per

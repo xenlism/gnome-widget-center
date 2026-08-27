@@ -125,9 +125,9 @@ export default class CirclesNetHalfWidget {
             this._timerId = null;
         }
     }
-    _tick() {
+    async _tick() {
         this._gauge.layoutChildren(this._settings);
-        const {totalRxBytesPerSec: totalRxBytesPerSec, totalTxBytesPerSec: totalTxBytesPerSec} = this._metrics.getNetworkUsage();
+        const {totalRxBytesPerSec: totalRxBytesPerSec, totalTxBytesPerSec: totalTxBytesPerSec} = await this._metrics.getNetworkUsage();
         const download = _adaptiveFraction(totalRxBytesPerSec, this._downloadScale);
         const upload = _adaptiveFraction(totalTxBytesPerSec, this._uploadScale);
         this._downloadScale = download.scale;

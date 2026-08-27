@@ -1,6 +1,6 @@
 import Gio from "gi://Gio";
 import GLib from "gi://GLib";
-import { ensureDirectory, fileExists, readTextFile, writeTextFile, writeJsonFile } from "./fsUtils.js";
+import { ensureDirectory, fileExists, readTextFileAsync, writeTextFile, writeJsonFile } from "./fsUtils.js";
 
 function _sanitizeIdPart(value) {
     return String(value ?? "").trim().replace(/[^a-zA-Z0-9._-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
@@ -48,7 +48,7 @@ export function userWidgetsRoot() {
     return GLib.build_filenamev([GLib.get_user_data_dir(), "gnome-widget-center", "widgets"]);
 }
 
-export function createChildWidgetFromParent(api, parentMetadata, childName, options = {}) {
+export async function createChildWidgetFromParent(api, parentMetadata, childName, options = {}) {
     const srcDir = childTemplateDir(api);
     if (!fileExists(GLib.build_filenamev([srcDir, "metadata.json"]))) {
         throw new Error(`Architect Widget "${parentMetadata?.id}" has no child/ template (expected at ${srcDir})`);
@@ -63,7 +63,7 @@ export function createChildWidgetFromParent(api, parentMetadata, childName, opti
     _copyDirRecursive(srcDir, destDir);
 
     const metadataPath = GLib.build_filenamev([destDir, "metadata.json"]);
-    const metadata = JSON.parse(readTextFile(metadataPath));
+    const metadata = JSON.parse(await readTextFileAsync(metadataPath));
     metadata.id = childId;
     metadata.parent = parentMetadata.id;
     if (options.name ?? childName) metadata.name = options.name ?? childName;
@@ -72,7 +72,7 @@ export function createChildWidgetFromParent(api, parentMetadata, childName, opti
     if (options.configOverrides && Object.keys(options.configOverrides).length > 0) {
         const configPath = GLib.build_filenamev([destDir, "config.json"]);
         if (fileExists(configPath)) {
-            const config = JSON.parse(readTextFile(configPath));
+            const config = JSON.parse(await readTextFileAsync(configPath));
             _applyFieldDefaultOverrides(config, options.configOverrides);
             writeJsonFile(configPath, config);
         }
@@ -81,7 +81,7 @@ export function createChildWidgetFromParent(api, parentMetadata, childName, opti
     const widgetJsPath = GLib.build_filenamev([destDir, options.parentEntryFile ?? "widget.js"]);
     if (fileExists(widgetJsPath)) {
         const parentUri = resolveParentEntryUri(api, options.parentEntryFile ?? "widget.js");
-        const source = readTextFile(widgetJsPath).replaceAll("{{PARENT_ENTRY_URI}}", parentUri);
+        const source = (await readTextFileAsync(widgetJsPath)).replaceAll("{{PARENT_ENTRY_URI}}", parentUri);
         writeTextFile(widgetJsPath, source);
     }
 

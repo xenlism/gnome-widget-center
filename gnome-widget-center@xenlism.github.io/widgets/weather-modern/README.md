@@ -46,7 +46,7 @@ typing a city name and tabbing away silently didn't persist anything.
 If you've never set `location` (it's still the hardcoded
 `13.756331,100.501762` default), `widget.js` tries once, on first load,
 to replace it with your approximate location from a free
-IP-geolocation lookup - in order: `ip-api.com`, `freeipapi.com`, then
+IP-geolocation lookup - in order: `freeipapi.com`, then
 `ipwhois.io`, stopping at the first one that answers. Gated by an
 internal `locationAutoDetected` flag so it only ever runs once per
 widget instance. This is separate from, and independent of, the

@@ -277,7 +277,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
             const confirmed = await confirmOverwrite(window, this._tr("importexport.import.confirm_heading", "Import this theme?"), this._tr("importexport.import.confirm_body", "This applies appearance and widget settings from the chosen file, " + "overwriting any current values for the widgets it covers, and disables " + "every other widget so your desktop matches the theme exactly. This cannot be undone."), this._tr("importexport.import.confirm_button", "Import"));
             if (!confirmed) return;
             try {
-                const document = readGwctFile(path);
+                const document = await readGwctFile(path);
                 const theme = new ThemeService;
                 theme.init();
                 const discoveredWidgetsById = new Map(discoveredWidgets.map(w => [ w.id, w ]));
@@ -346,7 +346,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
             });
             if (!path) return;
             try {
-                const document = readGwctFile(path);
+                const document = await readGwctFile(path);
                 const meta = document.packMeta;
                 const heading = this._tr("importexport.importpack.confirm_heading", "Install this theme pack?");
                 const body = meta ? [ meta.name, meta.description, meta.author ? `by ${meta.author}` : null, `${(document.widgets ?? []).length} widget(s)` ].filter(Boolean).join("\n") : this._tr("importexport.importpack.confirm_body_nometa", `"${GLib.path_get_basename(path)}" doesn't carry a name/description (it wasn't ` + "made with Export Theme…), but it can still be installed — it'll show up " + "under its file name.");

@@ -7,7 +7,7 @@ import { SystemMetricsService } from "../../lib/systemMetricsApi.js";
 import { parseFontDescription as _parseFontDescription, toCssColor as _toCssColor, textShadowCss as _textShadowCss } from "../../lib/widgetVisualKit.js";
 import { createLayeredCard, applyLayeredCardStyle } from "../../lib/shell/cardLayers.js";
 import { configJsonDefaults } from "../../lib/widgetConfigDefaults.js";
-import { readTextFile, writeJsonFile } from "../../lib/fsUtils.js";
+import { readTextFile, readTextFileAsync, writeJsonFile } from "../../lib/fsUtils.js";
 import { createChildWidgetFromParent } from "../../lib/architectWidgetKit.js";
 
 const CLOCK_FORMATS = {
@@ -48,6 +48,12 @@ export default class GeekStatClockWidget {
         this._logger = api.logger;
         this._timeoutId = null;
         this._metrics = new SystemMetricsService;
+        this._statCache = {
+            cpu: { percent: 0 },
+            memory: { percent: 0 },
+            network: { totalRxBytesPerSec: 0, totalTxBytesPerSec: 0 },
+        };
+        this._statRefreshInflight = false;
         this._metadata = JSON.parse(readTextFile(GLib.build_filenamev([ api.path.me, "metadata.json" ])));
 
         if (this._metadata.parent) this._addChild = undefined;
@@ -154,12 +160,31 @@ export default class GeekStatClockWidget {
         return `${value.toFixed(decimals)} ${units[i]}`;
     }
 
+    // metrics.sample() is now async (it reads /proc files off the async
+    // fsUtils helper), but this text is built synchronously as part of
+    // _render()'s label pass. Same stale-while-revalidate shape used by
+    // widgetCenterOverlay: read from the last-known cache immediately,
+    // kick a background refresh, and let the next tick pick up fresh
+    // numbers once it resolves.
     _statText() {
-        const { cpu: cpu, memory: memory, network: network } = this._metrics.sample();
+        this._refreshStatCache();
+        const { cpu: cpu, memory: memory, network: network } = this._statCache;
         const disk = this._getDiskUsage(this._settings.diskPath ?? "/");
         const netDown = this._formatRate(network?.totalRxBytesPerSec ?? 0);
         const netUp = this._formatRate(network?.totalTxBytesPerSec ?? 0);
         return `CPU ${Math.round(cpu.percent)}%   ` + `MEM ${Math.round(memory.percent)}%   ` + `DISK ${Math.round(disk.percent)}%   ` + `NET ↓${netDown} ↑${netUp}`;
+    }
+
+    _refreshStatCache() {
+        if (this._statRefreshInflight) return;
+        this._statRefreshInflight = true;
+        this._metrics.sample().then(sample => {
+            this._statCache = sample;
+        }).catch(e => {
+            this._logger.info(`geek-stat-clock: stat refresh failed: ${e}`);
+        }).finally(() => {
+            this._statRefreshInflight = false;
+        });
     }
 
     _sourceText(source, now) {
@@ -235,11 +260,11 @@ export default class GeekStatClockWidget {
         if (!result) return;
         const preset = BLOCK_TYPE_PRESETS.find(p => p.id === result.presetId) ?? BLOCK_TYPE_PRESETS.find(p => p.id === DEFAULT_PRESET_ID);
         try {
-            const { id: id, path: path } = createChildWidgetFromParent(this._api, this._metadata, result.name, {
+            const { id: id, path: path } = await createChildWidgetFromParent(this._api, this._metadata, result.name, {
                 configOverrides: { ...preset.fontOverrides },
                 rescan: false
             });
-            this._patchChildBlockType(path, preset.blockType);
+            await this._patchChildBlockType(path, preset.blockType);
             this._api.host?.rescan?.();
             this._logger.info(`geek-stat-clock: created child "${id}" (${preset.blockType})`);
         } catch (e) {
@@ -247,9 +272,9 @@ export default class GeekStatClockWidget {
         }
     }
 
-    _patchChildBlockType(childPath, blockType) {
+    async _patchChildBlockType(childPath, blockType) {
         const metaPath = GLib.build_filenamev([ childPath, "metadata.json" ]);
-        const meta = JSON.parse(readTextFile(metaPath));
+        const meta = JSON.parse(await readTextFileAsync(metaPath));
         meta["block-type"] = blockType;
         writeJsonFile(metaPath, meta);
     }

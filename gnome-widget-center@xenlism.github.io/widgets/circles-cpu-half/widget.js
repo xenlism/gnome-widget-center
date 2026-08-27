@@ -93,9 +93,9 @@ export default class CirclesCpuHalfWidget {
             this._timerId = null;
         }
     }
-    _tick() {
+    async _tick() {
         this._gauge.layoutChildren(this._settings);
-        const {cpu: cpu} = this._metrics.sample();
+        const {cpu: cpu} = await this._metrics.sample();
         this._fraction = Math.max(0, Math.min(100, cpu.percent ?? 0)) / 100;
         this._render();
     }

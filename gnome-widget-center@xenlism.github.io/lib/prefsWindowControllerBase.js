@@ -1,6 +1,6 @@
 import GLib from "gi://GLib";
 
-import { readTextFile } from "./fsUtils.js";
+import { readTextFileAsync } from "./fsUtils.js";
 
 import { pickTranslation } from "./i18nUtils.js";
 
@@ -19,11 +19,17 @@ class PrefsWindowControllerBase {
         if (typeof extensionOrPath === "string") {
             this._extensionObject = null;
             this.path = extensionOrPath;
-            this.metadata = this._loadMetadataFromPath(extensionOrPath);
+            // reading metadata.json is async now (EGO.md has the why), so we
+            // can't fill this in here anymore. build() calls
+            // _ensureMetadataLoaded() before the about page or window title
+            // ever look at it.
+            this.metadata = {};
+            this._metadataLoaded = false;
         } else {
             this._extensionObject = extensionOrPath;
             this.path = extensionOrPath.path;
             this.metadata = extensionOrPath.metadata;
+            this._metadataLoaded = true;
         }
         this._i18n = null;
         this._settings = null;
@@ -53,7 +59,7 @@ class PrefsWindowControllerBase {
             discoveredWidgets: this._discovered
         }, prefill);
     }
-    openExportThemeDialogForPack(window, themePackId) {
+    async openExportThemeDialogForPack(window, themePackId) {
         if (!this._settings || !this._storage) return;
         const bundledThemepacksPath = GLib.build_filenamev([ this.path, "themepacks" ]);
         const userThemepacksPath = GLib.build_filenamev([ GLib.get_user_config_dir(), "gnome-widget-center", "themepacks" ]);
@@ -64,7 +70,8 @@ class PrefsWindowControllerBase {
             path: userThemepacksPath,
             source: "user"
         } ]);
-        const entry = registry.discover().find(e => e.id === themePackId);
+        const entries = await registry.discover();
+        const entry = entries.find(e => e.id === themePackId);
         if (!entry) {
             logError(new Error(`theme pack "${themePackId}" not found`), "[widget-center] prefs: openExportThemeDialogForPack");
             return;
@@ -79,9 +86,17 @@ class PrefsWindowControllerBase {
             widgetIds: entry.manifest.widgets ?? []
         });
     }
-    _loadMetadataFromPath(extensionPath) {
+    // build() calls this before anything reads this.metadata. It's a no-op
+    // when we were constructed from the extension object (shell hands us
+    // metadata synchronously in that case, nothing to load).
+    async _ensureMetadataLoaded() {
+        if (this._metadataLoaded) return;
+        this.metadata = await this._loadMetadataFromPath(this.path);
+        this._metadataLoaded = true;
+    }
+    async _loadMetadataFromPath(extensionPath) {
         try {
-            const contents = readTextFile(GLib.build_filenamev([ extensionPath, "metadata.json" ]));
+            const contents = await readTextFileAsync(GLib.build_filenamev([ extensionPath, "metadata.json" ]));
             return contents === null ? {} : JSON.parse(contents);
         } catch (e) {
             logError(e, "[widget-center] prefs: could not read metadata.json");

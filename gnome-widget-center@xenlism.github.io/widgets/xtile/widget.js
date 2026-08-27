@@ -228,7 +228,7 @@ export default class XtileArchitectWidget extends XtileBaseWidget {
             return;
         }
         try {
-            const { id } = createChildWidgetFromParent(this._api, this._metadata, name, {
+            const { id } = await createChildWidgetFromParent(this._api, this._metadata, name, {
                 name,
                 configOverrides: {
                     app: [ desktopPath ],

@@ -131,20 +131,29 @@ export default class WidgetCenterExtension extends Extension {
         const bundledWidgetsPath = GLib.build_filenamev([ this.path, "widgets" ]);
         const userWidgetsPath = GLib.build_filenamev([ GLib.get_user_data_dir(), "gnome-widget-center", "widgets" ]);
         this._userWidgetsPath = userWidgetsPath;
-        const loader = new WidgetRuntimeLoader([ bundledWidgetsPath, userWidgetsPath ], this._storage, this._logger, this._settings?.isReady ? this._settings.getGlobalValue("widget-spacing") : 0, this._settings, this._themeService, () => this._loadNewlyDiscoveredWidgets());
+        const loader = new WidgetRuntimeLoader([ bundledWidgetsPath, userWidgetsPath ], this._storage, this._logger, this._settings?.isReady ? this._settings.getGlobalValue("widget-spacing") : 0, this._settings, this._themeService, () => this._loadNewlyDiscoveredWidgets().catch(e => this._logger?.error("rescan-triggered _loadNewlyDiscoveredWidgets failed", e)));
         this._loader = loader;
-        if (this._settings?.isReady) applyAutoEnablePolicy(this._settings, loader.discover(), userWidgetsPath, this._logger);
-        const initialDisabled = new Set(this._settings?.isReady ? this._settings.getGlobalValue("disabled-widgets") : []);
-        if (this._settings?.isReady) {
-            this._disabledChangedId = this._settings.onChanged("disabled-widgets", ids => this._applyDisabledWidgets(new Set(ids)));
-            this._languageChangedId = this._settings.onChanged("language", lang => loader.notifyHostLanguageChanged(lang ?? ""));
-            this._activeThemePackChangedId = this._settings.onChanged("active-theme-pack", id => this._applyActiveThemePack(id).catch(e => this._logger?.error(`failed to apply theme pack "${id}"`, e)));
-        }
         let cancelled = false;
         this._cancelLoad = () => {
             cancelled = true;
         };
-        loader.loadAll(initialDisabled).then(started => {
+        // discover() reads each widget's metadata.json asynchronously
+        // (EGO-X-004), so the auto-enable policy, the resulting
+        // "disabled-widgets" read, and loadAll() all have to wait for it -
+        // they must run in this order and are guarded by `cancelled` in case
+        // disable() runs before this resolves.
+        loader.discover().then(discovered => {
+            if (cancelled) return null;
+            if (this._settings?.isReady) applyAutoEnablePolicy(this._settings, discovered, userWidgetsPath, this._logger);
+            const initialDisabled = new Set(this._settings?.isReady ? this._settings.getGlobalValue("disabled-widgets") : []);
+            if (this._settings?.isReady) {
+                this._disabledChangedId = this._settings.onChanged("disabled-widgets", ids => this._applyDisabledWidgets(new Set(ids)));
+                this._languageChangedId = this._settings.onChanged("language", lang => loader.notifyHostLanguageChanged(lang ?? ""));
+                this._activeThemePackChangedId = this._settings.onChanged("active-theme-pack", id => this._applyActiveThemePack(id).catch(e => this._logger?.error(`failed to apply theme pack "${id}"`, e)));
+            }
+            return loader.loadAll(initialDisabled);
+        }).then(started => {
+            if (cancelled || started === null) return;
             this._logger.log(`[widget-center] loaded ${started.length} widget(s)`);
             for (const err of loader.errors) this._logger?.warn(`"${err.id}" failed: ${err.reason}`);
             if (cancelled) {
@@ -157,7 +166,7 @@ export default class WidgetCenterExtension extends Extension {
                 id: e.id,
                 path: e.path
             })));
-        }).catch(e => this._logger?.error("loadAll() failed", e));
+        }).catch(e => this._logger?.error("enable() widget discovery/load sequence failed", e));
         this._widgetCenterOverlay = new WidgetCenterOverlay(this, {
             widgetLoader: this._loader,
             logger: this._logger,
@@ -467,12 +476,13 @@ export default class WidgetCenterExtension extends Extension {
             this._layer.removeWidgetActor(id);
             this._loader.unloadOne(id);
         }
-        this._loadNewlyDiscoveredWidgets(disabledIds);
+        this._loadNewlyDiscoveredWidgets(disabledIds).catch(e => this._logger?.error("_loadNewlyDiscoveredWidgets failed", e));
     }
-    _loadNewlyDiscoveredWidgets(disabledIds = null) {
+    async _loadNewlyDiscoveredWidgets(disabledIds = null) {
         if (!this._loader || !this._layer) return;
         if (this._applyingThemePack) return;
-        const discovered = this._loader.discover();
+        const discovered = await this._loader.discover();
+        if (!this._loader || !this._layer) return;
         let disabled = disabledIds ?? new Set(this._settings?.isReady ? this._settings.getGlobalValue("disabled-widgets") : []);
         if (this._settings?.isReady) {
             const reconciled = applyAutoEnablePolicy(this._settings, discovered, this._userWidgetsPath, this._logger);
@@ -484,7 +494,7 @@ export default class WidgetCenterExtension extends Extension {
             this._loader.loadOne(widgetInfo).then(entry => entry && this._placeEntry(entry)).catch(e => this._logger?.error(`"${widgetInfo.id}" failed to load`, e));
         }
     }
-    _discoverThemePackById(id) {
+    async _discoverThemePackById(id) {
         const bundledPath = GLib.build_filenamev([ this.path, "themepacks" ]);
         const userPath = GLib.build_filenamev([ GLib.get_user_config_dir(), "gnome-widget-center", "themepacks" ]);
         const registry = new ThemePackRegistry([ {
@@ -494,11 +504,13 @@ export default class WidgetCenterExtension extends Extension {
             path: userPath,
             source: "user"
         } ]);
-        return registry.discover().find(entry => entry.id === id) ?? null;
+        const entries = await registry.discover();
+        return entries.find(entry => entry.id === id) ?? null;
     }
     async _applyActiveThemePack(id) {
         if (!id || !this._loader || !this._layer || !this._storage || !this._themeService) return;
-        const entry = this._discoverThemePackById(id);
+        const entry = await this._discoverThemePackById(id);
+        if (!this._loader || !this._layer || !this._storage || !this._themeService) return;
         if (!entry) {
             this._logger?.warn(`active theme pack "${id}" not found on disk`);
             return;
@@ -514,7 +526,7 @@ export default class WidgetCenterExtension extends Extension {
                     this._layer.removeWidgetActor(loadedEntry.id);
                 }
                 this._loader.unloadAll();
-                const discovered = new Map(this._loader.discover().map(w => [ w.id, w ]));
+                const discovered = new Map((await this._loader.discover()).map(w => [ w.id, w ]));
                 importGwctDocument(entry.document, {
                     storage: this._storage,
                     theme: this._themeService,

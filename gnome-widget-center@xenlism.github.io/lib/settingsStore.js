@@ -2,7 +2,7 @@ import GLib from "gi://GLib";
 
 import Gio from "gi://Gio";
 
-import { ensureDirectory, readTextFile, writeTextFile } from "./fsUtils.js";
+import { ensureDirectory, readTextFileAsync, writeTextFile } from "./fsUtils.js";
 
 const SETTINGS_SUBDIR = "gnome-widget-center/settings";
 
@@ -13,17 +13,27 @@ function _getSettingsDir() {
 }
 
 export class SettingsStore {
+    // Constructors can't be async, so this factory is how callers get an
+    // instance now — it does the initial disk read with readTextFileAsync
+    // instead of blocking the process the way the old constructor did (see
+    // EGO.md / HANDOVER_EGO_FIXES.md for the why). Only call site is
+    // prefsWidgetManagement.js's settings.js prefs flow, which was already
+    // inside a promise chain, so this was a small change there.
+    static async create(widgetId, fields = []) {
+        const store = new SettingsStore(widgetId, fields);
+        await store._loadFromDiskAsync();
+        return store;
+    }
     constructor(widgetId, fields = []) {
         this.widgetId = widgetId;
         this._fields = fields;
         this._dir = _getSettingsDir();
         this._file = this._dir.get_child(`${widgetId}.json`);
-        this._values = {};
+        this._values = this._defaultsMap();
         this._monitor = null;
         this._changedHandlerId = 0;
         this._listeners = new Set;
         this._localListeners = new Set;
-        this._loadFromDisk();
     }
     _defaultsMap() {
         const defaults = {};
@@ -32,10 +42,10 @@ export class SettingsStore {
         }
         return defaults;
     }
-    _loadFromDisk() {
+    async _loadFromDiskAsync() {
         const defaults = this._defaultsMap();
         try {
-            const contents = readTextFile(this._file.get_path());
+            const contents = await readTextFileAsync(this._file.get_path());
             if (contents !== null) {
                 this._values = {
                     ...defaults,
@@ -90,10 +100,11 @@ export class SettingsStore {
         this._monitor = this._file.monitor(Gio.FileMonitorFlags.NONE, null);
         this._changedHandlerId = this._monitor.connect("changed", (_monitor, _file, _otherFile, eventType) => {
             if (eventType === Gio.FileMonitorEvent.CHANGES_DONE_HINT || eventType === Gio.FileMonitorEvent.CREATED) {
-                this._loadFromDisk();
-                for (const listener of this._listeners) {
-                    listener(this.getAll());
-                }
+                this._loadFromDiskAsync().then(() => {
+                    for (const listener of this._listeners) {
+                        listener(this.getAll());
+                    }
+                }).catch(e => logError(e, `[gwc.settingsStore] Failed to reload settings for "${this.widgetId}" after file change`));
             }
         });
     }

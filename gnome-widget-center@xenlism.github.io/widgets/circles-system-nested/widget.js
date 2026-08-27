@@ -132,8 +132,8 @@ export default class CirclesSystemNestedWidget {
             this._timerId = null;
         }
     }
-    _tick() {
-        const {cpu: cpu, memory: memory} = this._metrics.sample();
+    async _tick() {
+        const {cpu: cpu, memory: memory} = await this._metrics.sample();
         const disk = this._getDiskUsage("/");
         this._fractions.cpu = Math.max(0, Math.min(100, cpu.percent ?? 0)) / 100;
         this._fractions.mem = Math.max(0, Math.min(100, memory.percent ?? 0)) / 100;

@@ -22,7 +22,7 @@ export class ThemePackRegistry {
     get lastErrors() {
         return this._lastErrors;
     }
-    discover() {
+    async discover() {
         const found = new Map;
         this._lastErrors = [];
         for (const {path: searchPath, source: source} of this._searchPaths) {
@@ -43,21 +43,21 @@ export class ThemePackRegistry {
                 const name = info.get_name();
                 if (name.startsWith("_")) continue;
                 if (info.get_file_type() === Gio.FileType.DIRECTORY) {
-                    this._discoverFolderPack(dir, name, info, source, found);
+                    await this._discoverFolderPack(dir, name, info, source, found);
                 } else if (info.get_file_type() === Gio.FileType.REGULAR && name.endsWith(FLAT_FILE_EXTENSION)) {
-                    this._discoverFlatPack(dir, name, info, source, found);
+                    await this._discoverFlatPack(dir, name, info, source, found);
                 }
             }
         }
         return [ ...found.values() ];
     }
-    _discoverFolderPack(dir, folderName, info, source, found) {
+    async _discoverFolderPack(dir, folderName, info, source, found) {
         const packDir = dir.get_child(folderName);
         const packPath = packDir.get_path();
         const manifestFile = packDir.get_child(MANIFEST_FILENAME);
         let manifest;
         try {
-            manifest = this._readJson(manifestFile);
+            manifest = await this._readJson(manifestFile);
         } catch (e) {
             this._recordError({
                 id: folderName,
@@ -82,13 +82,13 @@ export class ThemePackRegistry {
             widgetCount: Array.isArray(manifest.widgets) ? manifest.widgets.length : 0
         });
     }
-    _discoverFlatPack(dir, fileName, info, source, found) {
+    async _discoverFlatPack(dir, fileName, info, source, found) {
         const file = dir.get_child(fileName);
         const filePath = file.get_path();
         const baseName = fileName.slice(0, -FLAT_FILE_EXTENSION.length);
         let raw;
         try {
-            raw = this._readJson(file);
+            raw = await this._readJson(file);
         } catch (e) {
             this._recordError({
                 id: baseName,
@@ -148,10 +148,22 @@ export class ThemePackRegistry {
             return 0;
         }
     }
-    _readJson(file) {
+    async _readJson(file) {
         if (!file.query_exists(null)) throw new Error("file not found");
-        const [ok, contents] = file.load_contents(null);
-        if (!ok) throw new Error("could not read file");
+        const contents = await new Promise((resolve, reject) => {
+            file.load_contents_async(null, (source, result) => {
+                try {
+                    const [ok, bytes] = source.load_contents_finish(result);
+                    if (!ok) {
+                        reject(new Error("could not read file"));
+                        return;
+                    }
+                    resolve(bytes);
+                } catch (e) {
+                    reject(e);
+                }
+            });
+        });
         const text = new TextDecoder("utf-8").decode(contents);
         try {
             return JSON.parse(text);

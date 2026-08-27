@@ -8,6 +8,8 @@ import Gio from "gi://Gio";
 
 import { SystemMetricsService } from "../../lib/systemMetricsApi.js";
 
+import { readTextFileAsync } from "../../lib/fsUtils.js";
+
 import { SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, toCssColor as _toCssColor, TEXT_SHADOW_DEFAULTS, textShadowCss as _textShadowCss, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS } from "../../lib/widgetVisualKit.js";
 
 import { createLayeredCard, applyLayeredCardStyle } from "../../lib/shell/cardLayers.js";
@@ -93,9 +95,9 @@ export default class GeekArcheySystechSqureWidget {
         this._render();
         return this._actor;
     }
-    enable() {
+    async enable() {
         this._cancellable = new Gio.Cancellable;
-        this._ensureDistroDetected();
+        await this._ensureDistroDetected();
         this._fetchStaticInfo();
         this._updateDynamicInfo();
         this._timerId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, REFRESH_INTERVAL_SECONDS, () => {
@@ -126,17 +128,16 @@ export default class GeekArcheySystechSqureWidget {
         this._render();
         this._fetchStaticInfo();
     }
-    _ensureDistroDetected() {
+    async _ensureDistroDetected() {
         if (this._settings.distroDetected) return;
-        this._settings.distro = this._detectLinuxDistro();
+        this._settings.distro = await this._detectLinuxDistro();
         this._settings.distroDetected = true;
         this._api.saveSettings?.(this._settings);
     }
-    _detectLinuxDistro() {
+    async _detectLinuxDistro() {
         try {
-            const [ok, contents] = GLib.file_get_contents("/etc/os-release");
-            if (!ok) return "linux";
-            const text = (new TextDecoder).decode(contents);
+            const text = await readTextFileAsync("/etc/os-release");
+            if (!text) return "linux";
             const clean = v => (v ?? "").trim().replace(/^"|"$/g, "");
             const id = clean(text.match(/^ID=(.*)$/m)?.[1]);
             const idLike = clean(text.match(/^ID_LIKE=(.*)$/m)?.[1]);
@@ -168,11 +169,11 @@ export default class GeekArcheySystechSqureWidget {
             value.text = `${label}: ${this._info[key] ?? "…"}`;
         }
     }
-    _fetchStaticInfo() {
-        this._info.os = this._readOsPrettyName();
-        this._info.kernel = this._readKernelVersion();
-        this._info.host = this._readHostProduct() ?? GLib.get_host_name();
-        this._info.cpu = this._readCpuModel();
+    async _fetchStaticInfo() {
+        this._info.os = await this._readOsPrettyName();
+        this._info.kernel = await this._readKernelVersion();
+        this._info.host = await this._readHostProduct() ?? GLib.get_host_name();
+        this._info.cpu = await this._readCpuModel();
         this._info.shell = this._readShellName();
         this._info.resolution = this._readResolution();
         this._info.de = GLib.getenv("XDG_CURRENT_DESKTOP") ?? "GNOME";
@@ -194,9 +195,9 @@ export default class GeekArcheySystechSqureWidget {
             this._render();
         });
     }
-    _updateDynamicInfo() {
-        this._info.uptime = this._formatUptime(this._readUptimeSeconds());
-        const {totalKb: totalKb, usedKb: usedKb} = this._metrics.getMemoryUsage();
+    async _updateDynamicInfo() {
+        this._info.uptime = this._formatUptime(await this._readUptimeSeconds());
+        const {totalKb: totalKb, usedKb: usedKb} = await this._metrics.getMemoryUsage();
         this._info.memory = `${this._formatGb(usedKb)}/${this._formatGb(totalKb)}`;
         this._render();
     }
@@ -272,39 +273,37 @@ export default class GeekArcheySystechSqureWidget {
             }
         });
     }
-    _readOsPrettyName() {
+    async _readOsPrettyName() {
         try {
-            const [ok, contents] = GLib.file_get_contents("/etc/os-release");
-            if (!ok) return "Linux";
-            const text = (new TextDecoder).decode(contents);
+            const text = await readTextFileAsync("/etc/os-release");
+            if (!text) return "Linux";
             const match = text.match(/^PRETTY_NAME="?([^"\n]+)"?/m);
             return match ? match[1] : "Linux";
         } catch (e) {
             return "Linux";
         }
     }
-    _readKernelVersion() {
+    async _readKernelVersion() {
         try {
-            const [ok, contents] = GLib.file_get_contents("/proc/sys/kernel/osrelease");
-            return ok ? (new TextDecoder).decode(contents).trim() : "Unknown";
+            const text = await readTextFileAsync("/proc/sys/kernel/osrelease");
+            return text ? text.trim() : "Unknown";
         } catch (e) {
             return "Unknown";
         }
     }
-    _readHostProduct() {
+    async _readHostProduct() {
         try {
-            const [ok, contents] = GLib.file_get_contents("/sys/class/dmi/id/product_name");
-            const text = ok ? (new TextDecoder).decode(contents).trim() : "";
-            return text || null;
+            const text = await readTextFileAsync("/sys/class/dmi/id/product_name");
+            const trimmed = text ? text.trim() : "";
+            return trimmed || null;
         } catch (e) {
             return null;
         }
     }
-    _readCpuModel() {
+    async _readCpuModel() {
         try {
-            const [ok, contents] = GLib.file_get_contents("/proc/cpuinfo");
-            if (!ok) return "Unknown";
-            const text = (new TextDecoder).decode(contents);
+            const text = await readTextFileAsync("/proc/cpuinfo");
+            if (!text) return "Unknown";
             const match = text.match(/^model name\s*:\s*(.+)$/m);
             return match ? match[1].replace(/\s+/g, " ").trim() : "Unknown";
         } catch (e) {
@@ -325,11 +324,10 @@ export default class GeekArcheySystechSqureWidget {
             return "Unknown";
         }
     }
-    _readUptimeSeconds() {
+    async _readUptimeSeconds() {
         try {
-            const [ok, contents] = GLib.file_get_contents("/proc/uptime");
-            if (!ok) return 0;
-            const text = (new TextDecoder).decode(contents);
+            const text = await readTextFileAsync("/proc/uptime");
+            if (!text) return 0;
             return parseFloat(text.split(" ")[0]) || 0;
         } catch (e) {
             return 0;

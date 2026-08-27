@@ -179,8 +179,8 @@ export default class CirclesSystemWidget {
             this._timerId = null;
         }
     }
-    _tick() {
-        const {cpu: cpu, memory: memory} = this._metrics.sample();
+    async _tick() {
+        const {cpu: cpu, memory: memory} = await this._metrics.sample();
         const disk = this._getDiskUsage("/");
         this._setGauge(this._gauges[0], cpu.percent);
         this._setGauge(this._gauges[1], memory.percent);

@@ -116,8 +116,8 @@ export default class CirclesMemWidget {
             this._timerId = null;
         }
     }
-    _tick() {
-        const {percent: percent} = this._metrics.getMemoryUsage();
+    async _tick() {
+        const {percent: percent} = await this._metrics.getMemoryUsage();
         const clamped = Math.max(0, Math.min(100, percent ?? 0));
         this._fraction = clamped / 100;
         this._valueLabel.set_text(`${Math.round(clamped)}%`);

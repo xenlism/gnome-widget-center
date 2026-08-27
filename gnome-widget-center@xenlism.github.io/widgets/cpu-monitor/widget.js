@@ -145,8 +145,8 @@ export default class CpuMonitorWidget {
             this._timerId = null;
         }
     }
-    _tick() {
-        const {percent: percent} = this._metrics.getCpuUsage();
+    async _tick() {
+        const {percent: percent} = await this._metrics.getCpuUsage();
         this._history.push(percent);
         if (this._history.length > MAX_HISTORY) this._history.shift();
         this._valueLabel.set_text(`${percent}%`);

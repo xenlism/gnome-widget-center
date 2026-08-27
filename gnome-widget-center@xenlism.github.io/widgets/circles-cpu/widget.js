@@ -116,8 +116,8 @@ export default class CirclesCpuWidget {
             this._timerId = null;
         }
     }
-    _tick() {
-        const {percent: percent} = this._metrics.getCpuUsage();
+    async _tick() {
+        const {percent: percent} = await this._metrics.getCpuUsage();
         const clamped = Math.max(0, Math.min(100, percent ?? 0));
         this._fraction = clamped / 100;
         this._valueLabel.set_text(`${Math.round(clamped)}%`);

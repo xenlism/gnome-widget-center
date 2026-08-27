@@ -1,6 +1,6 @@
 import GLib from "gi://GLib";
 
-import { writeJsonFile, readTextFile, ensureDirectory, fileExists } from "./fsUtils.js";
+import { writeJsonFile, readTextFileAsync, ensureDirectory, fileExists } from "./fsUtils.js";
 
 import { readWidgetConfig } from "./widgetConfigReader.js";
 
@@ -130,8 +130,8 @@ export function writeGwctFile(path, document) {
     return finalPath;
 }
 
-export function readGwctFile(path) {
-    const contents = readTextFile(path);
+export async function readGwctFile(path) {
+    const contents = await readTextFileAsync(path);
     if (contents === null) throw new Error(`File not found: ${path}`);
     const parsed = JSON.parse(contents);
     if (parsed.format !== GWCT_FORMAT) throw new Error("Not a GNOME Widget Center theme file (.gwct).");

@@ -1,5 +1,7 @@
 import GLib from "gi://GLib";
 
+import { readTextFileAsync } from "./fsUtils.js";
+
 const PROC_STAT_PATH = "/proc/stat";
 
 const PROC_MEMINFO_PATH = "/proc/meminfo";
@@ -11,13 +13,13 @@ export class SystemMetricsService {
         this._prevCpu = null;
         this._prevNet = null;
     }
-    getCpuUsage() {
+    async getCpuUsage() {
         try {
-            const [ok, contents] = GLib.file_get_contents(PROC_STAT_PATH);
-            if (!ok) return {
+            const contents = await readTextFileAsync(PROC_STAT_PATH);
+            if (!contents) return {
                 percent: 0
             };
-            const firstLine = (new TextDecoder).decode(contents).split("\n")[0];
+            const firstLine = contents.split("\n")[0];
             const fields = firstLine.trim().split(/\s+/).slice(1).map(Number);
             const idle = fields[3] ?? 0;
             const total = fields.reduce((sum, n) => sum + (Number.isFinite(n) ? n : 0), 0);
@@ -40,17 +42,17 @@ export class SystemMetricsService {
             };
         }
     }
-    getMemoryUsage() {
+    async getMemoryUsage() {
         try {
-            const [ok, contents] = GLib.file_get_contents(PROC_MEMINFO_PATH);
-            if (!ok) return {
+            const contents = await readTextFileAsync(PROC_MEMINFO_PATH);
+            if (!contents) return {
                 totalKb: 0,
                 availableKb: 0,
                 usedKb: 0,
                 percent: 0
             };
             const values = {};
-            for (const line of (new TextDecoder).decode(contents).split("\n")) {
+            for (const line of contents.split("\n")) {
                 const match = line.match(/^(\w+):\s+(\d+)/);
                 if (match) values[match[1]] = Number(match[2]);
             }
@@ -73,14 +75,14 @@ export class SystemMetricsService {
             };
         }
     }
-    listNetworkDevices() {
-        return this._readNetDev().map(({name: name}) => ({
+    async listNetworkDevices() {
+        return (await this._readNetDev()).map(({name: name}) => ({
             name: name
         }));
     }
-    getNetworkUsage() {
+    async getNetworkUsage() {
         const nowUs = GLib.get_monotonic_time();
-        const current = this._readNetDev();
+        const current = await this._readNetDev();
         const interfaces = current.map(({name: name, rxBytes: rxBytes, txBytes: txBytes}) => {
             const prevEntry = this._prevNet?.interfaces.get(name);
             let rxBytesPerSec = 0;
@@ -113,19 +115,20 @@ export class SystemMetricsService {
             totalTxBytesPerSec: interfaces.reduce((sum, i) => sum + i.txBytesPerSec, 0)
         };
     }
-    sample() {
+    async sample() {
+        const [cpu, memory, network, devices] = await Promise.all([ this.getCpuUsage(), this.getMemoryUsage(), this.getNetworkUsage(), this.listNetworkDevices() ]);
         return {
-            cpu: this.getCpuUsage(),
-            memory: this.getMemoryUsage(),
-            network: this.getNetworkUsage(),
-            devices: this.listNetworkDevices()
+            cpu: cpu,
+            memory: memory,
+            network: network,
+            devices: devices
         };
     }
-    _readNetDev() {
+    async _readNetDev() {
         try {
-            const [ok, contents] = GLib.file_get_contents(PROC_NET_DEV_PATH);
-            if (!ok) return [];
-            const lines = (new TextDecoder).decode(contents).split("\n").slice(2);
+            const contents = await readTextFileAsync(PROC_NET_DEV_PATH);
+            if (!contents) return [];
+            const lines = contents.split("\n").slice(2);
             const result = [];
             for (const line of lines) {
                 if (!line.includes(":")) continue;

@@ -13,6 +13,8 @@ import { SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, parseFontDe
 import { createLayeredCard, applyLayeredCardStyle } from "../../lib/shell/cardLayers.js";
 
 import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
+
+import { readTextFileAsync, writeTextFileAsync } from "../../lib/fsUtils.js";
 const FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
 
 const REFRESH_SECONDS = 15 * 60;
@@ -249,12 +251,6 @@ export default class WeatherMinimalWidget {
     }
     async _fetchIpLocation() {
         const endpoints = [ {
-            url: "http://ip-api.com/json/",
-            parse: d => ({
-                latitude: d.lat,
-                longitude: d.lon
-            })
-        }, {
             url: "https://freeipapi.com/api/json",
             parse: d => ({
                 latitude: d.latitude,
@@ -321,19 +317,33 @@ export default class WeatherMinimalWidget {
         if (!this._iconDir) return null;
         const srcFile = this._iconDir.get_child(`${iconKey}.svg`);
         if (!srcFile.query_exists(null)) return null;
+        const safeColor = this._normalizeHexColor(colorHex);
+        const cacheFile = this._cacheDir.get_child(`${iconKey}-${safeColor.replace("#", "")}.svg`);
+        if (cacheFile.query_exists(null)) return cacheFile;
+        // Cache miss: recoloring means reading the source SVG and writing the
+        // cached copy, both real file I/O. Do that off the main loop and fall
+        // back to the plain (uncolored) icon for this render pass - once the
+        // cache file lands, _render() runs again and this hits the
+        // query_exists() cache-hit branch above like normal.
+        this._recolorIconAsync(srcFile, cacheFile, safeColor, iconKey);
+        return srcFile;
+    }
+    async _recolorIconAsync(srcFile, cacheFile, safeColor, iconKey) {
+        const cachePath = cacheFile.get_path();
+        if (!this._recoloring) this._recoloring = new Set;
+        if (this._recoloring.has(cachePath)) return;
+        this._recoloring.add(cachePath);
         try {
-            const safeColor = this._normalizeHexColor(colorHex);
-            const cacheFile = this._cacheDir.get_child(`${iconKey}-${safeColor.replace("#", "")}.svg`);
-            if (cacheFile.query_exists(null)) return cacheFile;
-            const [, contents] = srcFile.load_contents(null);
-            const svgText = new TextDecoder("utf-8").decode(contents);
+            const svgText = await readTextFileAsync(srcFile.get_path());
+            if (svgText == null) return;
             const recolored = svgText.replaceAll("#000000", safeColor);
             GLib.mkdir_with_parents(this._cacheDir.get_path(), 448);
-            GLib.file_set_contents(cacheFile.get_path(), recolored);
-            return cacheFile;
+            await writeTextFileAsync(cachePath, recolored);
+            this._render();
         } catch (e) {
             this._api.logger.info(`weather-minimal: failed to recolor icon "${iconKey}": ${e}`);
-            return srcFile;
+        } finally {
+            this._recoloring.delete(cachePath);
         }
     }
     _render() {

@@ -6,8 +6,8 @@ import { validateSettingsSchema } from "./settingsSchema.js";
 
 const REQUIRED_METADATA_FIELDS = [ "id", "name", "entry" ];
 
-// NOTE: This class must stay reachable from BOTH extension.js (shell process)
-// and prefs.js (prefs process) — it only scans metadata.json on disk and must
+// This class must stay reachable from BOTH extension.js (shell process)
+// and prefs.js (prefs process). It only scans metadata.json on disk and must
 // never import GNOME Shell libraries (Clutter/St/Shell) or anything that does,
 // directly or dynamically. Actual widget instantiation/rendering (which needs
 // those libraries) lives in lib/shell/widgetRuntimeLoader.js instead, so that
@@ -21,7 +21,7 @@ export class WidgetLoader {
     get errors() {
         return this._errors;
     }
-    discover() {
+    async discover() {
         const found = new Map;
         this._errors = [];
         for (const basePath of this._searchPaths) {
@@ -42,7 +42,7 @@ export class WidgetLoader {
                 const metadataFile = widgetDir.get_child("metadata.json");
                 let metadata;
                 try {
-                    metadata = this._readMetadata(metadataFile);
+                    metadata = await this._readMetadata(metadataFile);
                 } catch (e) {
                     this._recordError({
                         id: folderName,
@@ -83,10 +83,22 @@ export class WidgetLoader {
         this._pathById = new Map(Array.from(found.values(), w => [ w.id, w.path ]));
         return Array.from(found.values());
     }
-    _readMetadata(metadataFile) {
+    async _readMetadata(metadataFile) {
         if (!metadataFile.query_exists(null)) throw new Error("metadata.json not found");
-        const [ok, contents] = metadataFile.load_contents(null);
-        if (!ok) throw new Error("could not read metadata.json");
+        const contents = await new Promise((resolve, reject) => {
+            metadataFile.load_contents_async(null, (source, result) => {
+                try {
+                    const [ok, bytes] = source.load_contents_finish(result);
+                    if (!ok) {
+                        reject(new Error("could not read metadata.json"));
+                        return;
+                    }
+                    resolve(bytes);
+                } catch (e) {
+                    reject(e);
+                }
+            });
+        });
         return JSON.parse(new TextDecoder("utf-8").decode(contents));
     }
     _recordError(widgetInfo, reason) {

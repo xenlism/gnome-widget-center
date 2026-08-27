@@ -24,6 +24,11 @@ chosen depends on `GLib.get_language_names()` / the user's settings override, so
 there is no fixed file to point a static `import` at. All six are real,
 used translation files, not dead code.
 
+Individual widgets follow the identical pattern for their own locale files
+(e.g. `widgets/calendar-header/i18n/*.js`, loaded via `_loadWidgetI18n()` in
+`lib/prefsWidgetManagement.js`), so any newly-flagged `widgets/<id>/i18n/*.js`
+file falls under this same, already-accepted rationale.
+
 ## 2. Widget "kit" helper libraries
 
 `lib/architectWidgetKit.js`, `lib/calendarGridKit.js`, `lib/halfCircleGaugeKit.js`,
@@ -72,6 +77,78 @@ widgets the user hasn't enabled), or maintaining a manually-updated static impor
 list that duplicates what `metadata.json` and the locale folder already express.
 We consider the current dynamic-loading architecture correct for this project and
 have documented it here per the reviewer's request rather than changing it.
+
+---
+
+# Reviewer notes — EGO-I-003 (`lib/shell/cardLayers.js` imports St/Clutter/Shell)
+
+We traced the full static **and** dynamic import graph from `prefs.js` (and from
+`widget-center-prefs-app.js`, the standalone prefs launcher) and confirmed
+`lib/shell/cardLayers.js` is not reachable from either — it is only ever
+imported by `extension.js`, by `lib/shell/widgetRuntimeLoader.js` (explicitly
+shell-only, see its own header comment), and by bundled `widgets/*/widget.js`
+files, all of which run in the Shell process.
+
+The one path that *could* have made it reachable was
+`lib/prefsWidgetManagement.js`'s `_openHandWrittenPrefs()`, which dynamically
+`import()`s a file named by a widget's own `metadata.json` `"prefs"` field —
+data that, for user-installed widgets, is untrusted. That field was only
+checked for being a non-empty string, so a widget could in principle set
+`"prefs": "../../lib/shell/cardLayers.js"` (or any other path) and have it
+`import()`-ed inside the prefs process, which would pull in
+St/Clutter/Shell there and crash it. We think this — a provably-unsafe path
+rather than an actually-exercised one — is what the automated check is
+(correctly, conservatively) flagging.
+
+Fixed: added `isSafeWidgetRelativeFilename()` in `lib/prefsWidgetList.js`,
+which rejects any `"prefs"` value containing a path separator or `".."`. It
+gates `hasPrefs` (so such a widget no longer shows a working prefs entry) and
+is checked again at the `import()` call site in
+`lib/prefsWidgetManagement.js` as defense in depth.
+
+---
+
+# Reviewer notes — EGO-X-004 (synchronous file IO in shell code)
+
+`lib/fsUtils.js` already has `readTextFileAsync` / `writeTextFileAsync` /
+`readBytesFileAsync` / `writeBytesFileAsync` / `writeJsonFileAsync` twins of
+every sync helper; new call sites should prefer those.
+
+**Converted this round:** `lib/systemMetricsApi.js` (all three `/proc` reads),
+the 12 widgets that poll it, `widgets/geek-archey-systech-bay/widget.js`,
+`widgets/geek-archey-systech-squre/widget.js` (`/etc/os-release`,
+`/proc/sys/kernel/osrelease`, `/sys/class/dmi/id/product_name`,
+`/proc/cpuinfo`, `/proc/uptime`), and the three weather widgets' icon-recolor
+cache-miss path. See `HANDOVER_EGO_FIXES.md` v7 for the per-file detail.
+
+Not yet converted, and deliberately left for a dedicated pass rather than
+rushed here:
+
+- **`WidgetLoader.discover()`** (`lib/widgetLoader.js`) and
+  **`ThemePackRegistry.discover()`** (`lib/themePackRegistry.js`) are called
+  synchronously in many places whose return value is used immediately in the
+  same expression (`.find()`, `.filter()`, building menu/grid UI on the spot) —
+  in `extension.js` (widget enable/disable, building the panel menu),
+  `lib/shell/widgetCenterOverlay.js` (building the widget grid,
+  `_discoverWidgets()`/`_refreshOverviewGrid()`), and `lib/prefsWidgetList.js`.
+  Converting these to async means restructuring every one of those call sites
+  to a "render now with a loading/empty state, re-render when data arrives"
+  pattern. That's a real, testable-only-in-a-live-Shell UI change, not a
+  same-session drive-by edit, so it's tracked as follow-up work rather than
+  done here.
+- `lib/shell/widgetCenterOverlay.js`'s `_scanMetadataFolders()` (the fallback
+  path used when no `widgetLoader` was injected) has the same coupling to
+  `_discoverWidgets()` above and is deferred for the same reason.
+- `lib/fsUtils.js`'s `readTextFile()`/`readBytesFile()` sync function
+  *definitions* themselves stay synchronous on purpose — they're the shared
+  utility still used by the constructor-can't-be-`async` cluster
+  (`storageService.js`, `themeService.js`, `widgetConfigReader.js`, two
+  widget constructors). Expect these two lines to keep showing up on a
+  re-run until that cluster gets its own pass.
+  (`prefsWindowControllerBase.js` and `settingsStore.js` were part of this
+  cluster too but are done as of v8/v10 respectively — neither's
+  constructor reads the file synchronously anymore, see
+  `HANDOVER_EGO_FIXES.md`.)
 
 ---
 

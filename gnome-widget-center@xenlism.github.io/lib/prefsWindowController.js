@@ -59,6 +59,7 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
             WidgetSettings.flushAll();
             return false;
         });
+        await this._ensureMetadataLoaded();
         const settings = new SettingsService(this._extensionObject ?? GLib.build_filenamev([ this.path, "schemas" ]));
         try {
             settings.init();
@@ -71,7 +72,7 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
         storage.init();
         const bundledWidgetsPath = GLib.build_filenamev([ this.path, "widgets" ]);
         const userWidgetsPath = GLib.build_filenamev([ GLib.get_user_data_dir(), "gnome-widget-center", "widgets" ]);
-        const {ok: ok, errors: errors} = new PrefsWidgetList([ bundledWidgetsPath, userWidgetsPath ]).list();
+        const {ok: ok, errors: errors} = await new PrefsWidgetList([ bundledWidgetsPath, userWidgetsPath ]).list();
         this._settings = settings;
         this._storage = storage;
         this._discovered = ok;
@@ -82,7 +83,7 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
         const geometry = monitor.get_geometry();
         window.set_default_size(900, geometry.height);
         this._buildOverviewCardsTab(window, settings, ok);
-        this._buildThemesCardsTab(window, settings, storage, ok);
+        await this._buildThemesCardsTab(window, settings, storage, ok);
         this._preferencesPage = this._buildPreferencesPage(window, settings, storage, ok, {
             bundledWidgetsPath: bundledWidgetsPath,
             userWidgetsPath: userWidgetsPath
@@ -94,7 +95,7 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
         this._openRequestedWidgetPrefs(window, settings, storage, ok);
         if (settings.isReady) {
             const requestedIdHandlerId = settings.onChanged("requested-widget-id", value => {
-                this._jumpToWidgetPrefs(window, settings, storage, ok, value);
+                this._jumpToWidgetPrefs(window, settings, storage, ok, value).catch(e => logError(e, "[widget-center] prefsV2: requested-widget-id jump failed"));
             });
             window.connect("close-request", () => {
                 settings.disconnect(requestedIdHandlerId);
@@ -440,7 +441,7 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
             }
         }
     }
-    _buildThemesCardsTab(window, settings, storage, discoveredWidgets) {
+    async _buildThemesCardsTab(window, settings, storage, discoveredWidgets) {
         if (this._themesPage) {
             window.remove(this._themesPage);
             this._themesPage = null;
@@ -454,7 +455,7 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
         });
         const flow = this._buildCardFlowBox();
         scroll.set_child(flow);
-        const entries = this._discoverThemePacks();
+        const entries = await this._discoverThemePacks();
         if (entries.length === 0) {
             flow.append(new Gtk.Label({
                 label: this._tr("themes.empty", "No theme packs found"),
@@ -483,7 +484,7 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
         window.add(page);
         this._themesPage = page;
     }
-    _discoverThemePacks() {
+    async _discoverThemePacks() {
         const bundledPath = GLib.build_filenamev([ this.path, "themepacks" ]);
         const userPath = GLib.build_filenamev([ GLib.get_user_config_dir(), "gnome-widget-center", "themepacks" ]);
         this._userThemepacksPath = userPath;
@@ -494,7 +495,7 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
             path: userPath,
             source: "user"
         } ]);
-        return registry.discover();
+        return await registry.discover();
     }
     _buildThemeCard(window, settings, entry) {
         const {manifest: manifest, path: path, source: source} = entry;
@@ -585,7 +586,7 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
                     window.remove(this._themesPage);
                     this._themesPage = null;
                 }
-                this._buildThemesCardsTab(window, settings, this._storage, this._discovered);
+                this._buildThemesCardsTab(window, settings, this._storage, this._discovered).catch(e => logError(e, "[widget-center] prefsV2: rebuilding themes tab after remove failed"));
             });
             const overlay = new Gtk.Overlay;
             const banner = card.get_first_child();

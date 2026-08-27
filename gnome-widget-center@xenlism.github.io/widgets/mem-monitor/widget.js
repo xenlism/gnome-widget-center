@@ -145,8 +145,8 @@ export default class MemMonitorWidget {
             this._timerId = null;
         }
     }
-    _tick() {
-        const {percent: percent} = this._metrics.getMemoryUsage();
+    async _tick() {
+        const {percent: percent} = await this._metrics.getMemoryUsage();
         this._history.push(percent);
         if (this._history.length > MAX_HISTORY) this._history.shift();
         this._valueLabel.set_text(`${percent}%`);

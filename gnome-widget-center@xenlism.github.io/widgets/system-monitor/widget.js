@@ -166,8 +166,8 @@ export default class SystemMonitorMiniWidget {
             this._timerId = null;
         }
     }
-    _updateStats() {
-        const {cpu: cpu, memory: memory, network: network} = this._metrics.sample();
+    async _updateStats() {
+        const {cpu: cpu, memory: memory, network: network} = await this._metrics.sample();
         const disk = this._getDiskUsage("/");
         this._setGauge(this._gauges[0], cpu.percent);
         this._setGauge(this._gauges[1], memory.percent);

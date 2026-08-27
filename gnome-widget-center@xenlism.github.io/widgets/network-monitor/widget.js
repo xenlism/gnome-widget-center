@@ -168,8 +168,8 @@ export default class NetworkMonitorWidget {
             this._timerId = null;
         }
     }
-    _tick() {
-        const {totalRxBytesPerSec: totalRxBytesPerSec, totalTxBytesPerSec: totalTxBytesPerSec} = this._metrics.getNetworkUsage();
+    async _tick() {
+        const {totalRxBytesPerSec: totalRxBytesPerSec, totalTxBytesPerSec: totalTxBytesPerSec} = await this._metrics.getNetworkUsage();
         this._rxHistory.push(totalRxBytesPerSec);
         if (this._rxHistory.length > MAX_HISTORY) this._rxHistory.shift();
         this._txHistory.push(totalTxBytesPerSec);

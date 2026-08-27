@@ -238,12 +238,27 @@ export default class SettingsControlBarWidget {
     }
 
     _enableBluetooth() {
+        // Check whether BlueZ is actually running before touching it at all.
+        // Gio.DBusProxyFlags.NONE (the old code) lets GDBus try to activate
+        // org.bluez on the system bus when it isn't already up, and on a lot
+        // of systems there's no bluetoothd unit to activate, so that attempt
+        // fails loudly (NameHasNoOwner) and gets logged as an error even
+        // though "no Bluetooth here" is an entirely normal, expected case —
+        // the widget already has a fallback (Airplane Mode) for exactly this.
+        if (!this._hasSystemService('org.bluez')) {
+            this._api.logger.info('settings-control-bar: BlueZ is not running, switching this button to Airplane Mode');
+            this._btAdapterPath = null;
+            this._enableAirplaneModeFallback();
+            this._renderBluetooth();
+            return;
+        }
+
         try {
             const objectManager = Gio.DBusProxy.new_for_bus_sync(
-                Gio.BusType.SYSTEM, Gio.DBusProxyFlags.NONE, null,
+                Gio.BusType.SYSTEM, Gio.DBusProxyFlags.DO_NOT_AUTO_START, null,
                 'org.bluez', '/', 'org.freedesktop.DBus.ObjectManager', null);
             const [managedObjects] = objectManager.call_sync(
-                'GetManagedObjects', null, Gio.DBusCallFlags.NONE, -1, null
+                'GetManagedObjects', null, Gio.DBusCallFlags.NO_AUTO_START, -1, null
             ).deep_unpack();
 
             this._btAdapterPath = Object.keys(managedObjects)
@@ -256,7 +271,7 @@ export default class SettingsControlBarWidget {
         if (this._btAdapterPath) {
             try {
                 this._btProxy = Gio.DBusProxy.new_for_bus_sync(
-                    Gio.BusType.SYSTEM, Gio.DBusProxyFlags.NONE, null,
+                    Gio.BusType.SYSTEM, Gio.DBusProxyFlags.DO_NOT_AUTO_START, null,
                     'org.bluez', this._btAdapterPath, 'org.bluez.Adapter1', null);
                 this._btSignalId = this._btProxy.connect('g-properties-changed', () => this._renderBluetooth());
                 this._btMode = 'bluetooth';
@@ -276,12 +291,40 @@ export default class SettingsControlBarWidget {
         this._renderBluetooth();
     }
 
+    // Sync NameHasOwner check on the system bus, with NO_AUTO_START so this
+    // itself never triggers the activation attempt we're trying to avoid.
+    // Same idea as the getBluetoothDevices() helper, just the call_sync
+    // shape since the rest of this file (enable/disable) is synchronous.
+    _hasSystemService(name) {
+        try {
+            const result = Gio.DBus.system.call_sync(
+                'org.freedesktop.DBus', '/org/freedesktop/DBus', 'org.freedesktop.DBus',
+                'NameHasOwner', new GLib.Variant('(s)', [name]), new GLib.VariantType('(b)'),
+                Gio.DBusCallFlags.NO_AUTO_START, -1, null
+            );
+            return result.deepUnpack()[0];
+        } catch (e) {
+            return false;
+        }
+    }
+
     _enableAirplaneModeFallback() {
         this._btMode = 'airplane';
         this._bluetoothTooltipText = 'Airplane Mode';
 
+        // Look the schema up first instead of relying on the Gio.Settings
+        // constructor to throw — a missing rfkill schema (e.g. a distro not
+        // running gnome-settings-daemon) is just "this fallback isn't
+        // available either", not an error worth alarming anyone with.
+        const schema = Gio.SettingsSchemaSource.get_default()?.lookup(RFKILL_SCHEMA, true);
+        if (!schema) {
+            this._api.logger.info(`settings-control-bar: ${RFKILL_SCHEMA} schema not found, Airplane Mode fallback unavailable`);
+            this._rfkillSettings = null;
+            return;
+        }
+
         try {
-            this._rfkillSettings = new Gio.Settings({schema_id: RFKILL_SCHEMA});
+            this._rfkillSettings = new Gio.Settings({settings_schema: schema});
             this._rfkillSignalId = this._rfkillSettings.connect('changed::airplane-mode', () => this._renderBluetooth());
         } catch (e) {
             this._api.logger.error(`settings-control-bar: could not reach ${RFKILL_SCHEMA}: ${e.message}`);

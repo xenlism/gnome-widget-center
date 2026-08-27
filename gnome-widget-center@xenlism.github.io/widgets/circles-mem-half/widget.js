@@ -93,9 +93,9 @@ export default class CirclesMemHalfWidget {
             this._timerId = null;
         }
     }
-    _tick() {
+    async _tick() {
         this._gauge.layoutChildren(this._settings);
-        const {memory: memory} = this._metrics.sample();
+        const {memory: memory} = await this._metrics.sample();
         this._fraction = Math.max(0, Math.min(100, memory.percent ?? 0)) / 100;
         this._render();
     }

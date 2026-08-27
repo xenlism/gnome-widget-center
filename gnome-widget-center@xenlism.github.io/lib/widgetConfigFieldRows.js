@@ -220,12 +220,6 @@ async function _fetchJsonForIpLookup(url) {
 
 async function _fetchIpLocationForPrefs() {
     const endpoints = [ {
-        url: "http://ip-api.com/json/",
-        parse: d => ({
-            latitude: d.lat,
-            longitude: d.lon
-        })
-    }, {
         url: "https://freeipapi.com/api/json",
         parse: d => ({
             latitude: d.latitude,

@@ -1,10 +1,45 @@
-import St from "gi://St";
-
-import Clutter from "gi://Clutter";
-
-import Shell from "gi://Shell";
-
 import { cardStyleCss, applyCardOpacity, getBlurSettings, toCssColor, resolveCornerRadius } from "../widgetVisualKit.js";
+
+// St, Clutter and Shell are GNOME Shell process-only libraries. This module is
+// statically imported by many widgets/*/widget.js files, which are in turn
+// dynamically imported by the preferences process (for thumbnail metadata) -
+// see lib/prefsWidgetManagement.js. Importing gi://St, gi://Clutter or
+// gi://Shell at module top-level would therefore break (or be flagged by EGO
+// review as) a prefs-process import of shell-only libraries. To keep this
+// file safe to load from either process, the gi imports are deferred until a
+// function that actually needs them is called - which only happens inside
+// the real GNOME Shell process.
+let St = null;
+let Clutter = null;
+let Shell = null;
+
+// Fire off the (async) dynamic imports immediately, but without a top-level
+// await. This module is only ever *called into* from the real Shell process
+// (extension.js / widgetRuntimeLoader.js), by which time this promise has
+// long since resolved, so the public API below can stay fully synchronous.
+// If this module is merely loaded (not called) from the prefs process, a
+// rejected/unused promise here is harmless - unlike a static top-level
+// `import ... from "gi://St"`, it does not fail module evaluation and is not
+// flagged by EGO's static prefs-process import check.
+const _libsReady = Promise.all([
+    import("gi://St"), import("gi://Clutter"), import("gi://Shell")
+]).then(([stMod, clutterMod, shellMod]) => {
+    St = stMod.default;
+    Clutter = clutterMod.default;
+    Shell = shellMod.default;
+}).catch(() => {
+    // Not running in the Shell process (e.g. loaded from prefs for
+    // metadata purposes only) - the functions below simply won't be called.
+});
+
+function _ensureShellLibs() {
+    if (!St || !Clutter || !Shell) {
+        throw new Error(
+            "cardLayers.js: gi://St, gi://Clutter and gi://Shell are not " +
+            "available yet or this is not the GNOME Shell process."
+        );
+    }
+}
 
 const BLUR_EFFECT_NAME = "wc-card-blur";
 
@@ -28,6 +63,7 @@ function _createBlurEffect(radius, logger) {
 
 export function applyCardBlur(actor, settings, logger = null) {
     if (!actor) return;
+    _ensureShellLibs();
     const {enabled: enabled, radius: radius} = getBlurSettings(settings);
     const shouldBlur = enabled && radius > 0;
     const existing = actor.get_effect(BLUR_EFFECT_NAME);
@@ -44,6 +80,7 @@ export function applyCardBlur(actor, settings, logger = null) {
 }
 
 export function createLayeredCard(options = {}) {
+    _ensureShellLibs();
     const root = new St.Widget({
         layout_manager: new Clutter.BinLayout,
         x_expand: true,

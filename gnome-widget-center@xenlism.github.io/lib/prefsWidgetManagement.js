@@ -8,6 +8,8 @@ import Gdk from "gi://Gdk";
 
 import { fileExists } from "./fsUtils.js";
 
+import { isSafeWidgetRelativeFilename } from "./prefsWidgetList.js";
+
 import { pickTranslation } from "./i18nUtils.js";
 
 import { WidgetSettings } from "./widgetSettings.js";
@@ -47,7 +49,7 @@ export const PrefsWidgetManagementMixin = Base => class extends Base {
         });
     }
     jumpToWidget(window, widgetId) {
-        this._jumpToWidgetPrefs(window, this._settings, this._storage, this._discovered, widgetId);
+        this._jumpToWidgetPrefs(window, this._settings, this._storage, this._discovered, widgetId).catch(e => logError(e, "[widget-center] prefs: jumpToWidget failed"));
     }
     _openRequestedWidgetPrefs(window, settings, storage, discovered) {
         if (!settings.isReady) return;
@@ -58,16 +60,16 @@ export const PrefsWidgetManagementMixin = Base => class extends Base {
             logError(e, "[widget-center] prefs: could not read requested-widget-id");
             return;
         }
-        this._jumpToWidgetPrefs(window, settings, storage, discovered, requestedId);
+        this._jumpToWidgetPrefs(window, settings, storage, discovered, requestedId).catch(e => logError(e, "[widget-center] prefs: _openRequestedWidgetPrefs failed"));
     }
-    _rescanDiscovered() {
+    async _rescanDiscovered() {
         const bundledWidgetsPath = this._bundledWidgetsPath ?? GLib.build_filenamev([ this.path, "widgets" ]);
         const userWidgetsPath = this._userWidgetsPath ?? GLib.build_filenamev([ GLib.get_user_data_dir(), "gnome-widget-center", "widgets" ]);
-        const { ok } = new PrefsWidgetList([ bundledWidgetsPath, userWidgetsPath ]).list();
+        const { ok } = await new PrefsWidgetList([ bundledWidgetsPath, userWidgetsPath ]).list();
         this._discovered = ok;
         return ok;
     }
-    _jumpToWidgetPrefs(window, settings, storage, discovered, requestedId) {
+    async _jumpToWidgetPrefs(window, settings, storage, discovered, requestedId) {
         if (!requestedId) return;
         try {
             settings.setGlobalValue("requested-widget-id", "");
@@ -76,7 +78,7 @@ export const PrefsWidgetManagementMixin = Base => class extends Base {
         }
         let widget = discovered.find(w => w.id === requestedId);
         if (!widget) {
-            const fresh = this._rescanDiscovered();
+            const fresh = await this._rescanDiscovered();
             widget = fresh.find(w => w.id === requestedId);
         }
         if (!widget) {
@@ -174,13 +176,13 @@ export const PrefsWidgetManagementMixin = Base => class extends Base {
             logError(new Error(`settings.js not found for "${widget.id}"`));
             return;
         }
-        import(`file://${entryPath}`).then(module => {
+        import(`file://${entryPath}`).then(async module => {
             if (typeof module.defineSettings !== "function") throw new Error(`settings.js for "${widget.id}" has no defineSettings() export`);
             const gwc = createGwcContext(widget.id);
             module.defineSettings(gwc);
             const schema = gwc.settings.build();
             validateSchema(schema);
-            const store = new SettingsStore(widget.id, schema.fields);
+            const store = await SettingsStore.create(widget.id, schema.fields);
             const prefsPage = new Adw.PreferencesPage({
                 title: title
             });
@@ -214,6 +216,15 @@ export const PrefsWidgetManagementMixin = Base => class extends Base {
         window.present_subpage(prefsPage);
     }
     _openHandWrittenPrefs(window, storage, widget) {
+        // widget.metadata.prefs is data from an on-disk metadata.json (untrusted
+        // for user-installed widgets). Reject anything but a plain filename so
+        // this can never resolve outside the widget's own folder, e.g. onto a
+        // lib/shell/*.js file that imports GNOME Shell libraries, which would
+        // crash the (Shell-library-free) prefs process.
+        if (!isSafeWidgetRelativeFilename(widget.metadata.prefs)) {
+            logError(new Error(`invalid "prefs" entry "${widget.metadata.prefs}" for "${widget.id}" (must be a plain filename)`));
+            return;
+        }
         const entryPath = GLib.build_filenamev([ widget.path, widget.metadata.prefs ]);
         if (!fileExists(entryPath)) {
             logError(new Error(`prefs entry "${widget.metadata.prefs}" not found for "${widget.id}"`));
