@@ -116,8 +116,16 @@ If GNOME Widget Center makes your desktop better, please consider supporting its
 [![Sponsor on GitHub](https://img.shields.io/badge/Sponsor_on_GitHub-GitHub_Sponsors-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/xenlism)
 
 - [GitHub Sponsors](https://github.com/sponsors/xenlism)
-- [Ko-fi](https://ko-fi.com/xenlism)
-- [USDT (TRC20) QR Code](assets/usdt.jpg)
+- [![Support on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/xenlism)
+- [📥 Copy USDT (TRC20) Address](#usdt-trc20-address)
+
+### USDT (TRC20) Address
+
+Copy this address when sending USDT on the TRON network:
+
+```text
+TLKY1oapYpq6NcjhXhnvdHmkDtStid16JS
+```
 
 ## Development status
 
