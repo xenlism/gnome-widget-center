@@ -10,7 +10,17 @@
 
 > **Status:** Preview / alpha release. The current package declares support for **GNOME Shell 50**. Please report issues you find and keep a backup of an important setup before upgrading.
 
+
+## Screenshots
+
 ![Desktop](assets/desktop.png)
+
+
+### Edit Mode
+
+![Edit Mode](assets/editmode.png)
+
+[▶ Watch the Edit Mode video](assets/editmode.mp4)
 
 ## What you can do
 
@@ -101,13 +111,6 @@ Read [Creating Widgets](docs/CREATING_WIDGETS.md) and the [Widget API reference]
 
 To update, extract a newer archive and run `./install.sh` again.
 
-## Screenshots
-
-### Edit Mode
-
-![Edit Mode](assets/editmode.png)
-
-[▶ Watch the Edit Mode video](assets/editmode.mp4)
 
 ## Support development
 
@@ -117,7 +120,8 @@ If GNOME Widget Center makes your desktop better, please consider supporting its
 
 - [GitHub Sponsors](https://github.com/sponsors/xenlism)
 - [![Support on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/xenlism)
-- [📥 Copy USDT (TRC20) Address](#usdt-trc20-address)
+- [![USDT (TRC20](https://shields.io)](#usdt-trc20-address)
+
 
 ### USDT (TRC20) Address
 
@@ -126,10 +130,6 @@ Copy this address when sending USDT on the TRON network:
 ```text
 TLKY1oapYpq6NcjhXhnvdHmkDtStid16JS
 ```
-
-## Development status
-
-See [development/PROJECT_STATUS.md](development/PROJECT_STATUS.md) for the current verification boundary.
 
 ## License
 
