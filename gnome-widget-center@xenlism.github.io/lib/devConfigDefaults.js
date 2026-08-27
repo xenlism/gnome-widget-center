@@ -2,6 +2,8 @@ import GLib from "gi://GLib";
 
 import { fileExists, readTextFileAsync, writeJsonFileAsync } from "./fsUtils.js";
 
+import { invalidateWidgetConfigCache } from "./widgetConfigReader.js";
+
 export function applyCurrentValuesAsConfigDefaults(config, currentValues) {
     if (!config || !Array.isArray(config.tabs) || !currentValues) return config;
     const applyToFields = fields => {
@@ -48,6 +50,11 @@ export async function saveCurrentSettingsAsWidgetDefaults(widgetPath, currentVal
             applyCurrentValuesAsConfigDefaults(config, currentValues ?? {});
             await writeJsonFileAsync(configPath, config);
             result.configUpdated = true;
+            // readWidgetConfig() caches by path (see widgetConfigReader.js);
+            // we just rewrote config.json out from under it, so the next
+            // read of this widget's config needs to see this write, not the
+            // stale cached copy from before "Save Defaults" was clicked.
+            invalidateWidgetConfigCache(widgetPath);
         } catch (e) {
             result.errors.push(`failed to write ${configPath}: ${e.message}`);
         }

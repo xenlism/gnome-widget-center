@@ -8,7 +8,7 @@ import { WidgetSettings } from "../widgetSettings.js";
 
 import { getSchemaDefaults } from "../settingsSchema.js";
 
-import { readWidgetConfig } from "../widgetConfigReader.js";
+import { readWidgetConfig, invalidateWidgetConfigCache } from "../widgetConfigReader.js";
 
 import { getConfigDefaults } from "../widgetConfigValidator.js";
 
@@ -215,6 +215,11 @@ export class WidgetRuntimeLoader extends WidgetLoader {
             this._logger.warn?.(`[widget-loader] reloadWidget("${widgetId}") — not currently loaded`);
             return null;
         }
+        // Hot-reload's whole point is picking up on-disk edits, and that
+        // now includes config.json (readWidgetConfig() caches by path since
+        // this round's EGO-X-004 pass — see widgetConfigReader.js), not
+        // just the widget.js re-import a few lines down.
+        invalidateWidgetConfigCache(oldEntry.path);
         const widgetInfo = {
             id: oldEntry.id,
             metadata: oldEntry.metadata,

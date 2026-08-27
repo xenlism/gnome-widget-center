@@ -141,14 +141,28 @@ rushed here:
   `_discoverWidgets()` above and is deferred for the same reason.
 - `lib/fsUtils.js`'s `readTextFile()`/`readBytesFile()` sync function
   *definitions* themselves stay synchronous on purpose — they're the shared
-  utility still used by the constructor-can't-be-`async` cluster
-  (`storageService.js`, `themeService.js`, `widgetConfigReader.js`, two
-  widget constructors). Expect these two lines to keep showing up on a
-  re-run until that cluster gets its own pass.
-  (`prefsWindowControllerBase.js` and `settingsStore.js` were part of this
-  cluster too but are done as of v8/v10 respectively — neither's
-  constructor reads the file synchronously anymore, see
-  `HANDOVER_EGO_FIXES.md`.)
+  utility other code still calls into, either as the genuine last resort
+  (the two widget constructors below) or as an intentional one-time
+  fallback path behind an in-memory cache (`storageService.js`,
+  `themeService.js`, `widgetConfigReader.js` — see `HANDOVER_EGO_FIXES.md`
+  v11 for why those three got a cache instead of a full async conversion:
+  each has at least one caller that reads its return value synchronously
+  and immediately — a widget's `api.position.x` getter, a `{...spread}` in
+  ~50 widget files, a short-lived prefs dialog that needs the real value
+  back the same tick — so full async wasn't safely on the table).
+- The two widget constructors (`widgets/xtile/widget.js`,
+  `widgets/geek-architect/widget.js`) are the one piece of this cluster
+  genuinely left undone. Both read their own `metadata.json` synchronously
+  to decide whether to null out `this._addChild`, and `extension.js` reads
+  `typeof entry.instance?._addChild === "function"` synchronously right
+  after construction to decide whether to show an "Add child" button in
+  edit mode. A fire-and-forget async read here would race that check —
+  wrong for a *specific instance*, not just slow — so the only fully
+  correct fix is turning `new ModuleClass(api)` into an awaited factory,
+  which means changing the widget-construction contract shared by every
+  widget module (~35 of them), not just these two. That's a real,
+  worthwhile change but a much bigger and riskier one than anything else in
+  this cluster — left alone on purpose, not missed.
 
 ---
 

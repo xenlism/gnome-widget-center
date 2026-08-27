@@ -1,3 +1,149 @@
+# EGO review fixes — handover (v11)
+
+## ✅ DONE this session: went through the rest of the EGO-X-004 cluster —
+## `storageService.js`, `widgetConfigReader.js`, `themeService.js` — and
+## made a deliberate, documented call on the last piece
+## (`xtile`/`geek-architect` widget constructors)
+
+User asked to just keep going down the priority list from v10. Did the two
+hot, high-call-count files as a cache-based fix (not a full async
+conversion — explained why below), then `themeService.js` with the same
+async-priming pattern as v8/v10, then stopped short of the widget
+constructors on purpose.
+
+### `storageService.js` — in-memory cache instead of async conversion
+
+`getWidgetPosition()` is exposed to every widget as a plain property getter
+(`api.position.x`/`.y`/`.monitorIndex` in `widgetRuntimeLoader.js`'s
+`_buildPositionApi()`) — a getter can't return a `Promise` without breaking
+every widget that reads it as a number, so this one genuinely can't become
+`async` without changing what "the position API" means for every widget
+that's ever used it. Converting the class itself wasn't an option here.
+
+Instead: added an in-memory cache. `_layoutCache` (layout.json, keyed
+implicitly — there's one layout file) is primed asynchronously from `init()`
+via `readTextFileAsync`, with `loadLayout()` falling back to one synchronous
+read only if something asks before that priming finishes (same fallback
+shape used for `prefsWindowControllerBase.js`/`settingsStore.js` in
+v8/v10). `_widgetSettingsCache` (a `Map`, keyed by widget instance id) has
+no priming — instance ids aren't known in advance — but turns every repeat
+read of a given widget's settings (there are several: `widgetSettings.js`,
+the prefs page, export, backup) into a cache hit. Writes
+(`saveLayout()`/`saveWidgetSettings()`) update the cache immediately so it
+never goes stale from this class's own methods.
+
+In practice this means: dragging a widget around no longer does a sync
+disk read on every position update during the drag (`updateWidgetPosition`
+→ `loadLayout()` → cache hit), and by the time any widget's position getter
+actually fires (widget construction happens after `loader.discover()`
+resolves — already an async gap), the layout cache has almost always
+already been primed from disk.
+
+Checked every caller doesn't hold onto and mutate the cached object in a way
+that would corrupt it — `getWidgetPosition()` already returned a fresh
+`{x, y, monitorIndex}` literal (not the raw layout entry), so no caller gets
+a live reference to cached internals it could mutate by accident.
+
+### `widgetConfigReader.js` — same idea: cache instead of full async
+
+The bigger reason this one couldn't fully convert: `configJsonDefaults()`
+(the public wrapper most widgets use) is called synchronously inside a
+plain object literal spread — `{...configJsonDefaults(import.meta.url), ...}`
+— in **~50 different widget files**. A `Promise` can't be spread like that;
+making this async would mean editing all ~50 call sites' `getDefaultSettings()`
+(or wherever that spread lives) to become `async`, which is a widget-authoring
+contract change far outside this pass's scope.
+
+Added a path-keyed cache (`_configCache`, a `Map`) instead: `readWidgetConfig()`
+now only reads+parses+validates config.json from disk once per widget path
+per process, which matters most for `widgetRuntimeLoader.js`'s
+`_configJsonDefaults()` — that gets called again every time a widget's
+settings change (defaults get re-applied) and again on hot-reload, so this
+turns 2-3 disk reads per widget per session into 1. Read/parse/validation
+*failures* are deliberately not cached — that's almost always a widget
+author mid-edit of config.json, and the whole point of surfacing the error
+is so the next attempt (after they fix it) picks up the fix.
+
+Added `invalidateWidgetConfigCache(widgetPath)` and wired it into the two
+places that actually rewrite a widget's config.json out from under this
+cache: `devConfigDefaults.js`'s "Save current settings as defaults" flow
+(prefs), and `widgetRuntimeLoader.js`'s `reloadWidget()` (dev hot-reload —
+the whole point of hot-reload is picking up on-disk edits, and that now
+includes config.json too, not just the widget.js re-import it already did).
+
+### `themeService.js` — same async-priming pattern as v8/v10
+
+Structurally identical situation to `settingsStore.js`: single JSON file,
+already had an in-memory `_cache`, read at `init()` (called synchronously
+from `extension.js`'s `enable()`) and again on a debounced file-watcher
+"changed" event. Converted the same way: `_cache` starts `undefined`
+("not loaded yet," distinct from loaded-but-empty), `init()` fires an async
+`_primeCache()` in the background, and every getter goes through a new
+`_ensureCacheLoaded()` that does the old synchronous `reload()` as a
+one-time fallback if something asks before priming resolves.
+
+The reason this needed the fallback (unlike a version that just returns
+defaults until loaded): `prefsPageBuilders.js` constructs five separate
+short-lived `new ThemeService(); init();` instances for one-shot dialogs
+that need the *actual* saved theme back immediately, not defaults — those
+still get correct data synchronously, at the same disk-read cost as before
+this change, just no longer paid by the long-lived
+`extension.js`-owned instance in the common case.
+
+### Widget constructors (`widgets/xtile/widget.js`, `widgets/geek-architect/widget.js`) — deliberately NOT touched, and why this isn't a "do it anyway"
+
+Both read their own `metadata.json` synchronously in the constructor to
+decide whether `this._addChild` should exist (a widget spawned as a
+*child* of one of these can't itself spawn children — `if
+(this._metadata.parent) this._addChild = undefined;`). `extension.js`
+reads `typeof entry.instance?._addChild === "function"` **synchronously**,
+right after `loader.loadOne()` resolves, to decide whether to show an
+"Add child" button in edit mode (`hasAddChild`, `extension.js:296` and two
+other spots).
+
+Traced whether an async metadata load here would actually be safe: since
+class constructors can't be `async`, the only way to make this non-blocking
+is a fire-and-forget read in the constructor — which means `_addChild`
+might still be un-nulled (or the read might just not have resolved yet) by
+the time `extension.js` checks `hasAddChild` a few lines later in
+`loadOne()`'s caller. That's not a slow-first-frame issue like the others in
+this cluster — it's a real race that could show or hide the wrong button for
+a child-widget instance, silently, depending on scheduling. The only fully
+correct fix is turning widget construction itself into an awaited factory
+(`await ModuleClass.create(api)` instead of `new ModuleClass(api)`), which
+means changing the one contract every widget module in this project relies
+on — all ~35 of them, not just these two. That's a real change this project
+should make at some point, but it's a different, much bigger and riskier
+change than anything else in this cluster, so it's being left alone rather
+than rushed. Recorded here instead of quietly dropped.
+
+`node --check` on every touched file plus the usual repo-wide pass — clean.
+Re-ran `grep -rn "readTextFile(\|readBytesFile(" --include=*.js .` — only
+the two widget constructors above, plus the now-intentional one-time sync
+fallback lines inside `storageService.js`/`themeService.js`/
+`widgetConfigReader.js` (the ones documented above, not unconditional
+constructor reads anymore).
+
+**Not independently verified** — no GJS runtime here, usual caveat, and this
+round touches more of the "hot path" than v8/v10 did. Specific things worth
+smoke-testing before shipping: dragging a widget around (storageService
+cache correctness during rapid position updates), opening a widget's
+settings.js/config.json prefs and confirming values match what's on
+desktop, editing a widget's `config.json` on disk while in dev mode and
+confirming hot-reload picks it up, and toggling the global theme /
+per-widget theme from the prefs "Theme" dialogs to confirm `themeService`'s
+short-lived instances still read/write the right values.
+
+## Repack
+
+This zip (`gnome-widget-center-EGO-fixes-v11.zip`) contains everything from
+v10 plus the changes above. Only the two widget constructors remain
+from the original EGO-X-004 list, deliberately, per the reasoning above —
+not a "next round" item so much as "needs a real design decision about the
+widget construction contract before touching."
+
+---
+
 # EGO review fixes — handover (v10)
 
 ## ✅ DONE this session: next-smallest piece of the "constructor can't be async" cluster — `settingsStore.js`

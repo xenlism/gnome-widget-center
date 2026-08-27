@@ -2,7 +2,7 @@ import Gio from "gi://Gio";
 
 import GLib from "gi://GLib";
 
-import { ensureDirectory, readTextFile, writeTextFile } from "./fsUtils.js";
+import { ensureDirectory, readTextFile, readTextFileAsync, writeTextFile } from "./fsUtils.js";
 
 import { angleDistanceToOffset } from "./widgetVisualKit.js";
 
@@ -58,7 +58,20 @@ export class ThemeService {
     constructor() {
         this._themeFile = null;
         this._isInitialized = false;
-        this._cache = null;
+        // undefined = "not loaded yet", distinct from a loaded-but-empty
+        // cache. init() fires off an async priming read in the background;
+        // every getter below goes through _ensureCacheLoaded() first, which
+        // does a one-time synchronous fallback read only if something asks
+        // before that background read has resolved. Long-lived instances
+        // (extension.js's this._themeService) get the real win here — by
+        // the time anything actually needs theme data, widget construction
+        // is already gated behind its own async discover() chain, so the
+        // background read has almost always already finished. Short-lived
+        // instances (the several `new ThemeService(); init();` one-shots in
+        // prefsPageBuilders.js that need a real value back immediately)
+        // still get correct data via the sync fallback, same disk-read cost
+        // as before this change — just no longer paid by every caller.
+        this._cache = undefined;
     }
     init() {
         if (this._isInitialized) return;
@@ -68,6 +81,39 @@ export class ThemeService {
         const themePath = GLib.build_filenamev([ baseDirPath, THEME_FILE_NAME ]);
         this._themeFile = Gio.File.new_for_path(themePath);
         this._isInitialized = true;
+        this._primeCache();
+    }
+    async _primeCache() {
+        if (this._cache !== undefined) return;
+        let loaded;
+        try {
+            const jsonString = await readTextFileAsync(this._themeFile.get_path());
+            loaded = jsonString === null ? {
+                version: 1,
+                global: {},
+                widgets: {}
+            } : this._normalize(JSON.parse(jsonString));
+        } catch (error) {
+            if (this._cache === undefined) logError(error, "Failed to load theme.json — falling back to defaults");
+            loaded = {
+                version: 1,
+                global: {},
+                widgets: {}
+            };
+        }
+        // Only apply this if nothing (a sync fallback read, reload(), or
+        // save()) already settled _cache while we were awaiting the read.
+        if (this._cache === undefined) this._cache = loaded;
+    }
+    _normalize(parsed) {
+        return {
+            version: parsed.version ?? 1,
+            global: parsed.global ?? {},
+            widgets: parsed.widgets ?? {}
+        };
+    }
+    _ensureCacheLoaded() {
+        if (this._cache !== undefined) return;
         this.reload();
     }
     getThemeFilePath() {
@@ -78,20 +124,11 @@ export class ThemeService {
         if (!this._isInitialized) this.init();
         try {
             const jsonString = readTextFile(this._themeFile.get_path());
-            if (jsonString === null) {
-                this._cache = {
-                    version: 1,
-                    global: {},
-                    widgets: {}
-                };
-                return;
-            }
-            const parsed = JSON.parse(jsonString);
-            this._cache = {
-                version: parsed.version ?? 1,
-                global: parsed.global ?? {},
-                widgets: parsed.widgets ?? {}
-            };
+            this._cache = jsonString === null ? {
+                version: 1,
+                global: {},
+                widgets: {}
+            } : this._normalize(JSON.parse(jsonString));
         } catch (error) {
             logError(error, "Failed to load theme.json — falling back to defaults");
             this._cache = {
@@ -118,6 +155,7 @@ export class ThemeService {
     }
     getGlobalTheme() {
         if (!this._isInitialized) this.init();
+        this._ensureCacheLoaded();
         const g = this._cache.global ?? {};
         return {
             background: {
@@ -144,6 +182,7 @@ export class ThemeService {
     }
     getWidgetTheme(widgetId) {
         if (!this._isInitialized) this.init();
+        this._ensureCacheLoaded();
         const entry = this._cache.widgets?.[widgetId] ?? {};
         return {
             theme: entry.theme ?? null,
@@ -153,6 +192,7 @@ export class ThemeService {
     }
     setWidgetTheme(widgetId, patch) {
         if (!this._isInitialized) this.init();
+        this._ensureCacheLoaded();
         const current = this._cache.widgets?.[widgetId] ?? {};
         const merged = {
             theme: patch.theme ?? current.theme,
@@ -172,6 +212,7 @@ export class ThemeService {
     }
     setGlobalTheme(patch) {
         if (!this._isInitialized) this.init();
+        this._ensureCacheLoaded();
         const current = this.getGlobalTheme();
         this.save({
             global: {
