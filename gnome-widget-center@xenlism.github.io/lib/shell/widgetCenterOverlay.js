@@ -18,6 +18,10 @@ import * as Animation from "resource:///org/gnome/shell/ui/animation.js";
 
 import { ThemePackRegistry } from "../themePackRegistry.js";
 
+import { loadTranslations } from "../i18n/index.js";
+
+import { pickTranslation } from "../i18nUtils.js";
+
 const SCHEMA_ID = "org.gnome.shell.extensions.widget-center";
 
 const KEYBINDING_KEY = "widget-center-overlay-keybinding";
@@ -30,15 +34,18 @@ const PREFS_APP_ID = "io.github.xenlism.WidgetCenterPrefs";
 
 const SORT_MODES = [ {
     id: "name",
-    label: "Name",
+    key: "overlay.sort.name",
+    fallback: "Name",
     icon: "format-justify-left-symbolic"
 }, {
     id: "size",
-    label: "Widget size",
+    key: "overlay.sort.size",
+    fallback: "Widget size",
     icon: "view-grid-symbolic"
 }, {
     id: "mtime",
-    label: "Date modified",
+    key: "overlay.sort.mtime",
+    fallback: "Date modified",
     icon: "document-open-recent-symbolic"
 } ];
 
@@ -74,6 +81,7 @@ export class WidgetCenterOverlay {
         this._prefsWatchTimeoutId = 0;
         this._prefsWatchUnmanagedId = 0;
         this._prefsWatchWindow = null;
+        this._i18n = {};
     }
     enable() {
         try {
@@ -84,6 +92,27 @@ export class WidgetCenterOverlay {
         }
         this._addKeybinding();
         this._exportDBus();
+        this._loadI18n();
+    }
+    _loadI18n() {
+        let languageOverride;
+        try {
+            languageOverride = this._gsettings?.get_string("language") || undefined;
+        } catch (e) {
+            languageOverride = undefined;
+        }
+        loadTranslations(GLib.build_filenamev([ this._path, "i18n" ]), languageOverride).then(translations => {
+            this._i18n = translations ?? {};
+            // The overlay is built once per open(); if it's already on screen
+            // (unlikely this early, but harmless otherwise) re-render so any
+            // widget/theme currently in view picks up the loaded strings.
+            if (this._overlay) this._renderTab(this._activeTab);
+        }).catch(() => {
+            this._i18n = {};
+        });
+    }
+    _tr(key, fallback) {
+        return pickTranslation(this._i18n, key, fallback);
     }
     disable() {
         this.close();
@@ -220,10 +249,10 @@ export class WidgetCenterOverlay {
         const tabsBox = new St.BoxLayout({
             style_class: "wc-overlay-tabs"
         });
-        for (const [id, label] of [ [ "overview", "Overview" ], [ "themes", "Themes" ] ]) {
+        for (const [id, key, fallback] of [ [ "overview", "tab.overview.label", "Overview" ], [ "themes", "tab.themes.label", "Themes" ] ]) {
             const button = new St.Button({
                 style_class: "wc-overlay-tab",
-                label: label,
+                label: this._tr(key, fallback),
                 can_focus: true,
                 reactive: true
             });
@@ -233,7 +262,7 @@ export class WidgetCenterOverlay {
         }
         const preferencesButton = new St.Button({
             style_class: "wc-overlay-tab",
-            label: "Preferences",
+            label: this._tr("tab.preferences.label", "Preferences"),
             can_focus: true,
             reactive: true
         });
@@ -282,7 +311,7 @@ export class WidgetCenterOverlay {
             this._widgetSort = mode;
             this._refreshOverviewGrid(gridBin);
         });
-        bar.add_child(this._buildSearchEntry("Search widgets…", this._widgetSearch, text => {
+        bar.add_child(this._buildSearchEntry(this._tr("overview.search.placeholder", "Search widgets…"), this._widgetSearch, text => {
             this._widgetSearch = text;
             this._refreshOverviewGrid(gridBin);
         }));
@@ -291,7 +320,7 @@ export class WidgetCenterOverlay {
         const hadCache = this._widgetDiscoveryCache !== undefined;
         this._widgetDiscoveryCache = this._discoverWidgets();
         if (!hadCache) {
-            gridBin.set_child(this._buildLoadingSpinner("Loading widgets…"));
+            gridBin.set_child(this._buildLoadingSpinner(this._tr("overlay.loading.widgets", "Loading widgets…")));
         } else {
             this._refreshOverviewGrid(gridBin);
         }
@@ -342,9 +371,9 @@ export class WidgetCenterOverlay {
         controls.add_child(new St.Widget({
             x_expand: true
         }));
-        controls.add_child(this._buildIconTextButton("emblem-system-symbolic", "Settings", () => this._openWidgetSettings(id)));
+        controls.add_child(this._buildIconTextButton("emblem-system-symbolic", this._tr("overview.card.settings", "Settings"), () => this._openWidgetSettings(id)));
         if (entry.source === "user") {
-            controls.add_child(this._buildIconTextButton("trash-symbolic", "Uninstall", () => this._uninstallUserWidget(id)));
+            controls.add_child(this._buildIconTextButton("trash-symbolic", this._tr("overview.card.remove", "Uninstall"), () => this._uninstallUserWidget(id)));
         }
         card.add_child(controls);
         return card;
@@ -452,8 +481,8 @@ export class WidgetCenterOverlay {
             this._themeSort = mode;
             this._refreshThemesGrid(gridBin);
         });
-        bar.add_child(this._buildIconTextButton("emblem-shared-symbolic", "Share desktop", () => this._launchExternalPrefsWindow([ "--export-theme-new" ])));
-        bar.add_child(this._buildSearchEntry("Search themes…", this._themeSearch, text => {
+        bar.add_child(this._buildIconTextButton("emblem-shared-symbolic", this._tr("overlay.theme.share_desktop", "Share desktop"), () => this._launchExternalPrefsWindow([ "--export-theme-new" ])));
+        bar.add_child(this._buildSearchEntry(this._tr("themes.search.placeholder", "Search themes…"), this._themeSearch, text => {
             this._themeSearch = text;
             this._refreshThemesGrid(gridBin);
         }));
@@ -462,7 +491,7 @@ export class WidgetCenterOverlay {
         const hadCache = this._themePackDiscoveryCache !== undefined;
         this._themePackDiscoveryCache = this._discoverThemePacks();
         if (!hadCache) {
-            gridBin.set_child(this._buildLoadingSpinner("Loading themes…"));
+            gridBin.set_child(this._buildLoadingSpinner(this._tr("overlay.loading.themes", "Loading themes…")));
         } else {
             this._refreshThemesGrid(gridBin);
         }
@@ -542,9 +571,9 @@ export class WidgetCenterOverlay {
         controls.add_child(new St.Widget({
             x_expand: true
         }));
-        controls.add_child(this._buildIconTextButton("emblem-shared-symbolic", "Share", () => this._exportThemePack(entry)));
+        controls.add_child(this._buildIconTextButton("emblem-shared-symbolic", this._tr("overlay.theme.share", "Share"), () => this._exportThemePack(entry)));
         if (entry.source === "user") {
-            controls.add_child(this._buildIconTextButton("user-trash-symbolic", "Uninstall", () => this._removeThemePack(entry)));
+            controls.add_child(this._buildIconTextButton("user-trash-symbolic", this._tr("themes.card.remove", "Uninstall"), () => this._removeThemePack(entry)));
         }
         card.add_child(controls);
         return card;
@@ -630,11 +659,12 @@ export class WidgetCenterOverlay {
             x_align: Clutter.ActorAlign.CENTER
         });
         for (const mode of SORT_MODES) {
+            const modeLabel = this._tr(mode.key, mode.fallback);
             const button = new St.Button({
                 style_class: mode.id === currentMode ? "wc-overlay-tab wc-overlay-tab-active" : "wc-overlay-tab",
                 can_focus: true,
                 reactive: true,
-                accessible_name: `Sort by ${mode.label}`
+                accessible_name: this._tr("overlay.sort.accessible_name", "Sort by {mode}").replace("{mode}", modeLabel)
             });
             button.set_child(new St.Icon({
                 icon_name: mode.icon,
@@ -756,7 +786,7 @@ export class WidgetCenterOverlay {
         this._prefsWatchUnmanagedId = 0;
         this._prefsWatchWindow = null;
     }
-    _buildLoadingSpinner(label = "Loading…") {
+    _buildLoadingSpinner(label = this._tr("overlay.loading.default", "Loading…")) {
         const box = new St.BoxLayout({
             vertical: true,
             x_expand: true,
@@ -802,7 +832,7 @@ export class WidgetCenterOverlay {
         }
         if (entries.length === 0) {
             box.add_child(new St.Label({
-                text: "Nothing here yet.",
+                text: this._tr("overlay.empty", "Nothing here yet."),
                 style_class: "wc-overlay-empty"
             }));
         }
@@ -904,7 +934,8 @@ export class WidgetCenterOverlay {
         const toggle = this._buildSwitch(this._isThemePackEnabled(entry.id), on => {
             if (on) this._loadThemePack(entry); else this._unloadThemePack();
         });
-        toggle.accessible_name = this._isThemePackEnabled(entry.id) ? `${entry.manifest?.name ?? entry.id} — active` : `${entry.manifest?.name ?? entry.id} — not loaded`;
+        const themeName = entry.manifest?.name ?? entry.id;
+        toggle.accessible_name = this._isThemePackEnabled(entry.id) ? this._tr("overlay.theme.accessible_active", "{name} — active").replace("{name}", themeName) : this._tr("overlay.theme.accessible_inactive", "{name} — not loaded").replace("{name}", themeName);
         return toggle;
     }
     _buildIconButton(iconName, callback) {

@@ -4,7 +4,7 @@ import St from "gi://St";
 
 import { ModalDialog } from "resource:///org/gnome/shell/ui/modalDialog.js";
 
-import { readTextFile } from "../../lib/fsUtils.js";
+import { readTextFile, readTextFileAsync } from "../../lib/fsUtils.js";
 import { createChildWidgetFromParent } from "../../lib/architectWidgetKit.js";
 import { findAppInfoByQuery, getAppInfoFromFilename } from "../../lib/utils.js";
 import {
@@ -207,11 +207,27 @@ export class XtileBaseWidget {
 }
 
 export default class XtileArchitectWidget extends XtileBaseWidget {
-    constructor(api) {
+    constructor(api, metadata = null) {
         super(api);
-        this._metadata = JSON.parse(readTextFile(GLib.build_filenamev([ api.path.me, "metadata.json" ])));
+        // metadata is normally read synchronously here (unavoidable for a
+        // plain `new` call — a constructor can't be async). When the loader
+        // can await construction (see static createInstance() below), it
+        // pre-reads metadata.json off the main thread and passes it in here
+        // instead, skipping the sync disk read entirely (EGO-X-004).
+        this._metadata = metadata ?? JSON.parse(readTextFile(GLib.build_filenamev([ api.path.me, "metadata.json" ])));
 
         if (this._metadata.parent) this._addChild = undefined;
+    }
+
+    // Opt-in async factory. lib/shell/widgetRuntimeLoader.js calls this
+    // instead of `new` when a widget module exposes it, so metadata.json is
+    // read via readTextFileAsync() instead of the synchronous fallback in
+    // the constructor above. Every other bundled widget has no
+    // createInstance() and keeps using plain `new` exactly as before —
+    // this is additive, not a contract change for the other ~50 widgets.
+    static async createInstance(api) {
+        const raw = await readTextFileAsync(GLib.build_filenamev([ api.path.me, "metadata.json" ]));
+        return new this(api, JSON.parse(raw));
     }
 
     getDefaultSettings() {

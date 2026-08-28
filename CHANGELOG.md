@@ -7,16 +7,65 @@ internal `version` integer instead.
 
 **Verification status:** everything listed below is code-complete and has passed
 syntax-checks / Node-mockable unit tests, but most of it has **not yet been
-confirmed end-to-end on real GNOME Shell hardware** — see `development/tests/e2e-checklist.md`
+confirmed end-to-end on real GNOME Shell hardware** — see `development/PROJECT_STATUS.md`
 for the exact status per item before relying on this changelog as a "works on my
 machine" guarantee.
 
 ## [Unreleased] — version 1
 
-### 2026-08-26 — export-dialog hang, overlay search perf, blur/opacity/corner-radius bug sweep
+### 2026-08-28 — EGO-X-004 closed out: async widget construction for xtile/geek-architect
+
+**Verification status: code-complete, syntax-checked (`node --check`) plus a
+repo-wide import-graph check, NOT yet confirmed on real GNOME Shell
+hardware.**
+
+- **Fixed — last open EGO-X-004 item:** `widgets/xtile/widget.js` and
+  `widgets/geek-architect/widget.js` read their own `metadata.json`
+  synchronously in the constructor, purely to decide whether to null out
+  `this._addChild` for child instances. Added an opt-in
+  `static async createInstance(api)` to both, which reads metadata.json via
+  `readTextFileAsync()` and passes it into the constructor.
+  `lib/shell/widgetRuntimeLoader.js`'s two construction sites (`loadOne()`,
+  `reloadWidget()`) now call `createInstance()` instead of plain `new` when
+  a widget module defines it; every other bundled widget has no
+  `createInstance()` and is constructed exactly as before — additive, not a
+  contract change for the ~50 other widgets. The constructors' original
+  synchronous `readTextFile()` path stays in place as a fallback for any
+  direct `new` call. See `EGO.md` for the full writeup — EGO-X-004 is now
+  fully resolved.
+
+### 2026-08-28 — quick-drag overlap bug, theme export screenshot not downsized
 
 **Verification status for everything below: code-complete, syntax-checked
 (`node --check`), NOT yet confirmed on real GNOME Shell hardware.**
+
+Found during a manual daily-use test pass (not via Claude Code — the built
+extension used directly). See `development/PROJECT_STATUS.md`'s "Latest
+manual test pass" for the full set of results from that session, including
+the two items unaffected by this (Edit Mode, backup/restore) and the one
+still outstanding (multi-monitor, untested).
+
+- **Fixed — quick Super+drag ignored `prevent-widget-overlap`:** Edit Mode's
+  drag (`lib/shell/editModeDragController.js`) already ran dropped positions
+  through `LayoutEngine.findFreePosition()` to keep widgets from overlapping,
+  but the plain Super+click-drag (`lib/shell/dragController.js`, used outside
+  Edit Mode) never did — it only clamped to monitor bounds, so a widget could
+  be dropped directly on top of another even with the setting on.
+  `DragController` now takes an optional `layoutEngine` and an
+  `setOthersProvider()` callback, wired up in `extension.js` the same way
+  `EditModeDragController` already is, so both drag paths enforce the same
+  collision check.
+- **Fixed — Theme Pack export embedded the screenshot at full resolution:**
+  `lib/themePackExportDialog.js` base64-encoded whatever screenshot was
+  picked or captured — a full desktop screenshot on a 4K panel, for
+  instance — directly into the `.gwct` JSON with no resizing step, so export
+  size scaled with the source display instead of staying fixed. Added
+  `resizeScreenshotToCover()` (GdkPixbuf: scale + center-crop, "cover" style)
+  that downsizes to a fixed 460×270 before encoding, applied to both the
+  file-picker flow and the desktop-capture (Super+Delete) flow. Removed the
+  now-unused `MIME_BY_EXTENSION` map and `readBytesFileAsync` import left
+  over from the old direct-embed path — screenshots are always re-encoded to
+  PNG now, so per-extension MIME lookup no longer applies.
 
 - **Fixed:** `lib/themePackExportDialog.js`'s Export Theme Pack… success handler called
   `window.close()` immediately after `showReportDialog(window, ...)` presented a modal
@@ -154,7 +203,7 @@ machine" guarantee.
 - `development/tasks/07-multi-monitor-support.md` and `development/tasks/08-hot-reload-dev-mode.md` are
   missing a "Notes from implementation" section even though their code exists
   and is wired into `extension.js` — their actual acceptance-criteria status is
-  unconfirmed (see `development/tests/e2e-checklist.md`).
+  unconfirmed (see `development/PROJECT_STATUS.md`).
 - A setting changed through a widget's Control Center prefs page is written to
   disk immediately, but an already-running widget instance in the Shell
   process only picks up the new value the next time it's (re)loaded — not

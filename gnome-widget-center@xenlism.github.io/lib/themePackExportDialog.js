@@ -4,17 +4,53 @@ import Gtk from "gi://Gtk";
 
 import Gdk from "gi://Gdk";
 
+import GdkPixbuf from "gi://GdkPixbuf";
+
 import GLib from "gi://GLib";
 
 import { chooseFile, showReportDialog } from "./prefsDialogs.js";
 
 import { buildGwctDocumentAsync, writeGwctFile, ensureGwctExtension } from "./exportService.js";
 
-import { readBytesFileAsync } from "./fsUtils.js";
-
 const SCREENSHOT_KEYBINDING_KEY = "theme-screenshot-keybinding";
 
 const DEFAULT_SCREENSHOT_ACCEL = "<Super>Delete";
+
+// Theme Pack screenshots are embedded as base64 inside the .gwct JSON, and
+// shown at a small, fixed-aspect size in the overlay's theme-pack grid.
+// Without downsizing here, a full desktop screenshot (e.g. a 4K capture)
+// gets base64-encoded whole, ballooning the exported file for no visual
+// benefit. Resize+crop to this fixed box before embedding, regardless of
+// where the image came from (file picker or the desktop-capture keybinding).
+const EXPORT_SCREENSHOT_WIDTH = 460;
+
+const EXPORT_SCREENSHOT_HEIGHT = 270;
+
+// Cover-fit + center-crop a source image down to a fixed box, the same way
+// CSS `background-size: cover` would, then re-encode as PNG. Takes a path
+// (both the file-picker flow and the desktop-capture flow always have one)
+// rather than raw bytes, since GdkPixbuf's loader wants a file or stream.
+function resizeScreenshotToCover(path, targetWidth = EXPORT_SCREENSHOT_WIDTH, targetHeight = EXPORT_SCREENSHOT_HEIGHT) {
+    const source = GdkPixbuf.Pixbuf.new_from_file(path);
+    const sourceWidth = source.get_width();
+    const sourceHeight = source.get_height();
+    if (!sourceWidth || !sourceHeight) throw new Error("screenshot has no readable dimensions");
+    const scale = Math.max(targetWidth / sourceWidth, targetHeight / sourceHeight);
+    const scaledWidth = Math.max(1, Math.round(sourceWidth * scale));
+    const scaledHeight = Math.max(1, Math.round(sourceHeight * scale));
+    const scaled = source.scale_simple(scaledWidth, scaledHeight, GdkPixbuf.InterpType.BILINEAR);
+    const offsetX = Math.max(0, Math.round((scaledWidth - targetWidth) / 2));
+    const offsetY = Math.max(0, Math.round((scaledHeight - targetHeight) / 2));
+    const cropWidth = Math.min(targetWidth, scaledWidth);
+    const cropHeight = Math.min(targetHeight, scaledHeight);
+    const cropped = scaled.new_subpixbuf(offsetX, offsetY, cropWidth, cropHeight);
+    const [ok, buffer] = cropped.save_to_bufferv("png", [], []);
+    if (!ok || !buffer) throw new Error("could not encode resized screenshot to PNG");
+    return {
+        bytes: buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer),
+        mime: "image/png"
+    };
+}
 
 function buildTimestampedThemeId(rawName) {
     const slug = rawName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "theme-pack";
@@ -30,13 +66,6 @@ function idleTick() {
         });
     });
 }
-
-const MIME_BY_EXTENSION = {
-    ".png": "image/png",
-    ".jpg": "image/jpeg",
-    ".jpeg": "image/jpeg",
-    ".webp": "image/webp"
-};
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -129,11 +158,8 @@ export function openThemePackExportDialog(parentWindow, services, prefill = {}) 
         });
         if (!path) return;
         try {
-            const bytes = await readBytesFileAsync(path);
-            if (!bytes) throw new Error("could not read the chosen file");
-            const ext = path.slice(path.lastIndexOf(".")).toLowerCase();
-            const mime = MIME_BY_EXTENSION[ext] ?? "application/octet-stream";
-            applyScreenshotPick(path, bytes, mime);
+            const resized = resizeScreenshotToCover(path);
+            applyScreenshotPick(path, resized.bytes, resized.mime);
         } catch (e) {
             logError(e, "[widget-center] themePackExportDialog: could not read screenshot");
             showReportDialog(window, "Could not read screenshot", e.message);
@@ -144,8 +170,8 @@ export function openThemePackExportDialog(parentWindow, services, prefill = {}) 
     if (prefill.screenshotPath) {
         (async () => {
             try {
-                const bytes = await readBytesFileAsync(prefill.screenshotPath);
-                if (bytes) applyScreenshotPick(prefill.screenshotPath, bytes, "image/png");
+                const resized = resizeScreenshotToCover(prefill.screenshotPath);
+                applyScreenshotPick(prefill.screenshotPath, resized.bytes, resized.mime);
             } catch (e) {
                 logError(e, "[widget-center] themePackExportDialog: could not attach prefilled screenshot");
             }

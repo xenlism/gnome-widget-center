@@ -1,13 +1,35 @@
 import Clutter from "gi://Clutter";
 
+import * as Main from "resource:///org/gnome/shell/ui/main.js";
+
 import { MonitorLockManager } from "../monitorLockManager.js";
 
 export class DragController {
-    constructor(widgetLayer, storageService) {
+    constructor(widgetLayer, storageService, layoutEngine = null) {
         this._layer = widgetLayer;
         this._storage = storageService;
+        // Optional: without a layoutEngine, this quick Super+drag only clamps
+        // to monitor bounds (its original behavior). With one — wired up the
+        // same way EditModeDragController is — it also respects
+        // "prevent-widget-overlap" so a plain drag can't drop a widget on top
+        // of another one, matching what Edit Mode already enforces.
+        this._layout = layoutEngine;
+        this._getOthersOnMonitor = null;
         this._tracked = new Map;
         this._drag = null;
+    }
+    setOthersProvider(provider) {
+        this._getOthersOnMonitor = provider;
+    }
+    _monitorBoundsFor(monitorIndex) {
+        const container = this._layer.getContainer?.(monitorIndex);
+        if (container && container.get_parent()) {
+            const [width, height] = container.get_size();
+            if (width > 0 && height > 0) return { width, height };
+        }
+        const monitor = Main.layoutManager.monitors[monitorIndex];
+        if (monitor) return { width: monitor.width, height: monitor.height };
+        return { width: global.stage.width, height: global.stage.height };
     }
     attach(widgetId, actor, monitorIndex = 0) {
         if (this._tracked.has(widgetId)) return;
@@ -44,7 +66,14 @@ export class DragController {
         const newY = this._drag.startY + (stageY - this._drag.grabY);
         const [width, height] = this._drag.actor.get_size();
         const locked = MonitorLockManager.clamp(this._drag.monitorIndex, newX, newY, width, height);
-        this._layer.setWidgetPosition(this._drag.widgetId, locked.x, locked.y);
+        if (!this._layout) {
+            this._layer.setWidgetPosition(this._drag.widgetId, locked.x, locked.y);
+            return Clutter.EVENT_STOP;
+        }
+        const bounds = this._monitorBoundsFor(this._drag.monitorIndex);
+        const others = this._getOthersOnMonitor?.(this._drag.monitorIndex, this._drag.widgetId) ?? [];
+        const target = this._layout.findFreePosition(locked.x, locked.y, width, height, bounds, others, this._drag.widgetId);
+        this._layer.setWidgetPosition(this._drag.widgetId, target.x, target.y);
         return Clutter.EVENT_STOP;
     }
     _onRelease(event) {

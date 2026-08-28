@@ -136,7 +136,12 @@ export class WidgetRuntimeLoader extends WidgetLoader {
         const api = this._buildApi(widgetInfo, settings);
         let instance;
         try {
-            instance = new ModuleClass(api);
+            // Opt-in async construction (EGO-X-004): widgets that need to
+            // read something async before their constructor body runs
+            // (currently xtile/geek-architect, reading their own
+            // metadata.json) expose a static createInstance(); every other
+            // widget has no such method and is built exactly as before.
+            instance = typeof ModuleClass.createInstance === "function" ? await ModuleClass.createInstance(api) : new ModuleClass(api);
         } catch (e) {
             this._recordError(widgetInfo, `constructor threw: ${e.message}`);
             return null;
@@ -241,7 +246,8 @@ export class WidgetRuntimeLoader extends WidgetLoader {
         const api = this._buildApi(widgetInfo, settings);
         let instance, actor;
         try {
-            instance = new ModuleClass(api);
+            // Same opt-in async construction as loadOne() above (EGO-X-004).
+            instance = typeof ModuleClass.createInstance === "function" ? await ModuleClass.createInstance(api) : new ModuleClass(api);
             if (this._storageService) this._applyDefaults(widgetInfo, instance, settings);
             actor = instance.buildActor();
             if (!actor) throw new Error("buildActor() returned null/undefined");

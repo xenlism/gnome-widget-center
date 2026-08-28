@@ -78,8 +78,9 @@ export default class WidgetCenterExtension extends Extension {
         this._layer = new WidgetLayer(this._storage);
         this._layer.init(this._monitors.getMonitors(), this._monitors.primaryIndex);
         this._monitors.watch((monitors, primaryIndex) => this._layer.reconcileMonitors(monitors, primaryIndex));
-        this._drag = new DragController(this._layer, this._storage);
         this._layout = new LayoutEngine(this._readLayoutSettings());
+        this._drag = new DragController(this._layer, this._storage, this._layout);
+        this._drag.setOthersProvider((monitorIndex, excludeId) => this._othersOnMonitor(monitorIndex, excludeId));
         this._editMode = new WidgetEditMode(this._storage, {
             onSettings: id => {
                 this._logger.debug("edit-mode", `onSettings("${id}")`);

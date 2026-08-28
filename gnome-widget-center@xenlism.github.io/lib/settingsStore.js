@@ -16,7 +16,7 @@ export class SettingsStore {
     // Constructors can't be async, so this factory is how callers get an
     // instance now — it does the initial disk read with readTextFileAsync
     // instead of blocking the process the way the old constructor did (see
-    // EGO.md / HANDOVER_EGO_FIXES.md for the why). Only call site is
+    // EGO.md for the why). Only call site is
     // prefsWidgetManagement.js's settings.js prefs flow, which was already
     // inside a promise chain, so this was a small change there.
     static async create(widgetId, fields = []) {
