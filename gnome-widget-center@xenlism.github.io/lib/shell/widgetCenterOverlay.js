@@ -18,7 +18,7 @@ import * as Animation from "resource:///org/gnome/shell/ui/animation.js";
 
 import { ThemePackRegistry } from "../themePackRegistry.js";
 
-import { loadTranslations } from "../i18n/index.js";
+import { loadTranslations } from "../../i18n/index.js";
 
 import { pickTranslation } from "../i18nUtils.js";
 
