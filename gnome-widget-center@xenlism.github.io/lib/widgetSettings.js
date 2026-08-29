@@ -60,6 +60,17 @@ export class WidgetSettings {
     static reloadFromDisk(widgetId, storageService) {
         const target = _liveTargets.get(widgetId);
         if (!target) return false;
+        // getWidgetSettings() is cache-first (see storageService.js) so
+        // repeated in-process reads don't hit disk every time - correct for
+        // this process's own writes (saveWidgetSettings() keeps that cache
+        // in sync), but wrong here: reloadFromDisk() only exists to pick up
+        // a change made from *outside* this process - most commonly the
+        // separate settings-window subprocess writing the same file - and
+        // without invalidating first, this just handed back the same stale
+        // in-memory value every time, so no external edit ever showed up
+        // until the whole extension (and this cache with it) got torn down
+        // and rebuilt via disable/enable.
+        storageService.invalidateWidgetSettingsCache?.(widgetId);
         const raw = storageService.getWidgetSettings(widgetId) ?? {};
         const next = {
             _schemaVersion: target._schemaVersion ?? CURRENT_SCHEMA_VERSION,

@@ -4,7 +4,7 @@ import St from "gi://St";
 
 import { ModalDialog } from "resource:///org/gnome/shell/ui/modalDialog.js";
 
-import { readTextFile, readTextFileAsync } from "../../lib/fsUtils.js";
+import { readTextFileAsync } from "../../lib/fsUtils.js";
 import { createChildWidgetFromParent } from "../../lib/architectWidgetKit.js";
 import { findAppInfoByQuery, getAppInfoFromFilename } from "../../lib/utils.js";
 import {
@@ -207,14 +207,17 @@ export class XtileBaseWidget {
 }
 
 export default class XtileArchitectWidget extends XtileBaseWidget {
-    constructor(api, metadata = null) {
+    constructor(api, metadata) {
         super(api);
-        // metadata is normally read synchronously here (unavoidable for a
-        // plain `new` call — a constructor can't be async). When the loader
-        // can await construction (see static createInstance() below), it
-        // pre-reads metadata.json off the main thread and passes it in here
-        // instead, skipping the sync disk read entirely (EGO-X-004).
-        this._metadata = metadata ?? JSON.parse(readTextFile(GLib.build_filenamev([ api.path.me, "metadata.json" ])));
+        // metadata is always pre-read off the main thread by static
+        // createInstance() below and passed in here — see that method.
+        // lib/shell/widgetRuntimeLoader.js's two construction sites always
+        // call createInstance() when a widget module defines it (this one
+        // does), so a bare `new` with no metadata never happens in this
+        // codebase; fail loudly instead of silently falling back to a
+        // synchronous disk read (EGO-X-004).
+        if (!metadata) throw new Error("XtileArchitectWidget requires metadata — construct via static createInstance(api)");
+        this._metadata = metadata;
 
         if (this._metadata.parent) this._addChild = undefined;
     }

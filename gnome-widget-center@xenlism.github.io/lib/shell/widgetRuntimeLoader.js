@@ -2,7 +2,7 @@ import GLib from "gi://GLib";
 
 import { fileExists } from "../fsUtils.js";
 
-import { deferUntilMapped } from "../widgetVisualKit.js";
+import { deferUntilMapped, applyCardOpacity } from "../widgetVisualKit.js";
 
 import { WidgetSettings } from "../widgetSettings.js";
 
@@ -17,6 +17,18 @@ import { SettingsWatcher } from "../settingsWatcher.js";
 import { BlockSizeManager, BLOCK_CELL_SIZE } from "../blockSizeManager.js";
 
 import { WidgetLoader } from "../widgetLoader.js";
+
+// Memoized dynamic import of ./cardLayers.js, shared by every call site in
+// this file that needs applyLayeredCardStyle()/applyCardBlur() (see the
+// "ONLY place allowed to import ./cardLayers.js" note below) so repeated
+// calls - e.g. one per settings change - reuse the same resolved module
+// instead of re-awaiting a fresh dynamic import() each time.
+let _cardLayersModulePromise = null;
+
+function _loadCardLayers() {
+    if (!_cardLayersModulePromise) _cardLayersModulePromise = import("./cardLayers.js");
+    return _cardLayersModulePromise;
+}
 
 // Shell-only widget runtime: instantiates widget.js modules into live actors.
 // This is the ONLY place allowed to (dynamically) import ./cardLayers.js,
@@ -61,8 +73,30 @@ export class WidgetRuntimeLoader extends WidgetLoader {
         return Array.from(this._instances.values());
     }
     async loadModule(widgetInfo) {
-        const entry = widgetInfo.metadata.entry ?? "widget.js";
-        const entryPath = GLib.build_filenamev([ widgetInfo.path, entry ]);
+        let entry = widgetInfo.metadata.entry ?? "widget.js";
+        let entryPath = GLib.build_filenamev([ widgetInfo.path, entry ]);
+        // Child widgets (spawned via an Architect widget's "Add Widget" button,
+        // e.g. widgets/geek-architect/child/) delegate their code to their
+        // parent. Resolve the parent HERE, by ID, via the live path map
+        // discover() just built - not from a path baked into the child's own
+        // widget.js at creation time (the old `export { default } from
+        // "{{PARENT_ENTRY_URI}}"` approach). That baked absolute file:// URI
+        // was tied to wherever the parent happened to be installed on the
+        // machine the child was created on, which broke the moment a child
+        // widget folder was copied/exported anywhere else (a different
+        // machine, a different $HOME, even a reinstalled extension path).
+        // Resolving by ID instead makes children portable: copy the folder
+        // anywhere that also has a widget with a matching ID installed - the
+        // same guarantee bundled widgets already have - and it loads.
+        if (widgetInfo.metadata.parent) {
+            const parentPath = this._pathById?.get(widgetInfo.metadata.parent);
+            if (!parentPath) {
+                this._recordError(widgetInfo, `parent widget "${widgetInfo.metadata.parent}" not found (is it installed?)`);
+                return null;
+            }
+            entry = "widget.js";
+            entryPath = GLib.build_filenamev([ parentPath, entry ]);
+        }
         if (!fileExists(entryPath)) {
             this._recordError(widgetInfo, `entry file "${entry}" not found`);
             return null;
@@ -119,7 +153,7 @@ export class WidgetRuntimeLoader extends WidgetLoader {
             (async () => {
                 try {
                     if (card.get_style()) return;
-                    const { applyLayeredCardStyle: applyLayeredCardStyle } = await import("./cardLayers.js");
+                    const { applyLayeredCardStyle: applyLayeredCardStyle } = await _loadCardLayers();
                     applyLayeredCardStyle(instance._layers, settings);
                     this._logger.warn?.(`[widget-loader] "${widgetInfo.id}": never called applyLayeredCardStyle() in _render() — painted its card with defaults instead. Add the call in the widget's own _render().`);
                 } catch (e) {
@@ -184,6 +218,30 @@ export class WidgetRuntimeLoader extends WidgetLoader {
             } catch (e) {
                 this._logger.error?.(`[widget-loader] "${widgetInfo.id}" onSettingsChanged() threw: ${e.message}`);
             }
+            // Card opacity and background blur are frame-level effects applied
+            // by the *loader*, not the widget - a widget's own _render() may or
+            // may not also apply them (most of the layered-card ones do, as a
+            // convenience, but several plain-actor widgets don't). Re-applying
+            // them here on every settings change - not just at initial
+            // placement - is what makes "card opacity"/"card blur" settings
+            // take effect immediately instead of only after the extension is
+            // disabled and re-enabled. Both applyCardOpacity() and
+            // applyCardBlur() are idempotent (a widget that already reapplied
+            // them itself just gets the same values set twice), so this is
+            // safe to run unconditionally.
+            (async () => {
+                try {
+                    const layers = current?.instance?._layers;
+                    const opacityTarget = layers?.card ?? current?.actor;
+                    const blurTarget = layers?.cardBlur ?? current?.actor;
+                    if (!opacityTarget) return;
+                    applyCardOpacity(opacityTarget, current.settings);
+                    const { applyCardBlur: applyCardBlur } = await _loadCardLayers();
+                    applyCardBlur(blurTarget, current.settings, this._logger);
+                } catch (e) {
+                    this._logger.error?.(`[widget-loader] "${widgetInfo.id}" failed to reapply opacity/blur after settings change: ${e.message}`);
+                }
+            })();
         });
         return entry;
     }

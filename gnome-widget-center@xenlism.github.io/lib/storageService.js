@@ -137,6 +137,13 @@ export class StorageService {
         const id = this._sanitizeWidgetId(instanceId);
         return GLib.build_filenamev([ this._widgetsDir.get_path(), `${id}.json` ]);
     }
+    getWidgetsDirPath() {
+        if (!this._isInitialized) this.init();
+        return this._widgetsDir.get_path();
+    }
+    invalidateWidgetSettingsCache(instanceId) {
+        this._widgetSettingsCache.delete(instanceId);
+    }
     getWidgetSettings(instanceId) {
         if (!this._isInitialized) this.init();
         if (this._widgetSettingsCache.has(instanceId)) return this._widgetSettingsCache.get(instanceId);

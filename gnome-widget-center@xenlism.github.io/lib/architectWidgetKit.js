@@ -1,6 +1,6 @@
 import Gio from "gi://Gio";
 import GLib from "gi://GLib";
-import { ensureDirectory, fileExists, readTextFileAsync, writeTextFile, writeJsonFile } from "./fsUtils.js";
+import { ensureDirectory, fileExists, readTextFileAsync, writeJsonFile } from "./fsUtils.js";
 
 function _sanitizeIdPart(value) {
     return String(value ?? "").trim().replace(/[^a-zA-Z0-9._-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
@@ -35,11 +35,11 @@ function _copyDirRecursive(srcPath, destPath) {
     }
 }
 
-export function resolveParentEntryUri(api, entryFile = "widget.js") {
-    const path = GLib.build_filenamev([api.path.me, entryFile]);
-    return GLib.filename_to_uri(path, null);
-}
-
+// Child widgets no longer need a resolved parent URI baked into a file -
+// lib/shell/widgetRuntimeLoader.js's loadModule() resolves metadata.parent
+// (a stable widget ID) to the parent's *current* install path at load time
+// instead, via its own live discover() results. See child/widget.js's
+// comment for what this replaced and why.
 export function childTemplateDir(api) {
     return GLib.build_filenamev([api.path.me, "child"]);
 }
@@ -76,13 +76,6 @@ export async function createChildWidgetFromParent(api, parentMetadata, childName
             _applyFieldDefaultOverrides(config, options.configOverrides);
             writeJsonFile(configPath, config);
         }
-    }
-
-    const widgetJsPath = GLib.build_filenamev([destDir, options.parentEntryFile ?? "widget.js"]);
-    if (fileExists(widgetJsPath)) {
-        const parentUri = resolveParentEntryUri(api, options.parentEntryFile ?? "widget.js");
-        const source = (await readTextFileAsync(widgetJsPath)).replaceAll("{{PARENT_ENTRY_URI}}", parentUri);
-        writeTextFile(widgetJsPath, source);
     }
 
     api?.logger?.info?.(`architect: created child "${childId}" at ${destDir}`);

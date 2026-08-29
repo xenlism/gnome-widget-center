@@ -684,6 +684,34 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
             sourceRow.connect("activated", () => Gtk.show_uri(window, this.metadata.url, Gdk.CURRENT_TIME));
             detailsGroup.add(sourceRow);
         }
+        const supportGroup = new Adw.PreferencesGroup({
+            title: this._tr("about.support.title", "Support this project")
+        });
+        page.add(supportGroup);
+        const kofiUrl = "https://ko-fi.com/xenlism";
+        const kofiRow = new Adw.ActionRow({
+            title: this._tr("about.support.kofi", "Buy me a coffee on Ko-fi"),
+            activatable: true
+        });
+        kofiRow.add_prefix(new Gtk.Label({ label: "☕" }));
+        kofiRow.add_suffix(new Gtk.Image({
+            icon_name: "adw-external-link-symbolic"
+        }));
+        kofiRow.connect("activated", () => Gtk.show_uri(window, kofiUrl, Gdk.CURRENT_TIME));
+        supportGroup.add(kofiRow);
+        const sponsorUrl = "https://github.com/sponsors/xenlism";
+        const sponsorRow = new Adw.ActionRow({
+            title: this._tr("about.support.githubsponsor", "Sponsor on GitHub"),
+            activatable: true
+        });
+        sponsorRow.add_prefix(new Gtk.Image({
+            icon_name: "emblem-favorite-symbolic"
+        }));
+        sponsorRow.add_suffix(new Gtk.Image({
+            icon_name: "adw-external-link-symbolic"
+        }));
+        sponsorRow.connect("activated", () => Gtk.show_uri(window, sponsorUrl, Gdk.CURRENT_TIME));
+        supportGroup.add(sponsorRow);
         const aboutGroup = new Adw.PreferencesGroup({
             title: this._tr("about.project.title", "About this project")
         });

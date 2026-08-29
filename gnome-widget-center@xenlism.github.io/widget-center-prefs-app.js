@@ -13,6 +13,8 @@ import System from "system";
 
 import { PrefsWindowControllerV2 } from "./lib/prefsWindowController.js";
 
+import { WidgetSettings } from "./lib/widgetSettings.js";
+
 const APPLICATION_ID = "io.github.xenlism.WidgetCenterPrefs";
 
 const EXTENSION_PATH = GLib.path_get_dirname(GLib.filename_from_uri(import.meta.url)[0]);
@@ -40,6 +42,13 @@ app.connect("startup", () => {
     registerAppIconSearchPath();
 });
 
+// Safety net alongside the close-request flush above, in case the process
+// ever exits some other way (e.g. the compositor/session closing the
+// window without a normal close-request, like on logout).
+app.connect("shutdown", () => {
+    WidgetSettings.flushAll();
+});
+
 let window = null;
 
 let controller = null;
@@ -57,6 +66,17 @@ async function presentWindow(requestedWidgetId, focusTarget = null, exportThemeI
             logError(e, "[widget-center] widget-center-prefs-app: build() failed");
         });
         window.connect("close-request", () => {
+            // Field edits in a widget's settings page are saved through a
+            // 300ms-debounced Proxy (see WidgetSettings.load() in
+            // lib/widgetSettings.js) so rapid edits don't hit disk on every
+            // keystroke. But nothing was flushing that pending write before
+            // this window (and, since it's usually the app's only window,
+            // the whole gjs process) closed - so an edit made and then
+            // closed within that 300ms window was silently lost, never
+            // written to the widget's settings.json at all. Flush any
+            // pending debounced saves synchronously here, before the window
+            // (and the process behind it) actually goes away.
+            WidgetSettings.flushAll();
             window = null;
             controller = null;
             buildPromise = null;

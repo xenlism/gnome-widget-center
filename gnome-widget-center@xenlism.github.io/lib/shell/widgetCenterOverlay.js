@@ -373,7 +373,7 @@ export class WidgetCenterOverlay {
         }));
         controls.add_child(this._buildIconTextButton("emblem-system-symbolic", this._tr("overview.card.settings", "Settings"), () => this._openWidgetSettings(id)));
         if (entry.source === "user") {
-            controls.add_child(this._buildIconTextButton("trash-symbolic", this._tr("overview.card.remove", "Uninstall"), () => this._uninstallUserWidget(id)));
+            controls.add_child(this._buildIconTextButton("user-trash-symbolic", this._tr("overview.card.remove", "Uninstall"), () => this._uninstallUserWidget(id)));
         }
         card.add_child(controls);
         return card;
