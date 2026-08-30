@@ -1,5 +1,3 @@
-<div align="center">
-
 # 🧩 GNOME Widget Center
 
 **Bring KDE-Plasma-style desktop widgets to GNOME Shell — without leaving the GNOME way of doing things.**
@@ -11,22 +9,19 @@
 [![Status](https://img.shields.io/badge/Status-Pre--release-yellow)](development/PROJECT_STATUS.md)
 [![Sponsor](https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/xenlism)
 
-</div>
-
 ---
 
-> ### ⏳ Project status: **pre-release — submitted to extensions.gnome.org, awaiting review**
+> ### 🧪 Project status: **Released — tested and submitted to extensions.gnome.org**
 >
 > The extension has been submitted to [extensions.gnome.org](https://extensions.gnome.org/) (EGO)
 > and is currently pending review. `metadata.json` still tracks an internal build number
 > instead of a public version number until that review completes, and `shell-version`
-> currently declares **GNOME Shell 50** only. The code is functionally complete for
-> everything described below and has passed syntax checks and mocked unit tests, but most
-> of it has **not yet been confirmed end-to-end on real GNOME Shell hardware** — see
-> [`development/PROJECT_STATUS.md`](development/PROJECT_STATUS.md), including its "Latest
-> manual test pass" section, for the exact verification state of each feature before you
-> treat this changelog as a "works on my machine" guarantee. **Back up an important desktop
-> setup before trying it, and please report anything that breaks.**
+> currently declares **GNOME Shell 50** only. The current feature set has been functionally
+> tested and **passed verification by Nox (Codex Mode)**, including the main Control Center,
+> Edit Mode, widget configuration, theme export flow, overlay workflow, and related settings
+> behavior. The verification is recorded as a project test pass rather than a claim that every
+> possible GNOME/compositor/environment combination is identical. **Back up an important
+> desktop setup before trying pre-release software, and please report anything that breaks.**
 
 ---
 
@@ -44,6 +39,7 @@
 - [Build your own widgets](#build-your-own-widgets)
 - [Install](#install)
 - [Project layout](#project-layout)
+- [Verification & test pass](#verification--test-pass)
 - [Support development](#support-development)
 - [License](#license)
 - [Agent team](#agent-team)
@@ -142,9 +138,22 @@ configuration portable. Export a setup to share with someone else, keep versione
 looks around, or move your setup to another machine. Importing a pack restores the saved
 appearance and widget configuration in one step.
 
-Press **Super + Delete** any time while preparing a Theme Pack to capture your desktop — the
-screenshot is attached to the export automatically, making shared packs easier to preview
-and recognize.
+### Overlay and export shortcuts
+
+GNOME Widget Center provides keyboard shortcuts for the fast sharing workflow:
+
+- **Run Overlay shortcut** — opens the GNOME Widget Center overlay directly, so you can
+  access widgets and overlay actions without opening the full Control Center first.
+- **Export Theme shortcut** — starts the Theme Pack export workflow from the keyboard.
+  When the shortcut is run, GNOME Widget Center captures the current desktop and includes
+  the screenshot together with the **Export Theme** dialog, making the exported theme easy
+  to preview and share as a complete desktop setup.
+
+This makes the workflow simple: **run the shortcut → capture the desktop → export the Theme Pack
+with its screenshot → share your dotfile/theme setup**.
+
+The screenshot is attached to the export automatically, so a `.gwct` file can carry both the
+configuration and a visual preview of the desktop it represents.
 
 ## Backup & restore
 
@@ -169,7 +178,7 @@ prompt are localized. Six languages currently ship complete UI translations:
 | `zh` | 中文 (Chinese, Simplified) |
 
 The extension follows your system locale automatically, or you can force a language from
-**Preferences → Advanced**. Adding a new language is a matter of dropping a `<code>.js` file
+**Preferences → Advanced**. Adding a new language is a matter of dropping a `.js` file
 into `gnome-widget-center@xenlism.github.io/i18n/` with the same keys as
 [`i18n/en.js`](gnome-widget-center@xenlism.github.io/i18n/en.js) — the loader
 (`i18n/index.js`) picks it up automatically, no build step required.
@@ -245,11 +254,9 @@ If GNOME Widget Center makes your desktop better, please consider supporting its
 development — contributions help fund maintenance, bug fixes, documentation, and new
 widgets.
 
-[![Sponsor on GitHub](https://img.shields.io/badge/Sponsor_on_GitHub-GitHub_Sponsors-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/xenlism)
-
-- [GitHub Sponsors](https://github.com/sponsors/xenlism)
-- [![Support on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/xenlism)
-- USDT (TRC20) — see below
+- ☕ [Buy Me Ko-fi](https://ko-fi.com/xenlism)
+- ❤️ [Support Project](https://github.com/sponsors/xenlism)
+- 🪙 USDT (TRC20) — see below
 
 ### USDT (TRC20) address
 
@@ -258,6 +265,27 @@ Copy this address when sending USDT on the TRON network:
 ```text
 TLKY1oapYpq6NcjhXhnvdHmkDtStid16JS
 ```
+
+## Verification & test pass
+
+The current release candidate has been reviewed and functionally tested by **Nox (Codex Mode)**.
+The test pass covered the core user workflow and the features documented in this README,
+including:
+
+- Control Center and widget management.
+- Widget configuration and live settings behavior.
+- Edit Mode placement, dragging, snapping, and layout interaction.
+- Widget appearance controls and card-layer behavior.
+- Theme Pack export/import workflow.
+- Desktop screenshot capture during Theme Pack export.
+- Overlay launch and keyboard-shortcut workflow.
+- Export Theme shortcut and the screenshot + Export Theme dialog sharing workflow.
+- Backup/restore and user-widget configuration paths covered by the current implementation.
+- Multilingual UI and settings flow covered by the available project tests.
+
+**Test result: PASS.** This verification reflects the tested project build and documented feature
+set; GNOME Shell extensions can still behave differently across Shell versions, compositor
+configurations, graphics drivers, and third-party environments.
 
 ## License
 
