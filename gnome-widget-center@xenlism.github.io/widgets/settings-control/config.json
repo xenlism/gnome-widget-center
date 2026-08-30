@@ -20,7 +20,7 @@
                             "fieldType": "colorpicker",
                             "format": "color",
                             "alpha": true,
-                            "default": "#bf404000"
+                            "default": "#ffffff24"
                         },
                         {
                             "id": "iconOnColor",
@@ -29,6 +29,7 @@
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
+                            "alpha": true,
                             "default": "#3584e4"
                         },
                         {
@@ -38,7 +39,8 @@
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
-                            "default": "#9a9996"
+                            "alpha": true,
+                            "default": "#2d2d2d26"
                         }
                     ]
                 },

@@ -28,7 +28,7 @@
                             "description": "Roundness of the card's corners",
                             "dataType": "number",
                             "fieldType": "spinbutton",
-                            "default": 24,
+                            "default": 18,
                             "min": 0,
                             "max": 74,
                             "step": 1,

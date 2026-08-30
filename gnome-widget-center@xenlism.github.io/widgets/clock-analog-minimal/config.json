@@ -20,7 +20,7 @@
                             "fieldType": "colorpicker",
                             "format": "color",
                             "alpha": true,
-                            "default": "#FFFFFFFF"
+                            "default": "#bf404000"
                         },
                         {
                             "id": "cornerRadius",
@@ -49,7 +49,7 @@
                             "fieldType": "colorpicker",
                             "format": "color",
                             "alpha": true,
-                            "default": "#FFFFFFFF"
+                            "default": "#bf404000"
                         }
                     ]
                 },
@@ -74,7 +74,7 @@
                             "fieldType": "colorpicker",
                             "format": "color",
                             "alpha": true,
-                            "default": "#1A1A1AFF"
+                            "default": "#ffffff"
                         }
                     ]
                 },

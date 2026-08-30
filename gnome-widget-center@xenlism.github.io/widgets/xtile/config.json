@@ -18,7 +18,9 @@
                             "description": "Pick an installed app or browse for a .desktop file",
                             "dataType": "list",
                             "fieldType": "list",
-                            "default": [],
+                            "default": [
+                                "/usr/share/applications/chatgpt.desktop"
+                            ],
                             "minItems": 0,
                             "maxItems": 1,
                             "item": {

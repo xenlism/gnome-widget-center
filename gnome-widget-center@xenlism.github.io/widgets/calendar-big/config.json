@@ -53,7 +53,7 @@
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
-                            "default": "#C7C7CC"
+                            "default": "#241f31"
                         },
                         {
                             "id": "weekdayHeaderColor",
@@ -80,7 +80,7 @@
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
-                            "default": "#FFFFFF"
+                            "default": "#241f31"
                         }
                     ]
                 },
@@ -97,7 +97,7 @@
                             "fieldType": "colorpicker",
                             "format": "color",
                             "alpha": true,
-                            "default": "#FFFFFFFF"
+                            "default": "#bf404000"
                         },
                         {
                             "id": "cornerRadius",

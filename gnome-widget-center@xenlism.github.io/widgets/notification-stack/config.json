@@ -43,7 +43,7 @@
                             "fieldType": "colorpicker",
                             "format": "color",
                             "alpha": true,
-                            "default": "#3A3A3CC2"
+                            "default": "#ffffff3b"
                         },
                         {
                             "id": "cornerRadius",
@@ -78,7 +78,7 @@
                             "description": "",
                             "dataType": "boolean",
                             "fieldType": "switch",
-                            "default": false
+                            "default": true
                         },
                         {
                             "id": "blurRadius",
@@ -170,33 +170,6 @@
                     "description": "",
                     "fields": [
                         {
-                            "id": "showCategoryLabel",
-                            "label": "Show \"Time Sensitive\" label",
-                            "description": "",
-                            "dataType": "boolean",
-                            "fieldType": "switch",
-                            "default": true
-                        },
-                        {
-                            "id": "categoryFont",
-                            "label": "Category font",
-                            "description": "",
-                            "dataType": "string",
-                            "fieldType": "fontpicker",
-                            "default": "Cantarell Bold 10",
-                            "visibleIf": "showCategoryLabel"
-                        },
-                        {
-                            "id": "categoryColor",
-                            "label": "Category color",
-                            "description": "",
-                            "dataType": "string",
-                            "fieldType": "colorpicker",
-                            "format": "color",
-                            "default": "#FF9F0A",
-                            "visibleIf": "showCategoryLabel"
-                        },
-                        {
                             "id": "titleFont",
                             "label": "Title font",
                             "description": "",
@@ -211,7 +184,7 @@
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
-                            "default": "#FFFFFF"
+                            "default": "#000000"
                         },
                         {
                             "id": "bodyFont",
@@ -228,7 +201,7 @@
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
-                            "default": "#D1D1D6"
+                            "default": "#241f31"
                         }
                     ]
                 }

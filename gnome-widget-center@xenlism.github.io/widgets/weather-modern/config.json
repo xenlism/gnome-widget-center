@@ -77,7 +77,7 @@
                             "fieldType": "colorpicker",
                             "format": "color",
                             "alpha": true,
-                            "default": "#00000084"
+                            "default": "#bf404000"
                         },
                         {
                             "id": "cornerRadius",

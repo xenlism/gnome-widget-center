@@ -2,7 +2,7 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
-import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, borderCss as _borderCss, BORDER_DEFAULTS, OPACITY_DEFAULTS, BLUR_DEFAULTS, applyCardOpacity, resolveCornerRadius} from '../../lib/widgetVisualKit.js';
+import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, borderCss as _borderCss, BORDER_DEFAULTS, OPACITY_DEFAULTS, BLUR_DEFAULTS, applyCardOpacity, resolveCornerRadius, toCssColor as _toCssColor} from '../../lib/widgetVisualKit.js';
 import {createLayeredCard, applyCardBlur} from '../../lib/shell/cardLayers.js';
 import {attachTooltip} from '../../lib/shell/widgetTooltip.js';
 import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
@@ -19,6 +19,7 @@ export default class PowerMenuWidget {
         this._settings = api.settings;
         this._tooltips = [];
         this._icons = [];
+        this._buttons = [];
         this._sessionProxy = null;
         this._login1Proxy = null;
     }
@@ -27,6 +28,7 @@ export default class PowerMenuWidget {
         const backgroundColor = this._settings?.backgroundColor ?? '#070000a5';
         const cornerRadius = resolveCornerRadius(this._settings);
         const iconColor = this._settings?.iconColor ?? '#2e2e2e';
+        const buttonColor = this._settings?.buttonColor ?? '#FFFFFF1F';
 
         this._layers = createLayeredCard({
             contentStyleClass: 'power-menu-widget-root',
@@ -68,7 +70,7 @@ export default class PowerMenuWidget {
 
         const layout = this._grid.layout_manager;
         actions.forEach(({icon, tooltip, onClicked}, i) => {
-            const button = this._makeButton(icon, iconColor, onClicked);
+            const button = this._makeButton(icon, iconColor, buttonColor, onClicked);
             layout.attach(button, i % 2, Math.trunc(i / 2), 1, 1);
             this._tooltips.push(attachTooltip(button, this._layers, tooltip));
         });
@@ -127,6 +129,10 @@ export default class PowerMenuWidget {
         const iconColor = settings?.iconColor ?? '#2e2e2e';
         for (const icon of this._icons)
             icon.set_style(`color: ${iconColor};`);
+
+        const buttonColor = settings?.buttonColor ?? '#FFFFFF1F';
+        for (const button of this._buttons)
+            button.set_style(this._buttonStyle(buttonColor));
     }
 
     _cardStyle(hexColor, cornerRadius) {
@@ -153,7 +159,7 @@ export default class PowerMenuWidget {
         return {r: (rgbNum >> 16) & 255, g: (rgbNum >> 8) & 255, b: rgbNum & 255, a};
     }
 
-    _makeButton(iconName, iconColor, onClicked) {
+    _makeButton(iconName, iconColor, buttonColor, onClicked) {
         const icon = new St.Icon({icon_name: iconName, icon_size: ICON_SIZE});
         icon.set_style(`color: ${iconColor};`);
         this._icons.push(icon);
@@ -166,11 +172,14 @@ export default class PowerMenuWidget {
             track_hover: true,
         });
         button.set_size(BUTTON_SIZE, BUTTON_SIZE);
-        button.set_style(
-            `background-color: rgba(255, 255, 255, 0.08); border-radius: ${BUTTON_SIZE / 2}px;`
-        );
+        button.set_style(this._buttonStyle(buttonColor));
+        this._buttons.push(button);
         button.connect('clicked', onClicked);
         return button;
+    }
+
+    _buttonStyle(buttonColor) {
+        return `background-color: ${_toCssColor(buttonColor, '#FFFFFF1F')}; border-radius: ${BUTTON_SIZE / 2}px;`;
     }
 
     _suspend() {

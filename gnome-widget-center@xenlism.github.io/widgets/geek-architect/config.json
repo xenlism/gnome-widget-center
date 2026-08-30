@@ -214,7 +214,7 @@
                             "description": "What this line displays.",
                             "dataType": "string",
                             "fieldType": "dropdown",
-                            "default": "clock",
+                            "default": "dayOfWeek",
                             "options": [
                                 {
                                     "value": "clock",
@@ -245,7 +245,7 @@
                             "dataType": "string",
                             "fieldType": "fontpicker",
                             "format": "font",
-                            "default": "Sans Bold 28"
+                            "default": "Sans Bold 95"
                         },
                         {
                             "id": "line1Color",
@@ -270,7 +270,7 @@
                             "description": "Add a shadow behind this line's text.",
                             "dataType": "boolean",
                             "fieldType": "switch",
-                            "default": true
+                            "default": false
                         },
                         {
                             "id": "line1ShadowColor",
@@ -349,7 +349,7 @@
                             "description": "What this line displays.",
                             "dataType": "string",
                             "fieldType": "dropdown",
-                            "default": "longDate",
+                            "default": "clock",
                             "options": [
                                 {
                                     "value": "clock",
@@ -480,7 +480,7 @@
                             "description": "Turn this line off entirely (line 1 can't be turned off).",
                             "dataType": "boolean",
                             "fieldType": "switch",
-                            "default": true
+                            "default": false
                         },
                         {
                             "id": "line3Source",

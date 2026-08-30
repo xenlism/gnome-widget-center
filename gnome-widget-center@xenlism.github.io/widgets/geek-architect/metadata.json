@@ -8,8 +8,8 @@
     "entry": "widget.js",
     "block-type": "3x1",
     "default-position": {
-        "x": 60,
-        "y": 60,
+        "x": 673,
+        "y": 271,
         "monitor": 0
     },
     "screenshot": "screenshot.png"

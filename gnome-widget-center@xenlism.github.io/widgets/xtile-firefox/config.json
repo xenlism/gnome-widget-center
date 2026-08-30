@@ -69,7 +69,7 @@
                             "description": "Leave blank to use the app's own name from its .desktop file. Set automatically from the name you typed when this tile was created.",
                             "dataType": "string",
                             "fieldType": "text",
-                            "default": "firefox",
+                            "default": "",
                             "visibleIf": "showLabel"
                         },
                         {

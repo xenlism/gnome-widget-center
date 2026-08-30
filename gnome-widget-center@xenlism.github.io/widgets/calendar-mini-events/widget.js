@@ -82,10 +82,10 @@ export default class CalendarMiniEventsWidget {
             backgroundColorKey: "cardColor",
             cornerRadiusFallback: 20
         }, false);
-        this._content.set_style("padding: 14px; spacing: 8px;");
+        this._content.set_style("padding: 10px; spacing: 6px;");
 
         const now = GLib.DateTime.new_now_local();
-        const { family: weekFamily, size: weekSize } = parseFontDescription(s.weekFont ?? "Cantarell Bold 12", "Cantarell Bold", 12);
+        const { family: weekFamily, size: weekSize } = parseFontDescription(s.weekFont ?? "Cantarell Bold 10", "Cantarell Bold", 10);
         const { family: dateFamily, size: dateSize } = parseFontDescription(s.dateFont ?? "Cantarell Bold 34", "Cantarell Bold", 34);
 
         this._weekdayLabel.set_text((now.format("%A") ?? "").toUpperCase());

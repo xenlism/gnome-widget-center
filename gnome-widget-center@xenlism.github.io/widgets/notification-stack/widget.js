@@ -1,30 +1,14 @@
 import St from "gi://St";
 
-import Clutter from "gi://Clutter";
-
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
 import { SHADOW_DEFAULTS, BLUR_DEFAULTS, shadowBoxShadowCss, borderCss, toCssColor, parseFontDescription, resolveCornerRadius } from "../../lib/widgetVisualKit.js";
-import { applyCardBlur } from "../../lib/shell/cardLayers.js";
-
-const _DEMO_NOTIFICATIONS = [ {
-    appName: "Fitness",
-    isTimeSensitive: false,
-    title: "Move goal achieved",
-    body: "You closed your Move ring - well done."
-}, {
-    appName: "Medications Reminder",
-    isTimeSensitive: true,
-    title: "Medications Reminder",
-    body: "Time to log your medications"
-} ];
 
 export default class NotificationStackWidget {
     constructor(api) {
         this._api = api;
         this._settings = api.settings;
         this._notifications = [];
-        this._usingDemoData = true;
         this._sourceAddedId = null;
         this._notificationIds = new Map();
         this._cardBox = null;
@@ -73,9 +57,6 @@ export default class NotificationStackWidget {
             borderColor: "#FFFFFF26",
             borderWidth: 1,
             showAppIcon: true,
-            showCategoryLabel: true,
-            categoryFont: "Cantarell Bold 10",
-            categoryColor: "#FF9F0A",
             titleFont: "Cantarell Bold 13",
             titleColor: "#FFFFFF",
             bodyFont: "Cantarell 12",
@@ -102,10 +83,8 @@ export default class NotificationStackWidget {
     }
 
     _onNotificationAdded(source, notification) {
-        this._usingDemoData = false;
         this._notifications.unshift({
             appName: source?.title ?? source?.name ?? "",
-            isTimeSensitive: !!notification?.urgency && notification.urgency >= 2,
             title: notification?.title ?? "",
             body: notification?.body ?? notification?.bannerBodyText ?? "",
             gicon: notification?.gicon ?? source?.icon ?? null
@@ -123,7 +102,8 @@ export default class NotificationStackWidget {
         this._actor.set_style(`background-color: transparent; spacing: ${spacing}px;`);
 
         const maxCards = Number.isFinite(this._settings.maxCards) ? this._settings.maxCards : 3;
-        const items = (this._usingDemoData ? _DEMO_NOTIFICATIONS : this._notifications).slice(0, Math.max(1, maxCards));
+        // An empty stack is intentional: do not fill it with placeholder/demo cards.
+        const items = this._notifications.slice(0, Math.max(1, maxCards));
 
         for (const item of items) this._actor.add_child(this._buildCard(item));
     }
@@ -134,47 +114,31 @@ export default class NotificationStackWidget {
         const bg = toCssColor(s.cardBgColor ?? "#3A3A3CC2", "#3A3A3CC2");
 
         const cardOuter = new St.Widget({
-            layout_manager: new Clutter.BinLayout,
             style_class: "notification-stack-widget-card",
             style: `background-color: ${bg}; border-radius: ${cornerRadius}px;` + borderCss(s) + shadowBoxShadowCss(s)
         });
-        const cardBlurInset = new St.Widget({
-            x_expand: true,
-            y_expand: true,
-            style: `background-color: ${bg}; margin: ${cornerRadius + 2}px;`
-        });
-        applyCardBlur(cardBlurInset, s);
-        cardOuter.add_child(cardBlurInset);
 
-        const card = new St.BoxLayout({ vertical: false, style: "padding: 10px 12px;" });
+        const card = new St.BoxLayout({ vertical: false, style: "padding: 12px 14px; min-height: 64px;" });
         cardOuter.add_child(card);
 
         if (s.showAppIcon ?? true) {
             const icon = new St.Icon({
                 gicon: item.gicon ?? null,
                 icon_name: item.gicon ? null : "dialog-information-symbolic",
-                icon_size: 28,
-                style: "margin-right: 10px;"
+                icon_size: 30,
+                style: "margin-right: 12px; margin-top: 1px;"
             });
             card.add_child(icon);
         }
 
         const textCol = new St.BoxLayout({ vertical: true, x_expand: true });
 
-        if ((s.showCategoryLabel ?? true) && item.isTimeSensitive) {
-            const { family: catFamily, size: catSize } = parseFontDescription(s.categoryFont ?? "Cantarell Bold 10", "Cantarell Bold", 10);
-            const catLabel = new St.Label({
-                text: "TIME SENSITIVE",
-                style: `color: ${s.categoryColor ?? "#FF9F0A"}; font-family: ${catFamily}; font-size: ${catSize}px; letter-spacing: 1px;`
-            });
-            textCol.add_child(catLabel);
-        }
-
         const { family: titleFamily, size: titleSize } = parseFontDescription(s.titleFont ?? "Cantarell Bold 13", "Cantarell Bold", 13);
         const titleLabel = new St.Label({
             text: item.appName && item.appName !== item.title ? `${item.appName}` : item.title ?? "",
             style: `color: ${s.titleColor ?? "#FFFFFF"}; font-family: ${titleFamily}; font-size: ${titleSize}px; font-weight: bold;`
         });
+        titleLabel.clutter_text.ellipsize = 3;
         textCol.add_child(titleLabel);
 
         if (item.appName && item.appName !== item.title && item.title) {
@@ -183,6 +147,7 @@ export default class NotificationStackWidget {
                 text: item.title,
                 style: `color: ${s.titleColor ?? "#FFFFFF"}; font-family: ${titleFamily2}; font-size: ${titleSize2}px;`
             });
+            subtitleLabel.clutter_text.ellipsize = 3;
             textCol.add_child(subtitleLabel);
         }
 
@@ -193,6 +158,7 @@ export default class NotificationStackWidget {
                 style: `color: ${s.bodyColor ?? "#D1D1D6"}; font-family: ${bodyFamily}; font-size: ${bodySize}px;`
             });
             bodyLabel.clutter_text.line_wrap = true;
+            bodyLabel.clutter_text.ellipsize = 3;
             textCol.add_child(bodyLabel);
         }
 

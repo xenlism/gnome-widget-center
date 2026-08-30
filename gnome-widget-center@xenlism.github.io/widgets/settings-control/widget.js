@@ -31,8 +31,8 @@ export default class SettingsControlWidget {
         this._dndButton = null;
         this._themeButton = null;
 
-        this._iconOnColor = '#3584e4';
-        this._iconOffColor = '#9a9996';
+        this._iconOnColor = '#3584E4E6';
+        this._iconOffColor = '#9A99961F';
 
         this._nmProxy = null;
         this._nmSignalId = null;
@@ -50,8 +50,8 @@ export default class SettingsControlWidget {
     buildActor() {
         const backgroundColor = this._settings?.backgroundColor ?? '#070000a5';
         const cornerRadius = resolveCornerRadius(this._settings);
-        this._iconOnColor = this._settings?.iconOnColor ?? '#3584e4';
-        this._iconOffColor = this._settings?.iconOffColor ?? '#9a9996';
+        this._iconOnColor = this._settings?.iconOnColor ?? '#3584E4E6';
+        this._iconOffColor = this._settings?.iconOffColor ?? '#9A99961F';
 
         this._layers = createLayeredCard({
             contentStyleClass: 'settings-control-widget-root',
@@ -208,8 +208,8 @@ export default class SettingsControlWidget {
         this._layers.cardBlur.set_style(this._cardBlurStyle(backgroundColor, cornerRadius));
         applyCardBlur(this._layers.cardBlur, settings);
 
-        this._iconOnColor = settings?.iconOnColor ?? '#3584e4';
-        this._iconOffColor = settings?.iconOffColor ?? '#9a9996';
+        this._iconOnColor = settings?.iconOnColor ?? '#3584E4E6';
+        this._iconOffColor = settings?.iconOffColor ?? '#9A99961F';
 
         this._renderNetwork();
         this._renderBluetooth();
@@ -472,8 +472,10 @@ export default class SettingsControlWidget {
         icon.set_style('color: #ffffff;');
 
         const hex = isOn ? this._iconOnColor : this._iconOffColor;
-        const {r, g, b} = this._hexToRgba(hex);
-        const alpha = isOn ? 0.9 : 0.12;
+        const {r, g, b, a} = this._hexToRgba(hex);
+        // Keep the old visual defaults for existing six-digit saved colors;
+        // newly selected colors include their alpha channel and use it directly.
+        const alpha = String(hex).replace('#', '').length >= 8 ? a : (isOn ? 0.9 : 0.12);
         button.set_style(`background-color: rgba(${r}, ${g}, ${b}, ${alpha}); border-radius: ${BUTTON_SIZE / 2}px;`);
     }
 

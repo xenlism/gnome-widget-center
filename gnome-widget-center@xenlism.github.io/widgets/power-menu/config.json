@@ -20,7 +20,7 @@
                             "fieldType": "colorpicker",
                             "format": "color",
                             "alpha": true,
-                            "default": "#bf404000"
+                            "default": "#ffffff24"
                         },
                         {
                             "id": "iconColor",
@@ -30,6 +30,16 @@
                             "fieldType": "colorpicker",
                             "format": "color",
                             "default": "#FFFFFF"
+                        },
+                        {
+                            "id": "buttonColor",
+                            "label": "Button color",
+                            "description": "Background color of the power action buttons — use the alpha slider to control opacity",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#2d2d2d3a"
                         }
                     ]
                 },

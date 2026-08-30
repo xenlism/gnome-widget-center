@@ -20,7 +20,7 @@
                             "fieldType": "colorpicker",
                             "format": "color",
                             "alpha": true,
-                            "default": "#000000d9"
+                            "default": "#bf404000"
                         }
                     ]
                 },

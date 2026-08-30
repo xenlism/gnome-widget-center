@@ -96,7 +96,7 @@
                             "fieldType": "colorpicker",
                             "format": "color",
                             "alpha": true,
-                            "default": "#ffffffFF"
+                            "default": "#ffffff"
                         }
                     ]
                 },

@@ -19,7 +19,7 @@
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
-                            "default": "#1a1a1a"
+                            "default": "#ffffff"
                         },
                         {
                             "id": "accentColor",
