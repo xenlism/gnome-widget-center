@@ -185,7 +185,7 @@ export class WidgetEditMode {
         });
         const row = new St.BoxLayout({
             style_class: "widget-edit-mode-icon-row",
-            vertical: false,
+            orientation: Clutter.Orientation.HORIZONTAL,
             width: width,
             height: ICON_ROW_HEIGHT,
             x_expand: false,

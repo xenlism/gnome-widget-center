@@ -27,19 +27,19 @@ export default class CalendarEventsWidget {
         });
         this._actor = this._layers.root;
         this._content = new St.BoxLayout({
-            vertical: false
+            orientation: Clutter.Orientation.HORIZONTAL
         });
         this._layers.content.add_child(this._content);
 
-        this._calendarCol = new St.BoxLayout({ vertical: true, x_expand: true });
+        this._calendarCol = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, x_expand: true });
         this._headerLabel = new St.Label({ style_class: "calendar-events-widget-month" });
-        this._weekHeaderRow = new St.BoxLayout({ vertical: false });
-        this._gridBox = new St.BoxLayout({ vertical: true });
+        this._weekHeaderRow = new St.BoxLayout({ orientation: Clutter.Orientation.HORIZONTAL });
+        this._gridBox = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL });
         this._calendarCol.add_child(this._headerLabel);
         this._calendarCol.add_child(this._weekHeaderRow);
         this._calendarCol.add_child(this._gridBox);
 
-        this._eventsCol = new St.BoxLayout({ vertical: true, x_expand: true });
+        this._eventsCol = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, x_expand: true });
 
         this._content.add_child(this._calendarCol);
         this._content.add_child(this._eventsCol);
@@ -118,7 +118,7 @@ export default class CalendarEventsWidget {
         this._gridBox.destroy_all_children();
         this._gridBox.set_style("spacing: 2px;");
         for (const week of grid.weeks) {
-            const row = new St.BoxLayout({ vertical: false, style: "spacing: 2px;" });
+            const row = new St.BoxLayout({ orientation: Clutter.Orientation.HORIZONTAL, style: "spacing: 2px;" });
             for (const cell of week) {
                 const isHighlighted = cell.inMonth && cell.isToday;
                 const cellStyle = isHighlighted ? `color: ${s.highlightDayTextColor ?? "#FFFFFF"}; background-color: ${s.highlightDayColor ?? "#3B82F6"}; border-radius: 999px;` : `color: ${cell.inMonth ? s.calendarTextColor ?? "#1A1A1A" : (s.weekdayHeaderColor ?? "#8E8E93") + "80"};`;
@@ -179,7 +179,7 @@ export default class CalendarEventsWidget {
             cardOuter.add_child(cardBlurInset);
         }
 
-        const card = new St.BoxLayout({ vertical: true, x_expand: true, style: "padding: 8px 10px;" });
+        const card = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, x_expand: true, style: "padding: 8px 10px;" });
         cardOuter.add_child(card);
         const titleLabel = new St.Label({
             text: title,

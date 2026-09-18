@@ -3,7 +3,8 @@
   "name": "GNOME Widget Center",
   "description": "GNOME Widget Center is a simple and flexible way to add useful widgets to your GNOME desktop.It lets you easily manage, arrange, and customize different widgets in one place.You can add tools such as clocks, system information, media controls, shortcuts, and more.Each widget is designed to be lightweight, clean, and easy to configure. Make your desktop more useful and personal without changing the way GNOME works.",
   "shell-version": [
-    "50"
+    "50",
+    "51"
   ],
   "url": "https://github.com/xenlism/gnome-widget-center",
     "screenshots": [

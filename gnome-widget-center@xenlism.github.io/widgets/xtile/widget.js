@@ -65,7 +65,7 @@ export class XtileBaseWidget {
         // this._content is a plain padding/layout wrapper - a child of
         // layers.content, not the Content Layer itself (R5).
         this._content = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             x_expand: true,
             y_expand: true
         });
@@ -266,7 +266,7 @@ export default class XtileArchitectWidget extends XtileBaseWidget {
                 styleClass: "xtile-architect-dialog"
             });
             const box = new St.BoxLayout({
-                vertical: true,
+                orientation: Clutter.Orientation.VERTICAL,
                 style_class: "xtile-architect-dialog-box"
             });
 

@@ -186,7 +186,7 @@ export default class MediaPlayerCircleWidget {
         }
 
         this._textBox = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
 
             width: SIZE - 24,
 

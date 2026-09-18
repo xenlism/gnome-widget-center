@@ -47,7 +47,7 @@ export default class CirclesBatteryHalfWidget {
         });
         this._actor = this._layers.root;
         const outerBox = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             x_expand: true,
             y_expand: true
         });

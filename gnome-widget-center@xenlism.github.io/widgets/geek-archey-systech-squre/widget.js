@@ -56,7 +56,7 @@ export default class GeekArcheySystechSqureWidget {
         this._actor.x_align = Clutter.ActorAlign.CENTER;
         this._actor.y_align = Clutter.ActorAlign.CENTER;
         const infoBox = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             style_class: "geek-archey-systech-squre-info"
         });
         infoBox.set_style(`padding: ${CARD_PADDING}px; spacing: 2px;`);
@@ -71,7 +71,7 @@ export default class GeekArcheySystechSqureWidget {
         this._rows = {};
         for (const [key, label, color] of ROW_DEFS) {
             const row = new St.BoxLayout({
-                vertical: false,
+                orientation: Clutter.Orientation.HORIZONTAL,
                 style_class: "geek-archey-systech-squre-row"
             });
             const bullet = new St.Label({

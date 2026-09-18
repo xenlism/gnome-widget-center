@@ -176,7 +176,7 @@ export default class MediaPlayerSquareWidget {
         }
 
         this._textBox = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
 
             width: COVER_SIZE,
 

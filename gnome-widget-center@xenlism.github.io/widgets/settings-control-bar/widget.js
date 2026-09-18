@@ -78,7 +78,7 @@ export default class SettingsControlBarWidget {
         this._row = new St.BoxLayout({
             style_class: 'settings-control-bar-widget-row',
             style: `spacing: ${BUTTON_SPACING}px;`,
-            vertical: false,
+            orientation: Clutter.Orientation.HORIZONTAL,
         });
         this._content.set_child(this._row);
 

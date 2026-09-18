@@ -25,7 +25,7 @@ export default class CalendarPlainWidget {
         this._actor = this._layers.root;
 
         this._innerColumn = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             x_expand: true,
             y_expand: true,
             x_align: Clutter.ActorAlign.CENTER,
@@ -33,12 +33,12 @@ export default class CalendarPlainWidget {
         });
         this._layers.content.add_child(this._innerColumn);
 
-        this._headerRow = new St.BoxLayout({ vertical: false });
+        this._headerRow = new St.BoxLayout({ orientation: Clutter.Orientation.HORIZONTAL });
         this._monthLabel = new St.Label({ style_class: "calendar-plain-widget-month", x_expand: true });
         this._headerRow.add_child(this._monthLabel);
 
-        this._weekHeaderRow = new St.BoxLayout({ vertical: false });
-        this._gridBox = new St.BoxLayout({ vertical: true });
+        this._weekHeaderRow = new St.BoxLayout({ orientation: Clutter.Orientation.HORIZONTAL });
+        this._gridBox = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL });
 
         this._innerColumn.add_child(this._headerRow);
         this._innerColumn.add_child(this._weekHeaderRow);
@@ -107,7 +107,7 @@ export default class CalendarPlainWidget {
         this._gridBox.destroy_all_children();
         this._gridBox.set_style("spacing: 4px;");
         for (const week of grid.weeks) {
-            const row = new St.BoxLayout({ vertical: false, style: "spacing: 4px;" });
+            const row = new St.BoxLayout({ orientation: Clutter.Orientation.HORIZONTAL, style: "spacing: 4px;" });
             for (const cell of week) {
                 const isHighlighted = cell.inMonth && cell.isToday;
                 let cellStyle;

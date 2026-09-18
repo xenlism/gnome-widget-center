@@ -26,7 +26,7 @@ export default class ClockModernWidget {
         });
         this._actor = this._layers.root;
         this._content = new St.BoxLayout({
-            vertical: true
+            orientation: Clutter.Orientation.VERTICAL
         });
         this._layers.content.add_child(this._content);
         this._ampmLabel = new St.Label({

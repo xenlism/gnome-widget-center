@@ -1,4 +1,5 @@
 import St from "gi://St";
+import Clutter from "gi://Clutter";
 
 import GLib from "gi://GLib";
 
@@ -167,7 +168,7 @@ export default class WeatherPanelWidget {
         });
         this._actor = this._layers.root;
         this._content = new St.BoxLayout({
-            vertical: true
+            orientation: Clutter.Orientation.VERTICAL
         });
         this._layers.content.add_child(this._content);
         this._iconBin = new St.Bin({

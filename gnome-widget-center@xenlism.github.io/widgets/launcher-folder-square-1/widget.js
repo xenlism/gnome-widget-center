@@ -51,11 +51,11 @@ export default class LauncherFolderSquare1 {
         });
         this._layers.content.add_child(this._content);
         const grid = new St.BoxLayout({
-            vertical: true
+            orientation: Clutter.Orientation.VERTICAL
         });
         for (let row = 0; row < GRID_ROWS; row++) {
             const rowBox = new St.BoxLayout({
-                vertical: false
+                orientation: Clutter.Orientation.HORIZONTAL
             });
             if (row > 0) rowBox.set_style(`margin-top: ${GRID_SPACING}px;`);
             for (let col = 0; col < GRID_COLS; col++) {

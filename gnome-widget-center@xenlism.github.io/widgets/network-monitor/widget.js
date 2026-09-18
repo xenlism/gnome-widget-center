@@ -96,13 +96,13 @@ export default class NetworkMonitorWidget {
         });
         this._actor = this._layers.root;
         this._content = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             x_expand: true,
             y_expand: true
         });
         this._layers.content.add_child(this._content);
         this._textBox = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             x_expand: true,
             y_expand: true
         });

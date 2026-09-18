@@ -40,7 +40,7 @@ export default class CirclesBatteryWidget {
         });
         this._actor = this._layers.root;
         const outerBox = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             x_expand: true,
             y_expand: true
         });
@@ -63,7 +63,7 @@ export default class CirclesBatteryWidget {
         this._stack.add_child(this._ringArea);
         this._repaintId = this._ringArea.connect("repaint", () => this._onRepaint());
         this._textBox = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             x_align: Clutter.ActorAlign.CENTER,
             y_align: Clutter.ActorAlign.CENTER,
             x_expand: true,

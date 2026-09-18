@@ -64,7 +64,7 @@ export default class CirclesSystemWidget {
         });
         this._actor = this._layers.root;
         const outerBox = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             x_expand: true,
             y_expand: true
         });
@@ -78,17 +78,17 @@ export default class CirclesSystemWidget {
         });
         outerBox.add_child(centerBin);
         const content = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             x_align: Clutter.ActorAlign.CENTER
         });
         centerBin.set_child(content);
         const ringsRow = new St.BoxLayout({
-            vertical: false,
+            orientation: Clutter.Orientation.HORIZONTAL,
             x_align: Clutter.ActorAlign.CENTER
         });
         content.add_child(ringsRow);
         const captionsRow = new St.BoxLayout({
-            vertical: false,
+            orientation: Clutter.Orientation.HORIZONTAL,
             x_align: Clutter.ActorAlign.CENTER
         });
         captionsRow.set_style("margin-top: 4px;");

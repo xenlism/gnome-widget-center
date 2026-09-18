@@ -38,12 +38,12 @@ export default class SystemMonitorMiniWidget {
         });
         this._actor = this._layers.root;
         this._content = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             x_align: Clutter.ActorAlign.CENTER
         });
         this._layers.content.add_child(this._content);
         const ringsRow = new St.BoxLayout({
-            vertical: false,
+            orientation: Clutter.Orientation.HORIZONTAL,
             x_align: Clutter.ActorAlign.CENTER
         });
         this._gauges.push(this._buildGauge(ringsRow, "CPU"));
@@ -84,7 +84,7 @@ export default class SystemMonitorMiniWidget {
         });
         stack.add_child(area);
         const textBox = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             x_align: Clutter.ActorAlign.CENTER,
             y_align: Clutter.ActorAlign.CENTER,
             x_expand: true,

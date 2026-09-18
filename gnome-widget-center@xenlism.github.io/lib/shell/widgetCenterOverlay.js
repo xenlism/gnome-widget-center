@@ -221,7 +221,7 @@ export class WidgetCenterOverlay {
         const monitor = Main.layoutManager.primaryMonitor;
         this._overlay = new St.BoxLayout({
             style_class: "wc-overlay",
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             reactive: true,
             can_focus: true,
             x: monitor.x,
@@ -241,7 +241,7 @@ export class WidgetCenterOverlay {
     _buildHeader() {
         const header = new St.BoxLayout({
             style_class: "wc-overlay-header",
-            vertical: false
+            orientation: Clutter.Orientation.HORIZONTAL
         });
         const leftSpacer = new St.Widget({
             x_expand: true
@@ -299,7 +299,7 @@ export class WidgetCenterOverlay {
     }
     _buildOverviewTab() {
         const outer = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             x_expand: true,
             y_expand: true
         });
@@ -344,7 +344,7 @@ export class WidgetCenterOverlay {
     _buildWidgetCard(entry, disabledSet) {
         const {id: id, metadata: metadata, path: path} = entry;
         const card = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             style_class: "wc-overlay-card"
         });
         card.add_child(this._buildScreenshot(path, metadata));
@@ -469,7 +469,7 @@ export class WidgetCenterOverlay {
     }
     _buildThemesTab() {
         const outer = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             x_expand: true,
             y_expand: true
         });
@@ -544,7 +544,7 @@ export class WidgetCenterOverlay {
     _buildThemePackCard(entry) {
         const {id: id, path: path, manifest: manifest} = entry;
         const card = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             style_class: "wc-overlay-card"
         });
         card.add_child(this._buildScreenshot(path, manifest));
@@ -788,7 +788,7 @@ export class WidgetCenterOverlay {
     }
     _buildLoadingSpinner(label = this._tr("overlay.loading.default", "Loading…")) {
         const box = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             x_expand: true,
             y_expand: true,
             x_align: Clutter.ActorAlign.CENTER,
@@ -815,7 +815,7 @@ export class WidgetCenterOverlay {
             hscrollbar_policy: St.PolicyType.NEVER
         });
         const box = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             style_class: "wc-overlay-grid",
             x_align: Clutter.ActorAlign.CENTER
         });

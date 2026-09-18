@@ -23,14 +23,14 @@ export default class CalendarHeaderWidget {
         });
         this._actor = this._layers.root;
         this._content = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             x_expand: true,
             y_expand: true
         });
         this._layers.content.add_child(this._content);
         const header = new St.BoxLayout({
             style_class: "calendar-header-widget-header",
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             x_expand: true
         });
         const monthLabel = new St.Label({
@@ -43,7 +43,7 @@ export default class CalendarHeaderWidget {
         header.add_child(weekdayLabel);
         const body = new St.BoxLayout({
             style_class: "calendar-header-widget-body",
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             x_expand: true,
             y_expand: true
         });

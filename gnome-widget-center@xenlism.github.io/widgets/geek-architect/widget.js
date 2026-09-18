@@ -85,7 +85,7 @@ export default class GeekStatClockWidget {
         this._actor = this._layers.root;
 
         this._content = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             x_expand: true,
             y_expand: true,
             x_align: Clutter.ActorAlign.CENTER,
@@ -95,7 +95,7 @@ export default class GeekStatClockWidget {
         this._layers.content.add_child(this._content);
 
         this._innerPad = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             x_expand: true,
             y_expand: true,
             x_align: Clutter.ActorAlign.CENTER,
@@ -319,7 +319,7 @@ export default class GeekStatClockWidget {
             const presetList = new St.BoxLayout({
                 style_class: "geek-stat-clock-widget-preset-row",
                 style: "spacing: 4px; margin-top: 2px;",
-                vertical: true,
+                orientation: Clutter.Orientation.VERTICAL,
                 x_expand: true
             });
             let selectedId = DEFAULT_PRESET_ID;

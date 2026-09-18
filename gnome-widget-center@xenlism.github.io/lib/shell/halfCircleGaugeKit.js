@@ -31,7 +31,7 @@ export class HalfCircleGauge {
 
     build(parent, onRepaint) {
         this.row = new St.BoxLayout({
-            vertical: false,
+            orientation: Clutter.Orientation.HORIZONTAL,
             y_align: Clutter.ActorAlign.CENTER
         });
         if (typeof parent.set_child === "function") parent.set_child(this.row); else parent.add_child(this.row);
@@ -42,7 +42,7 @@ export class HalfCircleGauge {
         });
         this._repaintId = this.ringArea.connect("repaint", onRepaint);
         this.textBox = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             x_align: Clutter.ActorAlign.CENTER,
             y_align: Clutter.ActorAlign.CENTER
         });

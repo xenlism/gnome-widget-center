@@ -170,11 +170,11 @@ export default class WeatherDarkWidget {
         this._actor.x_align = Clutter.ActorAlign.START;
         this._actor.y_align = Clutter.ActorAlign.CENTER;
         this._content = new St.BoxLayout({
-            vertical: false
+            orientation: Clutter.Orientation.HORIZONTAL
         });
         this._layers.content.add_child(this._content);
         this._textBox = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             y_align: Clutter.ActorAlign.CENTER,
             x_expand: true,
             style: "spacing: 4px;"

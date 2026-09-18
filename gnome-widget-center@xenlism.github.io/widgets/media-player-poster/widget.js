@@ -57,7 +57,7 @@ export default class MediaPlayerPosterWidget {
             height: SIZE
         });
         this._content = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             x_expand: true,
             y_expand: true,
             clip_to_allocation: true
@@ -68,7 +68,7 @@ export default class MediaPlayerPosterWidget {
             coordinate: Clutter.BindCoordinate.SIZE,
         }));
         this._innerPad = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             x_expand: true,
             y_expand: true,
             style: `padding: ${PADDING}px;`

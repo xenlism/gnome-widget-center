@@ -25,13 +25,13 @@ export default class CalendarMiniEventsWidget {
         });
         this._actor = this._layers.root;
         this._content = new St.BoxLayout({
-            vertical: true
+            orientation: Clutter.Orientation.VERTICAL
         });
         this._layers.content.add_child(this._content);
 
         this._weekdayLabel = new St.Label({ style_class: "calendar-mini-events-widget-weekday" });
         this._dayLabel = new St.Label({ style_class: "calendar-mini-events-widget-day" });
-        this._eventsCol = new St.BoxLayout({ vertical: true });
+        this._eventsCol = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL });
 
         this._content.add_child(this._weekdayLabel);
         this._content.add_child(this._dayLabel);
@@ -143,7 +143,7 @@ export default class CalendarMiniEventsWidget {
             rowOuter.add_child(rowBlurInset);
         }
 
-        const row = new St.BoxLayout({ vertical: false, x_expand: true, style: "padding: 6px 10px;" });
+        const row = new St.BoxLayout({ orientation: Clutter.Orientation.HORIZONTAL, x_expand: true, style: "padding: 6px 10px;" });
         rowOuter.add_child(row);
 
         const tab = new St.Widget({
@@ -153,7 +153,7 @@ export default class CalendarMiniEventsWidget {
         });
         row.add_child(tab);
 
-        const textCol = new St.BoxLayout({ vertical: true, x_expand: true, style: "margin-left: 8px;" });
+        const textCol = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, x_expand: true, style: "margin-left: 8px;" });
         if (timeText) {
             textCol.add_child(new St.Label({
                 text: timeText,

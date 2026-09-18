@@ -111,7 +111,7 @@ export default class MediaPlayerWideWidget {
         this._coverButton.connect("clicked", () => this._onCoverClicked());
         this._leftStack.add_child(this._coverButton);
         this._rightBox = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             x_expand: true,
             y_expand: true
         });
@@ -128,7 +128,7 @@ export default class MediaPlayerWideWidget {
         });
         for (const label of [ this._titleLabel, this._albumLabel, this._artistLabel ]) label.clutter_text.set_line_wrap(false);
         this._infoBox = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             y_expand: true
         });
         this._infoBox.add_child(this._titleLabel);

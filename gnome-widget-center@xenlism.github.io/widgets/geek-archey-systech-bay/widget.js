@@ -89,7 +89,7 @@ export default class GeekArcheySystechBayWidget {
         this._actor.x_align = Clutter.ActorAlign.CENTER;
         this._actor.y_align = Clutter.ActorAlign.CENTER;
         const content = new St.BoxLayout({
-            vertical: false
+            orientation: Clutter.Orientation.HORIZONTAL
         });
         content.set_style(`padding: ${CARD_PADDING}px;`);
         this._layers.content.add_child(content);
@@ -100,7 +100,7 @@ export default class GeekArcheySystechBayWidget {
         this._asciiLabel.clutter_text.set_line_wrap(false);
         content.add_child(this._asciiLabel);
         const infoBox = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             style_class: "geek-archey-systech-bay-info"
         });
         infoBox.set_style("margin-left: 18px;");
@@ -115,7 +115,7 @@ export default class GeekArcheySystechBayWidget {
         this._rows = {};
         for (const [key, label, color] of ROW_DEFS) {
             const row = new St.BoxLayout({
-                vertical: false,
+                orientation: Clutter.Orientation.HORIZONTAL,
                 style_class: "geek-archey-systech-bay-row"
             });
             const bullet = new St.Label({
@@ -136,7 +136,7 @@ export default class GeekArcheySystechBayWidget {
             };
         }
         this._paletteRow = new St.BoxLayout({
-            vertical: false,
+            orientation: Clutter.Orientation.HORIZONTAL,
             style_class: "geek-archey-systech-bay-palette"
         });
         this._paletteRow.set_style("margin-top: 6px;");

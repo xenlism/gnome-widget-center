@@ -1,4 +1,5 @@
 import St from "gi://St";
+import Clutter from "gi://Clutter";
 
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
@@ -17,7 +18,7 @@ export default class NotificationStackWidget {
     buildActor() {
         this._actor = new St.BoxLayout({
             style_class: "notification-stack-widget-root",
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             style: "background-color: transparent;"
         });
         this._render();
@@ -118,7 +119,7 @@ export default class NotificationStackWidget {
             style: `background-color: ${bg}; border-radius: ${cornerRadius}px;` + borderCss(s) + shadowBoxShadowCss(s)
         });
 
-        const card = new St.BoxLayout({ vertical: false, style: "padding: 12px 14px; min-height: 64px;" });
+        const card = new St.BoxLayout({ orientation: Clutter.Orientation.HORIZONTAL, style: "padding: 12px 14px; min-height: 64px;" });
         cardOuter.add_child(card);
 
         if (s.showAppIcon ?? true) {
@@ -131,7 +132,7 @@ export default class NotificationStackWidget {
             card.add_child(icon);
         }
 
-        const textCol = new St.BoxLayout({ vertical: true, x_expand: true });
+        const textCol = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, x_expand: true });
 
         const { family: titleFamily, size: titleSize } = parseFontDescription(s.titleFont ?? "Cantarell Bold 13", "Cantarell Bold", 13);
         const titleLabel = new St.Label({
