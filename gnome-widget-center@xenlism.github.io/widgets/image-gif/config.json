@@ -1,0 +1,119 @@
+{
+    "version": "1.0",
+    "tabs": [
+        {
+            "id": "general",
+            "label": "Image / GIF",
+            "description": "A static image or a looping animated GIF",
+            "icon": "image-x-generic-symbolic",
+            "groups": [
+                {
+                    "id": "card",
+                    "label": "Card",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "backgroundColor",
+                            "label": "Background color",
+                            "description": "Shows behind the image - visible as letterboxing when \"Fit\" is set to Contain.",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#000000FF"
+                        }
+                    ]
+                },
+                {
+                    "id": "source",
+                    "label": "Source",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "imagePath",
+                            "label": "Image or GIF file",
+                            "description": "Pick a picture or an animated GIF. Animated GIFs play on a loop; any other format is shown as a still image.",
+                            "dataType": "string",
+                            "fieldType": "filepicker",
+                            "format": "file",
+                            "filters": [
+                                "*.gif",
+                                "*.png",
+                                "*.jpg",
+                                "*.jpeg",
+                                "*.webp",
+                                "*.bmp"
+                            ],
+                            "default": ""
+                        }
+                    ]
+                },
+                {
+                    "id": "display",
+                    "label": "Display",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "fitMode",
+                            "label": "Fit",
+                            "description": "Contain keeps the whole image visible (may letterbox). Stretch fills the card, ignoring aspect ratio.",
+                            "dataType": "string",
+                            "fieldType": "dropdown",
+                            "default": "contain",
+                            "options": [
+                                {
+                                    "value": "contain",
+                                    "label": "Contain (keep aspect ratio)"
+                                },
+                                {
+                                    "value": "stretch",
+                                    "label": "Stretch to fill"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "shadow",
+            "label": "Shadow",
+            "description": "Drop shadow behind this widget.",
+            "groups": [
+                {
+                    "id": "shadow",
+                    "label": "Shadow effect",
+                    "description": "Off by default. Default color is black at 30% transparency.",
+                    "fields": [
+                        {
+                            "id": "shadowAngle",
+                            "label": "Shadow angle",
+                            "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 90,
+                            "min": 0,
+                            "max": 360,
+                            "step": 1,
+                            "suffix": "\u00b0",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowDistance",
+                            "label": "Shadow distance",
+                            "description": "How far the shadow is offset, in pixels",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 6,
+                            "min": 0,
+                            "max": 60,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "shadowEnabled"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,15 @@
+{
+    "id": "xenlism.github.io.image-slideshow",
+    "name": "Image Slideshow By Xenlism",
+    "description": "2x2 desktop slideshow that crossfades through the photos in a folder you pick, in sequence or shuffled.",
+    "version": "1.0.0",
+    "author": "Nattapong Pullkhow",
+    "api-version": 1,
+    "entry": "widget.js",
+    "block-type": "2x2",
+    "default-position": {
+        "x": 520,
+        "y": 80,
+        "monitor": 0
+    }
+}

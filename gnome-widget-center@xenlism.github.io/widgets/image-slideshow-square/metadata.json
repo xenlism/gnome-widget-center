@@ -1,0 +1,15 @@
+{
+    "id": "xenlism.github.io.image-slideshow-square",
+    "name": "Image Slideshow Square By Xenlism",
+    "description": "1x1 desktop slideshow that crossfades through the photos in a folder you pick, in sequence or shuffled. Same widget as \"Image Slideshow\" but sized as a compact 1x1 square by default.",
+    "version": "1.0.0",
+    "author": "Nattapong Pullkhow",
+    "api-version": 1,
+    "entry": "widget.js",
+    "block-type": "1x1",
+    "default-position": {
+        "x": 520,
+        "y": 300,
+        "monitor": 0
+    }
+}

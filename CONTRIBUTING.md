@@ -39,7 +39,7 @@ faith, and focus feedback on the code, not the person.
    using the UUID from `metadata.json`:
 
    ```
-   git clone <your-fork-url> ~/.local/share/gnome-shell/extensions/gnome-widget-center@xenlism.github.io
+   git clone https://github.com/xenlism/gnome-widget-center.git ~/.local/share/gnome-shell/extensions/gnome-widget-center@xenlism.github.io
    ```
 
 2. Compile the GSettings schema after any change under `schemas/`:
@@ -116,7 +116,7 @@ widgets/my-widget/
 ├── stylesheet.css     # optional
 ├── screenshot.png     # optional, but recommended for the widget picker
 ├── README.md          # recommended — see convention below
-└── i18n/               # optional, per-widget strings (see clock-analog-classic)
+└── i18n/               # optional, per-widget strings (see weather-dark)
 ```
 
 **`metadata.json`** fields:
@@ -135,7 +135,7 @@ widgets/my-widget/
 
 **`config.json`** describes the settings tabs/groups/fields rendered in
 the preferences window. Reuse the existing `fieldType`s where possible:
-`colorpicker`, `dropdown`, `filepicker`, `fontpicker`, `list`,
+`colorpicker`, `dropdown`, `filepicker`, `folderpicker`, `fontpicker`, `list`,
 `location`, `slider`, `spinbutton`, `switch`, `text`. Look at a widget
 with similar settings (e.g. `weather-dark` for a widget calling an
 external API, `circles-battery` for a ring gauge) as a starting

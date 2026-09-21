@@ -1,0 +1,15 @@
+{
+    "id": "xenlism.github.io.pomodoro-timer",
+    "name": "Pomodoro Timer By Xenlism",
+    "description": "1x1 ring gauge Pomodoro timer - Work / Short break / Long break cycle with a play/pause button. The ring color shifts red/yellow/green as the phase's time runs low (or use one fixed color per phase instead).",
+    "version": "1.0.0",
+    "author": "Nattapong Pullkhow",
+    "api-version": 1,
+    "entry": "widget.js",
+    "block-type": "1x1",
+    "default-position": {
+        "x": 80,
+        "y": 300,
+        "monitor": 0
+    }
+}

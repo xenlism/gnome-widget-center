@@ -1,0 +1,15 @@
+{
+    "id": "xenlism.github.io.image-gif-square",
+    "name": "Image / Animated GIF Square By Xenlism",
+    "description": "1x1 desktop picture frame. Pick a static image or an animated GIF - GIFs loop in place; anything else is shown as a still image. Same widget as \"Image / Animated GIF\" but sized as a compact 1x1 square by default.",
+    "version": "1.0.0",
+    "author": "Nattapong Pullkhow",
+    "api-version": 1,
+    "entry": "widget.js",
+    "block-type": "1x1",
+    "default-position": {
+        "x": 300,
+        "y": 300,
+        "monitor": 0
+    }
+}

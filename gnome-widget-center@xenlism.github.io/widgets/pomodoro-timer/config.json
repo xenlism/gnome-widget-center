@@ -1,0 +1,356 @@
+{
+    "version": "1.0",
+    "tabs": [
+        {
+            "id": "general",
+            "label": "Pomodoro Timer",
+            "description": "Work / short break / long break ring timer",
+            "icon": "alarm-symbolic",
+            "groups": [
+                {
+                    "id": "card",
+                    "label": "Card",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "backgroundColor",
+                            "label": "Background color",
+                            "description": "Card background. Use the alpha slider for transparency.",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#232838F5"
+                        }
+                    ]
+                },
+                {
+                    "id": "durations",
+                    "label": "Durations",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "workMinutes",
+                            "label": "Work duration",
+                            "description": "Length of a work session",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 25,
+                            "min": 1,
+                            "max": 180,
+                            "step": 1,
+                            "suffix": "min"
+                        },
+                        {
+                            "id": "shortBreakMinutes",
+                            "label": "Short break duration",
+                            "description": "Length of a short break, taken after most work sessions",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 5,
+                            "min": 1,
+                            "max": 60,
+                            "step": 1,
+                            "suffix": "min"
+                        },
+                        {
+                            "id": "longBreakMinutes",
+                            "label": "Long break duration",
+                            "description": "Length of a long break, taken every \"Sessions before long break\" work sessions",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 15,
+                            "min": 1,
+                            "max": 120,
+                            "step": 1,
+                            "suffix": "min"
+                        },
+                        {
+                            "id": "sessionsBeforeLongBreak",
+                            "label": "Sessions before long break",
+                            "description": "Number of completed work sessions between long breaks",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 4,
+                            "min": 2,
+                            "max": 12,
+                            "step": 1
+                        }
+                    ]
+                },
+                {
+                    "id": "behavior",
+                    "label": "Behavior",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "autoStartNextPhase",
+                            "label": "Auto-start next phase",
+                            "description": "Automatically start the next phase's countdown when one finishes. Turn off to require pressing play each time.",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": true
+                        },
+                        {
+                            "id": "notifyOnPhaseEnd",
+                            "label": "Notify when a phase ends",
+                            "description": "Show a desktop notification when work/break finishes",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": true
+                        }
+                    ]
+                },
+                {
+                    "id": "ring",
+                    "label": "Ring colors",
+                    "description": "By default the ring's color shifts by how much time is left in the current phase (green \u2192 yellow \u2192 red). Turn that off to use one fixed color per phase instead.",
+                    "fields": [
+                        {
+                            "id": "circleBaseColor",
+                            "label": "Circle base color (track)",
+                            "description": "Base/track color drawn behind the progress ring",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFF26"
+                        },
+                        {
+                            "id": "ringThickness",
+                            "label": "Ring thickness",
+                            "description": "Stroke width of both the base track and the progress ring",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 10,
+                            "min": 4,
+                            "max": 24,
+                            "step": 1,
+                            "suffix": "px"
+                        },
+                        {
+                            "id": "colorByProgress",
+                            "label": "Color by time remaining (%)",
+                            "description": "Ring color: green above 50% left, yellow 20-50%, red below 20%. Turn off to use the fixed per-phase colors below instead.",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": true
+                        },
+                        {
+                            "id": "ringColorHigh",
+                            "label": "Plenty of time left (> 50%)",
+                            "description": "Ring color while more than half the phase remains",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#33D17AFF"
+                        },
+                        {
+                            "id": "ringColorMid",
+                            "label": "Getting short (20-50%)",
+                            "description": "Ring color while between 20% and 50% of the phase remains",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#F5C211FF"
+                        },
+                        {
+                            "id": "ringColorLow",
+                            "label": "Almost up (< 20%)",
+                            "description": "Ring color while less than 20% of the phase remains",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#E01B24FF"
+                        },
+                        {
+                            "id": "workFixedColor",
+                            "label": "Work color (fixed mode)",
+                            "description": "Ring color during Work when \"Color by time remaining\" is off",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#E01B24FF"
+                        },
+                        {
+                            "id": "breakFixedColor",
+                            "label": "Break color (fixed mode)",
+                            "description": "Ring color during short and long breaks when \"Color by time remaining\" is off",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#33D17AFF"
+                        }
+                    ]
+                },
+                {
+                    "id": "text",
+                    "label": "Text",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "showPhaseLabel",
+                            "label": "Show phase label",
+                            "description": "Show the WORK / SHORT BREAK / LONG BREAK caption under the time",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": true
+                        },
+                        {
+                            "id": "phaseLabelWork",
+                            "label": "Work label text",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "text",
+                            "default": "WORK"
+                        },
+                        {
+                            "id": "phaseLabelShortBreak",
+                            "label": "Short break label text",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "text",
+                            "default": "SHORT BREAK"
+                        },
+                        {
+                            "id": "phaseLabelLongBreak",
+                            "label": "Long break label text",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "text",
+                            "default": "LONG BREAK"
+                        },
+                        {
+                            "id": "timeFont",
+                            "label": "Time font",
+                            "description": "Face and size of the mm:ss countdown",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "format": "font",
+                            "default": "Sans Bold 24"
+                        },
+                        {
+                            "id": "timeColor",
+                            "label": "Time color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFFFF"
+                        },
+                        {
+                            "id": "phaseLabelFont",
+                            "label": "Phase label font",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "format": "font",
+                            "default": "Sans Bold 9"
+                        },
+                        {
+                            "id": "phaseLabelColor",
+                            "label": "Phase label color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFFB3"
+                        }
+                    ]
+                },
+                {
+                    "id": "button",
+                    "label": "Play/pause button",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "showControlButton",
+                            "label": "Show play/pause button",
+                            "description": "",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": true
+                        },
+                        {
+                            "id": "buttonColor",
+                            "label": "Button background color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFF1A"
+                        },
+                        {
+                            "id": "buttonBorderColor",
+                            "label": "Button border color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFF59"
+                        },
+                        {
+                            "id": "buttonIconColor",
+                            "label": "Button icon color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFFFF"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "shadow",
+            "label": "Shadow",
+            "description": "Drop shadow behind this widget.",
+            "groups": [
+                {
+                    "id": "shadow",
+                    "label": "Shadow effect",
+                    "description": "Off by default. Default color is black at 30% transparency.",
+                    "fields": [
+                        {
+                            "id": "shadowAngle",
+                            "label": "Shadow angle",
+                            "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 90,
+                            "min": 0,
+                            "max": 360,
+                            "step": 1,
+                            "suffix": "\u00b0",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowDistance",
+                            "label": "Shadow distance",
+                            "description": "How far the shadow is offset, in pixels",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 6,
+                            "min": 0,
+                            "max": 60,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "shadowEnabled"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,248 @@
+{
+    "version": "1.0",
+    "tabs": [
+        {
+            "id": "general",
+            "label": "Screen Time",
+            "description": "Today's active screen time vs. a daily goal",
+            "icon": "preferences-system-time-symbolic",
+            "groups": [
+                {
+                    "id": "card",
+                    "label": "Card",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "backgroundColor",
+                            "label": "Background color",
+                            "description": "Card background. Use the alpha slider for transparency.",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#1B1E2AF5"
+                        }
+                    ]
+                },
+                {
+                    "id": "tracking",
+                    "label": "Tracking",
+                    "description": "Active time is based on Mutter's idle monitor (keyboard/mouse input), not any single app - it counts as \"screen time\" any time you aren't idle, regardless of what's focused.",
+                    "fields": [
+                        {
+                            "id": "idleThresholdSeconds",
+                            "label": "Idle threshold",
+                            "description": "No keyboard/mouse input for at least this long counts as away from the desk, not active",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 60,
+                            "min": 10,
+                            "max": 600,
+                            "step": 5,
+                            "suffix": "s"
+                        },
+                        {
+                            "id": "pollSeconds",
+                            "label": "Check interval",
+                            "description": "How often idle state is sampled. Lower is more accurate but wakes the process more often.",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 15,
+                            "min": 5,
+                            "max": 120,
+                            "step": 5,
+                            "suffix": "s"
+                        }
+                    ]
+                },
+                {
+                    "id": "goal",
+                    "label": "Daily goal",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "dailyGoalHours",
+                            "label": "Daily goal",
+                            "description": "The progress bar and its color are relative to this",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 6,
+                            "min": 1,
+                            "max": 24,
+                            "step": 1,
+                            "suffix": "h"
+                        }
+                    ]
+                },
+                {
+                    "id": "colors",
+                    "label": "Bar colors",
+                    "description": "The bar's color switches automatically: under 70% of the goal, 70-100%, and over 100%.",
+                    "fields": [
+                        {
+                            "id": "barTrackColor",
+                            "label": "Bar track color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFF26"
+                        },
+                        {
+                            "id": "barColorGood",
+                            "label": "Under 70% of goal",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#33D17AFF"
+                        },
+                        {
+                            "id": "barColorWarn",
+                            "label": "70-100% of goal",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#F5C211FF"
+                        },
+                        {
+                            "id": "barColorOver",
+                            "label": "Over 100% of goal",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#E01B24FF"
+                        }
+                    ]
+                },
+                {
+                    "id": "text",
+                    "label": "Text & icon",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "showIcon",
+                            "label": "Show icon",
+                            "description": "",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": true
+                        },
+                        {
+                            "id": "iconColor",
+                            "label": "Icon color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFFB3"
+                        },
+                        {
+                            "id": "captionText",
+                            "label": "Caption text",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "text",
+                            "default": "SCREEN TIME"
+                        },
+                        {
+                            "id": "captionFont",
+                            "label": "Caption font",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "format": "font",
+                            "default": "Sans Bold 9"
+                        },
+                        {
+                            "id": "captionColor",
+                            "label": "Caption color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFFB3"
+                        },
+                        {
+                            "id": "valueFont",
+                            "label": "Value font",
+                            "description": "Font of the \"Xh Ym\" value",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "format": "font",
+                            "default": "Sans Bold 20"
+                        },
+                        {
+                            "id": "valueColor",
+                            "label": "Value color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFFFF"
+                        },
+                        {
+                            "id": "subCaptionColor",
+                            "label": "Goal caption color",
+                            "description": "Color of the small \"of Nh goal - X%\" line under the bar",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "alpha": true,
+                            "default": "#FFFFFF80"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "shadow",
+            "label": "Shadow",
+            "description": "Drop shadow behind this widget.",
+            "groups": [
+                {
+                    "id": "shadow",
+                    "label": "Shadow effect",
+                    "description": "Off by default. Default color is black at 30% transparency.",
+                    "fields": [
+                        {
+                            "id": "shadowAngle",
+                            "label": "Shadow angle",
+                            "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 90,
+                            "min": 0,
+                            "max": 360,
+                            "step": 1,
+                            "suffix": "\u00b0",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowDistance",
+                            "label": "Shadow distance",
+                            "description": "How far the shadow is offset, in pixels",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 6,
+                            "min": 0,
+                            "max": 60,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "shadowEnabled"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

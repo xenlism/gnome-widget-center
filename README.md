@@ -2,7 +2,7 @@
 
 **Bring KDE-Plasma-style desktop widgets to GNOME Shell — without leaving the GNOME way of doing things.**
 
-[![GNOME Shell](https://img.shields.io/badge/GNOME%20Shell-50-4A86CF?logo=gnome&logoColor=white)](https://www.gnome.org/)
+[![GNOME Shell](https://img.shields.io/badge/GNOME%20Shell-50--51-4A86CF?logo=gnome&logoColor=white)](https://www.gnome.org/)
 [![Language](https://img.shields.io/badge/Language-GJS%20%2F%20JavaScript-yellow)](https://gjs.guide/)
 [![Toolkit](https://img.shields.io/badge/Toolkit-GTK%204%20%2F%20Libadwaita-blue)](https://www.gtk.org/)
 [![License](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
@@ -15,8 +15,8 @@
 >
 > The extension has been submitted to [extensions.gnome.org](https://extensions.gnome.org/) (EGO)
 > and is currently pending review. `metadata.json` still tracks an internal build number
-> instead of a public version number until that review completes, and `shell-version`
-> currently declares **GNOME Shell 50** only. The current feature set has been functionally
+> instead of a public version number until that review completes. `shell-version`
+> currently declares **GNOME Shell 50 and 51**. The current feature set has been functionally
 > tested and **passed verification by Nox (Codex Mode)**, including the main Control Center,
 > Edit Mode, widget configuration, theme export flow, overlay workflow, and related settings
 > behavior. The verification is recorded as a project test pass rather than a claim that every
@@ -78,10 +78,10 @@ back the entire thing up — all without restarting GNOME Shell.
 - 🌍 **Localized UI** across the Control Center, the overlay, and settings dialogs.
 - 🏗️ **Widget-Architects** — one widget design that spawns any number of independently-configured children.
 
-Out of the box the extension ships **55 ready-to-use widgets** across clocks, calendars,
+Out of the box the extension ships **61 ready-to-use widgets** across clocks, calendars,
 weather, system monitors (CPU/RAM/disk/network, in bar, circular, and "geek" archey-style
-layouts), media controls, launchers, and utility panels — plus one bundled Theme Pack
-(`Geek-Minimal-Half-Moon`) to try the concept immediately.
+layouts), media controls, launchers, and utility panels — plus **7 bundled Theme Packs**
+(including `Geek-Minimal-Half-Moon`) to try the concept immediately.
 
 ## Widgets and Widget-Architects
 
@@ -207,7 +207,7 @@ Start from the included templates:
 - [`development/widget-templates/architect-template`](development/widget-templates/architect-template) — a Widget-Architect that creates configurable children.
 
 Then read [Creating Widgets](docs/CREATING_WIDGETS.md) and the
-[Widget API reference](gnome-widget-center@xenlism.github.io/WIDGET_API.md) for the full
+[Widget API reference](WIDGET_API.md) for the full
 development workflow and available APIs.
 
 ## Install
@@ -239,8 +239,8 @@ gnome-widget-center-main/
 │   ├── extension.js, prefs.js               # entry points
 │   ├── lib/                                 # host logic (loader, layout, settings, i18n…)
 │   ├── i18n/                                # en / th / de / es / ja / zh translations
-│   ├── widgets/                             # 55 bundled widgets
-│   ├── themepacks/                          # bundled Theme Pack(s)
+│   ├── widgets/                             # 61 bundled widgets
+│   ├── themepacks/                          # 7 bundled Theme Packs
 │   └── schemas/                             # GSettings schema
 ├── development/                             # roadmap, project status, templates, tests, docs
 ├── docs/                                    # user-facing docs (Creating Widgets, etc.)
