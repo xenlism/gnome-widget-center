@@ -1,0 +1,136 @@
+{
+    "version": "1.0",
+    "tabs": [
+        {
+            "id": "general",
+            "label": "Sticky Note",
+            "description": "Paper look and text.",
+            "icon": "text-editor-symbolic",
+            "groups": [
+                {
+                    "id": "paper",
+                    "label": "Paper",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "paperColor",
+                            "label": "Paper color",
+                            "description": "Also changed by clicking the color dot on the note itself.",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#FFFBBDFF"
+                        },
+                        {
+                            "id": "cornerRadius",
+                            "label": "Corner radius",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 3,
+                            "min": 0,
+                            "max": 24,
+                            "step": 1,
+                            "suffix": "px"
+                        },
+                        {
+                            "id": "showFoldedCorner",
+                            "label": "Show folded corner",
+                            "description": "Draws a small page-curl in the bottom-right corner, like the real Stickies app.",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": true
+                        },
+                        {
+                            "id": "showColorDot",
+                            "label": "Show color-cycle dot",
+                            "description": "A small dot in the corner - click it to cycle through preset note colors.",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": true
+                        }
+                    ]
+                },
+                {
+                    "id": "text",
+                    "label": "Text",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "placeholderText",
+                            "label": "Placeholder",
+                            "description": "Shown until you click the note and write something.",
+                            "dataType": "string",
+                            "fieldType": "text",
+                            "default": "Click to write a note..."
+                        },
+                        {
+                            "id": "textFont",
+                            "label": "Font",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "default": "Sans 15"
+                        },
+                        {
+                            "id": "textColor",
+                            "label": "Text color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#3A3226FF"
+                        },
+                        {
+                            "id": "textAlign",
+                            "label": "Alignment",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "dropdown",
+                            "default": "left",
+                            "options": [
+                                { "value": "left", "label": "Left" },
+                                { "value": "center", "label": "Center" }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "shadow",
+            "label": "Shadow",
+            "description": "",
+            "groups": [
+                {
+                    "id": "shadow",
+                    "label": "Shadow effect",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "shadowAngle",
+                            "label": "Shadow angle",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 90,
+                            "min": 0,
+                            "max": 360,
+                            "step": 1
+                        },
+                        {
+                            "id": "shadowDistance",
+                            "label": "Shadow distance",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 6,
+                            "min": 0,
+                            "max": 40,
+                            "step": 1,
+                            "suffix": "px"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

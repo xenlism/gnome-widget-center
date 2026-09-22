@@ -16,6 +16,22 @@ import Soup from "gi://Soup?version=3.0";
 
 import { getSpecialFolderInfo } from "./fsUtils.js";
 
+let _hostTr = (key, fallback) => fallback;
+
+let _hostLanguage = "en";
+
+// Called by buildConfigPage() before it builds any rows. Host strings (search
+// dialog, tooltips, file-chooser labels) are translated through the host's own
+// i18n bundle so they work for every widget, whether or not it ships i18n/.
+export function setHostContext({tr: tr, language: language} = {}) {
+    _hostTr = typeof tr === "function" ? tr : (key, fallback) => fallback;
+    _hostLanguage = /^[a-z]{2}$/.test(language ?? "") ? language : "en";
+}
+
+function _h(key, fallback) {
+    return _hostTr(key, fallback);
+}
+
 let _locationSearchSession = null;
 
 function _getLocationSearchSession() {
@@ -78,7 +94,7 @@ export function _locationRow(field, current, set) {
         icon_name: "system-search-symbolic",
         valign: Gtk.Align.CENTER,
         css_classes: [ "flat" ],
-        tooltip_text: "Search city location"
+        tooltip_text: _h("configui.location.search_tooltip", "Search city location")
     });
     editButton.connect("clicked", () => {
         const root = row.get_root();
@@ -87,7 +103,7 @@ export function _locationRow(field, current, set) {
             return;
         }
         const dialog = new Gtk.Window({
-            title: "Search Location",
+            title: _h("configui.location.search_title", "Search Location"),
             transient_for: root,
             modal: true,
             default_width: 400,
@@ -103,7 +119,7 @@ export function _locationRow(field, current, set) {
             margin_end: 12
         });
         const searchEntry = new Gtk.SearchEntry({
-            placeholder_text: "Search city..."
+            placeholder_text: _h("configui.location.search_placeholder", "Search city...")
         });
         mainBox.append(searchEntry);
         const listBox = new Gtk.ListBox({
@@ -120,7 +136,7 @@ export function _locationRow(field, current, set) {
             let child;
             while (child = listBox.get_first_child()) listBox.remove(child);
             if (!keyword || keyword.trim().length < 2) return;
-            const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(keyword)}&count=10&language=en&format=json`;
+            const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(keyword)}&count=10&language=${_hostLanguage}&format=json`;
             const message = Soup.Message.new("GET", url);
             const session = _getLocationSearchSession();
             session.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (sess, res) => {
@@ -144,7 +160,7 @@ export function _locationRow(field, current, set) {
                         }
                     } else {
                         listBox.append(new Adw.ActionRow({
-                            title: "No results found",
+                            title: _h("configui.location.no_results", "No results found"),
                             sensitive: false
                         }));
                     }
@@ -164,7 +180,7 @@ export function _locationRow(field, current, set) {
         icon_name: "find-location-symbolic",
         valign: Gtk.Align.CENTER,
         css_classes: [ "flat" ],
-        tooltip_text: "Detect from my IP address"
+        tooltip_text: _h("configui.location.detect_tooltip", "Detect from my IP address")
     });
     const spinner = new Gtk.Spinner({
         valign: Gtk.Align.CENTER,
@@ -177,7 +193,7 @@ export function _locationRow(field, current, set) {
         _fetchIpLocationForPrefs().then(coords => {
             if (!coords) {
                 row.add_css_class("error");
-                row.set_tooltip_text("Could not detect your location - check your connection, or type coordinates directly.");
+                row.set_tooltip_text(_h("configui.location.detect_failed", "Could not detect your location - check your connection, or type coordinates directly."));
                 GLib.timeout_add(GLib.PRIORITY_DEFAULT, 4e3, () => {
                     row.set_tooltip_text(field.description || "");
                     validate();
@@ -567,10 +583,10 @@ export function _iconRow(field, current, set) {
 export function _pathRow(field, current, set, {folder: folder}) {
     const row = new Adw.ActionRow({
         title: _esc(field.label),
-        subtitle: current || field.placeholder || "Not set"
+        subtitle: current || field.placeholder || _h("configui.path.not_set", "Not set")
     });
     const button = new Gtk.Button({
-        label: "Browse…",
+        label: _h("shared.browse", "Browse…"),
         valign: Gtk.Align.CENTER
     });
     button.connect("clicked", () => {
@@ -729,7 +745,7 @@ export function _listRow(field, current, set) {
             const objField = {
                 ...itemSchema,
                 id: `item-${index}`,
-                label: `Item ${index + 1}`,
+                label: _h("configui.list.item", "Item {n}").replace("{n}", index + 1),
                 fieldType: "object"
             };
             const expander = _objectRow(objField, item, updated => {
@@ -742,7 +758,7 @@ export function _listRow(field, current, set) {
         const primField = {
             ...itemSchema,
             id: `item-${index}`,
-            label: `Item ${index + 1}`,
+            label: _h("configui.list.item", "Item {n}").replace("{n}", index + 1),
             fieldType: itemSchema.fieldType ?? (itemSchema.dataType === "boolean" ? "switch" : "text")
         };
         const liveItem = new Proxy({
@@ -794,19 +810,19 @@ export function _listRow(field, current, set) {
             icon_name: "list-add-symbolic",
             valign: Gtk.Align.CENTER,
             css_classes: [ "flat" ],
-            tooltip_text: "Browse for an application",
+            tooltip_text: _h("configui.list.browse_app", "Browse for an application"),
             sensitive: withinBounds(1)
         });
         addButton.connect("clicked", () => {
             const dialog = new Gtk.FileDialog({
-                title: field.label ?? "Add application"
+                title: field.label ?? _h("configui.list.add_app", "Add application")
             });
             dialog.set_initial_folder(Gio.File.new_for_path(scanDirectory));
             const filterStore = new Gio.ListStore({
                 item_type: Gtk.FileFilter
             });
             const filter = new Gtk.FileFilter;
-            filter.set_name("Desktop entries");
+            filter.set_name(_h("configui.list.desktop_entries", "Desktop entries"));
             filter.add_pattern("*.desktop");
             filterStore.append(filter);
             dialog.set_filters(filterStore);
@@ -870,7 +886,7 @@ export function _listRow(field, current, set) {
                 icon_name: "pan-down-symbolic",
                 valign: Gtk.Align.CENTER,
                 css_classes: [ "flat" ],
-                tooltip_text: "Quick-add a special folder",
+                tooltip_text: _h("configui.list.quickadd_folder", "Quick-add a special folder"),
                 sensitive: withinBounds(1)
             });
             const popoverList = new Gtk.ListBox({
@@ -904,12 +920,12 @@ export function _listRow(field, current, set) {
             icon_name: "list-add-symbolic",
             valign: Gtk.Align.CENTER,
             css_classes: [ "flat" ],
-            tooltip_text: "Browse for a folder",
+            tooltip_text: _h("configui.list.browse_folder", "Browse for a folder"),
             sensitive: withinBounds(1)
         });
         addButton.connect("clicked", () => {
             const dialog = new Gtk.FileDialog({
-                title: field.label ?? "Add folder"
+                title: field.label ?? _h("configui.list.add_folder", "Add folder")
             });
             if (field.item.scanDirectory) dialog.set_initial_folder(Gio.File.new_for_path(field.item.scanDirectory));
             dialog.select_folder(addButton.get_root(), null, (_dialog, result) => {

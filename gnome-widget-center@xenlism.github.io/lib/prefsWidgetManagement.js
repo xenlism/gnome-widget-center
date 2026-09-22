@@ -114,7 +114,7 @@ export const PrefsWidgetManagementMixin = Base => class extends Base {
                 icon_name: "go-next-symbolic",
                 valign: Gtk.Align.CENTER,
                 css_classes: [ "flat" ],
-                tooltip_text: `${widget.name} settings`
+                tooltip_text: this._tr("overview.card.settings_tooltip", "{name} settings").replace("{name}", widget.name)
             });
             settingsButton.connect("clicked", () => {
                 this._openWidgetPrefs(window, storage, widget).catch(e => logError(e, `[widget-center] prefs: opening settings for "${widget.id}" failed`));
@@ -122,6 +122,17 @@ export const PrefsWidgetManagementMixin = Base => class extends Base {
             row.add_suffix(settingsButton);
         }
         return row;
+    }
+    // Two-letter code for the language the UI is actually shown in: the explicit
+    // override if set, otherwise the first usable system language.
+    _hostLanguageCode() {
+        const override = this._settings?.isReady ? this._settings.getGlobalValue("language") : "";
+        if (override) return override;
+        for (const name of GLib.get_language_names()) {
+            const code = name.slice(0, 2).toLowerCase();
+            if (/^[a-z]{2}$/.test(code)) return code;
+        }
+        return "en";
     }
     _loadWidgetI18n(widget) {
         const languageOverride = this._settings?.isReady ? this._settings.getGlobalValue("language") || undefined : undefined;
@@ -152,7 +163,10 @@ export const PrefsWidgetManagementMixin = Base => class extends Base {
             const {config: config, errors: errors} = readWidgetConfig(widget.path);
             if (config) {
                 const settingsHandle = WidgetSettings.load(widget.id, storage);
-                const prefsPage = buildConfigPage(config, settingsHandle, title, widget.path, translations);
+                const prefsPage = buildConfigPage(config, settingsHandle, title, widget.path, translations, {
+                    hostTr: (key, fallback) => this._tr(key, fallback),
+                    hostLanguage: this._hostLanguageCode()
+                });
                 this._presentPrefsPage(window, widget, prefsPage);
                 return;
             }
@@ -202,7 +216,7 @@ export const PrefsWidgetManagementMixin = Base => class extends Base {
             halign: Gtk.Align.END
         });
         const saveButton = new Gtk.Button({
-            label: "Save & Close",
+            label: this._tr("prefs.widget.save_close", "Save & Close"),
             css_classes: [ "suggested-action" ]
         });
         saveButton.connect("clicked", () => {

@@ -1,0 +1,166 @@
+{
+    "version": "1.0",
+    "tabs": [
+        {
+            "id": "general",
+            "label": "To-Do List",
+            "description": "Task list content and card appearance.",
+            "icon": "view-list-symbolic",
+            "groups": [
+                {
+                    "id": "card",
+                    "label": "Card",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "backgroundColor",
+                            "label": "Background color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#1E1E2EF0"
+                        },
+                        {
+                            "id": "cornerRadius",
+                            "label": "Corner radius",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 18,
+                            "min": 0,
+                            "max": 48,
+                            "step": 1,
+                            "suffix": "px"
+                        }
+                    ]
+                },
+                {
+                    "id": "tasks",
+                    "label": "Tasks",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "titleText",
+                            "label": "Title",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "text",
+                            "default": "To-Do"
+                        },
+                        {
+                            "id": "maxVisibleItems",
+                            "label": "Max visible tasks",
+                            "description": "Older tasks past this count are hidden (not deleted) until earlier ones are checked off or removed.",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 7,
+                            "min": 3,
+                            "max": 20,
+                            "step": 1
+                        },
+                        {
+                            "id": "autoSortDone",
+                            "label": "Move completed tasks to the bottom",
+                            "description": "",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": true
+                        }
+                    ]
+                },
+                {
+                    "id": "text",
+                    "label": "Text",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "titleFont",
+                            "label": "Title font",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "default": "Sans Bold 14"
+                        },
+                        {
+                            "id": "titleColor",
+                            "label": "Title color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#FFFFFFFF"
+                        },
+                        {
+                            "id": "itemFont",
+                            "label": "Task font",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "default": "Sans 13"
+                        },
+                        {
+                            "id": "itemColor",
+                            "label": "Task color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#FFFFFFFF"
+                        },
+                        {
+                            "id": "completedColor",
+                            "label": "Completed task color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#FFFFFF66"
+                        },
+                        {
+                            "id": "accentColor",
+                            "label": "Checkbox / accent color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#3584E4FF"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "shadow",
+            "label": "Shadow",
+            "description": "",
+            "groups": [
+                {
+                    "id": "shadow",
+                    "label": "Shadow effect",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "shadowAngle",
+                            "label": "Shadow angle",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 90,
+                            "min": 0,
+                            "max": 360,
+                            "step": 1
+                        },
+                        {
+                            "id": "shadowDistance",
+                            "label": "Shadow distance",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 6,
+                            "min": 0,
+                            "max": 40,
+                            "step": 1,
+                            "suffix": "px"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

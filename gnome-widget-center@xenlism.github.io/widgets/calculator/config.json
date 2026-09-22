@@ -1,0 +1,147 @@
+{
+    "version": "1.0",
+    "tabs": [
+        {
+            "id": "general",
+            "label": "Calculator",
+            "description": "Colors and card appearance.",
+            "icon": "accessories-calculator-symbolic",
+            "groups": [
+                {
+                    "id": "card",
+                    "label": "Card",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "backgroundColor",
+                            "label": "Background color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#1C1C1EF5"
+                        },
+                        {
+                            "id": "cornerRadius",
+                            "label": "Corner radius",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 20,
+                            "min": 0,
+                            "max": 48,
+                            "step": 1,
+                            "suffix": "px"
+                        }
+                    ]
+                },
+                {
+                    "id": "display",
+                    "label": "Display",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "displayFont",
+                            "label": "Display font",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "default": "Sans 34"
+                        },
+                        {
+                            "id": "displayColor",
+                            "label": "Display color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#FFFFFFFF"
+                        }
+                    ]
+                },
+                {
+                    "id": "buttons",
+                    "label": "Buttons",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "digitButtonColor",
+                            "label": "Digit button color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#505050FF"
+                        },
+                        {
+                            "id": "functionButtonColor",
+                            "label": "Function button color (AC, +/-, %)",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#A5A5A5FF"
+                        },
+                        {
+                            "id": "operatorButtonColor",
+                            "label": "Operator button color (÷ × − + =)",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#FF9F0AFF"
+                        },
+                        {
+                            "id": "buttonTextColor",
+                            "label": "Digit/function text color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#FFFFFFFF"
+                        },
+                        {
+                            "id": "functionTextColor",
+                            "label": "Function text color (AC, +/-, %)",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#000000FF"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "shadow",
+            "label": "Shadow",
+            "description": "",
+            "groups": [
+                {
+                    "id": "shadow",
+                    "label": "Shadow effect",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "shadowAngle",
+                            "label": "Shadow angle",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 90,
+                            "min": 0,
+                            "max": 360,
+                            "step": 1
+                        },
+                        {
+                            "id": "shadowDistance",
+                            "label": "Shadow distance",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 6,
+                            "min": 0,
+                            "max": 40,
+                            "step": 1,
+                            "suffix": "px"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

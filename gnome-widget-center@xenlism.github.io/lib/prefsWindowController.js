@@ -12,7 +12,7 @@ import Pango from "gi://Pango";
 
 import { PrefsWindowController } from "./prefsWindowControllerBase.js";
 
-import { confirmOverwrite } from "./prefsDialogs.js";
+import { confirmOverwrite, setDialogTranslator } from "./prefsDialogs.js";
 
 import { fileExists, pathIsUnder } from "./fsUtils.js";
 
@@ -68,6 +68,7 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
         }
         const languageOverride = settings.isReady ? settings.getGlobalValue("language") || undefined : undefined;
         this._i18n = await loadTranslations(GLib.build_filenamev([ this.path, "i18n" ]), languageOverride).catch(() => ({}));
+        setDialogTranslator((key, fallback) => this._tr(key, fallback));
         const storage = new StorageService;
         storage.init();
         const bundledWidgetsPath = GLib.build_filenamev([ this.path, "widgets" ]);
@@ -375,7 +376,7 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
         }
         if (widget.metadata?.author) {
             body.append(new Gtk.Label({
-                label: `by ${widget.metadata.author}`,
+                label: this._tr("importexport.importpack.by_author", "by {author}").replace("{author}", widget.metadata.author),
                 xalign: 0,
                 css_classes: [ "dim-label", "caption" ]
             }));
@@ -397,7 +398,7 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
         if (isUser) {
             const removeButton = this._buildIconTextButton("user-trash-symbolic", this._tr("overview.card.remove", "Uninstall"), [ "destructive-action" ]);
             removeButton.connect("clicked", async () => {
-                const confirmed = await confirmOverwrite(window, this._tr("overview.card.remove_confirm_heading", "Remove this widget?"), this._tr("overview.card.remove_confirm_body", `This deletes "${widget.name}" from your user widgets folder. This cannot be undone.`), this._tr("overview.card.remove_confirm_button", "Remove"));
+                const confirmed = await confirmOverwrite(window, this._tr("overview.card.remove_confirm_heading", "Remove this widget?"), this._tr("overview.card.remove_confirm_body", "This deletes \"{name}\" from your user widgets folder. This cannot be undone.").replace("{name}", widget.name), this._tr("overview.card.remove_confirm_button", "Remove"));
                 if (!confirmed) return;
                 this._removeUserWidget(settings, widget);
                 this._discovered = this._discovered.filter(w => w.id !== widget.id);
@@ -574,7 +575,7 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
                 margin_end: 8
             });
             removeButton.connect("clicked", async () => {
-                const confirmed = await confirmOverwrite(window, this._tr("themes.card.remove_confirm_heading", "Remove this theme pack?"), this._tr("themes.card.remove_confirm_body", `This deletes "${manifest.name ?? entry.id}" from your themepacks folder. This cannot be undone.`), this._tr("themes.card.remove_confirm_button", "Remove"));
+                const confirmed = await confirmOverwrite(window, this._tr("themes.card.remove_confirm_heading", "Remove this theme pack?"), this._tr("themes.card.remove_confirm_body", "This deletes \"{name}\" from your themepacks folder. This cannot be undone.").replace("{name}", manifest.name ?? entry.id), this._tr("themes.card.remove_confirm_button", "Remove"));
                 if (!confirmed) return;
                 try {
                     deleteRecursive(Gio.File.new_for_path(path));

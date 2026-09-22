@@ -4,14 +4,23 @@ import Gtk from "gi://Gtk";
 
 import Gio from "gi://Gio";
 
+// Shared dialog helpers have no access to the controller's translations, so the
+// controller registers a translator here once its i18n bundle is loaded. Until
+// then (or for a missing key) the English fallbacks below are used.
+let _translate = (key, fallback) => fallback;
+
+export function setDialogTranslator(fn) {
+    _translate = typeof fn === "function" ? fn : (key, fallback) => fallback;
+}
+
 export function showReportDialog(window, title, bodyText, onClose) {
     const dialog = new Adw.MessageDialog({
         transient_for: window,
         heading: title,
-        body: bodyText || "(nothing to report)",
+        body: bodyText || _translate("dialog.nothing_to_report", "(nothing to report)"),
         modal: true
     });
-    dialog.add_response("close", "Close");
+    dialog.add_response("close", _translate("dialog.close", "Close"));
     if (onClose) dialog.connect("response", () => onClose());
     dialog.present();
 }
@@ -29,8 +38,8 @@ export function promptPassword(window, heading, body) {
             margin_top: 8
         });
         dialog.set_extra_child(entry);
-        dialog.add_response("cancel", "Cancel");
-        dialog.add_response("ok", "Continue");
+        dialog.add_response("cancel", _translate("dialog.cancel", "Cancel"));
+        dialog.add_response("ok", _translate("dialog.continue", "Continue"));
         dialog.set_response_appearance("ok", Adw.ResponseAppearance.SUGGESTED);
         dialog.set_default_response("ok");
         entry.connect("activate", () => dialog.response("ok"));
@@ -41,7 +50,7 @@ export function promptPassword(window, heading, body) {
     });
 }
 
-export function confirmOverwrite(window, heading, body, confirmLabel = "Overwrite") {
+export function confirmOverwrite(window, heading, body, confirmLabel = _translate("dialog.overwrite", "Overwrite")) {
     return new Promise(resolve => {
         const dialog = new Adw.MessageDialog({
             transient_for: window,
@@ -49,7 +58,7 @@ export function confirmOverwrite(window, heading, body, confirmLabel = "Overwrit
             body: body,
             modal: true
         });
-        dialog.add_response("cancel", "Cancel");
+        dialog.add_response("cancel", _translate("dialog.cancel", "Cancel"));
         dialog.add_response("confirm", confirmLabel);
         dialog.set_response_appearance("confirm", Adw.ResponseAppearance.DESTRUCTIVE);
         dialog.set_default_response("cancel");
@@ -69,7 +78,7 @@ export function chooseFile(window, opts) {
             action: action,
             transient_for: window,
             modal: true,
-            accept_label: opts.action === "save" ? "_Save" : opts.action === "select_folder" ? "_Select" : "_Open"
+            accept_label: opts.action === "save" ? _translate("dialog.file.save", "_Save") : opts.action === "select_folder" ? _translate("dialog.file.select", "_Select") : _translate("dialog.file.open", "_Open")
         });
         if (opts.initialName) chooser.set_current_name(opts.initialName);
         if (opts.initialFolder) {

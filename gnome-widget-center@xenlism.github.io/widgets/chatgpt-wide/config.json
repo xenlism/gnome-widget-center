@@ -1,0 +1,41 @@
+{
+    "version": "1.0",
+    "tabs": [
+        {
+            "id": "general",
+            "label": "ChatGPT Quick Ask",
+            "description": "2x1 ChatGPT quick prompt settings",
+            "icon": "applications-internet-symbolic",
+            "groups": [
+                {
+                    "id": "appearance",
+                    "label": "Appearance",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "cornerRadius",
+                            "label": "Corner radius",
+                            "description": "Roundness of the card",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 18,
+                            "min": 0,
+                            "max": 80,
+                            "step": 1,
+                            "suffix": "px"
+                        },
+                        {
+                            "id": "accentColor",
+                            "label": "Accent color",
+                            "description": "Color used by the GPT mark and action",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "default": "#FFFFFF"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

@@ -73,12 +73,13 @@ const URL_PATTERN = /^https?:\/\/[^\s]+\.[^\s]+$/i;
 
 export function openThemePackExportDialog(parentWindow, services, prefill = {}) {
     const {storage: storage, theme: theme, settings: settings, discoveredWidgets: discoveredWidgets} = services;
+    const tr = typeof services.tr === "function" ? services.tr : (key, fallback) => fallback;
     const window = new Adw.Window({
         transient_for: parentWindow,
         modal: true,
         default_width: 480,
         default_height: 560,
-        title: "Export Theme…"
+        title: tr("importexport.exportpack.title", "Export Theme…")
     });
     const toolbarView = new Adw.ToolbarView;
     const header = new Adw.HeaderBar({
@@ -87,32 +88,32 @@ export function openThemePackExportDialog(parentWindow, services, prefill = {}) 
     toolbarView.add_top_bar(header);
     const page = new Adw.PreferencesPage;
     const group = new Adw.PreferencesGroup({
-        title: "Theme pack details",
-        description: "Shown to anyone who opens this .gwct file in their own Widget Center."
+        title: tr("export.group.title", "Theme pack details"),
+        description: tr("export.group.description", "Shown to anyone who opens this .gwct file in their own Widget Center.")
     });
     page.add(group);
     const nameRow = new Adw.EntryRow({
-        title: "Name"
+        title: tr("export.field.name", "Name")
     });
     nameRow.text = prefill.name ?? "";
     group.add(nameRow);
     const descRow = new Adw.EntryRow({
-        title: "Description"
+        title: tr("export.field.description", "Description")
     });
     descRow.text = prefill.description ?? "";
     group.add(descRow);
     const authorRow = new Adw.EntryRow({
-        title: "Author"
+        title: tr("export.field.author", "Author")
     });
     authorRow.text = prefill.author ?? "";
     group.add(authorRow);
     const emailRow = new Adw.EntryRow({
-        title: "Email"
+        title: tr("export.field.email", "Email")
     });
     emailRow.text = prefill.email ?? "";
     group.add(emailRow);
     const urlRow = new Adw.EntryRow({
-        title: "URL"
+        title: tr("export.field.url", "URL")
     });
     urlRow.text = prefill.url ?? "";
     group.add(urlRow);
@@ -133,9 +134,9 @@ export function openThemePackExportDialog(parentWindow, services, prefill = {}) 
     } catch (e) {
         logError(e, "[widget-center] themePackExportDialog: could not label desktop-share accel");
     }
-    const screenshotSubtitle = GLib.markup_escape_text(`No image selected — or press ${screenshotAccelLabel} to capture the desktop`, -1);
+    const screenshotSubtitle = GLib.markup_escape_text(tr("export.screenshot.none", "No image selected — or press {accel} to capture the desktop").replace("{accel}", screenshotAccelLabel), -1);
     const screenshotRow = new Adw.ActionRow({
-        title: "Screenshot",
+        title: tr("export.screenshot.title", "Screenshot"),
         subtitle: screenshotSubtitle
     });
     const applyScreenshotPick = (path, bytes, mime) => {
@@ -147,13 +148,13 @@ export function openThemePackExportDialog(parentWindow, services, prefill = {}) 
         screenshotRow.subtitle = GLib.markup_escape_text(GLib.path_get_basename(path), -1);
     };
     const screenshotButton = new Gtk.Button({
-        label: "Browse…",
+        label: tr("shared.browse", "Browse…"),
         valign: Gtk.Align.CENTER
     });
     screenshotButton.connect("clicked", async () => {
         const path = await chooseFile(window, {
             action: "open",
-            title: "Choose a screenshot image",
+            title: tr("export.screenshot.chooser_title", "Choose a screenshot image"),
             pattern: "*.png"
         });
         if (!path) return;
@@ -162,7 +163,7 @@ export function openThemePackExportDialog(parentWindow, services, prefill = {}) 
             applyScreenshotPick(path, resized.bytes, resized.mime);
         } catch (e) {
             logError(e, "[widget-center] themePackExportDialog: could not read screenshot");
-            showReportDialog(window, "Could not read screenshot", e.message);
+            showReportDialog(window, tr("export.screenshot.read_failed", "Could not read screenshot"), e.message);
         }
     });
     screenshotRow.add_suffix(screenshotButton);
@@ -195,31 +196,31 @@ export function openThemePackExportDialog(parentWindow, services, prefill = {}) 
         margin_end: 12
     });
     const closeButton = new Gtk.Button({
-        label: "Close"
+        label: tr("dialog.close", "Close")
     });
     closeButton.connect("clicked", () => window.close());
     bottomBar.append(closeButton);
     const exportButton = new Gtk.Button({
-        label: "Export",
+        label: tr("export.button", "Export"),
         css_classes: [ "suggested-action" ]
     });
     exportButton.connect("clicked", async () => {
         if (!nameRow.text.trim()) {
-            showReportDialog(window, "Give this theme pack a name", "The Name field can't be empty.");
+            showReportDialog(window, tr("export.name_required.heading", "Give this theme pack a name"), tr("export.name_required.body", "The Name field can't be empty."));
             return;
         }
         if (!markValidity(emailRow, EMAIL_PATTERN)) {
-            showReportDialog(window, "Check the Email field", `"${emailRow.text.trim()}" doesn't look like a valid email address.`);
+            showReportDialog(window, tr("export.email_invalid.heading", "Check the Email field"), tr("export.email_invalid.body", "\"{value}\" doesn't look like a valid email address.").replace("{value}", emailRow.text.trim()));
             return;
         }
         if (!markValidity(urlRow, URL_PATTERN)) {
-            showReportDialog(window, "Check the URL field", `"${urlRow.text.trim()}" doesn't look like a valid URL (must start with http:// or https://).`);
+            showReportDialog(window, tr("export.url_invalid.heading", "Check the URL field"), tr("export.url_invalid.body", "\"{value}\" doesn't look like a valid URL (must start with http:// or https://).").replace("{value}", urlRow.text.trim()));
             return;
         }
         const defaultName = ensureGwctExtension(nameRow.text.trim().replace(/[^\w.-]+/g, "-") || "theme-pack");
         const savePath = await chooseFile(window, {
             action: "save",
-            title: "Save theme pack",
+            title: tr("export.save_title", "Save theme pack"),
             initialName: defaultName,
             initialFolder: GLib.get_home_dir(),
             pattern: "*.gwct"
@@ -228,7 +229,7 @@ export function openThemePackExportDialog(parentWindow, services, prefill = {}) 
         exportButton.sensitive = false;
         closeButton.sensitive = false;
         progressBar.fraction = 0;
-        progressBar.text = "Collecting widget settings…";
+        progressBar.text = tr("importexport.export.progress_start", "Collecting widget settings…");
         progressBar.visible = true;
         await idleTick();
         try {
@@ -239,7 +240,7 @@ export function openThemePackExportDialog(parentWindow, services, prefill = {}) 
                 settings: settings
             }, (done, total) => {
                 progressBar.fraction = total > 0 ? done / total : 1;
-                progressBar.text = `Collecting widget settings… (${done}/${total})`;
+                progressBar.text = tr("importexport.export.progress_counted", "Collecting widget settings… ({done}/{total})").replace("{done}", done).replace("{total}", total);
             });
             document.packMeta = {
                 id: buildTimestampedThemeId(nameRow.text),
@@ -256,16 +257,16 @@ export function openThemePackExportDialog(parentWindow, services, prefill = {}) 
                 };
             }
             progressBar.fraction = 1;
-            progressBar.text = "Writing file…";
+            progressBar.text = tr("importexport.export.progress_writing", "Writing file…");
             await idleTick();
             const finalPath = writeGwctFile(ensureGwctExtension(savePath), document);
-            showReportDialog(window, "Theme pack exported", `Saved to ${finalPath}\nWidgets included: ${document.widgets.length}`, () => {
+            showReportDialog(window, tr("export.done_heading", "Theme pack exported"), `${tr("importexport.result.saved_to", "Saved to {path}").replace("{path}", finalPath)}\n${tr("backup.result.widgets_included", "Widgets included: {count}").replace("{count}", document.widgets.length)}`, () => {
                 window.close();
                 parentWindow.close();
             });
         } catch (e) {
             logError(e, "[widget-center] themePackExportDialog: export failed");
-            showReportDialog(window, "Export failed", e.message);
+            showReportDialog(window, tr("importexport.result.export_failed_heading", "Export failed"), e.message);
         } finally {
             progressBar.visible = false;
             exportButton.sensitive = true;

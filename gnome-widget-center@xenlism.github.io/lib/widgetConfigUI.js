@@ -4,10 +4,21 @@ import GLib from "gi://GLib";
 
 import { pickTranslation } from "./i18nUtils.js";
 
-import { _textRow, _locationRow, _textareaRow, _passwordRow, _switchRow, _checkboxRow, _dropdownRow, _spinRow, _sliderRow, _colorRow, _fontRow, _iconRow, _pathRow, _listRow, _objectRow, _autocompleteRow } from "./widgetConfigFieldRows.js";
+import { setHostContext, _textRow, _locationRow, _textareaRow, _passwordRow, _switchRow, _checkboxRow, _dropdownRow, _spinRow, _sliderRow, _colorRow, _fontRow, _iconRow, _pathRow, _listRow, _objectRow, _autocompleteRow } from "./widgetConfigFieldRows.js";
 
-export function buildConfigPage(config, settingsProxy, title, widgetPath, translations = {}) {
+let _hostT = (key, fallback) => fallback;
+
+export function buildConfigPage(config, settingsProxy, title, widgetPath, translations = {}, hostOptions = {}) {
     const tr = (key, fallback) => pickTranslation(translations, key, fallback);
+    // Host-level strings (dialogs, tooltips, error rows) come from the host's own
+    // i18n bundle, not from the widget's, so widgets without an i18n folder are
+    // still translated.
+    const hostTr = hostOptions.hostTr ?? ((key, fallback) => fallback);
+    _hostT = hostTr;
+    setHostContext({
+        tr: hostTr,
+        language: hostOptions.hostLanguage
+    });
     const page = new Adw.PreferencesPage({
         title: title
     });
@@ -69,7 +80,7 @@ export function buildConfigPage(config, settingsProxy, title, widgetPath, transl
                     console.error(`[widget-center] failed to build row for field "${field.id}"`, e);
                     row = new Adw.ActionRow({
                         title: GLib.markup_escape_text(String(field.id ?? "field"), -1),
-                        subtitle: "Could not display this setting - see logs."
+                        subtitle: hostTr("configui.error.render", "Could not display this setting - see logs.")
                     });
                 }
                 adwGroup.add(row);
@@ -210,7 +221,7 @@ function _buildRow(field, settingsProxy, notifyChange, autocompleteCtx) {
       default:
         return new Adw.ActionRow({
             title: GLib.markup_escape_text(String(field.label ?? field.id ?? ""), -1),
-            subtitle: `Unknown fieldType "${field.fieldType}"`,
+            subtitle: _hostT("configui.error.unknown_type", "Unknown fieldType \"{type}\"").replace("{type}", field.fieldType),
             sensitive: false
         });
     }

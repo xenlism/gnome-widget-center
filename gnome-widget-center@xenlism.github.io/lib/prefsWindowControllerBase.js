@@ -56,7 +56,8 @@ class PrefsWindowControllerBase {
             storage: this._storage,
             theme: theme,
             settings: this._settings,
-            discoveredWidgets: this._discovered
+            discoveredWidgets: this._discovered,
+            tr: (key, fallback) => this._tr(key, fallback)
         }, prefill);
     }
     async openExportThemeDialogForPack(window, themePackId) {

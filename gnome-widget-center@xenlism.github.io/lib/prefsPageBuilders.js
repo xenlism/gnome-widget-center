@@ -45,7 +45,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         group.add(new Adw.StatusPage({
             icon_name: "folder-download-symbolic",
             title: this._tr("store.title", "Coming soon"),
-            description: "A widget store is planned but not built yet — for now, install " + "third-party widgets manually into\n~/.local/share/gnome-widget-center/widgets/.",
+            description: this._tr("store.description", "A widget store is planned but not built yet — for now, install third-party widgets manually into\n~/.local/share/gnome-widget-center/widgets/."),
             vexpand: true
         }));
     }
@@ -60,43 +60,43 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         const categories = [ {
             id: "general",
             title: this._tr("category.general", "General"),
-            subtitle: "General settings and behavior",
+            subtitle: this._tr("category.general.subtitle", "General settings and behavior"),
             icon: "preferences-system-symbolic",
             build: () => this._buildGeneralCategory(settings)
         }, {
             id: "appearance",
             title: this._tr("category.appearance", "Appearance"),
-            subtitle: "Theme, colors and layout",
+            subtitle: this._tr("category.appearance.subtitle", "Theme, colors and layout"),
             icon: "applications-graphics-symbolic",
             build: () => this._buildAppearanceCategory(settings)
         }, {
             id: "desktop",
             title: this._tr("category.desktop", "Desktop"),
-            subtitle: "Margins, spacing and position",
+            subtitle: this._tr("category.desktop.subtitle", "Margins, spacing and position"),
             icon: "video-display-symbolic",
             build: () => this._buildDesktopCategory(settings)
         }, {
             id: "interactions",
             title: this._tr("category.interactions", "Interactions"),
-            subtitle: "Dragging, animations and actions",
+            subtitle: this._tr("category.interactions.subtitle", "Dragging, animations and actions"),
             icon: "input-mouse-symbolic",
             build: () => this._buildInteractionsCategory(settings)
         }, {
             id: "backup",
             title: this._tr("category.backup", "Backup and Restore"),
-            subtitle: "Backup and restore widgets",
+            subtitle: this._tr("category.backup.subtitle", "Backup and restore widgets"),
             icon: "drive-multidisk-symbolic",
             build: () => this._buildBackupCategory(window, settings, storage, discoveredWidgets, widgetPaths)
         }, {
             id: "importexport",
             title: this._tr("category.importexport", "Import / Export"),
-            subtitle: "Import or export widget data",
+            subtitle: this._tr("category.importexport.subtitle", "Import or export widget data"),
             icon: "send-to-symbolic",
             build: () => this._buildImportExportCategory(window, storage, discoveredWidgets)
         }, {
             id: "advanced",
             title: this._tr("category.advanced", "Advanced"),
-            subtitle: "Advanced developer options",
+            subtitle: this._tr("category.advanced.subtitle", "Advanced developer options"),
             icon: "applications-engineering-symbolic",
             build: () => this._buildAdvancedCategory(window, settings, storage, discoveredWidgets)
         } ];
@@ -104,7 +104,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
             categories.push({
                 id: "about",
                 title: this._tr("category.about", "About"),
-                subtitle: "About GNOME Widget Center",
+                subtitle: this._tr("category.about.subtitle", "About GNOME Widget Center"),
                 icon: "help-about-symbolic",
                 build: () => this._buildAboutCategory()
             });
@@ -326,7 +326,8 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
                 storage: storage,
                 theme: theme,
                 settings: this._settings,
-                discoveredWidgets: discoveredWidgets
+                discoveredWidgets: discoveredWidgets,
+                tr: (key, fallback) => this._tr(key, fallback)
             });
         });
         packGroup.add(exportPackRow);
@@ -349,7 +350,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
                 const document = await readGwctFile(path);
                 const meta = document.packMeta;
                 const heading = this._tr("importexport.importpack.confirm_heading", "Install this theme pack?");
-                const body = meta ? [ meta.name, meta.description, meta.author ? `by ${meta.author}` : null, `${(document.widgets ?? []).length} widget(s)` ].filter(Boolean).join("\n") : this._tr("importexport.importpack.confirm_body_nometa", `"${GLib.path_get_basename(path)}" doesn't carry a name/description (it wasn't ` + "made with Export Theme…), but it can still be installed — it'll show up " + "under its file name.");
+                const body = meta ? [ meta.name, meta.description, meta.author ? this._tr("importexport.importpack.by_author", "by {author}").replace("{author}", meta.author) : null, this._tr("importexport.importpack.widget_count", "{count} widget(s)").replace("{count}", (document.widgets ?? []).length) ].filter(Boolean).join("\n") : this._tr("importexport.importpack.confirm_body_nometa", "\"{name}\" doesn't carry a name/description (it wasn't made with Export Theme…), but it can still be installed — it'll show up under its file name.").replace("{name}", GLib.path_get_basename(path));
                 const confirmed = await confirmOverwrite(window, heading, body, this._tr("importexport.importpack.confirm_button", "Install"));
                 if (!confirmed) return;
                 const userThemepacksDir = GLib.build_filenamev([ GLib.get_user_config_dir(), "gnome-widget-center", "themepacks" ]);
@@ -499,7 +500,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
             description: this.metadata.description ?? ""
         }));
         const versionRow = new Adw.ActionRow({
-            title: "Version"
+            title: this._tr("about.version", "Version")
         });
         versionRow.add_suffix(new Gtk.Label({
             label: String(this.metadata.version ?? "—"),
@@ -508,7 +509,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         group.add(versionRow);
         if (this.metadata.url) {
             const linkRow = new Adw.ActionRow({
-                title: "Source code",
+                title: this._tr("about.source", "Source code"),
                 subtitle: this.metadata.url,
                 activatable: true
             });
@@ -527,14 +528,14 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         const page = new Adw.PreferencesPage;
 
         const shadowGroup = new Adw.PreferencesGroup({
-            title: "Global Shadow",
-            description: "Distance and angle apply to every widget's drop shadow. Each " + "widget still sets its own shadow color, opacity, and blur in its own " + "Appearance settings."
+            title: this._tr("appearance.shadow.title", "Global Shadow"),
+            description: this._tr("appearance.shadow.description", "Distance and angle apply to every widget's drop shadow. Each widget still sets its own shadow color, opacity, and blur in its own Appearance settings.")
         });
         page.add(shadowGroup);
 
         const shadowDistanceRow = new Adw.SpinRow({
-            title: "Shadow distance",
-            subtitle: "0–30 px.",
+            title: this._tr("appearance.shadow.distance.title", "Shadow distance"),
+            subtitle: this._tr("appearance.shadow.distance.subtitle", "0–30 px."),
             sensitive: ready,
             adjustment: new Gtk.Adjustment({
                 lower: 0,
@@ -550,8 +551,8 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         });
 
         const shadowAngleRow = new Adw.ComboRow({
-            title: "Shadow angle",
-            subtitle: "Direction the shadow falls, in 45° steps.",
+            title: this._tr("appearance.shadow.angle.title", "Shadow angle"),
+            subtitle: this._tr("appearance.shadow.angle.subtitle", "Direction the shadow falls, in 45° steps."),
             sensitive: ready,
             model: Gtk.StringList.new(SHADOW_ANGLE_STEPS.map(a => `${a}°`))
         });
@@ -569,8 +570,8 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         const page = new Adw.PreferencesPage;
         const ready = settings.isReady;
         const group = new Adw.PreferencesGroup({
-            title: "Language",
-            description: "Overrides the system locale for this extension's own UI text and " + "any widget that ships translations - only where a widget actually has that " + "language available, otherwise it falls back to the system locale as before."
+            title: this._tr("general.language.title", "Language"),
+            description: this._tr("general.language.description", "Overrides the system locale for this extension's own UI text and any widget that ships translations - only where a widget actually has that language available, otherwise it falls back to the system locale as before.")
         });
         page.add(group);
         const localeNames = {
@@ -582,10 +583,10 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
             ja: "日本語"
         };
         const codes = [ "", ...SUPPORTED_LOCALES ];
-        const labels = [ "System default", ...SUPPORTED_LOCALES.map(c => localeNames[c] ?? c) ];
+        const labels = [ this._tr("general.language.system_default", "System default"), ...SUPPORTED_LOCALES.map(c => localeNames[c] ?? c) ];
         const row = new Adw.ComboRow({
-            title: "UI language",
-            subtitle: "Applies immediately, no restart needed.",
+            title: this._tr("general.language.row.title", "UI language"),
+            subtitle: this._tr("general.language.row.subtitle", "Applies immediately, no restart needed."),
             model: Gtk.StringList.new(labels),
             selected: Math.max(0, codes.indexOf(ready ? settings.getGlobalValue("language") || "" : "")),
             sensitive: ready
@@ -603,13 +604,13 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         });
         group.add(row);
         const widgetsGroup = new Adw.PreferencesGroup({
-            title: "Widgets",
-            description: "What happens the first time a widget you installed yourself — into " + "~/.local/share/gnome-widget-center/widgets/, or dropped in by a theme " + "pack — is found. Widgets bundled with the extension always start off " + "and wait for you to enable them from Overview, regardless of this " + "setting."
+            title: this._tr("general.widgets.title", "Widgets"),
+            description: this._tr("general.widgets.description", "What happens the first time a widget you installed yourself — into ~/.local/share/gnome-widget-center/widgets/, or dropped in by a theme pack — is found. Widgets bundled with the extension always start off and wait for you to enable them from Overview, regardless of this setting.")
         });
         page.add(widgetsGroup);
         const autoEnableRow = new Adw.SwitchRow({
-            title: "Load new widgets automatically",
-            subtitle: "For widgets you install yourself. On: enabled the first time it's found " + "(previous behavior). Off: it appears in Overview but stays off the " + "desktop until you turn it on.",
+            title: this._tr("general.autoenable.title", "Load new widgets automatically"),
+            subtitle: this._tr("general.autoenable.subtitle", "For widgets you install yourself. On: enabled the first time it's found (previous behavior). Off: it appears in Overview but stays off the desktop until you turn it on."),
             active: ready ? !!settings.getGlobalValue("auto-enable-new-widgets") : true,
             sensitive: ready
         });
@@ -626,25 +627,25 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         });
         widgetsGroup.add(autoEnableRow);
         const shortcutGroup = new Adw.PreferencesGroup({
-            title: "Keyboard shortcut",
-            description: "Opens/closes the Widget Center Overlay (lib/shell/widgetCenterOverlay.js). " + "Also editable live from the overlay's own Preferences tab."
+            title: this._tr("general.shortcut.title", "Keyboard shortcut"),
+            description: this._tr("general.shortcut.description", "Opens/closes the Widget Center Overlay (lib/shell/widgetCenterOverlay.js). Also editable live from the overlay's own Preferences tab.")
         });
         page.add(shortcutGroup);
         const currentAccel = ready ? settings.getGlobalValue("widget-center-overlay-keybinding")?.[0] ?? "" : "<Super>F12";
         const shortcutRow = new Adw.ActionRow({
-            title: "Shortcut",
-            subtitle: "Click Record shortcut, then press the key combination.",
+            title: this._tr("general.shortcut.row.title", "Shortcut"),
+            subtitle: this._tr("general.shortcut.row.subtitle", "Click Record shortcut, then press the key combination."),
             sensitive: ready
         });
         const recordButton = new Gtk.Button({
-            label: currentAccel || "Disabled",
+            label: currentAccel || this._tr("general.shortcut.disabled", "Disabled"),
             valign: Gtk.Align.CENTER,
             sensitive: ready
         });
         let recording = false;
         recordButton.connect("clicked", () => {
             recording = true;
-            recordButton.label = "Press shortcut…";
+            recordButton.label = this._tr("general.shortcut.press", "Press shortcut…");
             recordButton.grab_focus();
         });
         const keyController = new Gtk.EventControllerKey;
@@ -652,7 +653,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
             if (!recording) return false;
             if (keyval === Gdk.KEY_Escape) {
                 recording = false;
-                recordButton.label = currentAccel || "Disabled";
+                recordButton.label = currentAccel || this._tr("general.shortcut.disabled", "Disabled");
                 return true;
             }
             if (isModifierKeyval(keyval)) return true;
@@ -678,12 +679,12 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         const page = new Adw.PreferencesPage;
         const ready = settings.isReady;
         const snapGroup = new Adw.PreferencesGroup({
-            title: "Magnetic snapping",
-            description: "Pulls a dragged widget toward screen edges and other widgets' edges."
+            title: this._tr("interactions.snap.title", "Magnetic snapping"),
+            description: this._tr("interactions.snap.description", "Pulls a dragged widget toward screen edges and other widgets' edges.")
         });
         page.add(snapGroup);
         const snapEnabledRow = new Adw.SwitchRow({
-            title: "Enable snapping",
+            title: this._tr("interactions.snap.enable.title", "Enable snapping"),
             active: ready ? !!settings.getGlobalValue("snap-enabled") : true,
             sensitive: ready
         });
@@ -697,8 +698,8 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         });
         snapGroup.add(snapEnabledRow);
         const snapDistanceRow = new Adw.SpinRow({
-            title: "Snap distance",
-            subtitle: "How close (px) an edge must get before it's pulled the rest of the way.",
+            title: this._tr("interactions.snap.distance.title", "Snap distance"),
+            subtitle: this._tr("interactions.snap.distance.subtitle", "How close (px) an edge must get before it's pulled the rest of the way."),
             adjustment: new Gtk.Adjustment({
                 lower: 0,
                 upper: 128,
@@ -717,7 +718,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         });
         snapGroup.add(snapDistanceRow);
         const guideColorRow = new Adw.ActionRow({
-            title: "Guide line color"
+            title: this._tr("interactions.snap.guidecolor.title", "Guide line color")
         });
         const guideColorButton = new Gtk.ColorDialogButton({
             dialog: new Gtk.ColorDialog({
@@ -741,12 +742,12 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         guideColorRow.activatable_widget = guideColorButton;
         snapGroup.add(guideColorRow);
         const gridGroup = new Adw.PreferencesGroup({
-            title: "Fixed grid snap",
-            description: "Off by default. Rounds a dragged widget's position to the nearest " + "grid cell, applied after magnetic snapping above."
+            title: this._tr("interactions.grid.title", "Fixed grid snap"),
+            description: this._tr("interactions.grid.description", "Off by default. Rounds a dragged widget's position to the nearest grid cell, applied after magnetic snapping above.")
         });
         page.add(gridGroup);
         const gridEnabledRow = new Adw.SwitchRow({
-            title: "Snap to grid",
+            title: this._tr("interactions.grid.enable.title", "Snap to grid"),
             active: ready ? !!settings.getGlobalValue("grid-snap-enabled") : false,
             sensitive: ready
         });
@@ -760,8 +761,8 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         });
         gridGroup.add(gridEnabledRow);
         const gridSizeRow = new Adw.SpinRow({
-            title: "Grid size",
-            subtitle: "Cell size in pixels. Only applies while Snap to grid above is on.",
+            title: this._tr("interactions.grid.size.title", "Grid size"),
+            subtitle: this._tr("interactions.grid.size.subtitle", "Cell size in pixels. Only applies while Snap to grid above is on."),
             adjustment: new Gtk.Adjustment({
                 lower: 4,
                 upper: 128,
@@ -784,13 +785,13 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
     _buildAdvancedCategory(window, settings, storage, discoveredWidgets) {
         const page = new Adw.PreferencesPage;
         const group = new Adw.PreferencesGroup({
-            title: "Development",
-            description: "For debugging the extension itself — safe to leave off otherwise."
+            title: this._tr("advanced.dev.title", "Development"),
+            description: this._tr("advanced.dev.description", "For debugging the extension itself — safe to leave off otherwise.")
         });
         page.add(group);
         const row = new Adw.SwitchRow({
-            title: "Development Mode",
-            subtitle: "Hot-reloads widgets on file change, and logs internal debug output " + "(Edit Mode flips, drag start/stop, etc) to the system journal — " + "view with: journalctl -f -o cat | grep widget-center",
+            title: this._tr("advanced.dev.mode.title", "Development Mode"),
+            subtitle: this._tr("advanced.dev.mode.subtitle", "Hot-reloads widgets on file change, and logs internal debug output (Edit Mode flips, drag start/stop, etc) to the system journal — view with: journalctl -f -o cat | grep widget-center"),
             active: settings.isReady ? !!settings.getGlobalValue("dev-mode") : false,
             sensitive: settings.isReady
         });
@@ -807,16 +808,16 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         });
         group.add(row);
         const defaultsGroup = new Adw.PreferencesGroup({
-            title: "Widget defaults",
-            description: "For widget authors — bakes the current live appearance/position of " + "every widget into its own config.json/metadata.json, so that becomes " + "the new out-of-the-box default. Writes directly to each widget's own " + "folder on disk."
+            title: this._tr("advanced.defaults.title", "Widget defaults"),
+            description: this._tr("advanced.defaults.description", "For widget authors — bakes the current live appearance/position of every widget into its own config.json/metadata.json, so that becomes the new out-of-the-box default. Writes directly to each widget's own folder on disk.")
         });
         page.add(defaultsGroup);
         const saveDefaultsRow = new Adw.ActionRow({
-            title: "Save current settings as defaults",
-            subtitle: "Applies to every installed widget in one go — see the confirmation " + "dialog before anything is written."
+            title: this._tr("advanced.defaults.row.title", "Save current settings as defaults"),
+            subtitle: this._tr("advanced.defaults.row.subtitle", "Applies to every installed widget in one go — see the confirmation dialog before anything is written.")
         });
         const saveDefaultsButton = new Gtk.Button({
-            label: "Save Defaults",
+            label: this._tr("advanced.defaults.button", "Save Defaults"),
             valign: Gtk.Align.CENTER,
             css_classes: [ "destructive-action" ]
         });
@@ -826,10 +827,10 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         saveDefaultsButton.connect("clicked", async () => {
             const widgets = (discoveredWidgets ?? []).filter(w => w.hasConfigJson);
             if (widgets.length === 0) {
-                showReportDialog(window, "Nothing to save", "No installed widget has a config.json with configurable fields.");
+                showReportDialog(window, this._tr("advanced.defaults.nothing_heading", "Nothing to save"), this._tr("advanced.defaults.nothing_body", "No installed widget has a config.json with configurable fields."));
                 return;
             }
-            const confirmed = await confirmOverwrite(window, "Save current settings as defaults?", `This overwrites config.json (and metadata.json's default-position) for ` + `all ${widgets.length} widget(s) with configurable appearance, using ` + `whatever they're currently set to right now on your desktop. This ` + `cannot be undone.`, "Save Defaults");
+            const confirmed = await confirmOverwrite(window, this._tr("advanced.defaults.confirm_heading", "Save current settings as defaults?"), this._tr("advanced.defaults.confirm_body", "This overwrites config.json (and metadata.json's default-position) for all {count} widget(s) with configurable appearance, using whatever they're currently set to right now on your desktop. This cannot be undone.").replace("{count}", widgets.length), this._tr("advanced.defaults.button", "Save Defaults"));
             if (!confirmed) return;
             let configUpdated = 0;
             let positionUpdated = 0;
@@ -851,25 +852,25 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
                     errors.push(`${widget.id}: ${e.message}`);
                 }
             }
-            const lines = [ `Widgets processed: ${widgets.length}`, `config.json updated: ${configUpdated}`, `metadata.json position updated: ${positionUpdated}` ];
+            const lines = [ this._tr("advanced.defaults.report.processed", "Widgets processed: {count}").replace("{count}", widgets.length), this._tr("advanced.defaults.report.config_updated", "config.json updated: {count}").replace("{count}", configUpdated), this._tr("advanced.defaults.report.position_updated", "metadata.json position updated: {count}").replace("{count}", positionUpdated) ];
             if (errors.length > 0) {
-                lines.push("", "Errors:");
+                lines.push("", this._tr("advanced.defaults.report.errors", "Errors:"));
                 for (const err of errors) lines.push(`  ${err}`);
             }
-            showReportDialog(window, errors.length > 0 ? "Saved with errors" : "Defaults saved", lines.join("\n"));
+            showReportDialog(window, errors.length > 0 ? this._tr("advanced.defaults.result_errors_heading", "Saved with errors") : this._tr("advanced.defaults.result_heading", "Defaults saved"), lines.join("\n"));
         });
         return page;
     }
     _buildDesktopCategory(settings) {
         const page = new Adw.PreferencesPage;
         const group = new Adw.PreferencesGroup({
-            title: "Widget placement",
-            description: "Applies while dragging widgets in Edit Mode."
+            title: this._tr("desktop.placement.title", "Widget placement"),
+            description: this._tr("desktop.placement.description", "Applies while dragging widgets in Edit Mode.")
         });
         page.add(group);
         const overlapRow = new Adw.SwitchRow({
-            title: "Prevent widgets from overlapping",
-            subtitle: "ห้าม widget ทับกัน — when off, widgets can be dropped on top of each other.",
+            title: this._tr("desktop.overlap.title", "Prevent widgets from overlapping"),
+            subtitle: this._tr("desktop.overlap.subtitle", "When off, widgets can be dropped on top of each other."),
             active: settings.isReady ? !!settings.getGlobalValue("prevent-widget-overlap") : true,
             sensitive: settings.isReady
         });
@@ -886,8 +887,8 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         });
         group.add(overlapRow);
         const marginRow = new Adw.SpinRow({
-            title: "Screen edge margin",
-            subtitle: "พื้นที่จากขอบจอที่ widget วางไม่ได้ — minimum distance (px) a widget " + "must keep from every edge of the screen.",
+            title: this._tr("desktop.margin.title", "Screen edge margin"),
+            subtitle: this._tr("desktop.margin.subtitle", "Minimum distance (px) a widget must keep from every edge of the screen."),
             adjustment: new Gtk.Adjustment({
                 lower: 0,
                 upper: 256,
@@ -909,8 +910,8 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         });
         group.add(marginRow);
         const spacingRow = new Adw.SpinRow({
-            title: "Spacing between widgets",
-            subtitle: "widget ต้องห่างกันเท่าไหร่ — minimum gap (px) kept between widgets " + "while overlap prevention above is on.",
+            title: this._tr("desktop.spacing.title", "Spacing between widgets"),
+            subtitle: this._tr("desktop.spacing.subtitle", "Minimum gap (px) kept between widgets while overlap prevention above is on."),
             adjustment: new Gtk.Adjustment({
                 lower: 0,
                 upper: 256,
