@@ -1,0 +1,188 @@
+{
+    "version": "1.0",
+    "tabs": [
+        {
+            "id": "general",
+            "label": "Note",
+            "description": "Header color, corner shape and text.",
+            "icon": "text-editor-symbolic",
+            "groups": [
+                {
+                    "id": "card",
+                    "label": "Card",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "cardColor",
+                            "label": "Card background",
+                            "description": "The body area behind the title/note/date.",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#F6F6F6FF"
+                        },
+                        {
+                            "id": "headerColorTop",
+                            "label": "Header color (top)",
+                            "description": "Top of the header band gradient.",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#FFD65AFF"
+                        },
+                        {
+                            "id": "headerColorBottom",
+                            "label": "Header color (bottom)",
+                            "description": "Bottom of the header band gradient.",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#FFAE00FF"
+                        },
+                        {
+                            "id": "cornerRadius",
+                            "label": "Corner radius",
+                            "description": "Shared by the card and the header's top corners.",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 12,
+                            "min": 0,
+                            "max": 24,
+                            "step": 1,
+                            "suffix": "px"
+                        },
+                        {
+                            "id": "showDivider",
+                            "label": "Show dashed divider",
+                            "description": "A thin dashed line under the header, like a tear-off perforation.",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": true
+                        }
+                    ]
+                },
+                {
+                    "id": "text",
+                    "label": "Text",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "title",
+                            "label": "Title",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "text",
+                            "default": "Customized Filtration"
+                        },
+                        {
+                            "id": "titleFont",
+                            "label": "Title font",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "default": "Sans Bold 9"
+                        },
+                        {
+                            "id": "titleColor",
+                            "label": "Title color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#242424FF"
+                        },
+                        {
+                            "id": "placeholderText",
+                            "label": "Note placeholder",
+                            "description": "Shown in italics until you click the card and write a note. The note itself is edited from the card (click it) or the dialog it opens - not here - and always wraps across multiple lines.",
+                            "dataType": "string",
+                            "fieldType": "text",
+                            "default": "Add a note..."
+                        },
+                        {
+                            "id": "noteFont",
+                            "label": "Note font",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "default": "Sans 7"
+                        },
+                        {
+                            "id": "noteColor",
+                            "label": "Note color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#5A5A5AFF"
+                        },
+                        {
+                            "id": "autoDate",
+                            "label": "Use today's date",
+                            "description": "Overrides the date text below with today's date, updated each refresh.",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": false
+                        },
+                        {
+                            "id": "dateText",
+                            "label": "Date",
+                            "description": "Shown when \"Use today's date\" is off.",
+                            "dataType": "string",
+                            "fieldType": "text",
+                            "default": "2/28/25"
+                        },
+                        {
+                            "id": "dateFont",
+                            "label": "Date font",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "default": "Sans 7"
+                        },
+                        {
+                            "id": "dateColor",
+                            "label": "Date color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#8A8A8AFF"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "shadow",
+            "label": "Shadow",
+            "description": "",
+            "groups": [
+                {
+                    "id": "shadow",
+                    "label": "Shadow effect",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "shadowAngle",
+                            "label": "Shadow angle",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 90,
+                            "min": 0,
+                            "max": 360,
+                            "step": 1
+                        },
+                        {
+                            "id": "shadowDistance",
+                            "label": "Shadow distance",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 6,
+                            "min": 0,
+                            "max": 40,
+                            "step": 1,
+                            "suffix": "px"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
