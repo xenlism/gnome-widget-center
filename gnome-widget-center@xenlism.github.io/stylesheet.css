@@ -297,3 +297,8 @@
 .wc-pref-switch:checked .wc-pref-switch-knob {
     margin-left: 23px;
 }
+
+.wc-pref-switch:checked .wc-pref-switch-knob-rtl {
+    margin-left: 3px;
+    margin-right: 23px;
+}

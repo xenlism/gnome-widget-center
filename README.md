@@ -166,7 +166,7 @@ whole thing back in one pass.
 ## Multilingual out of the box
 
 The Control Center, the in-session overlay, and every settings dialog and confirmation
-prompt are localized. Six languages currently ship complete UI translations:
+prompt are localized. Seven languages currently ship complete UI translations:
 
 | Code | Language |
 | --- | --- |
@@ -176,6 +176,7 @@ prompt are localized. Six languages currently ship complete UI translations:
 | `es` | Español (Spanish) |
 | `ja` | 日本語 (Japanese) |
 | `zh` | 中文 (Chinese, Simplified) |
+| `ar` | العربية (Arabic, RTL) |
 
 The extension follows your system locale automatically, or you can force a language from
 **Preferences → Advanced**. Adding a new language is a matter of dropping a `.js` file

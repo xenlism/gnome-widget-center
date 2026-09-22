@@ -2,7 +2,7 @@ import Gio from "gi://Gio";
 
 import GLib from "gi://GLib";
 
-export const SUPPORTED_LOCALES = Object.freeze([ "en", "zh", "es", "th", "de", "ja" ]);
+export const SUPPORTED_LOCALES = Object.freeze([ "en", "zh", "es", "th", "de", "ja", "ar" ]);
 
 export function scanAvailableLocales(dirPath) {
     const dir = Gio.File.new_for_path(dirPath);

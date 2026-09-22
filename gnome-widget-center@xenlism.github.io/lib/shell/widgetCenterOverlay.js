@@ -924,8 +924,9 @@ export class WidgetCenterOverlay {
             reactive: !readOnly,
             opacity: readOnly ? 200 : 255
         });
+        const isRtl = Clutter.get_default_text_direction() === Clutter.TextDirection.RTL;
         button.add_child(new St.Widget({
-            style_class: "wc-pref-switch-knob"
+            style_class: isRtl ? "wc-pref-switch-knob wc-pref-switch-knob-rtl" : "wc-pref-switch-knob"
         }));
         if (!readOnly) button.connect("notify::checked", () => onChange(button.checked));
         return button;

@@ -580,7 +580,8 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
             es: "Español",
             th: "ไทย",
             de: "Deutsch",
-            ja: "日本語"
+            ja: "日本語",
+            ar: "العربية"
         };
         const codes = [ "", ...SUPPORTED_LOCALES ];
         const labels = [ this._tr("general.language.system_default", "System default"), ...SUPPORTED_LOCALES.map(c => localeNames[c] ?? c) ];
