@@ -8,10 +8,6 @@ ones straight from the desktop - no window to open.
 - Tap **+** in the header to add a task. Typing opens the same
   `ModalDialog` + `St.Entry` pattern `xtile` uses to prompt for a name,
   so the on-screen keyboard/focus behaves the same way across widgets.
-  The entry is a wide (480px), word-wrapping multi-line field
-  (`single_line_mode`/`activatable` off, `Pango.WrapMode.WORD_CHAR`),
-  so Enter adds a line instead of submitting - only **Add**/Escape
-  closes it.
 - Tap a task's checkbox to mark it done (strikethrough text, dimmed
   color) or done → not done again.
 - Tap the trash icon on a row to delete that task.
@@ -28,10 +24,6 @@ ones straight from the desktop - no window to open.
 - **Max visible tasks** caps how many rows render at once (older/extra
   tasks show as a "+N more" counter rather than disappearing) so the
   card never outgrows its `2x2` footprint.
-
-A `1x1` companion, `todo-list-mini`, ships alongside this widget for
-tighter grid layouts - same behavior, smaller defaults (buttons,
-icons, fonts, padding, max visible tasks).
 
 ## Settings (To-Do List tab)
 

@@ -9,8 +9,8 @@ import { createLayeredCard, applyLayeredCardStyle } from "../../lib/shell/cardLa
 import { configJsonDefaults } from "../../lib/widgetConfigDefaults.js";
 import { SHADOW_DEFAULTS, hexToRgba, toCssColor, parseFontDescription } from "../../lib/widgetVisualKit.js";
 
-const FOLD_SIZE = 30;
-const DOT_SIZE = 16;
+const FOLD_SIZE = 18;
+const DOT_SIZE = 12;
 
 // Classic macOS "Stickies" preset colors, cycled by clicking the corner dot.
 const PRESET_COLORS = [
@@ -58,7 +58,7 @@ export default class StickyNoteWidget {
             orientation: Clutter.Orientation.VERTICAL,
             x_expand: true,
             y_expand: true,
-            style: "padding: 12px; spacing: 4px;"
+            style: "padding: 7px; spacing: 2px;"
         });
         this._stack.add_child(outer);
 
@@ -255,7 +255,7 @@ export default class StickyNoteWidget {
         applyLayeredCardStyle(this._layers, s, {
             backgroundColorKey: "paperColor",
             backgroundColorFallback: PRESET_COLORS[0],
-            cornerRadiusFallback: 3
+            cornerRadiusFallback: 2
         });
 
         if (this._dotButton) {
@@ -266,7 +266,7 @@ export default class StickyNoteWidget {
 
         if (this._textLabel) {
             const hasText = !!(s.noteText && s.noteText.trim());
-            const font = parseFontDescription(s.textFont ?? "Sans 15", "Sans", 15);
+            const font = parseFontDescription(s.textFont ?? "Sans 10", "Sans", 10);
             const align = s.textAlign === "center" ? "center" : "left";
             const inkColor = toCssColor(s.textColor, "#3A3226FF");
             const placeholder = s.placeholderText || "Click to write a note...";

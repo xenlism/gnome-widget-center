@@ -29,8 +29,20 @@ body to write.
   painted as a darker shade of the current paper color with a thin
   highlight along the crease - same `repaint`-signal technique
   `pomodoro-timer`'s ring and `circles-battery` use, just drawn once in
-  a corner instead of filling the whole card.
+  a corner instead of filling the whole card. It's pinned to the
+  bottom-right with the same expanding-spacer technique the color dot
+  uses (a `y_expand` spacer above a row with an `x_expand` spacer
+  before it), not `BinLayout` end-alignment on its own - that was
+  landing the fold near the middle of the card instead of the corner.
 - Empty note shows an italic placeholder instead of blank paper.
+- The "Edit note" dialog is a wide (480px), tall, word-wrapping
+  multi-line `St.Entry` (`single_line_mode` and `activatable` both
+  off, `line_wrap_mode: Pango.WrapMode.WORD_CHAR`) so Enter adds a
+  line instead of submitting - only **Save**/Escape closes it.
+
+A `1x1` companion, `sticky-note-mini`, ships alongside this widget for
+tighter grid layouts - same behavior, smaller defaults (fold, dot,
+padding, type size).
 
 ## Settings (Sticky Note tab)
 

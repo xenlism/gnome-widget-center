@@ -9,8 +9,8 @@ import { createLayeredCard, applyLayeredCardStyle } from "../../lib/shell/cardLa
 import { configJsonDefaults } from "../../lib/widgetConfigDefaults.js";
 import { SHADOW_DEFAULTS, toCssColor, parseFontDescription } from "../../lib/widgetVisualKit.js";
 
-const CHECKBOX_SIZE = 18;
-const DELETE_BUTTON_SIZE = 22;
+const CHECKBOX_SIZE = 14;
+const DELETE_BUTTON_SIZE = 16;
 
 function _nowEpoch() {
     return Math.floor(GLib.get_real_time() / 1e6);
@@ -46,7 +46,7 @@ export default class TodoListWidget {
             orientation: Clutter.Orientation.VERTICAL,
             x_expand: true,
             y_expand: true,
-            style: "padding: 14px; spacing: 8px;"
+            style: "padding: 6px; spacing: 3px;"
         });
         this._layers.content.add_child(outer);
 
@@ -71,7 +71,7 @@ export default class TodoListWidget {
             height: DELETE_BUTTON_SIZE,
             child: new St.Icon({
                 icon_name: "edit-clear-all-symbolic",
-                icon_size: 13
+                icon_size: 10
             })
         });
         this._clearButton.connect("clicked", () => this._onClearCompletedClicked());
@@ -83,7 +83,7 @@ export default class TodoListWidget {
             height: DELETE_BUTTON_SIZE,
             child: new St.Icon({
                 icon_name: "list-add-symbolic",
-                icon_size: 15
+                icon_size: 11
             })
         });
         this._addButton.connect("clicked", () => this._onAddClicked());
@@ -241,7 +241,7 @@ export default class TodoListWidget {
         const accent = toCssColor(s.accentColor, "#3584E4FF");
 
         if (this._titleLabel) {
-            const font = parseFontDescription(s.titleFont ?? "Sans Bold 14", "Sans Bold", 14);
+            const font = parseFontDescription(s.titleFont ?? "Sans Bold 10", "Sans Bold", 10);
             const color = toCssColor(s.titleColor, "#FFFFFFFF");
             this._titleLabel.set_text(s.titleText || "To-Do");
             this._titleLabel.set_style(`color: ${color}; font-family: ${font.family}; font-size: ${font.size}px; font-weight: bold;`);
@@ -267,7 +267,7 @@ export default class TodoListWidget {
         this._listBox.destroy_all_children();
 
         const s = this._settings;
-        const maxVisible = Number.isFinite(s.maxVisibleItems) ? Math.max(1, s.maxVisibleItems) : 7;
+        const maxVisible = Number.isFinite(s.maxVisibleItems) ? Math.max(1, s.maxVisibleItems) : 3;
         const autoSort = s.autoSortDone ?? true;
 
         const ordered = autoSort
@@ -313,7 +313,7 @@ export default class TodoListWidget {
             y_align: Clutter.ActorAlign.CENTER,
             child: new St.Icon({
                 icon_name: "object-select-symbolic",
-                icon_size: 12,
+                icon_size: 9,
                 visible: !!item.done
             })
         });
@@ -326,7 +326,7 @@ export default class TodoListWidget {
         checkbox.connect("clicked", () => this._toggleTask(item.id));
         row.add_child(checkbox);
 
-        const font = parseFontDescription(s.itemFont ?? "Sans 13", "Sans", 13);
+        const font = parseFontDescription(s.itemFont ?? "Sans 9", "Sans", 9);
         const color = item.done ? toCssColor(s.completedColor, "#FFFFFF66") : toCssColor(s.itemColor, "#FFFFFFFF");
         const label = new St.Label({
             x_expand: true,
@@ -347,7 +347,7 @@ export default class TodoListWidget {
             y_align: Clutter.ActorAlign.CENTER,
             child: new St.Icon({
                 icon_name: "user-trash-symbolic",
-                icon_size: 13
+                icon_size: 10
             })
         });
         remove.set_style("background-color: transparent;");
