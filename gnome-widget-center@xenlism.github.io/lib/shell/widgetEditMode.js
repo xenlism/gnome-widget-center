@@ -35,6 +35,22 @@ export class WidgetEditMode {
             error() {}
         };
         this._widgets = new Map;
+        this._locked = false;
+    }
+    // Global "edit-mode-locked" (schemas/...gschema.xml). While on,
+    // right-clicking any widget no longer opens its Edit Mode toolbar -
+    // toggle() below becomes a no-op for every widget. Any widget already
+    // mid-edit is exited immediately when this flips to true, same as
+    // pressing Escape.
+    setLocked(locked) {
+        locked = !!locked;
+        if (this._locked === locked) return;
+        this._locked = locked;
+        if (locked) {
+            for (const [widgetId, entry] of this._widgets) {
+                if (entry.state === EditModeState.EDIT || entry.state === EditModeState.DRAGGING) this._exitEdit(widgetId);
+            }
+        }
     }
     attach(widgetId, actor, options = {}) {
         if (this._widgets.has(widgetId)) {
@@ -79,6 +95,10 @@ export class WidgetEditMode {
         const entry = this._widgets.get(widgetId);
         if (!entry) {
             this._logger.warn("edit-mode", `toggle("${widgetId}") — no such widget attached`);
+            return;
+        }
+        if (this._locked) {
+            this._logger.debug("edit-mode", `toggle("${widgetId}") ignored — edit-mode-locked is on`);
             return;
         }
         if (entry.state === EditModeState.DRAGGING) {

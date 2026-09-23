@@ -2,7 +2,9 @@ import Gio from "gi://Gio";
 
 import GLib from "gi://GLib";
 
-export const SUPPORTED_LOCALES = Object.freeze([ "en", "zh", "es", "th", "de", "ja", "ar" ]);
+export const SUPPORTED_LOCALES = Object.freeze([
+    "en", "zh", "es", "th", "de", "ja", "ar", "ru", "fr", "pt_BR", "pt_PT"
+]);
 
 export function scanAvailableLocales(dirPath) {
     const dir = Gio.File.new_for_path(dirPath);
@@ -11,7 +13,7 @@ export function scanAvailableLocales(dirPath) {
         const enumerator = dir.enumerate_children("standard::name", Gio.FileQueryInfoFlags.NONE, null);
         let info;
         while ((info = enumerator.next_file(null)) !== null) {
-            const match = /^([a-z]{2})\.js$/.exec(info.get_name());
+            const match = /^([a-z]{2}(?:_[A-Z]{2})?)\.js$/.exec(info.get_name());
             if (match && SUPPORTED_LOCALES.includes(match[1])) found.push(match[1]);
         }
     } catch (e) {}
@@ -22,8 +24,14 @@ export function pickLocale(available, overrideLocale) {
     if (available.length === 0) return null;
     if (overrideLocale && available.includes(overrideLocale)) return overrideLocale;
     for (const name of GLib.get_language_names()) {
-        const code = name.slice(0, 2).toLowerCase();
-        if (available.includes(code)) return code;
+        const normalized = name.replace("-", "_");
+        const regional = normalized.match(/^([a-z]{2})_([A-Z]{2})/);
+        const candidates = regional
+            ? [ `${regional[1]}_${regional[2]}`, regional[1].toLowerCase() ]
+            : [ normalized.slice(0, 2).toLowerCase() ];
+        for (const code of candidates) {
+            if (available.includes(code)) return code;
+        }
     }
     return available.includes("en") ? "en" : available[0];
 }

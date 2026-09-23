@@ -82,6 +82,7 @@ export class WidgetCenterOverlay {
         this._prefsWatchUnmanagedId = 0;
         this._prefsWatchWindow = null;
         this._i18n = {};
+        this._languageChangedId = 0;
     }
     enable() {
         try {
@@ -93,6 +94,13 @@ export class WidgetCenterOverlay {
         this._addKeybinding();
         this._exportDBus();
         this._loadI18n();
+        // Bug: without this, _loadI18n() only ever runs once (here, at
+        // enable()) so changing the "language" key later - while the
+        // extension stays enabled - left the overlay's this._i18n (and
+        // anything built from it, tab labels included) stuck on whatever
+        // language was active at enable()-time, only picking up the change
+        // after a full disable()/enable() cycle. Re-run it live instead.
+        this._languageChangedId = this._gsettings.connect("changed::language", () => this._loadI18n());
     }
     _loadI18n() {
         let languageOverride;
@@ -103,10 +111,18 @@ export class WidgetCenterOverlay {
         }
         loadTranslations(GLib.build_filenamev([ this._path, "i18n" ]), languageOverride).then(translations => {
             this._i18n = translations ?? {};
-            // The overlay is built once per open(); if it's already on screen
-            // (unlikely this early, but harmless otherwise) re-render so any
-            // widget/theme currently in view picks up the loaded strings.
-            if (this._overlay) this._renderTab(this._activeTab);
+            // The overlay is built once per open(); if it's already on screen,
+            // fully rebuild it (rather than just re-rendering the content
+            // pane) so static chrome - tab labels, the Preferences button,
+            // sort-mode labels - built once in _buildUI()/_buildHeader() also
+            // picks up the newly loaded strings, not just whatever tab is
+            // currently showing.
+            if (this._overlay) {
+                // close()/open() don't touch this._activeTab, so this reopens
+                // on the same tab the user was already looking at.
+                this.close();
+                this.open();
+            }
         }).catch(() => {
             this._i18n = {};
         });
@@ -119,6 +135,10 @@ export class WidgetCenterOverlay {
         this._clearPrefsWatch();
         this._removeKeybinding();
         this._unexportDBus();
+        if (this._gsettings && this._languageChangedId) {
+            this._gsettings.disconnect(this._languageChangedId);
+        }
+        this._languageChangedId = 0;
         this._gsettings = null;
     }
     Toggle() {

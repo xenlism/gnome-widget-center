@@ -166,7 +166,7 @@ whole thing back in one pass.
 ## Multilingual out of the box
 
 The Control Center, the in-session overlay, and every settings dialog and confirmation
-prompt are localized. Seven languages currently ship complete UI translations:
+prompt are localized. Eleven languages currently ship complete UI translations:
 
 | Code | Language |
 | --- | --- |
@@ -177,12 +177,17 @@ prompt are localized. Seven languages currently ship complete UI translations:
 | `ja` | 日本語 (Japanese) |
 | `zh` | 中文 (Chinese, Simplified) |
 | `ar` | العربية (Arabic, RTL) |
+| `ru` | Русский (Russian) |
+| `fr` | Français (French) |
+| `pt_PT` | Português (Portugal) |
+| `pt_BR` | Português (Brasil) |
 
 The extension follows your system locale automatically, or you can force a language from
 **Preferences → Advanced**. Adding a new language is a matter of dropping a `.js` file
 into `gnome-widget-center@xenlism.github.io/i18n/` with the same keys as
 [`i18n/en.js`](gnome-widget-center@xenlism.github.io/i18n/en.js) — the loader
-(`i18n/index.js`) picks it up automatically, no build step required.
+(`i18n/index.js`) picks it up automatically, no build step required. Both plain two-letter
+codes (`fr.js`, `ru.js`) and region-qualified codes (`pt_BR.js`, `pt_PT.js`) are supported.
 
 ## User files and folders
 
@@ -239,7 +244,7 @@ gnome-widget-center-main/
 ├── gnome-widget-center@xenlism.github.io/   # the extension itself (installed as-is)
 │   ├── extension.js, prefs.js               # entry points
 │   ├── lib/                                 # host logic (loader, layout, settings, i18n…)
-│   ├── i18n/                                # en / th / de / es / ja / zh translations
+│   ├── i18n/                                # en / th / de / es / ja / zh / ar / ru / fr / pt_PT / pt_BR translations
 │   ├── widgets/                             # 61 bundled widgets
 │   ├── themepacks/                          # 7 bundled Theme Packs
 │   └── schemas/                             # GSettings schema

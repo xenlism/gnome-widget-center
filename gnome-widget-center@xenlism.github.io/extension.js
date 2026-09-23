@@ -128,7 +128,11 @@ export default class WidgetCenterExtension extends Extension {
                 this._layout.spacing = value;
                 if (this._loader) this._loader.shadowOverflowMargin = value;
             });
+            this._editModeLockedChangedId = this._settings.onChanged("edit-mode-locked", locked => {
+                this._editMode.setLocked(locked);
+            });
         }
+        this._editMode.setLocked(this._settings?.isReady ? this._settings.getGlobalValue("edit-mode-locked") : false);
         const bundledWidgetsPath = GLib.build_filenamev([ this.path, "widgets" ]);
         const userWidgetsPath = GLib.build_filenamev([ GLib.get_user_data_dir(), "gnome-widget-center", "widgets" ]);
         this._userWidgetsPath = userWidgetsPath;
@@ -213,6 +217,8 @@ export default class WidgetCenterExtension extends Extension {
         this._edgeMarginChangedId = null;
         if (this._settings && this._widgetSpacingChangedId != null) this._settings.disconnect(this._widgetSpacingChangedId);
         this._widgetSpacingChangedId = null;
+        if (this._settings && this._editModeLockedChangedId != null) this._settings.disconnect(this._editModeLockedChangedId);
+        this._editModeLockedChangedId = null;
         this._devWatcher?.stop();
         this._devWatcher = null;
         this._drag?.destroy();

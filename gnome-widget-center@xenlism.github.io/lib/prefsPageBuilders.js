@@ -581,7 +581,11 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
             th: "ไทย",
             de: "Deutsch",
             ja: "日本語",
-            ar: "العربية"
+            ar: "العربية",
+            ru: "Русский",
+            fr: "Français",
+            pt_BR: "Português (Brasil)",
+            pt_PT: "Português (Portugal)"
         };
         const codes = [ "", ...SUPPORTED_LOCALES ];
         const labels = [ this._tr("general.language.system_default", "System default"), ...SUPPORTED_LOCALES.map(c => localeNames[c] ?? c) ];
@@ -679,6 +683,26 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
     _buildInteractionsCategory(settings) {
         const page = new Adw.PreferencesPage;
         const ready = settings.isReady;
+        const lockGroup = new Adw.PreferencesGroup({
+            title: this._tr("interactions.lock.title", "Lock widgets"),
+            description: this._tr("interactions.lock.description", "Disables entering Edit Mode from the desktop - right-clicking a widget no longer opens its toolbar. Use this page to turn it back off if you get locked out.")
+        });
+        page.add(lockGroup);
+        const editModeLockedRow = new Adw.SwitchRow({
+            title: this._tr("interactions.lock.editmode.title", "Disable Edit Mode"),
+            subtitle: this._tr("interactions.lock.editmode.subtitle", "Right-click stops opening the Edit Mode toolbar on every widget."),
+            active: ready ? !!settings.getGlobalValue("edit-mode-locked") : false,
+            sensitive: ready
+        });
+        editModeLockedRow.connect("notify::active", () => {
+            if (!ready) return;
+            try {
+                settings.setGlobalValue("edit-mode-locked", editModeLockedRow.active);
+            } catch (e) {
+                logError(e, "could not save edit-mode-locked");
+            }
+        });
+        lockGroup.add(editModeLockedRow);
         const snapGroup = new Adw.PreferencesGroup({
             title: this._tr("interactions.snap.title", "Magnetic snapping"),
             description: this._tr("interactions.snap.description", "Pulls a dragged widget toward screen edges and other widgets' edges.")

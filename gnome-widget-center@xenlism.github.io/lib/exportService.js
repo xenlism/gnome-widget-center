@@ -28,13 +28,7 @@ function _buildWidgetEntry(widget, {storage: storage, theme: theme}, redactedFie
         widgetId: widget.id,
         keys: removedKeys
     });
-    const savedPosition = storage.getWidgetPosition(widget.id);
-    const defaultPosition = widget.metadata?.["default-position"];
-    const position = savedPosition ?? (defaultPosition ? {
-        x: defaultPosition.x ?? 0,
-        y: defaultPosition.y ?? 0,
-        monitorIndex: defaultPosition.monitorIndex ?? defaultPosition.monitor ?? 0
-    } : null);
+    const position = storage.getWidgetPosition(widget.id);
     const widgetTheme = theme.getWidgetTheme(widget.id);
     const dependencies = Array.isArray(widget.metadata?.dependencies?.system) ? widget.metadata.dependencies.system.filter(dep => dep && typeof dep.bin === "string" && dep.bin).map(dep => ({
         bin: dep.bin,
@@ -86,13 +80,7 @@ function _buildDocumentShell(theme, settings, widgetEntries) {
 
 function _enabledWidgets(widgets, storage, settings) {
     const disabledIds = settings?.isReady ? new Set(settings.getGlobalValue("disabled-widgets")) : new Set;
-    // A widget counts as "placed" if it's enabled, regardless of whether it has
-    // ever been dragged (and therefore has a layout.json entry). Widgets still
-    // sitting at their metadata default-position never get a layout.json row
-    // (see widgetLayer.js's getSavedPosition(), which only reads storage and
-    // never writes the fallback back), so requiring one here silently dropped
-    // any enabled-but-never-moved widget from the export.
-    return widgets.filter(widget => !disabledIds.has(widget.id));
+    return widgets.filter(widget => !disabledIds.has(widget.id) && storage.getWidgetPosition(widget.id) !== null);
 }
 
 function _idleTick() {
