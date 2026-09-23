@@ -112,11 +112,18 @@
                             "suffix": "px"
                         }
                     ]
-                },
+                }
+            ]
+        },
+        {
+            "id": "shadow",
+            "label": "Shadow",
+            "description": "Drop shadow behind this widget.",
+            "groups": [
                 {
                     "id": "shadow",
-                    "label": "Shadow",
-                    "description": "",
+                    "label": "Shadow effect",
+                    "description": "Off by default. Default color is black at 30% transparency.",
                     "fields": [
                         {
                             "id": "shadowAngle",

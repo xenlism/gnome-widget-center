@@ -94,39 +94,6 @@
                             "suffix": "px"
                         }
                     ]
-                },
-                {
-                    "id": "shadow",
-                    "label": "Shadow",
-                    "description": "",
-                    "fields": [
-                        {
-                            "id": "shadowAngle",
-                            "label": "Shadow angle",
-                            "description": "",
-                            "dataType": "integer",
-                            "fieldType": "slider",
-                            "default": 90,
-                            "min": 0,
-                            "max": 360,
-                            "step": 1,
-                            "suffix": "°",
-                            "visibleIf": "shadowEnabled"
-                        },
-                        {
-                            "id": "shadowDistance",
-                            "label": "Shadow distance",
-                            "description": "",
-                            "dataType": "integer",
-                            "fieldType": "spinbutton",
-                            "default": 6,
-                            "min": 0,
-                            "max": 60,
-                            "step": 1,
-                            "suffix": "px",
-                            "visibleIf": "shadowEnabled"
-                        }
-                    ]
                 }
             ]
         },
@@ -231,6 +198,46 @@
                             "dataType": "string",
                             "fieldType": "text",
                             "default": "No events today"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "shadow",
+            "label": "Shadow",
+            "description": "Drop shadow behind this widget.",
+            "groups": [
+                {
+                    "id": "shadow",
+                    "label": "Shadow effect",
+                    "description": "Off by default. Default color is black at 30% transparency.",
+                    "fields": [
+                        {
+                            "id": "shadowAngle",
+                            "label": "Shadow angle",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "slider",
+                            "default": 90,
+                            "min": 0,
+                            "max": 360,
+                            "step": 1,
+                            "suffix": "°",
+                            "visibleIf": "shadowEnabled"
+                        },
+                        {
+                            "id": "shadowDistance",
+                            "label": "Shadow distance",
+                            "description": "",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 6,
+                            "min": 0,
+                            "max": 60,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "shadowEnabled"
                         }
                     ]
                 }

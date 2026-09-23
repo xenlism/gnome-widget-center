@@ -142,15 +142,24 @@
                             "suffix": "s"
                         },
                         {
+                            "id": "launchEnabled",
+                            "label": "Launch app on click",
+                            "description": "Requires an app to be chosen below",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": false
+                        },
+                        {
                             "id": "launchAppPath",
                             "label": "Click to launch",
-                            "description": "Pick a .desktop file to launch when this card is clicked. Leave empty to disable.",
+                            "description": "Pick a .desktop file to launch when this card is clicked.",
                             "dataType": "string",
                             "fieldType": "filepicker",
                             "filters": [
                                 "*.desktop"
                             ],
-                            "default": ""
+                            "default": "",
+                            "enabledIf": "launchEnabled"
                         }
                     ]
                 }

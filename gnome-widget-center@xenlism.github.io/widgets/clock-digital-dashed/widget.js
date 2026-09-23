@@ -157,7 +157,8 @@ export default class ClockDigitalDashedWidget {
     _applyClickHandler() {
         this._removeClickHandler();
         const desktopFilePath = this._settings.launchAppPath ?? "";
-        if (!desktopFilePath) {
+        const launchEnabled = this._settings.launchEnabled ?? false;
+        if (!launchEnabled || !desktopFilePath) {
             this._actor.reactive = false;
             return;
         }
@@ -179,7 +180,7 @@ export default class ClockDigitalDashedWidget {
 
     _launchApp() {
         const path = this._settings.launchAppPath ?? "";
-        if (!path) return;
+        if (!(this._settings.launchEnabled ?? false) || !path) return;
         try {
             const appInfo = Gio.DesktopAppInfo.new_from_filename(path);
             if (appInfo) appInfo.launch([], null); else this._api.logger.info(`clock-digital-dashed: could not read .desktop file at ${path}`);

@@ -134,7 +134,8 @@ export default class CirclesYearWidget {
     _applyClickHandler() {
         this._removeClickHandler();
         const path = this._settings.launchAppPath ?? "";
-        if (!path) {
+        const launchEnabled = this._settings.launchEnabled ?? false;
+        if (!launchEnabled || !path) {
             this._actor.reactive = false;
             return;
         }
@@ -154,7 +155,7 @@ export default class CirclesYearWidget {
     }
     _launchApp() {
         const path = this._settings.launchAppPath ?? "";
-        if (!path) return;
+        if (!(this._settings.launchEnabled ?? false) || !path) return;
         try {
             const appInfo = Gio.DesktopAppInfo.new_from_filename(path);
             if (appInfo) appInfo.launch([], null); else this._api.logger.info(`circles-year: could not read .desktop file at ${path}`);

@@ -68,8 +68,8 @@
                     ]
                 },
                 {
-                    "id": "blurShadow",
-                    "label": "Blur & Shadow",
+                    "id": "blur",
+                    "label": "Blur",
                     "description": "",
                     "fields": [
                         {
@@ -92,7 +92,62 @@
                             "step": 1,
                             "suffix": "px",
                             "visibleIf": "blurEnabled"
+                        }
+                    ]
+                },
+                {
+                    "id": "text",
+                    "label": "Text",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "titleFont",
+                            "label": "Title font",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "default": "Cantarell Bold 13"
                         },
+                        {
+                            "id": "titleColor",
+                            "label": "Title color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "default": "#000000"
+                        },
+                        {
+                            "id": "bodyFont",
+                            "label": "Body font",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "fontpicker",
+                            "default": "Cantarell 12"
+                        },
+                        {
+                            "id": "bodyColor",
+                            "label": "Body color",
+                            "description": "",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "format": "color",
+                            "default": "#241f31"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "shadow",
+            "label": "Shadow",
+            "description": "Drop shadow behind this widget.",
+            "groups": [
+                {
+                    "id": "shadow",
+                    "label": "Shadow effect",
+                    "description": "Off by default. Default color is black at 30% transparency.",
+                    "fields": [
                         {
                             "id": "shadowEnabled",
                             "label": "Enable drop shadow",
@@ -161,47 +216,6 @@
                             "step": 1,
                             "suffix": "px",
                             "visibleIf": "shadowEnabled"
-                        }
-                    ]
-                },
-                {
-                    "id": "text",
-                    "label": "Text",
-                    "description": "",
-                    "fields": [
-                        {
-                            "id": "titleFont",
-                            "label": "Title font",
-                            "description": "",
-                            "dataType": "string",
-                            "fieldType": "fontpicker",
-                            "default": "Cantarell Bold 13"
-                        },
-                        {
-                            "id": "titleColor",
-                            "label": "Title color",
-                            "description": "",
-                            "dataType": "string",
-                            "fieldType": "colorpicker",
-                            "format": "color",
-                            "default": "#000000"
-                        },
-                        {
-                            "id": "bodyFont",
-                            "label": "Body font",
-                            "description": "",
-                            "dataType": "string",
-                            "fieldType": "fontpicker",
-                            "default": "Cantarell 12"
-                        },
-                        {
-                            "id": "bodyColor",
-                            "label": "Body color",
-                            "description": "",
-                            "dataType": "string",
-                            "fieldType": "colorpicker",
-                            "format": "color",
-                            "default": "#241f31"
                         }
                     ]
                 }
