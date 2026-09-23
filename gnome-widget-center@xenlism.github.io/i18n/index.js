@@ -2,9 +2,58 @@ import Gio from "gi://Gio";
 
 import GLib from "gi://GLib";
 
-export const SUPPORTED_LOCALES = Object.freeze([
-    "en", "zh", "es", "th", "de", "ja", "ar", "ru", "fr", "pt_BR", "pt_PT"
-]);
+// Registry of locale code -> the name shown in the language picker (written in
+// that language itself). This is NOT a whitelist: any i18n/<code>.js on disk
+// shows up in the picker automatically; this table only supplies its label.
+// A code missing here is still listed - it just shows the raw code as its label.
+// File naming: <language>.js or <language>_<COUNTRY>.js, e.g. th.js, pt_BR.js.
+export const LOCALE_NAMES = Object.freeze({
+    ar: "العربية",
+    bg: "Български",
+    bn: "বাংলা",
+    ca: "Català",
+    cs: "Čeština",
+    da: "Dansk",
+    de: "Deutsch",
+    el: "Ελληνικά",
+    en: "English",
+    es: "Español",
+    et: "Eesti",
+    fa: "فارسی",
+    fi: "Suomi",
+    fr: "Français",
+    he: "עברית",
+    hi: "हिन्दी",
+    hr: "Hrvatski",
+    hu: "Magyar",
+    id: "Bahasa Indonesia",
+    it: "Italiano",
+    ja: "日本語",
+    ko: "한국어",
+    lt: "Lietuvių",
+    lv: "Latviešu",
+    ms: "Bahasa Melayu",
+    nb: "Norsk bokmål",
+    nl: "Nederlands",
+    pl: "Polski",
+    pt: "Português",
+    pt_BR: "Português (Brasil)",
+    pt_PT: "Português (Portugal)",
+    ro: "Română",
+    ru: "Русский",
+    sk: "Slovenčina",
+    sr: "Српски",
+    sv: "Svenska",
+    ta: "தமிழ்",
+    th: "ไทย",
+    tr: "Türkçe",
+    uk: "Українська",
+    ur: "اردو",
+    vi: "Tiếng Việt",
+    zh: "中文",
+    zh_CN: "简体中文",
+    zh_TW: "繁體中文"
+});
 
 export function scanAvailableLocales(dirPath) {
     const dir = Gio.File.new_for_path(dirPath);
@@ -13,11 +62,19 @@ export function scanAvailableLocales(dirPath) {
         const enumerator = dir.enumerate_children("standard::name", Gio.FileQueryInfoFlags.NONE, null);
         let info;
         while ((info = enumerator.next_file(null)) !== null) {
+            // "index.js" never matches (5 letters), so no explicit exclusion is needed.
             const match = /^([a-z]{2}(?:_[A-Z]{2})?)\.js$/.exec(info.get_name());
-            if (match && SUPPORTED_LOCALES.includes(match[1])) found.push(match[1]);
+            if (match) found.push(match[1]);
         }
     } catch (e) {}
     return found;
+}
+
+// What the language picker shows: [{ code, name }], English first, rest by code.
+export function listAvailableLocales(dirPath) {
+    return scanAvailableLocales(dirPath)
+        .sort((a, b) => (a === "en" ? -1 : b === "en" ? 1 : a.localeCompare(b)))
+        .map(code => ({ code, name: LOCALE_NAMES[code] ?? code }));
 }
 
 export function pickLocale(available, overrideLocale) {

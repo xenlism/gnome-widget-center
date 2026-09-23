@@ -20,7 +20,7 @@ import { openThemePackExportDialog } from "./themePackExportDialog.js";
 
 import { rgbaToHex } from "./colorUtils.js";
 
-import { SUPPORTED_LOCALES } from "../i18n/index.js";
+import { listAvailableLocales } from "../i18n/index.js";
 
 import { SHADOW_ANGLE_STEPS } from "./globalShadowHelper.js";
 
@@ -574,21 +574,9 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
             description: this._tr("general.language.description", "Overrides the system locale for this extension's own UI text and any widget that ships translations - only where a widget actually has that language available, otherwise it falls back to the system locale as before.")
         });
         page.add(group);
-        const localeNames = {
-            en: "English",
-            zh: "中文",
-            es: "Español",
-            th: "ไทย",
-            de: "Deutsch",
-            ja: "日本語",
-            ar: "العربية",
-            ru: "Русский",
-            fr: "Français",
-            pt_BR: "Português (Brasil)",
-            pt_PT: "Português (Portugal)"
-        };
-        const codes = [ "", ...SUPPORTED_LOCALES ];
-        const labels = [ this._tr("general.language.system_default", "System default"), ...SUPPORTED_LOCALES.map(c => localeNames[c] ?? c) ];
+        const locales = listAvailableLocales(GLib.build_filenamev([ this.path, "i18n" ]));
+        const codes = [ "", ...locales.map(l => l.code) ];
+        const labels = [ this._tr("general.language.system_default", "System default"), ...locales.map(l => l.name) ];
         const row = new Adw.ComboRow({
             title: this._tr("general.language.row.title", "UI language"),
             subtitle: this._tr("general.language.row.subtitle", "Applies immediately, no restart needed."),
