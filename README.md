@@ -59,7 +59,7 @@ back the entire thing up — all without restarting GNOME Shell.
 
 ## Screenshots
 
-[![Watch the video on YouTube](https://img.youtube.com/vi/LaN50RX_Dcw/0.jpg)](assets/desktop.png)
+[![Watch the video on YouTube](assets/desktop.png)](https://www.youtube.com/watch?v=LaN50RX_Dcw)
 
 ### Edit Mode
 
