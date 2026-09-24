@@ -276,8 +276,8 @@
   ],
   "packMeta": {
     "id": "half-moon-monitor-20260918125718",
-    "name": "Half Moon Monitor",
-    "description": "Half Moon System Monitor Desktop",
+    "name": "Geek Minimal Half Moon",
+    "description": "A geek-style minimal desktop with half-ring battery and disk gauges hugging the screen edge, a circular media player, modern weather, and a compact block of quick settings toggles and power menu buttons in the center.",
     "author": "xenlism",
     "email": "ixenatt@gmail.com",
     "url": "https://github.com/xenlism/gnome-widget-center"

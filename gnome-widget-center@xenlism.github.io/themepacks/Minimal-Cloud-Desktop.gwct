@@ -374,7 +374,7 @@
   "packMeta": {
     "id": "minimal-cloud-desktop-20260830143025",
     "name": "Minimal Cloud Desktop",
-    "description": "Minimal Cirecle widget desktop",
+    "description": "A minimal desktop built from circular widgets: CPU, memory, disk, network and battery rings, a ring clock, a round media player and modern weather, arranged along the right side of the screen. Best on light, sky-like wallpapers.",
     "author": "xenlism",
     "email": "ixenatt@gmail.com",
     "url": "https://github.com/xenlism"

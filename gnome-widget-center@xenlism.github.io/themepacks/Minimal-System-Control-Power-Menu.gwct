@@ -193,7 +193,7 @@
   "packMeta": {
     "id": "minimal-system-control-power-menu-20260829125830",
     "name": "Minimal System Control Power Menu",
-    "description": "Minimal System Control And Power Menu Desktop",
+    "description": "A minimal top-right corner layout with an analog clock and modern weather on top, and quick settings toggles with power menu buttons below. Keeps the rest of the desktop clear.",
     "author": "xenlism",
     "email": "ixenatt@gmail.com",
     "url": "https://github.com/xenlism"

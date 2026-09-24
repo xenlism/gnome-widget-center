@@ -258,7 +258,7 @@
   "packMeta": {
     "id": "minimal-system-control-20260830151518",
     "name": "Minimal System Control",
-    "description": "Minimal System Control Desktop",
+    "description": "A minimal desktop with a top-right control panel (quick settings, power menu and notification stack), a big calendar at the top left, and a large weekday and time in the center.",
     "author": "xenlism",
     "email": "ixenatt@gmail.com",
     "url": "https://github.com/xenlism"

@@ -981,8 +981,8 @@
   ],
   "packMeta": {
     "id": "modern-tile-widget-20260923022313",
-    "name": "Modern Tile Widget",
-    "description": "Modern Tile Widgets Desktop",
+    "name": "Modern Tile",
+    "description": "A modern tile dashboard of 23 widgets in a tidy grid: CPU, memory and network monitors, circular gauges, calendars, clocks, weather, media player, launchers, app shortcuts, a to-do list, and settings and power bars. Designed for dark tiles over a light wallpaper.",
     "author": "xenlism",
     "email": "ixenatt@gmail.com",
     "url": "https://github.com/xenlism"
