@@ -2,7 +2,7 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
-import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, borderCss as _borderCss, BORDER_DEFAULTS, OPACITY_DEFAULTS, BLUR_DEFAULTS, applyCardOpacity, resolveCornerRadius, toCssColor as _toCssColor} from '../../lib/widgetVisualKit.js';
+import {SHADOW_DEFAULTS, shadowBoxShadowCss as _shadowBoxShadowCss, borderCss as _borderCss, BORDER_DEFAULTS, OPACITY_DEFAULTS, BLUR_DEFAULTS, applyCardOpacity, resolveCornerRadius} from '../../lib/widgetVisualKit.js';
 import {createLayeredCard, applyCardBlur} from '../../lib/shell/cardLayers.js';
 import {attachTooltip} from '../../lib/shell/widgetTooltip.js';
 import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
@@ -27,8 +27,8 @@ export default class PowerMenuWidget {
     buildActor() {
         const backgroundColor = this._settings?.backgroundColor ?? '#070000a5';
         const cornerRadius = resolveCornerRadius(this._settings);
-        const iconColor = this._settings?.iconColor ?? '#2e2e2e';
-        const buttonColor = this._settings?.buttonColor ?? '#FFFFFF1F';
+        const iconColor = this._settings?.iconColor ?? '#FFFFFF';
+        const buttonColor = this._settings?.buttonColor ?? '#2d2d2d3a';
 
         this._layers = createLayeredCard({
             contentStyleClass: 'power-menu-widget-root',
@@ -126,11 +126,11 @@ export default class PowerMenuWidget {
         this._layers.cardBlur.set_style(this._cardBlurStyle(backgroundColor, cornerRadius));
         applyCardBlur(this._layers.cardBlur, settings);
 
-        const iconColor = settings?.iconColor ?? '#2e2e2e';
+        const iconColor = settings?.iconColor ?? '#FFFFFF';
         for (const icon of this._icons)
             icon.set_style(`color: ${iconColor};`);
 
-        const buttonColor = settings?.buttonColor ?? '#FFFFFF1F';
+        const buttonColor = settings?.buttonColor ?? '#2d2d2d3a';
         for (const button of this._buttons)
             button.set_style(this._buttonStyle(buttonColor));
     }
@@ -179,7 +179,13 @@ export default class PowerMenuWidget {
     }
 
     _buttonStyle(buttonColor) {
-        return `background-color: ${_toCssColor(buttonColor, '#FFFFFF1F')}; border-radius: ${BUTTON_SIZE / 2}px;`;
+        // Same approach as settings-control: convert the picker's hex (incl. alpha)
+        // to rgba() so the button transparency follows the setting instead of a fixed value.
+        const hex = String(buttonColor ?? '#2d2d2d3a');
+        const {r, g, b, a} = this._hexToRgba(hex);
+        // 8-digit hex uses its own alpha; 6-digit hex means fully opaque.
+        const alpha = hex.replace('#', '').length >= 8 ? a : 1;
+        return `background-color: rgba(${r}, ${g}, ${b}, ${alpha}); border-radius: ${BUTTON_SIZE / 2}px;`;
     }
 
     _suspend() {

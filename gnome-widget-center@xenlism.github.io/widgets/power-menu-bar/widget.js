@@ -2,7 +2,7 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
-import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS, BLUR_DEFAULTS, toCssColor as _toCssColor} from '../../lib/widgetVisualKit.js';
+import {SHADOW_DEFAULTS, cardStyleCss as _cardStyleCss, BORDER_DEFAULTS, OPACITY_DEFAULTS, BLUR_DEFAULTS} from '../../lib/widgetVisualKit.js';
 import {createLayeredCard, applyLayeredCardStyle} from '../../lib/shell/cardLayers.js';
 import {attachTooltip} from '../../lib/shell/widgetTooltip.js';
 import {configJsonDefaults} from '../../lib/widgetConfigDefaults.js';
@@ -25,8 +25,8 @@ export default class PowerMenuBarWidget {
     }
 
     buildActor() {
-        const iconColor = this._settings?.iconColor ?? '#2e2e2e';
-        const buttonColor = this._settings?.buttonColor ?? '#FFFFFF1F';
+        const iconColor = this._settings?.iconColor ?? '#FFFFFF';
+        const buttonColor = this._settings?.buttonColor ?? '#2d2d2d3a';
 
         this._layers = createLayeredCard({
             contentStyleClass: 'power-menu-bar-widget-root',
@@ -113,11 +113,11 @@ export default class PowerMenuBarWidget {
 
         applyLayeredCardStyle(this._layers, settings, {backgroundColorFallback: '#070000a5', cornerRadiusFallback: 18});
 
-        const iconColor = settings?.iconColor ?? '#2e2e2e';
+        const iconColor = settings?.iconColor ?? '#FFFFFF';
         for (const icon of this._icons)
             icon.set_style(`color: ${iconColor};`);
 
-        const buttonColor = settings?.buttonColor ?? '#FFFFFF1F';
+        const buttonColor = settings?.buttonColor ?? '#2d2d2d3a';
         for (const button of this._buttons)
             button.set_style(this._buttonStyle(buttonColor));
     }
@@ -142,7 +142,25 @@ export default class PowerMenuBarWidget {
     }
 
     _buttonStyle(buttonColor) {
-        return `background-color: ${_toCssColor(buttonColor, '#FFFFFF1F')}; border-radius: ${BUTTON_SIZE / 2}px;`;
+        // Same approach as settings-control: convert the picker's hex (incl. alpha)
+        // to rgba() so the button transparency follows the setting instead of a fixed value.
+        const hex = String(buttonColor ?? '#2d2d2d3a');
+        const {r, g, b, a} = this._hexToRgba(hex);
+        // 8-digit hex uses its own alpha; 6-digit hex means fully opaque.
+        const alpha = hex.replace('#', '').length >= 8 ? a : 1;
+        return `background-color: rgba(${r}, ${g}, ${b}, ${alpha}); border-radius: ${BUTTON_SIZE / 2}px;`;
+    }
+
+    _hexToRgba(hex) {
+        let value = String(hex).replace('#', '');
+        if (value.length === 3 || value.length === 4)
+            value = [...value].map(c => c + c).join('');
+        const rgbNum = parseInt(value.slice(0, 6), 16);
+        if (Number.isNaN(rgbNum))
+            return {r: 255, g: 255, b: 255, a: 0.85};
+        const alphaByte = value.length >= 8 ? parseInt(value.slice(6, 8), 16) : 255;
+        const a = Number.isNaN(alphaByte) ? 1 : Math.round((alphaByte / 255) * 1000) / 1000;
+        return {r: (rgbNum >> 16) & 255, g: (rgbNum >> 8) & 255, b: rgbNum & 255, a};
     }
 
     _suspend() {

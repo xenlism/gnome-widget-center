@@ -446,9 +446,8 @@ export default class SettingsControlBarWidget {
 
         const hex = isOn ? this._iconOnColor : this._iconOffColor;
         const {r, g, b, a} = _hexToRgba(hex);
-        // Keep the old visual defaults for existing six-digit saved colors;
-        // newly selected colors include their alpha channel and use it directly.
-        const alpha = String(hex).replace('#', '').length >= 8 ? a : (isOn ? 0.9 : 0.12);
+        // 8-digit hex uses its own alpha; 6-digit hex means fully opaque (no preset alpha).
+        const alpha = String(hex).replace('#', '').length >= 8 ? a : 1;
         button.set_style(`background-color: rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${alpha}); border-radius: ${BUTTON_SIZE / 2}px;`);
     }
 
