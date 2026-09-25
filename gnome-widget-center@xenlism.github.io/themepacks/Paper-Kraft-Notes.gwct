@@ -1,0 +1,380 @@
+{
+  "format": "gwct",
+  "version": 1,
+  "exportedAt": "2026-09-24T18:08:23.000Z",
+  "appearance": {
+    "background": {
+      "transparent": true,
+      "color": "#3B2E22",
+      "blur": 0
+    },
+    "cornerRadius": {
+      "value": 10
+    },
+    "dropShadow": {
+      "enabled": true,
+      "transparent": false,
+      "color": "#000000",
+      "opacity": 0.38,
+      "angle": 90,
+      "distance": 4,
+      "blurRadius": 12,
+      "spread": 0
+    }
+  },
+  "hostSettings": {
+    "prevent-widget-overlap": true,
+    "edge-margin": 0,
+    "widget-spacing": 16,
+    "language": "en",
+    "guide-color": "#F5A623E6",
+    "snap-enabled": true,
+    "snap-distance": 16,
+    "grid-snap-enabled": false,
+    "grid-size": 16,
+    "widget-center-overlay-keybinding": [
+      "<Super>F12"
+    ],
+    "auto-enable-new-widgets": true
+  },
+  "widgets": [
+    {
+      "id": "xenlism.github.io.calendar-events",
+      "name": "Calendar + Events By Xenlism",
+      "position": {
+        "x": 48,
+        "y": 48,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "mondayStart": false,
+        "calendarFont": "Serif 11",
+        "calendarTextColor": "#F5EBDD",
+        "weekdayHeaderColor": "#C7B49A",
+        "highlightDayColor": "#D98E3D",
+        "highlightDayTextColor": "#3B2E22",
+        "cardColor": "#4A3C2CF2",
+        "cornerRadius": 10,
+        "maxEvents": 4,
+        "eventCardSpacing": 8,
+        "eventCardBgColor": "#5A4A36FF",
+        "eventCardCornerRadius": 14,
+        "eventCardBlurEnabled": false,
+        "eventCardBlurRadius": 16,
+        "eventFont": "Serif 11",
+        "eventTextColor": "#F5EBDD",
+        "noEventsText": "No events today",
+        "shadowAngle": 90,
+        "shadowDistance": 6,
+        "cornerRadiusEnabled": true,
+        "blurEnabled": false,
+        "blurRadius": 24,
+        "shadowEnabled": true,
+        "shadowColor": "#000000",
+        "shadowOpacity": 38,
+        "shadowBlur": 12,
+        "borderEnabled": true,
+        "borderColor": "#C7A97466",
+        "borderWidth": 1,
+        "opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.note",
+      "name": "Note",
+      "position": {
+        "x": 434,
+        "y": 48,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "cardColor": "#FBE6A2FF",
+        "headerColorTop": "#D98E3D",
+        "headerColorBottom": "#C1502E",
+        "cornerRadius": 10,
+        "showDivider": true,
+        "title": "Customized Filtration",
+        "titleFont": "Serif Bold 15",
+        "titleColor": "#3A2E1F",
+        "placeholderText": "Add a note...",
+        "noteFont": "Serif 12",
+        "noteColor": "#8A7350",
+        "autoDate": false,
+        "dateText": "2/28/25",
+        "dateFont": "Serif 11",
+        "dateColor": "#8A7350",
+        "shadowAngle": 90,
+        "shadowDistance": 6,
+        "cornerRadiusEnabled": true,
+        "blurEnabled": false,
+        "blurRadius": 24,
+        "shadowEnabled": true,
+        "shadowColor": "#000000",
+        "shadowOpacity": 38,
+        "shadowBlur": 12,
+        "borderEnabled": true,
+        "borderColor": "#C7A97466",
+        "borderWidth": 1,
+        "opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.sticky-note-mini",
+      "name": "Sticky Note (Mini)",
+      "position": {
+        "x": 48,
+        "y": 434,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "paperColor": "#FBE6A2FF",
+        "cornerRadius": 10,
+        "showFoldedCorner": true,
+        "showColorDot": true,
+        "placeholderText": "Write a note...",
+        "textFont": "Serif 10",
+        "textColor": "#3A2E1F",
+        "textAlign": "left",
+        "shadowAngle": 90,
+        "shadowDistance": 6,
+        "cornerRadiusEnabled": true,
+        "blurEnabled": false,
+        "blurRadius": 24,
+        "shadowEnabled": true,
+        "shadowColor": "#000000",
+        "shadowOpacity": 38,
+        "shadowBlur": 12,
+        "borderEnabled": true,
+        "borderColor": "#C7A97466",
+        "borderWidth": 1,
+        "opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.todo-list-mini",
+      "name": "To-Do List (Mini)",
+      "position": {
+        "x": 242,
+        "y": 434,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "backgroundColor": "#4A3C2CF2",
+        "cornerRadius": 10,
+        "titleText": "To-Do",
+        "maxVisibleItems": 3,
+        "autoSortDone": true,
+        "titleFont": "Serif Bold 10",
+        "titleColor": "#F5EBDD",
+        "itemFont": "Serif 9",
+        "itemColor": "#F5EBDD",
+        "completedColor": "#C7B49A",
+        "accentColor": "#D98E3D",
+        "shadowAngle": 90,
+        "shadowDistance": 6,
+        "cornerRadiusEnabled": true,
+        "blurEnabled": false,
+        "blurRadius": 24,
+        "shadowEnabled": true,
+        "shadowColor": "#000000",
+        "shadowOpacity": 38,
+        "shadowBlur": 12,
+        "borderEnabled": true,
+        "borderColor": "#C7A97466",
+        "borderWidth": 1,
+        "opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.circles-cpu",
+      "name": "Circles CPU By Xenlism",
+      "position": {
+        "x": 436,
+        "y": 434,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "backgroundColor": "#4A3C2CF2",
+        "labelFont": "Serif 12",
+        "labelColor": "#C7B49A",
+        "percentFont": "Serif Bold 22",
+        "percentColor": "#F5EBDD",
+        "circleBaseColor": "#FFFFFF1F",
+        "ringColor": "#D98E3D",
+        "ringThickness": 10,
+        "refreshRateSeconds": 2,
+        "launchEnabled": false,
+        "launchAppPath": "",
+        "shadowAngle": 90,
+        "shadowDistance": 6,
+        "cornerRadius": 10,
+        "cornerRadiusEnabled": true,
+        "blurEnabled": false,
+        "blurRadius": 24,
+        "shadowEnabled": true,
+        "shadowColor": "#000000",
+        "shadowOpacity": 38,
+        "shadowBlur": 12,
+        "borderEnabled": true,
+        "borderColor": "#C7A97466",
+        "borderWidth": 1,
+        "opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.circles-mem",
+      "name": "Circles MEM By Xenlism",
+      "position": {
+        "x": 630,
+        "y": 434,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "backgroundColor": "#4A3C2CF2",
+        "labelFont": "Serif 12",
+        "labelColor": "#C7B49A",
+        "percentFont": "Serif Bold 22",
+        "percentColor": "#F5EBDD",
+        "circleBaseColor": "#FFFFFF1F",
+        "ringColor": "#8FA06B",
+        "ringThickness": 10,
+        "refreshRateSeconds": 2,
+        "launchEnabled": false,
+        "launchAppPath": "/usr/share/applications/org.gnome.SystemMonitor.desktop",
+        "shadowAngle": 90,
+        "shadowDistance": 6,
+        "cornerRadius": 10,
+        "cornerRadiusEnabled": true,
+        "blurEnabled": false,
+        "blurRadius": 24,
+        "shadowEnabled": true,
+        "shadowColor": "#000000",
+        "shadowOpacity": 38,
+        "shadowBlur": 12,
+        "borderEnabled": true,
+        "borderColor": "#C7A97466",
+        "borderWidth": 1,
+        "opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.weather-minimal",
+      "name": "Weather (Minimal) By Xenlism",
+      "position": {
+        "x": 48,
+        "y": 628,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "location": "45.33249,-100.12068",
+        "cardColor": "#4A3C2CF2",
+        "cornerRadius": 10,
+        "iconColor": "#D98E3D",
+        "iconSize": 64,
+        "conditionFont": "Serif Bold 16",
+        "conditionColor": "#C7B49A",
+        "tempFont": "Serif Bold 34",
+        "tempColor": "#F5EBDD",
+        "tempUnit": "celsius",
+        "shadowAngle": 90,
+        "shadowDistance": 6,
+        "cornerRadiusEnabled": true,
+        "blurEnabled": false,
+        "blurRadius": 24,
+        "shadowEnabled": true,
+        "shadowColor": "#000000",
+        "shadowOpacity": 38,
+        "shadowBlur": 12,
+        "borderEnabled": true,
+        "borderColor": "#C7A97466",
+        "borderWidth": 1,
+        "opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.media-player-square",
+      "name": "Media Player (Square) By Xenlism",
+      "position": {
+        "x": 242,
+        "y": 628,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "cornerRadius": 10,
+        "infoFont": "Serif Bold 13",
+        "infoColor": "#F5EBDD",
+        "buttonColor": "#D98E3D",
+        "desktopFilePath": "/usr/share/applications/org.gnome.Rhythmbox3.desktop",
+        "shadowAngle": 90,
+        "shadowDistance": 6,
+        "cornerRadiusEnabled": true,
+        "blurEnabled": false,
+        "blurRadius": 24,
+        "shadowEnabled": true,
+        "shadowColor": "#000000",
+        "shadowOpacity": 38,
+        "shadowBlur": 12,
+        "borderEnabled": true,
+        "borderColor": "#C7A97466",
+        "borderWidth": 1,
+        "opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    }
+  ],
+  "packMeta": {
+    "id": "paper-kraft-notes",
+    "name": "Paper Kraft Notes",
+    "description": "Warm kraft-paper and cork-board browns, built around sticky notes, a to-do list and a cozy calendar.",
+    "author": "Keal",
+    "email": "ixenatt@gmail.com",
+    "url": "https://github.com/xenlism"
+  }
+}

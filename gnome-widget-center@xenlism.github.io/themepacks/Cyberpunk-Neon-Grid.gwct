@@ -1,0 +1,496 @@
+{
+  "format": "gwct",
+  "version": 1,
+  "exportedAt": "2026-09-24T18:08:23.000Z",
+  "appearance": {
+    "background": {
+      "transparent": true,
+      "color": "#08080C",
+      "blur": 0
+    },
+    "cornerRadius": {
+      "value": 8
+    },
+    "dropShadow": {
+      "enabled": true,
+      "transparent": false,
+      "color": "#F5D300",
+      "opacity": 0.3,
+      "angle": 90,
+      "distance": 4,
+      "blurRadius": 12,
+      "spread": 0
+    }
+  },
+  "hostSettings": {
+    "prevent-widget-overlap": true,
+    "edge-margin": 0,
+    "widget-spacing": 16,
+    "language": "en",
+    "guide-color": "#F5A623E6",
+    "snap-enabled": true,
+    "snap-distance": 16,
+    "grid-snap-enabled": false,
+    "grid-size": 16,
+    "widget-center-overlay-keybinding": [
+      "<Super>F12"
+    ],
+    "auto-enable-new-widgets": true
+  },
+  "widgets": [
+    {
+      "id": "xenlism.github.io.circles-cpu",
+      "name": "Circles CPU By Xenlism",
+      "position": {
+        "x": 48,
+        "y": 48,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "backgroundColor": "#0E0E14F5",
+        "labelFont": "Monospace 12",
+        "labelColor": "#8A8AA3",
+        "percentFont": "Monospace Bold 22",
+        "percentColor": "#F5F5FF",
+        "circleBaseColor": "#FFFFFF1A",
+        "ringColor": "#F5D300",
+        "ringThickness": 10,
+        "refreshRateSeconds": 2,
+        "launchEnabled": false,
+        "launchAppPath": "",
+        "shadowAngle": 90,
+        "shadowDistance": 6,
+        "cornerRadius": 8,
+        "cornerRadiusEnabled": true,
+        "blurEnabled": false,
+        "blurRadius": 24,
+        "shadowEnabled": true,
+        "shadowColor": "#F5D300",
+        "shadowOpacity": 30,
+        "shadowBlur": 18,
+        "borderEnabled": true,
+        "borderColor": "#F5D30066",
+        "borderWidth": 1,
+        "opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.circles-mem",
+      "name": "Circles MEM By Xenlism",
+      "position": {
+        "x": 242,
+        "y": 48,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "backgroundColor": "#0E0E14F5",
+        "labelFont": "Monospace 12",
+        "labelColor": "#8A8AA3",
+        "percentFont": "Monospace Bold 22",
+        "percentColor": "#F5F5FF",
+        "circleBaseColor": "#FFFFFF1A",
+        "ringColor": "#31F2E0",
+        "ringThickness": 10,
+        "refreshRateSeconds": 2,
+        "launchEnabled": false,
+        "launchAppPath": "/usr/share/applications/org.gnome.SystemMonitor.desktop",
+        "shadowAngle": 90,
+        "shadowDistance": 6,
+        "cornerRadius": 8,
+        "cornerRadiusEnabled": true,
+        "blurEnabled": false,
+        "blurRadius": 24,
+        "shadowEnabled": true,
+        "shadowColor": "#F5D300",
+        "shadowOpacity": 30,
+        "shadowBlur": 18,
+        "borderEnabled": true,
+        "borderColor": "#F5D30066",
+        "borderWidth": 1,
+        "opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.circles-disk",
+      "name": "Circles Disk By Xenlism",
+      "position": {
+        "x": 436,
+        "y": 48,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "backgroundColor": "#0E0E14F5",
+        "labelFont": "Monospace 12",
+        "labelColor": "#8A8AA3",
+        "percentFont": "Monospace Bold 22",
+        "percentColor": "#F5F5FF",
+        "circleBaseColor": "#FFFFFF1A",
+        "ringColor": "#FF3DBE",
+        "ringThickness": 10,
+        "diskPath": "/",
+        "refreshRateSeconds": 2,
+        "launchEnabled": false,
+        "launchAppPath": "",
+        "shadowAngle": 90,
+        "shadowDistance": 6,
+        "cornerRadius": 8,
+        "cornerRadiusEnabled": true,
+        "blurEnabled": false,
+        "blurRadius": 24,
+        "shadowEnabled": true,
+        "shadowColor": "#F5D300",
+        "shadowOpacity": 30,
+        "shadowBlur": 18,
+        "borderEnabled": true,
+        "borderColor": "#F5D30066",
+        "borderWidth": 1,
+        "opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.circles-battery",
+      "name": "Circles Battery By Xenlism",
+      "position": {
+        "x": 630,
+        "y": 48,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "backgroundColor": "#0E0E14CC",
+        "borderColor": "#F5D30066",
+        "circleBaseColor": "#FFFFFF1A",
+        "ringColorLow": "#FF3DBE",
+        "ringColorMid": "#F5D300",
+        "ringColorHigh": "#31F2E0",
+        "ringColorCharging": "#7B5CFA",
+        "ringThickness": 10,
+        "showLabel": true,
+        "captionText": "BATTERY",
+        "captionFont": "Monospace 10",
+        "captionColor": "#8A8AA3",
+        "percentFont": "Monospace Bold 22",
+        "percentColor": "#F5F5FF",
+        "refreshRateSeconds": 5,
+        "shadowAngle": 90,
+        "shadowDistance": 6,
+        "cornerRadius": 8,
+        "cornerRadiusEnabled": true,
+        "blurEnabled": false,
+        "blurRadius": 24,
+        "shadowEnabled": true,
+        "shadowColor": "#F5D300",
+        "shadowOpacity": 30,
+        "shadowBlur": 18,
+        "borderEnabled": true,
+        "borderWidth": 1,
+        "opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.circles-net",
+      "name": "Circles NET By Xenlism",
+      "position": {
+        "x": 824,
+        "y": 48,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "backgroundColor": "#0E0E14F5",
+        "labelFont": "Monospace 12",
+        "labelColor": "#8A8AA3",
+        "percentFont": "Monospace Bold 14",
+        "circleBaseColor": "#FFFFFF1A",
+        "downloadColor": "#31F2E0",
+        "uploadColor": "#FF3DBE",
+        "ringThickness": 7,
+        "refreshRateSeconds": 2,
+        "launchEnabled": false,
+        "launchAppPath": "",
+        "shadowAngle": 90,
+        "shadowDistance": 6,
+        "cornerRadius": 8,
+        "cornerRadiusEnabled": true,
+        "blurEnabled": false,
+        "blurRadius": 24,
+        "shadowEnabled": true,
+        "shadowColor": "#F5D300",
+        "shadowOpacity": 30,
+        "shadowBlur": 18,
+        "borderEnabled": true,
+        "borderColor": "#F5D30066",
+        "borderWidth": 1,
+        "opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.geek-archey-systech-squre",
+      "name": "Geek Archey Sysfetch (Square) By Xenlism",
+      "position": {
+        "x": 48,
+        "y": 242,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "distro": "arch",
+        "backgroundColor": "#0E0E14F5",
+        "shadowAngle": 90,
+        "shadowDistance": 6,
+        "cornerRadius": 8,
+        "cornerRadiusEnabled": true,
+        "blurEnabled": false,
+        "blurRadius": 24,
+        "shadowEnabled": true,
+        "shadowColor": "#F5D300",
+        "shadowOpacity": 30,
+        "shadowBlur": 18,
+        "borderEnabled": true,
+        "borderColor": "#F5D30066",
+        "borderWidth": 1,
+        "opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.network-monitor",
+      "name": "Network Monitor By Xenlism",
+      "position": {
+        "x": 434,
+        "y": 242,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "fontDesc": "Monospace Bold 20",
+        "fontColor": "#F5F5FF",
+        "downloadLineColor": "#31F2E0",
+        "uploadLineColor": "#FF3DBE",
+        "graphBaseColor": "#FFFFFF1A",
+        "backgroundColor": "#0E0E14F5",
+        "refreshRateSeconds": 3,
+        "launchEnabled": false,
+        "launchAppPath": "",
+        "shadowAngle": 90,
+        "shadowDistance": 6,
+        "cornerRadius": 8,
+        "cornerRadiusEnabled": true,
+        "blurEnabled": false,
+        "blurRadius": 24,
+        "shadowEnabled": true,
+        "shadowColor": "#F5D300",
+        "shadowOpacity": 30,
+        "shadowBlur": 18,
+        "borderEnabled": true,
+        "borderColor": "#F5D30066",
+        "borderWidth": 1,
+        "opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.clock-digital-dashed",
+      "name": "Clock (Digital Dashed) By Xenlism",
+      "position": {
+        "x": 48,
+        "y": 628,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "backgroundColor": "#0E0E14F5",
+        "cornerRadius": 8,
+        "showDashes": true,
+        "dashColor": "#F5F5FF",
+        "dashColorUpcoming": "#FFFFFF1A",
+        "format24h": true,
+        "digitFont": "Monospace Bold 34",
+        "digitColor": "#F5F5FF",
+        "refreshRateSeconds": 5,
+        "launchEnabled": false,
+        "launchAppPath": "",
+        "shadowAngle": 90,
+        "shadowDistance": 6,
+        "cornerRadiusEnabled": true,
+        "blurEnabled": false,
+        "blurRadius": 24,
+        "shadowEnabled": true,
+        "shadowColor": "#F5D300",
+        "shadowOpacity": 30,
+        "shadowBlur": 18,
+        "borderEnabled": true,
+        "borderColor": "#F5D30066",
+        "borderWidth": 1,
+        "opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.circles-clock",
+      "name": "Circles Clock By Xenlism",
+      "position": {
+        "x": 242,
+        "y": 628,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "backgroundColor": "#0E0E14F5",
+        "format24h": true,
+        "timeFont": "Monospace Bold 20",
+        "timeColor": "#F5F5FF",
+        "circleBaseColor": "#FFFFFF1A",
+        "colorHH": "#F5D300",
+        "colorMM": "#FF3DBE",
+        "colorSS": "#31F2E0",
+        "ringThickness": 10,
+        "refreshRateSeconds": 1,
+        "launchEnabled": false,
+        "launchAppPath": "",
+        "shadowAngle": 90,
+        "shadowDistance": 6,
+        "cornerRadius": 8,
+        "cornerRadiusEnabled": true,
+        "blurEnabled": false,
+        "blurRadius": 24,
+        "shadowEnabled": true,
+        "shadowColor": "#F5D300",
+        "shadowOpacity": 30,
+        "shadowBlur": 18,
+        "borderEnabled": true,
+        "borderColor": "#F5D30066",
+        "borderWidth": 1,
+        "opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.todo-list-mini",
+      "name": "To-Do List (Mini)",
+      "position": {
+        "x": 436,
+        "y": 628,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "backgroundColor": "#0E0E14F5",
+        "cornerRadius": 8,
+        "titleText": "To-Do",
+        "maxVisibleItems": 3,
+        "autoSortDone": true,
+        "titleFont": "Monospace Bold 10",
+        "titleColor": "#F5F5FF",
+        "itemFont": "Monospace 9",
+        "itemColor": "#F5F5FF",
+        "completedColor": "#8A8AA3",
+        "accentColor": "#F5D300",
+        "shadowAngle": 90,
+        "shadowDistance": 6,
+        "cornerRadiusEnabled": true,
+        "blurEnabled": false,
+        "blurRadius": 24,
+        "shadowEnabled": true,
+        "shadowColor": "#F5D300",
+        "shadowOpacity": 30,
+        "shadowBlur": 18,
+        "borderEnabled": true,
+        "borderColor": "#F5D30066",
+        "borderWidth": 1,
+        "opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.power-menu-bar",
+      "name": "Power Menu (Bar) By Xenlism",
+      "position": {
+        "x": 48,
+        "y": 822,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "backgroundColor": "#0E0E14CC",
+        "iconColor": "#F5F5FF",
+        "buttonColor": "#181822FF",
+        "cornerRadius": 8,
+        "shadowAngle": 90,
+        "shadowDistance": 6,
+        "cornerRadiusEnabled": true,
+        "blurEnabled": false,
+        "blurRadius": 24,
+        "shadowEnabled": true,
+        "shadowColor": "#F5D300",
+        "shadowOpacity": 30,
+        "shadowBlur": 18,
+        "borderEnabled": true,
+        "borderColor": "#F5D30066",
+        "borderWidth": 1,
+        "opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    }
+  ],
+  "packMeta": {
+    "id": "cyberpunk-neon-grid",
+    "name": "Cyberpunk Neon Grid",
+    "description": "Yellow, magenta and cyan neon grid over near-black — a dense geek stat wall for night owls.",
+    "author": "Keal",
+    "email": "ixenatt@gmail.com",
+    "url": "https://github.com/xenlism"
+  }
+}

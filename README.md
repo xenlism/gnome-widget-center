@@ -78,9 +78,9 @@ back the entire thing up — all without restarting GNOME Shell.
 - 🌍 **Localized UI** across the Control Center, the overlay, and settings dialogs.
 - 🏗️ **Widget-Architects** — one widget design that spawns any number of independently-configured children.
 
-Out of the box the extension ships **61 ready-to-use widgets** across clocks, calendars,
+Out of the box the extension ships **69 ready-to-use widgets** across clocks, calendars,
 weather, system monitors (CPU/RAM/disk/network, in bar, circular, and "geek" archey-style
-layouts), media controls, launchers, and utility panels — plus **7 bundled Theme Packs**
+layouts), media controls, launchers, and utility panels — plus **33 bundled Theme Packs**
 (including `Geek-Minimal-Half-Moon`) to try the concept immediately.
 
 ## Widgets and Widget-Architects
@@ -166,21 +166,25 @@ whole thing back in one pass.
 ## Multilingual out of the box
 
 The Control Center, the in-session overlay, and every settings dialog and confirmation
-prompt are localized. Eleven languages currently ship complete UI translations:
+prompt are localized. 45 languages currently ship complete UI translations:
 
-| Code | Language |
-| --- | --- |
-| `en` | English |
-| `th` | ไทย (Thai) |
-| `de` | Deutsch (German) |
-| `es` | Español (Spanish) |
-| `ja` | 日本語 (Japanese) |
-| `zh` | 中文 (Chinese, Simplified) |
-| `ar` | العربية (Arabic, RTL) |
-| `ru` | Русский (Russian) |
-| `fr` | Français (French) |
-| `pt_PT` | Português (Portugal) |
-| `pt_BR` | Português (Brasil) |
+| Code | Language | Code | Language | Code | Language |
+| --- | --- | --- | --- | --- | --- |
+| `en` | English | `hi` | हिन्दी (Hindi) | `pt_PT` | Português (Portugal) |
+| `ar` | العربية (Arabic, RTL) | `hr` | Hrvatski (Croatian) | `ro` | Română (Romanian) |
+| `bg` | Български (Bulgarian) | `hu` | Magyar (Hungarian) | `ru` | Русский (Russian) |
+| `bn` | বাংলা (Bengali) | `id` | Bahasa Indonesia (Indonesian) | `sk` | Slovenčina (Slovak) |
+| `ca` | Català (Catalan) | `it` | Italiano (Italian) | `sr` | Српски (Serbian) |
+| `cs` | Čeština (Czech) | `ja` | 日本語 (Japanese) | `sv` | Svenska (Swedish) |
+| `da` | Dansk (Danish) | `ko` | 한국어 (Korean) | `ta` | தமிழ் (Tamil) |
+| `de` | Deutsch (German) | `lt` | Lietuvių (Lithuanian) | `th` | ไทย (Thai) |
+| `el` | Ελληνικά (Greek) | `lv` | Latviešu (Latvian) | `tr` | Türkçe (Turkish) |
+| `es` | Español (Spanish) | `ms` | Bahasa Melayu (Malay) | `uk` | Українська (Ukrainian) |
+| `et` | Eesti (Estonian) | `nb` | Norsk bokmål (Norwegian) | `ur` | اردو (Urdu, RTL) |
+| `fa` | فارسی (Persian, RTL) | `nl` | Nederlands (Dutch) | `vi` | Tiếng Việt (Vietnamese) |
+| `fi` | Suomi (Finnish) | `pl` | Polski (Polish) | `zh` | 中文 (Chinese) |
+| `fr` | Français (French) | `pt` | Português (Portuguese) | `zh_CN` | 简体中文 (Chinese, Simplified) |
+| `he` | עברית (Hebrew, RTL) | `pt_BR` | Português (Brasil) | `zh_TW` | 繁體中文 (Chinese, Traditional) |
 
 The extension follows your system locale automatically, or you can force a language from
 **Preferences → Advanced**. Adding a new language is a matter of dropping a `.js` file
@@ -244,9 +248,9 @@ gnome-widget-center-main/
 ├── gnome-widget-center@xenlism.github.io/   # the extension itself (installed as-is)
 │   ├── extension.js, prefs.js               # entry points
 │   ├── lib/                                 # host logic (loader, layout, settings, i18n…)
-│   ├── i18n/                                # en / th / de / es / ja / zh / ar / ru / fr / pt_PT / pt_BR translations
-│   ├── widgets/                             # 61 bundled widgets
-│   ├── themepacks/                          # 7 bundled Theme Packs
+│   ├── i18n/                                # 45 UI translations (see table above)
+│   ├── widgets/                             # 69 bundled widgets
+│   ├── themepacks/                          # 33 bundled Theme Packs
 │   └── schemas/                             # GSettings schema
 ├── development/                             # roadmap, project status, templates, tests, docs
 ├── docs/                                    # user-facing docs (Creating Widgets, etc.)

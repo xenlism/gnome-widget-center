@@ -1,0 +1,384 @@
+{
+  "format": "gwct",
+  "version": 1,
+  "exportedAt": "2026-09-24T18:08:23.000Z",
+  "appearance": {
+    "background": {
+      "transparent": true,
+      "color": "#0C0A06",
+      "blur": 0
+    },
+    "cornerRadius": {
+      "value": 16
+    },
+    "dropShadow": {
+      "enabled": true,
+      "transparent": false,
+      "color": "#000000",
+      "opacity": 0.45,
+      "angle": 90,
+      "distance": 4,
+      "blurRadius": 12,
+      "spread": 0
+    }
+  },
+  "hostSettings": {
+    "prevent-widget-overlap": true,
+    "edge-margin": 0,
+    "widget-spacing": 16,
+    "language": "en",
+    "guide-color": "#F5A623E6",
+    "snap-enabled": true,
+    "snap-distance": 16,
+    "grid-snap-enabled": false,
+    "grid-size": 16,
+    "widget-center-overlay-keybinding": [
+      "<Super>F12"
+    ],
+    "auto-enable-new-widgets": true
+  },
+  "widgets": [
+    {
+      "id": "xenlism.github.io.clock-modern",
+      "name": "Clock (Modern) By Xenlism",
+      "position": {
+        "x": 48,
+        "y": 48,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "format24h": true,
+        "font": "Serif Bold 30",
+        "ampmFont": "Serif Bold 10",
+        "colorHH": "#F6E8C8",
+        "colorMM": "#F6E8C8",
+        "colorSS": "#D4AF37",
+        "colorAmPm": "#F1D07A",
+        "cardColor": "#16130BF5",
+        "cornerRadius": 16,
+        "launchOnClick": true,
+        "desktopFilePath": "/usr/share/applications/firefox.desktop",
+        "shadowAngle": 90,
+        "shadowDistance": 6,
+        "cornerRadiusEnabled": true,
+        "blurEnabled": false,
+        "blurRadius": 24,
+        "shadowEnabled": true,
+        "shadowColor": "#000000",
+        "shadowOpacity": 45,
+        "shadowBlur": 16,
+        "borderEnabled": true,
+        "borderColor": "#D4AF3766",
+        "borderWidth": 1,
+        "opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.calendar-big",
+      "name": "Calendar (big) By Xenlism",
+      "position": {
+        "x": 242,
+        "y": 48,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "mondayStart": false,
+        "calendarFont": "Serif 13",
+        "monthHeaderColor": "#F6E8C8",
+        "calendarTextColor": "#F6E8C8",
+        "outOfMonthColor": "#B79E6E",
+        "weekdayHeaderColor": "#B79E6E",
+        "highlightDayColor": "#D4AF37",
+        "highlightDayTextColor": "#0C0A06",
+        "cardColor": "#16130BF5",
+        "cornerRadius": 16,
+        "shadowAngle": 90,
+        "shadowDistance": 6,
+        "cornerRadiusEnabled": true,
+        "blurEnabled": false,
+        "blurRadius": 24,
+        "shadowEnabled": true,
+        "shadowColor": "#000000",
+        "shadowOpacity": 45,
+        "shadowBlur": 16,
+        "borderEnabled": true,
+        "borderColor": "#D4AF3766",
+        "borderWidth": 1,
+        "opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.circles-cpu",
+      "name": "Circles CPU By Xenlism",
+      "position": {
+        "x": 48,
+        "y": 434,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "backgroundColor": "#16130BF5",
+        "labelFont": "Serif 12",
+        "labelColor": "#B79E6E",
+        "percentFont": "Serif Bold 22",
+        "percentColor": "#F6E8C8",
+        "circleBaseColor": "#FFFFFF1A",
+        "ringColor": "#D4AF37",
+        "ringThickness": 10,
+        "refreshRateSeconds": 2,
+        "launchEnabled": false,
+        "launchAppPath": "",
+        "shadowAngle": 90,
+        "shadowDistance": 6,
+        "cornerRadius": 16,
+        "cornerRadiusEnabled": true,
+        "blurEnabled": false,
+        "blurRadius": 24,
+        "shadowEnabled": true,
+        "shadowColor": "#000000",
+        "shadowOpacity": 45,
+        "shadowBlur": 16,
+        "borderEnabled": true,
+        "borderColor": "#D4AF3766",
+        "borderWidth": 1,
+        "opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.circles-mem",
+      "name": "Circles MEM By Xenlism",
+      "position": {
+        "x": 242,
+        "y": 434,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "backgroundColor": "#16130BF5",
+        "labelFont": "Serif 12",
+        "labelColor": "#B79E6E",
+        "percentFont": "Serif Bold 22",
+        "percentColor": "#F6E8C8",
+        "circleBaseColor": "#FFFFFF1A",
+        "ringColor": "#F1D07A",
+        "ringThickness": 10,
+        "refreshRateSeconds": 2,
+        "launchEnabled": false,
+        "launchAppPath": "/usr/share/applications/org.gnome.SystemMonitor.desktop",
+        "shadowAngle": 90,
+        "shadowDistance": 6,
+        "cornerRadius": 16,
+        "cornerRadiusEnabled": true,
+        "blurEnabled": false,
+        "blurRadius": 24,
+        "shadowEnabled": true,
+        "shadowColor": "#000000",
+        "shadowOpacity": 45,
+        "shadowBlur": 16,
+        "borderEnabled": true,
+        "borderColor": "#D4AF3766",
+        "borderWidth": 1,
+        "opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.circles-disk",
+      "name": "Circles Disk By Xenlism",
+      "position": {
+        "x": 436,
+        "y": 434,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "backgroundColor": "#16130BF5",
+        "labelFont": "Serif 12",
+        "labelColor": "#B79E6E",
+        "percentFont": "Serif Bold 22",
+        "percentColor": "#F6E8C8",
+        "circleBaseColor": "#FFFFFF1A",
+        "ringColor": "#B08D2E",
+        "ringThickness": 10,
+        "diskPath": "/",
+        "refreshRateSeconds": 2,
+        "launchEnabled": false,
+        "launchAppPath": "",
+        "shadowAngle": 90,
+        "shadowDistance": 6,
+        "cornerRadius": 16,
+        "cornerRadiusEnabled": true,
+        "blurEnabled": false,
+        "blurRadius": 24,
+        "shadowEnabled": true,
+        "shadowColor": "#000000",
+        "shadowOpacity": 45,
+        "shadowBlur": 16,
+        "borderEnabled": true,
+        "borderColor": "#D4AF3766",
+        "borderWidth": 1,
+        "opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.circles-battery",
+      "name": "Circles Battery By Xenlism",
+      "position": {
+        "x": 630,
+        "y": 434,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "backgroundColor": "#16130BCC",
+        "borderColor": "#D4AF3766",
+        "circleBaseColor": "#FFFFFF1A",
+        "ringColorLow": "#B5533C",
+        "ringColorMid": "#D4AF37",
+        "ringColorHigh": "#7FBF7F",
+        "ringColorCharging": "#D4AF37",
+        "ringThickness": 10,
+        "showLabel": true,
+        "captionText": "BATTERY",
+        "captionFont": "Serif 10",
+        "captionColor": "#B79E6E",
+        "percentFont": "Serif Bold 22",
+        "percentColor": "#F6E8C8",
+        "refreshRateSeconds": 5,
+        "shadowAngle": 90,
+        "shadowDistance": 6,
+        "cornerRadius": 16,
+        "cornerRadiusEnabled": true,
+        "blurEnabled": false,
+        "blurRadius": 24,
+        "shadowEnabled": true,
+        "shadowColor": "#000000",
+        "shadowOpacity": 45,
+        "shadowBlur": 16,
+        "borderEnabled": true,
+        "borderWidth": 1,
+        "opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.media-player-poster",
+      "name": "Media Player (Poster) By Xenlism",
+      "position": {
+        "x": 48,
+        "y": 628,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "backgroundColor": "#16130BF5",
+        "widgetCornerRadius": 18,
+        "coverCornerRadius": 18,
+        "trackFont": "Serif Bold 20",
+        "trackColor": "#F6E8C8",
+        "artistFont": "Serif 13",
+        "artistColor": "#B79E6E",
+        "buttonColor": "#D4AF37",
+        "desktopFilePath": "",
+        "shadowAngle": 90,
+        "shadowDistance": 6,
+        "cornerRadius": 16,
+        "cornerRadiusEnabled": true,
+        "blurEnabled": false,
+        "blurRadius": 24,
+        "shadowEnabled": true,
+        "shadowColor": "#000000",
+        "shadowOpacity": 45,
+        "shadowBlur": 16,
+        "borderEnabled": true,
+        "borderColor": "#D4AF3766",
+        "borderWidth": 1,
+        "opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.todo-list-mini",
+      "name": "To-Do List (Mini)",
+      "position": {
+        "x": 434,
+        "y": 628,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "backgroundColor": "#16130BF5",
+        "cornerRadius": 16,
+        "titleText": "To-Do",
+        "maxVisibleItems": 3,
+        "autoSortDone": true,
+        "titleFont": "Serif Bold 10",
+        "titleColor": "#F6E8C8",
+        "itemFont": "Serif 9",
+        "itemColor": "#F6E8C8",
+        "completedColor": "#B79E6E",
+        "accentColor": "#D4AF37",
+        "shadowAngle": 90,
+        "shadowDistance": 6,
+        "cornerRadiusEnabled": true,
+        "blurEnabled": false,
+        "blurRadius": 24,
+        "shadowEnabled": true,
+        "shadowColor": "#000000",
+        "shadowOpacity": 45,
+        "shadowBlur": 16,
+        "borderEnabled": true,
+        "borderColor": "#D4AF3766",
+        "borderWidth": 1,
+        "opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    }
+  ],
+  "packMeta": {
+    "id": "royal-gold",
+    "name": "Royal Gold",
+    "description": "Black-and-gold luxury desktop with warm metallic accents on rich dark cards.",
+    "author": "Keal",
+    "email": "ixenatt@gmail.com",
+    "url": "https://github.com/xenlism"
+  }
+}
