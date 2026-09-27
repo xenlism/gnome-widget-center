@@ -286,7 +286,27 @@ export default class WidgetCenterExtension extends Extension {
             x: 40,
             y: 40
         };
+        // getSavedPosition() falls back to `fallback` in memory whenever
+        // layout.json has no entry for this widget yet - it never writes
+        // that fallback back to disk itself. Left alone, a widget that's
+        // sitting right there on the desktop at its default position, but
+        // has never been dragged even once, has NO entry in layout.json:
+        // storage.getWidgetPosition(entry.id) keeps returning null forever.
+        // That silently breaks anything that treats "has a saved position"
+        // as "is placed on the desktop" - notably exportService.js's
+        // _enabledWidgets(), which drops such a widget from every themepack
+        // export/backup even though it's visibly on screen. Persist the
+        // fallback immediately the first time a widget is placed so its
+        // position is real on disk from the start, not just implied.
+        const hadSavedPosition = this._storage?.getWidgetPosition(entry.id) != null;
         const position = this._layer.getSavedPosition(entry.id, fallback);
+        if (!hadSavedPosition) {
+            try {
+                this._storage?.updateWidgetPosition(entry.id, position.x, position.y, position.monitorIndex ?? 0);
+            } catch (e) {
+                this._logger?.error(`Failed to persist initial position for "${entry.id}"`, e);
+            }
+        }
         try {
             BlockSizeManager.applyBlockSize(entry.metadata, entry.actor);
         } catch (e) {
@@ -349,7 +369,17 @@ export default class WidgetCenterExtension extends Extension {
             x: 40,
             y: 40
         };
+        // Same rationale as _placeEntry(): don't leave a widget with no
+        // real layout.json entry just because it's never been dragged.
+        const hadSavedPosition = this._storage?.getWidgetPosition(widgetId) != null;
         const position = this._layer.getSavedPosition(widgetId, fallback);
+        if (!hadSavedPosition) {
+            try {
+                this._storage?.updateWidgetPosition(widgetId, position.x, position.y, position.monitorIndex ?? 0);
+            } catch (e) {
+                this._logger?.error(`Failed to persist initial position for "${widgetId}" after Reset`, e);
+            }
+        }
         try {
             BlockSizeManager.applyBlockSize(newEntry.metadata, newEntry.actor);
         } catch (e) {

@@ -132,6 +132,11 @@ export class WidgetRuntimeLoader extends WidgetLoader {
         }
     }
     _applyDefaults(widgetInfo, instance, settings) {
+        // Snapshot *before* applyDefaults()/flush() below can create it, so
+        // we can tell "this widget never had a settings file on disk" apart
+        // from "it already had one, defaults just filled in a missing key".
+        const settingsPath = this._storageService?.getWidgetSettingsPath?.(widgetInfo.id);
+        const hadSettingsFile = settingsPath ? fileExists(settingsPath) : true;
         try {
             const configJsonDefaults = this._configJsonDefaults(widgetInfo);
             const schemaDefaults = getSchemaDefaults(widgetInfo.metadata.settings);
@@ -141,6 +146,34 @@ export class WidgetRuntimeLoader extends WidgetLoader {
                 ...instance?.getDefaultSettings?.() ?? {}
             };
             WidgetSettings.applyDefaults(settings, defaults);
+            // applyDefaults() only *schedules* a write (each key it fills in
+            // goes through the settings Proxy's `set` trap, which debounces
+            // the actual disk write by DEBOUNCE_MS - see widgetSettings.js).
+            // That's fine for a user tweaking a slider, but wrong here: on a
+            // brand-new widget instance (no <id>.json yet, or one missing
+            // some keys) we want the merged config.json/schema/widget
+            // defaults captured on disk under
+            // ~/.config/gnome-widget-center/widgets/ as soon as the widget
+            // loads - not only after the debounce timer happens to fire, and
+            // not only once the user opens the settings panel and changes
+            // something. Flushing immediately here makes that unconditional.
+            // A no-op (no pending save) when applyDefaults() didn't actually
+            // add any new key - e.g. every default was already on disk.
+            WidgetSettings.flush(widgetInfo.id);
+            // Some widgets have no config.json, no settings schema in
+            // metadata.json, and no getDefaultSettings() at all - `defaults`
+            // above is `{}`, so applyDefaults() sets nothing and the flush()
+            // just above is a no-op. Without this, such a widget would never
+            // get a <id>.json file under
+            // ~/.config/gnome-widget-center/widgets/ no matter how many
+            // times it's loaded. Force one write of whatever the settings
+            // proxy holds right now (at minimum `_schemaVersion`) so the
+            // file always exists on disk the first time a widget loads.
+            if (!hadSettingsFile && this._storageService) {
+                this._storageService.saveWidgetSettings(widgetInfo.id, {
+                    ...settings
+                });
+            }
         } catch (e) {
             this._recordError(widgetInfo, `getDefaultSettings() threw: ${e.message}`);
         }

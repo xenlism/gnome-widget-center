@@ -291,5 +291,25 @@
       </description>
     </key>
 
+    <key name="pollinations-api-key" type="s">
+      <default>''</default>
+      <summary>Optional Pollinations AI API key, used by Export Theme…'s ✦ AI buttons</summary>
+      <description>
+        2026-09-27. Pollinations retired its old key-free
+        text.pollinations.ai/openai endpoint in favor of a unified
+        gen.pollinations.ai API that requires a (free) publishable key from
+        enter.pollinations.ai. Set from Preferences → Import/Export → Theme
+        pack (.gwct, shareable). Read by lib/themePackExportDialog.js's
+        generateAiMeta(), which now calls Pollinations directly (no local
+        Ollama fallback) - without this key, the ✦ AI buttons fail with an
+        error asking for one. Deliberately left out of both
+        HOST_SETTINGS_KEYS (lib/exportService.js, so it never ends up
+        inside a shared .gwct file) and BACKUP_GSCHEMA_KEYS
+        (lib/backupService.js, so it never ends up inside a .gwcbak backup
+        either) - this is a per-machine secret, not part of a shareable
+        theme or a portable backup.
+      </description>
+    </key>
+
   </schema>
 </schemalist>

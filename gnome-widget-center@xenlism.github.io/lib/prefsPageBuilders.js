@@ -404,6 +404,36 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
         shareShortcutRow.add_suffix(shareRecordButton);
         shareShortcutRow.activatable_widget = shareRecordButton;
         packGroup.add(shareShortcutRow);
+
+        // ── Pollinations API key (✦ AI) ──────────────────────────────────────
+        // Required for the ✦ AI buttons - see generateAiMeta() in
+        // themePackExportDialog.js, which calls Pollinations directly.
+        const pollinationsKeyRow = new Adw.PasswordEntryRow({
+            title: this._tr("importexport.pollinationskey.title", "Pollinations API key (✦ AI)"),
+            sensitive: this._settings.isReady
+        });
+        pollinationsKeyRow.text = this._settings.isReady
+            ? this._settings.getGlobalValue("pollinations-api-key") || ""
+            : "";
+        pollinationsKeyRow.connect("notify::text", () => {
+            try {
+                this._settings.setGlobalValue("pollinations-api-key", pollinationsKeyRow.text.trim());
+            } catch (e) {
+                logError(e, "could not save pollinations-api-key");
+            }
+        });
+        const pollinationsKeyUrl = "https://enter.pollinations.ai";
+        const pollinationsKeyHint = new Adw.ActionRow({
+            title: this._tr("importexport.pollinationskey.subtitle", "Get a free key"),
+            subtitle: pollinationsKeyUrl,
+            activatable: true
+        });
+        pollinationsKeyHint.add_suffix(new Gtk.Image({
+            icon_name: "adw-external-link-symbolic"
+        }));
+        pollinationsKeyHint.connect("activated", () => Gtk.show_uri(window, pollinationsKeyUrl, Gdk.CURRENT_TIME));
+        packGroup.add(pollinationsKeyRow);
+        packGroup.add(pollinationsKeyHint);
         return page;
     }
     _buildBackupCategory(window, settings, storage, discoveredWidgets, widgetPaths) {
