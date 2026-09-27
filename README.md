@@ -222,6 +222,35 @@ development workflow and available APIs.
 
 ## Install
 
+### Quick install (one line)
+
+No cloning, no archive to extract — this downloads the repo and installs it in one step:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/xenlism/gnome-widget-center/main/install.sh | bash
+```
+
+or with `wget`:
+
+```bash
+wget -qO- https://raw.githubusercontent.com/xenlism/gnome-widget-center/main/install.sh | bash
+```
+
+Run the same command again any time to update to the latest `main`.
+
+### Git clone
+
+```bash
+git clone https://github.com/xenlism/gnome-widget-center.git
+cd gnome-widget-center
+chmod +x install.sh
+./install.sh
+```
+
+To update, `git pull` and run `./install.sh` again.
+
+### From a release archive
+
 1. Extract the release archive and open a terminal in the extracted folder.
 2. Run:
 
@@ -230,16 +259,19 @@ development workflow and available APIs.
    ./install.sh
    ```
 
-   The installer reads the extension UUID from
-   `gnome-widget-center@xenlism.github.io/metadata.json`, installs it under
-   `~/.local/share/gnome-shell/extensions/`, recompiles the bundled GSettings schema, and
-   attempts to enable it. Any existing installation is moved to a timestamped backup folder
-   first.
-
-3. If it doesn't enable automatically, open **Extensions** and enable **GNOME Widget
-   Center** by hand. On Wayland, log out and back in if it doesn't appear right away.
-
 To update, extract a newer archive and run `./install.sh` again.
+
+### What the installer does
+
+Whichever method you use, `install.sh` reads the extension UUID from
+`gnome-widget-center@xenlism.github.io/metadata.json`, installs it under
+`~/.local/share/gnome-shell/extensions/`, recompiles the bundled GSettings schema, and
+attempts to enable it. Any existing installation is moved to a timestamped backup folder
+first. If it doesn't enable automatically, open **Extensions** and enable **GNOME Widget
+Center** by hand. On Wayland, log out and back in if it doesn't appear right away.
+
+Requires `git`, or `curl`/`wget` + `tar` as a fallback, plus `glib-compile-schemas`
+(ships with GLib on virtually every GNOME system).
 
 ## Project layout
 
