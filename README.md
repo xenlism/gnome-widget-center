@@ -1,172 +1,193 @@
-# 🧩 GNOME Widget Center
+# 🧩 GNOME Widget Center **v2**
 
-**Bring KDE-Plasma-style desktop widgets to GNOME Shell — without leaving the GNOME way of doing things.**
+**Live desktop widgets for GNOME Shell. Drag them, style them, theme them, share them. 🎨**
 
 [![GNOME Shell](https://img.shields.io/badge/GNOME%20Shell-50--51-4A86CF?logo=gnome&logoColor=white)](https://www.gnome.org/)
+[![Version](https://img.shields.io/badge/Version-2.0.0-brightgreen)](CHANGELOG.md)
 [![Language](https://img.shields.io/badge/Language-GJS%20%2F%20JavaScript-yellow)](https://gjs.guide/)
 [![Toolkit](https://img.shields.io/badge/Toolkit-GTK%204%20%2F%20Libadwaita-blue)](https://www.gtk.org/)
 [![License](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Pre--release-yellow)](development/PROJECT_STATUS.md)
 [![Sponsor](https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/xenlism)
 
----
-
-> ### 🧪 Project status: **Released — tested and submitted to extensions.gnome.org**
->
-> The extension has been submitted to [extensions.gnome.org](https://extensions.gnome.org/) (EGO)
-> and is currently pending review. `metadata.json` still tracks an internal build number
-> instead of a public version number until that review completes. `shell-version`
-> currently declares **GNOME Shell 50 and 51**. The current feature set has been functionally
-> tested and **passed verification by Nox (Codex Mode)**, including the main Control Center,
-> Edit Mode, widget configuration, theme export flow, overlay workflow, and related settings
-> behavior. The verification is recorded as a project test pass rather than a claim that every
-> possible GNOME/compositor/environment combination is identical. **Back up an important
-> desktop setup before trying pre-release software, and please report anything that breaks.**
-
----
-
-## Table of contents
-
-- [What it is](#what-it-is)
-- [Screenshots](#screenshots)
-- [Highlights](#highlights)
-- [Widgets and Widget-Architects](#widgets-and-widget-architects)
-- [Make every widget yours](#make-every-widget-yours)
-- [Theme Packs — share a whole desktop setup](#theme-packs--share-a-whole-desktop-setup)
-- [Backup & restore](#backup--restore)
-- [Multilingual out of the box](#multilingual-out-of-the-box)
-- [User files and folders](#user-files-and-folders)
-- [Build your own widgets](#build-your-own-widgets)
-- [Install](#install)
-- [Project layout](#project-layout)
-- [Verification & test pass](#verification--test-pass)
-- [Support development](#support-development)
-- [License](#license)
-- [Agent team](#agent-team)
-
----
-
-## What it is
-
-**GNOME Widget Center** is a GNOME Shell extension that lets you drop live, configurable
-widgets straight onto your desktop — clocks, calendars, weather, system monitors, media
-controls, app launchers, and more — and arrange them visually, the way you would in KDE
-Plasma, while staying inside the [GNOME Human Interface Guidelines](https://developer.gnome.org/hig/).
-
-Everything is managed from a single **Control Center**: turn widgets on or off, drag them
-into place, tune their appearance, package the whole look as a shareable **Theme Pack**, and
-back the entire thing up — all without restarting GNOME Shell.
-
-## Screenshots
-
 [![Watch the video on YouTube](assets/desktop.png)](https://www.youtube.com/watch?v=LaN50RX_Dcw)
 
-### Edit Mode
+> **Clocks, weather, system monitors, media controls, launchers** and **69 ready-made widgets**
+> ready to land on your desktop, plus **33 theme packs** that restyle the whole thing in one click.
+
+---
+
+## 🚀 What's new in v2
+
+v2 is a bigger change under the hood than it looks. The extension core stays lean, and the
+things that grow fastest (widgets and theme packs) get their own homes so they can ship on
+their own schedule.
+
+```mermaid
+flowchart LR
+    Core["🏠 gnome-widget-center<br/>loader · prefs · overlay"]
+    W["🧱 widgets repo<br/>one folder per widget"]
+    T["🎨 themepacks repo<br/>.gwct files"]
+    S["🛒 GWC Store<br/>browse &amp; install"]
+    W --> S
+    T --> S
+    S --> Core
+```
+
+| | What changed |
+| --- | --- |
+| 🧱 **Split repositories** | The extension core, the widgets, and the theme packs now live in separate repositories. New widgets and packs can be published without cutting a new extension release. |
+| 🛒 **GWC Store** *(in progress)* | A catalog layer on top of those repositories, so you can browse and install widgets and theme packs without leaving the app. |
+| 🎨 **Theme packs got smarter** | A `.gwct` now carries **card settings**, a **color scheme** (text 1/2, ring 1-4, accent) and **fonts**, not just per-widget values. Widgets you add later start from the pack's look instead of their own defaults. |
+| 🎯 **One theme, every widget** | Applying a pack also updates widgets that are *not* in it, so enabling one afterwards matches your active theme. No more mystery dark card next to a glass one. |
+| 🔑 **Unified card settings** | Card options share one naming pattern, `card-[setting]-[sub-setting]` (`card-background-color`, `card-corner-radius`, `card-opacity`, ...), so every widget speaks the same language. |
+| 🌍 **45 UI languages** | Region-aware locale loading (`pt_BR`, `pt_PT`, `zh_CN`, `zh_TW`) and a full set of translations. |
+| 📥 **Easier install** | One `curl`/`wget` line, a plain `git clone`, or a release archive, and all three go through the same `install.sh`. |
+
+> ⚠️ **Heads-up for existing users and widget authors:** because widgets and packs are leaving the
+> core repository, anything that relied on them being bundled will need updating. Your existing
+> widgets, settings and theme packs keep working from their current folders (see
+> [User files and folders](#-user-files-and-folders)).
+
+---
+
+## 📚 Table of contents
+
+- [What it is](#-what-it-is)
+- [Highlights](#-highlights)
+- [Edit Mode](#-edit-mode)
+- [Widgets and Widget-Architects](#-widgets-and-widget-architects)
+- [Make every widget yours](#-make-every-widget-yours)
+- [Theme Packs](#-theme-packs)
+- [Backup & restore](#-backup--restore)
+- [Multilingual](#-multilingual)
+- [User files and folders](#-user-files-and-folders)
+- [Build your own widgets](#-build-your-own-widgets)
+- [Install](#-install)
+- [Project layout](#-project-layout)
+- [Status & testing](#-status--testing)
+- [Support development](#-support-development)
+- [License](#license)
+- [Agent team](#-agent-team)
+
+---
+
+## ✨ What it is
+
+**GNOME Widget Center** is a GNOME Shell extension that lets you drop live, configurable
+widgets straight onto your desktop and arrange them visually, the way you would in KDE Plasma,
+while staying inside the [GNOME Human Interface Guidelines](https://developer.gnome.org/hig/).
+
+Everything is managed from a single **Control Center**: turn widgets on or off, drag them into
+place, tune their look, package the whole desktop as a shareable **Theme Pack**, and back it all
+up. No Shell restart needed. 🙌
+
+## 🌟 Highlights
+
+- 🖱️ **One Control Center** to add, enable, disable and configure every widget.
+- ✏️ **Edit Mode** with drag-and-drop placement, snapping, a grid, and multi-monitor support.
+- 🪟 **Deep per-widget styling**: background, border, shadow, blur, opacity and corner radius, mixed freely.
+- 📦 **Theme Packs**: export, import and share a complete desktop look as a single `.gwct` file, screenshot included.
+- 🎨 **Pack-wide color scheme and fonts** so new widgets match from the first second.
+- 💾 **Password-protected backups** (`.gwcbak`, AES-256 / PBKDF2) covering widget settings, host preferences and installed widget files.
+- 🧱 **Bring your own widgets** without touching the extension itself.
+- 🏗️ **Widget-Architects**: one design that spawns any number of independently configured children.
+- 🌍 **45 languages**, including RTL (Arabic, Hebrew, Persian, Urdu).
+
+## ✏️ Edit Mode
 
 ![Drag-and-drop Edit Mode with snapping guides](assets/editmode.png)
 
 [▶ Watch the Edit Mode video](assets/editmode.mp4)
 
-## Highlights
-
-- 🖱️ **One Control Center** to add, enable, disable, and configure every desktop widget.
-- ✏️ **Edit Mode** — drag-and-drop placement with snapping, a grid, and multi-monitor support.
-- 🎨 **Deep per-widget styling** — background, border, shadow, blur, opacity, and corner radius, mixed and matched freely.
-- 📦 **Theme Packs** — export, import, and share a complete desktop look as a single `.gwct` file, screenshot included.
-- 💾 **Password-protected full backups** (`.gwcbak`, AES‑256 / PBKDF2) that cover every widget's settings, host preferences, and installed widget files.
-- 🧱 **Bring your own widgets** — install user widgets without touching the extension itself.
-- 🌍 **Localized UI** across the Control Center, the overlay, and settings dialogs.
-- 🏗️ **Widget-Architects** — one widget design that spawns any number of independently-configured children.
-
-Out of the box the extension ships **69 ready-to-use widgets** across clocks, calendars,
-weather, system monitors (CPU/RAM/disk/network, in bar, circular, and "geek" archey-style
-layouts), media controls, launchers, and utility panels — plus **33 bundled Theme Packs**
-(including `Geek-Minimal-Half-Moon`) to try the concept immediately.
-
-## Widgets and Widget-Architects
-
-GNOME Widget Center supports two kinds of building blocks.
+## 🧱 Widgets and Widget-Architects
 
 ### Widgets
 
-Ready-to-use desktop components — clocks, calendars, weather, system monitors, media
-controls, launchers, shortcuts, and more. Each widget only exposes the settings that make
-sense for its job, so a simple clock stays simple while a system monitor can offer much
-richer controls.
+Ready-to-use desktop components: clocks, calendars, weather, system monitors (CPU / RAM / disk /
+network, in bar, circular and "geek" archey-style layouts), media controls (via MPRIS),
+launchers, shortcuts and more. Each widget exposes only the settings that make sense for its
+job, so a simple clock stays simple while a system monitor can offer much richer controls.
 
 ### Widget-Architects
 
-A Widget-Architect is a widget that creates its own **child widgets** — ideal when you want
-several instances of the same design with different settings, like one launcher tile per
-app, or several info cards showing different data.
+An Architect is a widget that creates its own **child widgets**. It's ideal for several
+instances of one design with different settings, like one launcher tile per app.
 
 1. Add the Architect widget to the desktop.
-2. Enter **Edit Mode** and select/right-click the Architect widget.
+2. Enter **Edit Mode** and select / right-click the Architect.
 3. Click **+ Add Widget** in its edit toolbar.
-4. Configure the new child. It's an independent widget instance that still shares the
-   Architect's underlying design.
+4. Configure the new child. It's an independent instance that still shares the Architect's design.
 
-The `+ Add Widget` action only ever appears on the Architect parent, so a child can't
-accidentally spawn grandchildren.
+The `+ Add Widget` action only appears on the Architect parent, so children can't spawn
+grandchildren.
 
-## Make every widget yours
+## 🎛️ Make every widget yours
 
-Most themeable widgets expose a common set of visual controls you can combine freely:
+Themeable widgets share one set of card controls, all following the `card-*` naming pattern:
 
-| Setting | What it changes | Ideas to try |
+| Setting | What it changes | Try this |
 | --- | --- | --- |
-| **Background color** | The card's fill color; alpha controls transparency. | A translucent dark card over a busy wallpaper, or a solid accent card for a launcher. |
-| **Corner radius** | How rounded the card's corners are. | Large radius for soft, modern cards; off for sharp dashboard panels. |
-| **Shadow** | A drop shadow with adjustable color, opacity, blur, distance, and direction. | A subtle dark shadow to separate transparent cards from a busy wallpaper. |
-| **Background blur** | Softens whatever sits behind a translucent card. | Pair with a transparent background for a glass-like look. |
-| **Border color and width** | An outline around the card. | A low-opacity border to define a card without weighing it down. |
-| **Opacity** | Fades the whole widget, text and icons included. | Lower it for background info; keep controls at full opacity for legibility. |
+| **Background color** | Card fill; alpha controls transparency. | Translucent dark card over a busy wallpaper. |
+| **Corner radius** | How round the corners are. | Big radius for soft cards, off for sharp dashboards. |
+| **Shadow** | Color, opacity, blur, distance and direction. | A subtle shadow to lift transparent cards. |
+| **Background blur** | Softens what's behind a translucent card. | Pair with transparency for a glass look. |
+| **Border** | Outline color and width. | A low-opacity border to define a card gently. |
+| **Opacity** | Fades the whole widget. | Lower it for background info, keep controls solid. |
 
-> **Blur note:** background blur depends on GNOME Shell and your graphics/compositor stack.
-> A known GNOME limitation can make blur unavailable or inconsistent on some systems — every
-> other appearance setting keeps working normally regardless.
+> **Blur note:** background blur depends on GNOME Shell and your graphics/compositor stack. A
+> known GNOME limitation can make blur unavailable or inconsistent on some systems. Every other
+> appearance setting keeps working regardless.
 
-There's no single "correct" style: mix transparency, blur, soft shadows, and rounded corners
-for a glassmorphism look, or go opaque with square corners and borders for a crisp dashboard.
-Every setting is per-widget, so your clock, launcher, and monitor can each have their own
-character.
+There's no single "right" style. Mix transparency, blur and soft shadows for glassmorphism, or
+go opaque with square corners for a crisp dashboard. 🧊
 
-## Theme Packs — share a whole desktop setup
+## 🎨 Theme Packs
 
-A Theme Pack captures more than colors — it makes an entire widget layout and its
-configuration portable. Export a setup to share with someone else, keep versioned desktop
-looks around, or move your setup to another machine. Importing a pack restores the saved
-appearance and widget configuration in one step.
+A Theme Pack captures more than colors. It makes an entire widget layout and its configuration
+portable, and in v2 it also carries the **look rules** for widgets you haven't added yet.
 
-### Overlay and export shortcuts
+**What's inside a `.gwct`:**
 
-GNOME Widget Center provides keyboard shortcuts for the fast sharing workflow:
+- 🧩 the widgets in the pack, with positions and per-widget settings
+- 🪪 `appearance`: background, corner radius, drop shadow
+- 🃏 `cardSettings`: the card look shared by every widget
+- 🌈 `colorScheme`: text 1/2, ring 1-4, accent and card colors
+- 🔤 `fontSettings`: text 1/2 font face and size
+- 🖼️ a desktop screenshot and pack metadata (name, author, description)
 
-- **Run Overlay shortcut** — opens the GNOME Widget Center overlay directly, so you can
-  access widgets and overlay actions without opening the full Control Center first.
-- **Export Theme shortcut** — starts the Theme Pack export workflow from the keyboard.
-  When the shortcut is run, GNOME Widget Center captures the current desktop and includes
-  the screenshot together with the **Export Theme** dialog, making the exported theme easy
-  to preview and share as a complete desktop setup.
+**How a pack behaves:**
 
-This makes the workflow simple: **run the shortcut → capture the desktop → export the Theme Pack
-with its screenshot → share your dotfile/theme setup**.
+- Choosing a pack **loads its widgets** and applies its look.
+- Widgets that are *not* in the pack are switched off, but their saved card, color and font
+  settings are refreshed from the pack. Enable one later and it matches.
+- The id of the most recently loaded pack is stored in the `active-theme-pack` GSettings key:
 
-The screenshot is attached to the export automatically, so a `.gwct` file can carry both the
-configuration and a visual preview of the desktop it represents.
+  ```bash
+  gsettings --schemadir ~/.local/share/gnome-shell/extensions/gnome-widget-center@xenlism.github.io/schemas \
+    get org.gnome.shell.extensions.widget-center active-theme-pack
+  ```
 
-## Backup & restore
+### ⌨️ Overlay and export shortcuts
 
-For everything a Theme Pack doesn't cover — secrets included — there's a full,
-password-protected backup format (`.gwcbak`, AES‑256 with a PBKDF2-derived key). It captures
-appearance, every widget's settings (including passwords and API keys), host preferences,
-and the widget files themselves for anything you installed yourself, and can restore the
-whole thing back in one pass.
+- **Run Overlay** opens the overlay straight away, so you can reach widgets and actions without
+  opening the full Control Center.
+- **Export Theme** starts the export from the keyboard. It captures the current desktop and
+  shows it in the **Export Theme** dialog, so the screenshot travels with the pack.
 
-## Multilingual out of the box
+The flow is simple: **shortcut → capture → export → share your setup.** 📸
 
-The Control Center, the in-session overlay, and every settings dialog and confirmation
-prompt are localized. 45 languages currently ship complete UI translations:
+## 💾 Backup & restore
+
+For everything a Theme Pack doesn't cover, secrets included, there's a full password-protected
+backup (`.gwcbak`, AES-256 with a PBKDF2-derived key). It captures appearance, every widget's
+settings (including passwords and API keys), host preferences, and the widget files you
+installed yourself, and restores the whole thing in one pass.
+
+## 🌍 Multilingual
+
+The Control Center, the overlay, and every settings dialog are localized. **45 languages**
+ship complete UI translations:
 
 | Code | Language | Code | Language | Code | Language |
 | --- | --- | --- | --- | --- | --- |
@@ -186,45 +207,39 @@ prompt are localized. 45 languages currently ship complete UI translations:
 | `fr` | Français (French) | `pt` | Português (Portuguese) | `zh_CN` | 简体中文 (Chinese, Simplified) |
 | `he` | עברית (Hebrew, RTL) | `pt_BR` | Português (Brasil) | `zh_TW` | 繁體中文 (Chinese, Traditional) |
 
-The extension follows your system locale automatically, or you can force a language from
-**Preferences → Advanced**. Adding a new language is a matter of dropping a `.js` file
-into `gnome-widget-center@xenlism.github.io/i18n/` with the same keys as
-[`i18n/en.js`](gnome-widget-center@xenlism.github.io/i18n/en.js) — the loader
-(`i18n/index.js`) picks it up automatically, no build step required. Both plain two-letter
-codes (`fr.js`, `ru.js`) and region-qualified codes (`pt_BR.js`, `pt_PT.js`) are supported.
+The extension follows your system locale, or you can force a language in
+**Preferences → Advanced**. To add one, drop a `.js` file into
+`gnome-widget-center@xenlism.github.io/i18n/` with the same keys as
+[`i18n/en.js`](gnome-widget-center@xenlism.github.io/i18n/en.js). The loader picks it up
+automatically, no build step. Plain codes (`fr.js`) and region codes (`pt_BR.js`) both work.
 
-## User files and folders
+## 📁 User files and folders
 
-GNOME Widget Center keeps your content separate from the extension itself, which makes
-upgrades safer and your work easy to back up or share.
+Your content stays separate from the extension, so upgrades are safe and backups are easy.
 
 | Folder | Purpose |
 | --- | --- |
 | `~/.config/gnome-widget-center/themepacks` | Your downloaded and exported Theme Packs. |
-| `~/.config/gnome-widget-center/widgets` | Your per-widget configuration and settings. |
+| `~/.config/gnome-widget-center/widgets` | Per-widget configuration and settings. |
 | `~/.local/share/gnome-widget-center/widgets` | Your installed user widgets, including Architect-created children. |
 
-## Build your own widgets
+## 🛠️ Build your own widgets
 
-The extension is designed to make widget development approachable. A widget can describe
-its preferences declaratively in `config.json`; the Control Center reads that file and
-generates the settings UI for you — text, colors, fonts, switches, numeric controls,
-dropdowns, and more — no custom preferences window required for common cases.
+A widget describes its preferences declaratively in `config.json`, and the Control Center
+generates the settings UI for you: text, colors, fonts, switches, numbers, dropdowns and more.
+Tag a color field with a `schemeRole` and it follows the pack's color scheme. Tag a font field
+with a `fontRole` and it follows the pack's fonts.
 
-Start from the included templates:
+Start from the templates:
 
-- [`development/widget-templates/template`](development/widget-templates/template) — a normal widget.
-- [`development/widget-templates/architect-template`](development/widget-templates/architect-template) — a Widget-Architect that creates configurable children.
+- [`development/widget-templates/template`](development/widget-templates/template): a normal widget.
+- [`development/widget-templates/architect-template`](development/widget-templates/architect-template): an Architect that creates configurable children.
 
-Then read [Creating Widgets](docs/CREATING_WIDGETS.md) and the
-[Widget API reference](WIDGET_API.md) for the full
-development workflow and available APIs.
+Then read [Creating Widgets](docs/CREATING_WIDGETS.md) and the [Widget API reference](WIDGET_API.md).
 
-## Install
+## 📥 Install
 
-### Quick install (one line)
-
-No cloning, no archive to extract — this downloads the repo and installs it in one step:
+### ⚡ Quick install (one line)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/xenlism/gnome-widget-center/main/install.sh | bash
@@ -236,9 +251,9 @@ or with `wget`:
 wget -qO- https://raw.githubusercontent.com/xenlism/gnome-widget-center/main/install.sh | bash
 ```
 
-Run the same command again any time to update to the latest `main`.
+Run it again any time to update to the latest `main`.
 
-### Git clone
+### 🌿 Git clone
 
 ```bash
 git clone https://github.com/xenlism/gnome-widget-center.git
@@ -247,11 +262,11 @@ chmod +x install.sh
 ./install.sh
 ```
 
-To update, `git pull` and run `./install.sh` again.
+To update: `git pull`, then `./install.sh` again.
 
-### From a release archive
+### 📦 From a release archive
 
-1. Extract the release archive and open a terminal in the extracted folder.
+1. Extract the archive and open a terminal in the extracted folder.
 2. Run:
 
    ```bash
@@ -259,81 +274,67 @@ To update, `git pull` and run `./install.sh` again.
    ./install.sh
    ```
 
-To update, extract a newer archive and run `./install.sh` again.
-
 ### What the installer does
 
-Whichever method you use, `install.sh` reads the extension UUID from
-`gnome-widget-center@xenlism.github.io/metadata.json`, installs it under
-`~/.local/share/gnome-shell/extensions/`, recompiles the bundled GSettings schema, and
-attempts to enable it. Any existing installation is moved to a timestamped backup folder
-first. If it doesn't enable automatically, open **Extensions** and enable **GNOME Widget
-Center** by hand. On Wayland, log out and back in if it doesn't appear right away.
+`install.sh` reads the extension UUID from `metadata.json`, installs into
+`~/.local/share/gnome-shell/extensions/`, recompiles the GSettings schema, and tries to enable
+the extension. Any existing install is moved to a timestamped backup first. If it doesn't
+enable automatically, open **Extensions** and switch on **GNOME Widget Center**. On Wayland,
+log out and back in if it doesn't show up right away.
 
-Requires `git`, or `curl`/`wget` + `tar` as a fallback, plus `glib-compile-schemas`
-(ships with GLib on virtually every GNOME system).
+Requires `git`, or `curl`/`wget` + `tar` as a fallback, plus `glib-compile-schemas` (ships
+with GLib on virtually every GNOME system).
 
-## Project layout
+## 🗂️ Project layout
 
 ```
 gnome-widget-center-main/
 ├── gnome-widget-center@xenlism.github.io/   # the extension itself (installed as-is)
 │   ├── extension.js, prefs.js               # entry points
-│   ├── lib/                                 # host logic (loader, layout, settings, i18n…)
-│   ├── i18n/                                # 45 UI translations (see table above)
-│   ├── widgets/                             # 69 bundled widgets
-│   ├── themepacks/                          # 33 bundled Theme Packs
+│   ├── lib/                                 # host logic (loader, layout, settings, themes...)
+│   ├── i18n/                                # 45 UI translations
+│   ├── widgets/                             # 69 widgets
+│   ├── themepacks/                          # 33 Theme Packs
 │   └── schemas/                             # GSettings schema
-├── development/                             # roadmap, project status, templates, tests, docs
-├── docs/                                    # user-facing docs (Creating Widgets, etc.)
-├── assets/                                  # README screenshots/video
-└── install.sh                               # installer used above
+├── development/                             # roadmap, status, templates, tests
+├── docs/                                    # user-facing docs
+├── assets/                                  # README screenshots / video
+└── install.sh                               # installer
 ```
 
-## Support development
+> In v2 the `widgets/` and `themepacks/` content is being moved into dedicated repositories
+> that the GWC Store will index.
 
-If GNOME Widget Center makes your desktop better, please consider supporting its continued
-development — contributions help fund maintenance, bug fixes, documentation, and new
-widgets.
+## 🧪 Status & testing
+
+GNOME Widget Center has been submitted to [extensions.gnome.org](https://extensions.gnome.org/)
+and is pending review. `shell-version` currently declares **GNOME Shell 50 and 51**.
+
+The current feature set was functionally tested and **passed verification by Nox (Codex Mode)**:
+Control Center and widget management, live settings, Edit Mode, appearance controls, Theme Pack
+export/import with screenshot capture, overlay and shortcuts, backup/restore, and the
+multilingual UI. This is a project test pass, not a claim that every GNOME, compositor and
+driver combination behaves identically. **Back up an important desktop setup before trying
+new software, and please report anything that breaks.** 🐛
+
+## ☕ Support development
+
+If GNOME Widget Center makes your desktop nicer, consider supporting it. Contributions fund
+maintenance, bug fixes, docs and new widgets.
 
 - ☕ [Buy Me Ko-fi](https://ko-fi.com/xenlism)
 - ❤️ [Support Project](https://github.com/sponsors/xenlism)
-- 🪙 USDT (TRC20) — see below
-
-### USDT (TRC20) address
-
-Copy this address when sending USDT on the TRON network:
+- 🪙 USDT (TRC20):
 
 ```text
 TLKY1oapYpq6NcjhXhnvdHmkDtStid16JS
 ```
 
-## Verification & test pass
-
-The current release candidate has been reviewed and functionally tested by **Nox (Codex Mode)**.
-The test pass covered the core user workflow and the features documented in this README,
-including:
-
-- Control Center and widget management.
-- Widget configuration and live settings behavior.
-- Edit Mode placement, dragging, snapping, and layout interaction.
-- Widget appearance controls and card-layer behavior.
-- Theme Pack export/import workflow.
-- Desktop screenshot capture during Theme Pack export.
-- Overlay launch and keyboard-shortcut workflow.
-- Export Theme shortcut and the screenshot + Export Theme dialog sharing workflow.
-- Backup/restore and user-widget configuration paths covered by the current implementation.
-- Multilingual UI and settings flow covered by the available project tests.
-
-**Test result: PASS.** This verification reflects the tested project build and documented feature
-set; GNOME Shell extensions can still behave differently across Shell versions, compositor
-configurations, graphics drivers, and third-party environments.
-
 ## License
 
 GPL-3.0. See [LICENSE](LICENSE).
 
-## Agent team
+## 🤖 Agent team
 
 | Agent | Role |
 | --- | --- |
