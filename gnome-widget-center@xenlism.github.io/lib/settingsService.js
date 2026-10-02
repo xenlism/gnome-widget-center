@@ -18,7 +18,7 @@ export class SettingsService {
     init() {
         if (this._isInitialized) return;
         if (this._extensionObject?.getSettings) {
-            this._globalSettings = this._extensionObject.getSettings(this._schemaId);
+            this._globalSettings = this._extensionObject.getSettings();
         } else if (this._schemasDir) {
             const source = Gio.SettingsSchemaSource.new_from_directory(this._schemasDir, Gio.SettingsSchemaSource.get_default(), false);
             const schema = source.lookup(this._schemaId, false);

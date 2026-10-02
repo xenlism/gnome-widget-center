@@ -367,7 +367,7 @@ export default class WeatherPanelWidget {
         const {family: conditionFontFamily, size: conditionFontSize} = _parseFontDescription(this._settings.conditionFont ?? "Sans 14", "Sans", 14);
         const {family: tempFontFamily, size: tempFontSize} = _parseFontDescription(this._settings.tempFont ?? "Sans Bold 32", "Sans Bold", 32);
         applyLayeredCardStyle(this._layers, this._settings, {
-            backgroundColorKey: "cardColor",
+            backgroundColorKey: "card-background-color",
             cornerRadiusFallback: 18
         }, false);
         this._content.set_style("padding: 10px 14px; spacing: 4px;");

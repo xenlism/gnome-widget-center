@@ -356,7 +356,7 @@ export default class WeatherMinimalWidget {
         const {family: conditionFontFamily, size: conditionFontSize} = _parseFontDescription(this._settings.conditionFont ?? "Sans Bold 16", "Sans Bold", 16);
         const {family: tempFontFamily, size: tempFontSize} = _parseFontDescription(this._settings.tempFont ?? "Sans Bold 34", "Sans Bold", 34);
         applyLayeredCardStyle(this._layers, this._settings, {
-            backgroundColorKey: "cardColor",
+            backgroundColorKey: "card-background-color",
             cornerRadiusFallback: 18
         }, false);
         this._content.set_style("padding: 14px 14px; spacing: 6px;");

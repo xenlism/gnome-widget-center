@@ -77,7 +77,7 @@ Create a new widget called **"daily-quote"** for gnome-widget-center, following 
 **3. `config.json`** (tabs → groups → fields per §6.4)
 - `fontSize`: `fieldType` `"spinbutton"`, `dataType` `"integer"`, min 12, max 48, default 18
 - `textColor`: `fieldType` `"colorpicker"`
-- `backgroundColor`: `fieldType` `"colorpicker"`, `alpha: true`
+- `card-background-color`: `fieldType` `"colorpicker"`, `alpha: true`
 - `refreshInterval`: `fieldType` `"spinbutton"`, `dataType` `"integer"`, min 1, max 1440, suffix `"min"`, default 30
 - `autoRotate`: `fieldType` `"switch"`, `dataType` `"boolean"`, default `true` (when off, keep showing the current quote instead of auto-rotating)
 

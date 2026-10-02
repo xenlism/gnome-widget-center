@@ -10,7 +10,7 @@ Cairo-drawing pattern as `circles-clock`.
 
 ## Settings (config.json)
 
-- **Card**: `backgroundColor`, `cornerRadius` - the square card behind
+- **Card**: `card-background-color`, `card-corner-radius` - the square card behind
   the round dial.
 - **Face**: `faceColor` (clock circle color).
 - **Tick marks**: `showMinuteTicks`, `tickColor` (HH/MM line color -

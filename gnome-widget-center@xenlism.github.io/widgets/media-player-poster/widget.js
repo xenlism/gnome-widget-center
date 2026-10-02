@@ -201,7 +201,7 @@ export default class MediaPlayerPosterWidget {
     _render() {
         this._actor.set_style((this._api.resolveCardCss?.() ?? _cardStyleCss(this._settings, {
             backgroundColorFallback: "#FFFFFF00",
-            cornerRadiusKey: "widgetCornerRadius",
+            cornerRadiusKey: "card-corner-radius",
             cornerRadiusFallback: 18
         })));
         const coverCornerRadius = this._settings.coverCornerRadius ?? 18;

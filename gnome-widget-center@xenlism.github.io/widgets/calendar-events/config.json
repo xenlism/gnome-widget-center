@@ -35,7 +35,8 @@
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
-                            "default": "#1A1A1A"
+                            "default": "#1A1A1A",
+                            "schemeRole": "text-1"
                         },
                         {
                             "id": "weekdayHeaderColor",
@@ -44,7 +45,8 @@
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
-                            "default": "#8E8E93"
+                            "default": "#8E8E93",
+                            "schemeRole": "text-2"
                         },
                         {
                             "id": "highlightDayColor",
@@ -53,7 +55,8 @@
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
-                            "default": "#3B82F6"
+                            "default": "#3B82F6",
+                            "schemeRole": "accent"
                         },
                         {
                             "id": "highlightDayTextColor",
@@ -72,17 +75,18 @@
                     "description": "Applies when this widget's own appearance isn't forced by the global theme.",
                     "fields": [
                         {
-                            "id": "cardColor",
+                            "id": "card-background-color",
                             "label": "Background",
                             "description": "",
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
                             "alpha": true,
-                            "default": "#F7F7F5FF"
+                            "default": "#F7F7F5FF",
+                            "schemeRole": "card-background"
                         },
                         {
-                            "id": "cornerRadius",
+                            "id": "card-corner-radius",
                             "label": "Corner radius",
                             "description": "",
                             "dataType": "integer",
@@ -189,7 +193,8 @@
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
-                            "default": "#1A1A1A"
+                            "default": "#1A1A1A",
+                            "schemeRole": "text-1"
                         },
                         {
                             "id": "noEventsText",
@@ -214,7 +219,7 @@
                     "description": "Off by default. Default color is black at 30% transparency.",
                     "fields": [
                         {
-                            "id": "shadowAngle",
+                            "id": "card-shadow-angle",
                             "label": "Shadow angle",
                             "description": "",
                             "dataType": "integer",
@@ -224,10 +229,10 @@
                             "max": 360,
                             "step": 1,
                             "suffix": "°",
-                            "visibleIf": "shadowEnabled"
+                            "visibleIf": "card-shadow-enabled"
                         },
                         {
-                            "id": "shadowDistance",
+                            "id": "card-shadow-distance",
                             "label": "Shadow distance",
                             "description": "",
                             "dataType": "integer",
@@ -237,7 +242,7 @@
                             "max": 60,
                             "step": 1,
                             "suffix": "px",
-                            "visibleIf": "shadowEnabled"
+                            "visibleIf": "card-shadow-enabled"
                         }
                     ]
                 }

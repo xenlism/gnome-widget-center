@@ -2,6 +2,8 @@ import Gio from "gi://Gio";
 
 import GLib from "gi://GLib";
 
+import { migrateCardSettings } from "./cardSettingKeys.js";
+
 import { ensureDirectory, readTextFile, readTextFileAsync, writeTextFile, fileExists } from "./fsUtils.js";
 
 export class StorageService {
@@ -156,6 +158,7 @@ export class StorageService {
             logError(error, `Failed to load settings for widget instance: ${instanceId}`);
             result = {};
         }
+        migrateCardSettings(result);
         // No async priming for this one the way loadLayout() has — we don't
         // know instance ids in advance, they only surface as widgets get
         // constructed. But this still turns every read after the first one
@@ -167,6 +170,7 @@ export class StorageService {
     }
     saveWidgetSettings(instanceId, settingsData) {
         if (!this._isInitialized) this.init();
+        migrateCardSettings(settingsData);
         try {
             const widgetSettingsPath = this.getWidgetSettingsPath(instanceId);
             writeTextFile(widgetSettingsPath, JSON.stringify(settingsData, null, 4));

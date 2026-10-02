@@ -59,7 +59,8 @@
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
-                            "default": "#1a1a1a"
+                            "default": "#1a1a1a",
+                            "schemeRole": "text-1"
                         },
                         {
                             "id": "colorMM",
@@ -68,7 +69,8 @@
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
-                            "default": "#1a1a1a"
+                            "default": "#1a1a1a",
+                            "schemeRole": "text-1"
                         },
                         {
                             "id": "colorSS",
@@ -77,7 +79,8 @@
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
-                            "default": "rgb(165,29,45)"
+                            "default": "rgb(165,29,45)",
+                            "schemeRole": "text-2"
                         },
                         {
                             "id": "colorAmPm",
@@ -86,17 +89,19 @@
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
-                            "default": "#d81f26"
+                            "default": "#d81f26",
+                            "schemeRole": "text-2"
                         },
                         {
-                            "id": "cardColor",
+                            "id": "card-background-color",
                             "label": "Card background color",
                             "description": "Background color of the clock card",
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
                             "alpha": true,
-                            "default": "#ffffff"
+                            "default": "#ffffff",
+                            "schemeRole": "card-background"
                         }
                     ]
                 },
@@ -106,7 +111,7 @@
                     "description": "",
                     "fields": [
                         {
-                            "id": "cornerRadius",
+                            "id": "card-corner-radius",
                             "label": "Corner radius",
                             "description": "Roundness of the clock card's corners",
                             "dataType": "number",
@@ -160,7 +165,7 @@
                     "description": "Off by default. Default color is black at 30% transparency.",
                     "fields": [
                         {
-                            "id": "shadowAngle",
+                            "id": "card-shadow-angle",
                             "label": "Shadow angle",
                             "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
                             "dataType": "integer",
@@ -170,10 +175,10 @@
                             "max": 360,
                             "step": 1,
                             "suffix": "°",
-                            "visibleIf": "shadowEnabled"
+                            "visibleIf": "card-shadow-enabled"
                         },
                         {
-                            "id": "shadowDistance",
+                            "id": "card-shadow-distance",
                             "label": "Shadow distance",
                             "description": "How far the shadow is offset, in pixels",
                             "dataType": "integer",
@@ -183,7 +188,7 @@
                             "max": 60,
                             "step": 1,
                             "suffix": "px",
-                            "visibleIf": "shadowEnabled"
+                            "visibleIf": "card-shadow-enabled"
                         }
                     ]
                 }

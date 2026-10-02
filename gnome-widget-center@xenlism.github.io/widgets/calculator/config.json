@@ -13,15 +13,16 @@
                     "description": "",
                     "fields": [
                         {
-                            "id": "backgroundColor",
+                            "id": "card-background-color",
                             "label": "Background color",
                             "description": "",
                             "dataType": "string",
                             "fieldType": "colorpicker",
-                            "default": "#1C1C1EF5"
+                            "default": "#1C1C1EF5",
+                            "schemeRole": "card-background"
                         },
                         {
-                            "id": "cornerRadius",
+                            "id": "card-corner-radius",
                             "label": "Corner radius",
                             "description": "",
                             "dataType": "integer",
@@ -117,7 +118,7 @@
                     "description": "",
                     "fields": [
                         {
-                            "id": "shadowAngle",
+                            "id": "card-shadow-angle",
                             "label": "Shadow angle",
                             "description": "",
                             "dataType": "integer",
@@ -128,7 +129,7 @@
                             "step": 1
                         },
                         {
-                            "id": "shadowDistance",
+                            "id": "card-shadow-distance",
                             "label": "Shadow distance",
                             "description": "",
                             "dataType": "integer",

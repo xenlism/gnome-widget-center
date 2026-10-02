@@ -13,15 +13,16 @@
                     "description": "",
                     "fields": [
                         {
-                            "id": "backgroundColor",
+                            "id": "card-background-color",
                             "label": "Background color",
                             "description": "",
                             "dataType": "string",
                             "fieldType": "colorpicker",
-                            "default": "#1E1E2EF0"
+                            "default": "#1E1E2EF0",
+                            "schemeRole": "card-background"
                         },
                         {
-                            "id": "cornerRadius",
+                            "id": "card-corner-radius",
                             "label": "Corner radius",
                             "description": "",
                             "dataType": "integer",
@@ -79,7 +80,8 @@
                             "description": "",
                             "dataType": "string",
                             "fieldType": "fontpicker",
-                            "default": "Sans Bold 14"
+                            "default": "Sans Bold 14",
+                            "fontRole": "text-1"
                         },
                         {
                             "id": "titleColor",
@@ -87,7 +89,8 @@
                             "description": "",
                             "dataType": "string",
                             "fieldType": "colorpicker",
-                            "default": "#FFFFFFFF"
+                            "default": "#FFFFFFFF",
+                            "schemeRole": "text-1"
                         },
                         {
                             "id": "itemFont",
@@ -95,7 +98,8 @@
                             "description": "",
                             "dataType": "string",
                             "fieldType": "fontpicker",
-                            "default": "Sans 13"
+                            "default": "Sans 13",
+                            "fontRole": "text-1"
                         },
                         {
                             "id": "itemColor",
@@ -103,7 +107,8 @@
                             "description": "",
                             "dataType": "string",
                             "fieldType": "colorpicker",
-                            "default": "#FFFFFFFF"
+                            "default": "#FFFFFFFF",
+                            "schemeRole": "text-1"
                         },
                         {
                             "id": "completedColor",
@@ -111,7 +116,8 @@
                             "description": "",
                             "dataType": "string",
                             "fieldType": "colorpicker",
-                            "default": "#FFFFFF66"
+                            "default": "#FFFFFF66",
+                            "schemeRole": "text-2"
                         },
                         {
                             "id": "accentColor",
@@ -119,7 +125,8 @@
                             "description": "",
                             "dataType": "string",
                             "fieldType": "colorpicker",
-                            "default": "#3584E4FF"
+                            "default": "#3584E4FF",
+                            "schemeRole": "accent"
                         }
                     ]
                 }
@@ -136,7 +143,7 @@
                     "description": "",
                     "fields": [
                         {
-                            "id": "shadowAngle",
+                            "id": "card-shadow-angle",
                             "label": "Shadow angle",
                             "description": "",
                             "dataType": "integer",
@@ -147,7 +154,7 @@
                             "step": 1
                         },
                         {
-                            "id": "shadowDistance",
+                            "id": "card-shadow-distance",
                             "label": "Shadow distance",
                             "description": "",
                             "dataType": "integer",

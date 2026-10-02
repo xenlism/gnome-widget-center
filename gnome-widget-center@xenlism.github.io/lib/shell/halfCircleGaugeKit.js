@@ -118,7 +118,7 @@ export class HalfCircleGauge {
         const baseColor = _hexToRgba(baseColorArg ?? settings.circleBaseColor ?? "#FFFFFF26");
         const cx = side === "left" ? 0 : RING_COLUMN_WIDTH;
         const cy = CONTENT_HEIGHT / 2;
-        const cornerRadius = Number.isFinite(settings.cornerRadius) ? Math.max(0, settings.cornerRadius) : 18;
+        const cornerRadius = Number.isFinite(settings["card-corner-radius"]) ? Math.max(0, settings["card-corner-radius"]) : 18;
         const cornerClearance = Math.max(thickness / 2 + 2, cornerRadius - CARD_PADDING);
         const outerRadius = Math.min(RING_COLUMN_WIDTH - thickness / 2 - 2, CONTENT_HEIGHT / 2 - cornerClearance);
         const start = -Math.PI / 2;

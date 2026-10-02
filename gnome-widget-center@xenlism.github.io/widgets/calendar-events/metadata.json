@@ -4,7 +4,7 @@
     "description": "Month calendar next to a list of today's events.",
     "version": "1.0.0",
     "author": "Nattapong Pullkhow",
-    "api-version": 1,
+    "api-version": 2,
     "entry": "widget.js",
     "block-type": "2x1",
     "default-position": {

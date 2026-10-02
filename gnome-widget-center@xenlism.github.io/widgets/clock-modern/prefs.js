@@ -37,7 +37,7 @@ export default class ClockModernWidgetPrefs {
         colorGroup.add(this._colorRow("colorMM", "MM color", "#1a1a1a"));
         colorGroup.add(this._colorRow("colorSS", "SS color", "#1a1a1a"));
         colorGroup.add(this._colorRow("colorAmPm", "am/pm color", "#d81f26"));
-        colorGroup.add(this._colorRow("cardColor", "Card background color", "#ffffff"));
+        colorGroup.add(this._colorRow("card-background-color", "Card background color", "#ffffff"));
         const launchGroup = new Adw.PreferencesGroup({
             title: "Launch on click",
             description: "Clicking the clock (without holding Super) launches the chosen app."

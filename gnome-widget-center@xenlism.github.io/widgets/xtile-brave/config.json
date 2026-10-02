@@ -80,7 +80,8 @@
                             "fieldType": "fontpicker",
                             "format": "font",
                             "default": "Sans Bold 11",
-                            "visibleIf": "showLabel"
+                            "visibleIf": "showLabel",
+                            "fontRole": "text-2"
                         },
                         {
                             "id": "labelColor",
@@ -91,7 +92,8 @@
                             "format": "color",
                             "alpha": true,
                             "default": "#FFFFFFFF",
-                            "visibleIf": "showLabel"
+                            "visibleIf": "showLabel",
+                            "schemeRole": "text-2"
                         }
                     ]
                 },

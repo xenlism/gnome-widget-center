@@ -5,7 +5,7 @@
   "description": "A Child of the Geek Stat Clock Architect Widget - 3 independently configurable clock/date/stat lines.",
   "version": "1.0.0",
   "author": "Nattapong Pullkhow",
-  "api-version": 1,
+  "api-version": 2,
   "entry": "widget.js",
   "block-type": "3x1",
   "default-position": {

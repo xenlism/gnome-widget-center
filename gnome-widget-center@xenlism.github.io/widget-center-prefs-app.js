@@ -11,7 +11,7 @@ import Gdk from "gi://Gdk";
 
 import System from "system";
 
-import { PrefsWindowControllerV2 } from "./lib/prefsWindowController.js";
+import { PrefsWindowControllerV2 } from "./lib/prefs/prefsWindowController.js";
 
 import { WidgetSettings } from "./lib/widgetSettings.js";
 

@@ -128,7 +128,7 @@ widgets/my-widget/
 | `description`       | One or two sentences shown in the widget picker.                  |
 | `version`           | Widget's own version string, independent of the extension version.|
 | `author`            | Your name or handle.                                              |
-| `api-version`       | Currently `1`.                                                     |
+| `api-version`       | Currently `2` (2.0).                                                     |
 | `entry`             | Usually `widget.js`.                                               |
 | `block-type`        | Default footprint — see existing values (`1x1`, `2x1`, `2x2`, `3x1`, `4x2`, `barx2`, ...); reuse an existing one where it fits rather than inventing a new aspect ratio. |
 | `default-position`  | `{x, y, monitor}` — a sane default spot on first add.              |
@@ -187,7 +187,7 @@ without flagging it in the PR description.
 ## Contributing a theme pack
 
 Theme packs (`.gwct` files under `themepacks/`) are exported via the
-in-app export dialog (`lib/themePackExportDialog.js`) and registered
+in-app export dialog (`lib/prefs/themePackExportDialog.js`) and registered
 through `lib/themePackRegistry.js`. If you're contributing one:
 
 - Export it from a real, working layout rather than hand-editing the

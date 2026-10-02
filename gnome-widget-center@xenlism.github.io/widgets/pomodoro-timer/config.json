@@ -13,14 +13,15 @@
                     "description": "",
                     "fields": [
                         {
-                            "id": "backgroundColor",
+                            "id": "card-background-color",
                             "label": "Background color",
                             "description": "Card background. Use the alpha slider for transparency.",
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
                             "alpha": true,
-                            "default": "#232838F5"
+                            "default": "#232838F5",
+                            "schemeRole": "card-background"
                         }
                     ]
                 },
@@ -104,7 +105,7 @@
                 {
                     "id": "ring",
                     "label": "Ring colors",
-                    "description": "By default the ring's color shifts by how much time is left in the current phase (green \u2192 yellow \u2192 red). Turn that off to use one fixed color per phase instead.",
+                    "description": "By default the ring's color shifts by how much time is left in the current phase (green → yellow → red). Turn that off to use one fixed color per phase instead.",
                     "fields": [
                         {
                             "id": "circleBaseColor",
@@ -232,7 +233,8 @@
                             "dataType": "string",
                             "fieldType": "fontpicker",
                             "format": "font",
-                            "default": "Sans Bold 24"
+                            "default": "Sans Bold 24",
+                            "fontRole": "text-1"
                         },
                         {
                             "id": "timeColor",
@@ -242,7 +244,8 @@
                             "fieldType": "colorpicker",
                             "format": "color",
                             "alpha": true,
-                            "default": "#FFFFFFFF"
+                            "default": "#FFFFFFFF",
+                            "schemeRole": "text-1"
                         },
                         {
                             "id": "phaseLabelFont",
@@ -251,7 +254,8 @@
                             "dataType": "string",
                             "fieldType": "fontpicker",
                             "format": "font",
-                            "default": "Sans Bold 9"
+                            "default": "Sans Bold 9",
+                            "fontRole": "text-2"
                         },
                         {
                             "id": "phaseLabelColor",
@@ -261,7 +265,8 @@
                             "fieldType": "colorpicker",
                             "format": "color",
                             "alpha": true,
-                            "default": "#FFFFFFB3"
+                            "default": "#FFFFFFB3",
+                            "schemeRole": "text-2"
                         }
                     ]
                 },
@@ -323,7 +328,7 @@
                     "description": "Off by default. Default color is black at 30% transparency.",
                     "fields": [
                         {
-                            "id": "shadowAngle",
+                            "id": "card-shadow-angle",
                             "label": "Shadow angle",
                             "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
                             "dataType": "integer",
@@ -332,11 +337,11 @@
                             "min": 0,
                             "max": 360,
                             "step": 1,
-                            "suffix": "\u00b0",
-                            "visibleIf": "shadowEnabled"
+                            "suffix": "°",
+                            "visibleIf": "card-shadow-enabled"
                         },
                         {
-                            "id": "shadowDistance",
+                            "id": "card-shadow-distance",
                             "label": "Shadow distance",
                             "description": "How far the shadow is offset, in pixels",
                             "dataType": "integer",
@@ -346,7 +351,7 @@
                             "max": 60,
                             "step": 1,
                             "suffix": "px",
-                            "visibleIf": "shadowEnabled"
+                            "visibleIf": "card-shadow-enabled"
                         }
                     ]
                 }

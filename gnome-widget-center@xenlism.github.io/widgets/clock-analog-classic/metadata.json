@@ -4,7 +4,7 @@
     "description": "Classic round analog clock face - hour/minute/second hands, all 12 numerals, hour and minute tick marks.",
     "version": "1.0.0",
     "author": "Nattapong Pullkhow",
-    "api-version": 1,
+    "api-version": 2,
     "entry": "widget.js",
     "block-type": "1x1",
     "default-position": {

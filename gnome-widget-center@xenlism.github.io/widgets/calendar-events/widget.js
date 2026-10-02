@@ -86,7 +86,7 @@ export default class CalendarEventsWidget {
         const s = this._settings;
 
         applyLayeredCardStyle(this._layers, s, {
-            backgroundColorKey: "cardColor",
+            backgroundColorKey: "card-background-color",
             cornerRadiusFallback: 20
         }, false);
         this._content.set_style("padding: 14px; spacing: 14px;");
@@ -173,8 +173,8 @@ export default class CalendarEventsWidget {
                 style: `background-color: ${bg}; margin: ${inset}px;`
             });
             applyCardBlur(cardBlurInset, {
-                blurEnabled: true,
-                blurRadius: Number.isFinite(s.eventCardBlurRadius) ? s.eventCardBlurRadius : 16
+                "card-blur-enabled": true,
+                "card-blur-radius": Number.isFinite(s.eventCardBlurRadius) ? s.eventCardBlurRadius : 16
             });
             cardOuter.add_child(cardBlurInset);
         }

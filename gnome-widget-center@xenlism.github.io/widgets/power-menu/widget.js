@@ -25,7 +25,7 @@ export default class PowerMenuWidget {
     }
 
     buildActor() {
-        const backgroundColor = this._settings?.backgroundColor ?? '#070000a5';
+        const backgroundColor = this._settings?.["card-background-color"] ?? '#070000a5';
         const cornerRadius = resolveCornerRadius(this._settings);
         const iconColor = this._settings?.iconColor ?? '#FFFFFF';
         const buttonColor = this._settings?.buttonColor ?? '#2d2d2d3a';
@@ -119,7 +119,7 @@ export default class PowerMenuWidget {
         if (!this._actor)
             return;
 
-        const backgroundColor = settings?.backgroundColor ?? '#070000a5';
+        const backgroundColor = settings?.["card-background-color"] ?? '#070000a5';
         const cornerRadius = resolveCornerRadius(settings);
         this._layers.card.set_style(this._cardStyle(backgroundColor, cornerRadius));
         applyCardOpacity(this._layers.card, settings);

@@ -4,7 +4,7 @@
     "description": "Large month calendar grid with a highlighted today.",
     "version": "1.0.0",
     "author": "Nattapong Pullkhow",
-    "api-version": 1,
+    "api-version": 2,
     "entry": "widget.js",
     "block-type": "2x2",
     "default-position": {

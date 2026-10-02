@@ -171,10 +171,10 @@ export default class StickyNoteWidget {
     // --- interaction -------------------------------------------------------
 
     _onCycleColorClicked() {
-        const current = (this._settings.paperColor ?? PRESET_COLORS[0]).toUpperCase();
+        const current = (this._settings["card-background-color"] ?? PRESET_COLORS[0]).toUpperCase();
         const idx = PRESET_COLORS.findIndex(c => c.toUpperCase() === current);
         const next = PRESET_COLORS[(idx + 1) % PRESET_COLORS.length];
-        this._settings.paperColor = next;
+        this._settings["card-background-color"] = next;
         this._render();
     }
 
@@ -250,10 +250,10 @@ export default class StickyNoteWidget {
         if (!this._actor) return;
 
         const s = this._settings;
-        const paperColor = s.paperColor ?? PRESET_COLORS[0];
+        const paperColor = s["card-background-color"] ?? PRESET_COLORS[0];
 
         applyLayeredCardStyle(this._layers, s, {
-            backgroundColorKey: "paperColor",
+            backgroundColorKey: "card-background-color",
             backgroundColorFallback: PRESET_COLORS[0],
             cornerRadiusFallback: 3
         });
@@ -294,7 +294,7 @@ export default class StickyNoteWidget {
         cr.paint();
         cr.setOperator(Cairo.Operator.OVER);
 
-        const paper = hexToRgba(this._settings.paperColor ?? PRESET_COLORS[0]);
+        const paper = hexToRgba(this._settings["card-background-color"] ?? PRESET_COLORS[0]);
         const darken = f => Math.max(0, Math.min(1, f));
 
         // Folded flap: a darker shade of the paper color, corner-to-corner.

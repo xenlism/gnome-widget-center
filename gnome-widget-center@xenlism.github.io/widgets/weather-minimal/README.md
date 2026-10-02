@@ -62,8 +62,8 @@ is yours to edit freely and is never overwritten automatically again.
 | Setting          | Type    | Default        | Description                                    |
 |-------------------|---------|----------------|--------------------------------------------------|
 | `location`         | location | `13.756331,100.501762` | `lat,lon` pair actually used for the weather fetch, with a built-in IP-detect button |
-| `cardColor`        | color   | `#ffffff`      | Card background color                              |
-| `cornerRadius`     | number  | `18`           | Card corner radius, px                              |
+| `card-background-color`        | color   | `#ffffff`      | Card background color                              |
+| `card-corner-radius`     | number  | `18`           | Card corner radius, px                              |
 | `iconColor`        | color   | `#1a1a1a`      | Weather icon tint                                   |
 | `iconSize`         | number  | `64`           | Weather icon size, px                               |
 | `conditionFont`    | string  | `Sans Bold 16` | Font face + size for the condition text            |

@@ -10,7 +10,7 @@ Cairo-drawing pattern as `circles-clock`.
 
 ## Settings (config.json)
 
-- **Card**: `backgroundColor`, `cornerRadius`.
+- **Card**: `card-background-color`, `card-corner-radius`.
 - **Dash ring**: `showDashes`, `dashColor` (HH/MM line color),
   `dashCount` (how many dashes make up the ring).
 - **Digits**: `format24h`, `digitFont`, `digitColor`.

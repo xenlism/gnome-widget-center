@@ -13,14 +13,15 @@
                     "description": "",
                     "fields": [
                         {
-                            "id": "backgroundColor",
+                            "id": "card-background-color",
                             "label": "Background color",
                             "description": "Card background. Defaults to fully transparent.",
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
                             "alpha": true,
-                            "default": "#bf404000"
+                            "default": "#bf404000",
+                            "schemeRole": "card-background"
                         }
                     ]
                 },
@@ -43,7 +44,8 @@
                             "description": "Face and size used for the HH:MM:SS text",
                             "dataType": "string",
                             "fieldType": "fontpicker",
-                            "default": "Sans Bold 20"
+                            "default": "Sans Bold 20",
+                            "fontRole": "text-1"
                         },
                         {
                             "id": "timeColor",
@@ -53,7 +55,8 @@
                             "fieldType": "colorpicker",
                             "format": "color",
                             "alpha": true,
-                            "default": "#FFFFFFFF"
+                            "default": "#FFFFFFFF",
+                            "schemeRole": "text-1"
                         }
                     ]
                 },
@@ -80,7 +83,8 @@
                             "fieldType": "colorpicker",
                             "format": "color",
                             "alpha": true,
-                            "default": "#e5a50a"
+                            "default": "#e5a50a",
+                            "schemeRole": "text-1"
                         },
                         {
                             "id": "colorMM",
@@ -90,7 +94,8 @@
                             "fieldType": "colorpicker",
                             "format": "color",
                             "alpha": true,
-                            "default": "#2ec27e"
+                            "default": "#2ec27e",
+                            "schemeRole": "text-1"
                         },
                         {
                             "id": "colorSS",
@@ -100,7 +105,8 @@
                             "fieldType": "colorpicker",
                             "format": "color",
                             "alpha": true,
-                            "default": "#3584e4"
+                            "default": "#3584e4",
+                            "schemeRole": "text-2"
                         },
                         {
                             "id": "ringThickness",
@@ -168,7 +174,7 @@
                     "description": "Off by default. Default color is black at 30% transparency.",
                     "fields": [
                         {
-                            "id": "shadowAngle",
+                            "id": "card-shadow-angle",
                             "label": "Shadow angle",
                             "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
                             "dataType": "integer",
@@ -178,10 +184,10 @@
                             "max": 360,
                             "step": 1,
                             "suffix": "°",
-                            "visibleIf": "shadowEnabled"
+                            "visibleIf": "card-shadow-enabled"
                         },
                         {
-                            "id": "shadowDistance",
+                            "id": "card-shadow-distance",
                             "label": "Shadow distance",
                             "description": "How far the shadow is offset, in pixels",
                             "dataType": "integer",
@@ -191,7 +197,7 @@
                             "max": 60,
                             "step": 1,
                             "suffix": "px",
-                            "visibleIf": "shadowEnabled"
+                            "visibleIf": "card-shadow-enabled"
                         }
                     ]
                 }

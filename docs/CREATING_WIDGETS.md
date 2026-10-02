@@ -47,7 +47,7 @@ the supported fixed `block-type` values: `barx1`, `barx2`, `barx3`, `barx4`,
   "description": "A short description shown in the Control Center.",
   "version": "1.0.0",
   "author": "Your name",
-  "api-version": 1,
+  "api-version": 2,
   "entry": "widget.js",
   "block-type": "1x1",
   "default-position": { "x": 40, "y": 40, "monitor": 0 }

@@ -32,7 +32,7 @@ This template ships `config.json` only. The loader actually supports
 three different ways for a widget to expose settings UI (hand-written
 `prefs.js`, a `settings.js` `defineSettings()` DSL, and `config.json`'s
 auto-generated UI), but **only one is checked** for a given widget -
-`lib/prefsWidgetManagement.js`'s `_openWidgetPrefs()` tries them in
+`lib/prefs/prefsWidgetManagement.js`'s `_openWidgetPrefs()` tries them in
 this order and stops at the first one present:
 
 1. `config.json` (if valid)

@@ -4,7 +4,7 @@
     "description": "2x2 folder-card style note - a colored header band with rounded top corners, a title, a subtitle line and a date, click to edit.",
     "version": "1.0.0",
     "author": "Community",
-    "api-version": 1,
+    "api-version": 2,
     "entry": "widget.js",
     "block-type": "2x2",
     "default-position": {

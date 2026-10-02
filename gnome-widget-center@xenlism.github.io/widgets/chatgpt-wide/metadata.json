@@ -4,7 +4,7 @@
     "description": "2x1 ChatGPT quick prompt card. Enter a prompt and open it in ChatGPT without an API key.",
     "version": "1.0.0",
     "author": "Nattapong Pullkhow",
-    "api-version": 1,
+    "api-version": 2,
     "entry": "widget.js",
     "block-type": "2x1",
     "default-position": {

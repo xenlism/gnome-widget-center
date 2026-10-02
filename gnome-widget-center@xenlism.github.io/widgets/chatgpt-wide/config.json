@@ -13,7 +13,7 @@
                     "description": "",
                     "fields": [
                         {
-                            "id": "cornerRadius",
+                            "id": "card-corner-radius",
                             "label": "Corner radius",
                             "description": "Roundness of the card",
                             "dataType": "integer",
@@ -31,7 +31,8 @@
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
-                            "default": "#FFFFFF"
+                            "default": "#FFFFFF",
+                            "schemeRole": "accent"
                         }
                     ]
                 }

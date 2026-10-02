@@ -1,0 +1,1290 @@
+import Adw from "gi://Adw";
+
+import Gtk from "gi://Gtk";
+
+import Gdk from "gi://Gdk";
+
+import Pango from "gi://Pango";
+
+import GLib from "gi://GLib";
+
+import { showReportDialog, promptPassword, confirmOverwrite, chooseFile } from "./prefsDialogs.js";
+
+import { saveCurrentSettingsAsWidgetDefaults } from "../devConfigDefaults.js";
+
+import { ThemeService } from "../themeService.js";
+
+import { buildGwctDocumentAsync, writeGwctFile, readGwctFile, importGwctDocument, installGwctAsThemePack, applyColorSchemeToWidgets, applyCardSettingsToWidgets, applyFontSettingsToWidgets } from "../exportService.js";
+
+import { COLOR_SCHEME_ROLES, DEFAULT_COLOR_SCHEME, schemeKey } from "../colorScheme.js";
+
+import { FONT_ROLES, DEFAULT_FONT_SETTINGS, fontKey } from "../fontScheme.js";
+
+import { CARD_SETTING_SPECS, CARD_SETTING_IDS, DEFAULT_CARD_SETTINGS } from "../cardDefaults.js";
+
+import { createBackup, restoreBackup } from "../backupService.js";
+
+import { openThemePackExportDialog } from "./themePackExportDialog.js";
+
+import { ThemePackRegistry } from "../themePackRegistry.js";
+
+import { rgbaToHex } from "../colorUtils.js";
+
+import { listAvailableLocales } from "../../i18n/index.js";
+
+import { SHADOW_ANGLE_STEPS } from "../globalShadowHelper.js";
+
+function rgbaToHex8(rgba) {
+    const toHex = c => Math.round(Math.min(1, Math.max(0, c)) * 255).toString(16).padStart(2, "0");
+    return `#${toHex(rgba.red)}${toHex(rgba.green)}${toHex(rgba.blue)}${toHex(rgba.alpha)}`;
+}
+
+function isModifierKeyval(keyval) {
+    return [ Gdk.KEY_Control_L, Gdk.KEY_Control_R, Gdk.KEY_Shift_L, Gdk.KEY_Shift_R, Gdk.KEY_Alt_L, Gdk.KEY_Alt_R, Gdk.KEY_Super_L, Gdk.KEY_Super_R, Gdk.KEY_Meta_L, Gdk.KEY_Meta_R, Gdk.KEY_Hyper_L, Gdk.KEY_Hyper_R, Gdk.KEY_ISO_Level3_Shift, Gdk.KEY_ISO_Level5_Shift, Gdk.KEY_Caps_Lock, Gdk.KEY_Shift_Lock, Gdk.KEY_Num_Lock, Gdk.KEY_Scroll_Lock ].includes(keyval);
+}
+
+export const PrefsPageBuildersMixin = Base => class extends Base {
+    _buildStorePage(window) {
+        const page = new Adw.PreferencesPage({
+            title: this._tr("tab.store.label", "Store"),
+            icon_name: "system-search-symbolic"
+        });
+        window.add(page);
+        const group = new Adw.PreferencesGroup;
+        page.add(group);
+        group.add(new Adw.StatusPage({
+            icon_name: "folder-download-symbolic",
+            title: this._tr("store.title", "Coming soon"),
+            description: this._tr("store.description", "A widget store is planned but not built yet — for now, install third-party widgets manually into\n~/.local/share/gnome-widget-center/widgets/."),
+            vexpand: true
+        }));
+    }
+    _buildPreferencesPage(window, settings, storage, discoveredWidgets, widgetPaths, options = {}) {
+        const page = new Adw.PreferencesPage({
+            title: this._tr("tab.preferences.label", "Preferences"),
+            icon_name: "preferences-system-symbolic"
+        });
+        window.add(page);
+        const group = new Adw.PreferencesGroup;
+        page.add(group);
+        const categories = [ {
+            id: "general",
+            title: this._tr("category.general", "General"),
+            subtitle: this._tr("category.general.subtitle", "General settings and behavior"),
+            icon: "preferences-system-symbolic",
+            build: () => this._buildGeneralCategory(settings)
+        }, {
+            id: "appearance",
+            title: this._tr("category.appearance", "Appearance"),
+            subtitle: this._tr("category.appearance.subtitle", "Theme, colors and layout"),
+            icon: "applications-graphics-symbolic",
+            build: () => this._buildAppearanceCategory(settings, storage, discoveredWidgets)
+        }, {
+            id: "desktop",
+            title: this._tr("category.desktop", "Desktop"),
+            subtitle: this._tr("category.desktop.subtitle", "Margins, spacing and position"),
+            icon: "video-display-symbolic",
+            build: () => this._buildDesktopCategory(settings)
+        }, {
+            id: "interactions",
+            title: this._tr("category.interactions", "Interactions"),
+            subtitle: this._tr("category.interactions.subtitle", "Dragging, animations and actions"),
+            icon: "input-mouse-symbolic",
+            build: () => this._buildInteractionsCategory(settings)
+        }, {
+            id: "backup",
+            title: this._tr("category.backup", "Backup and Restore"),
+            subtitle: this._tr("category.backup.subtitle", "Backup and restore widgets"),
+            icon: "drive-multidisk-symbolic",
+            build: () => this._buildBackupCategory(window, settings, storage, discoveredWidgets, widgetPaths)
+        }, {
+            id: "importexport",
+            title: this._tr("category.importexport", "Import / Export"),
+            subtitle: this._tr("category.importexport.subtitle", "Import or export widget data"),
+            icon: "send-to-symbolic",
+            build: () => this._buildImportExportCategory(window, storage, discoveredWidgets)
+        }, {
+            id: "advanced",
+            title: this._tr("category.advanced", "Advanced"),
+            subtitle: this._tr("category.advanced.subtitle", "Advanced developer options"),
+            icon: "applications-engineering-symbolic",
+            build: () => this._buildAdvancedCategory(window, settings, storage, discoveredWidgets)
+        } ];
+        if (options.includeAbout !== false) {
+            categories.push({
+                id: "about",
+                title: this._tr("category.about", "About"),
+                subtitle: this._tr("category.about.subtitle", "About GNOME Widget Center"),
+                icon: "help-about-symbolic",
+                build: () => this._buildAboutCategory()
+            });
+        }
+        group.add(this._buildCategoryAccordion(categories));
+        return page;
+    }
+    _buildCategoryAccordion(categories) {
+        const clamp = new Adw.Clamp({
+            maximum_size: 800,
+            tightening_threshold: 800
+        });
+        const list = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 12,
+            margin_top: 12,
+            margin_bottom: 24,
+            margin_start: 12,
+            margin_end: 12
+        });
+        clamp.set_child(list);
+        this._accordionCategoriesById = {};
+        categories.forEach((category, index) => {
+            const {widget: widget, expand: expand} = this._buildAccordionCategory(category);
+            list.append(widget);
+            this._accordionCategoriesById[category.id] = {
+                widget: widget,
+                expand: expand
+            };
+            if (index === 0) expand();
+        });
+        return clamp;
+    }
+    _buildAccordionCategory(category) {
+        const outer = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            css_classes: [ "card" ],
+            overflow: Gtk.Overflow.HIDDEN
+        });
+        const headerList = new Gtk.ListBox({
+            selection_mode: Gtk.SelectionMode.NONE,
+            css_classes: [ "boxed-list" ]
+        });
+        const headerRow = new Adw.ActionRow({
+            title: category.title,
+            subtitle: category.subtitle,
+            activatable: true
+        });
+        headerRow.add_prefix(new Gtk.Image({
+            icon_name: category.icon
+        }));
+        const chevron = new Gtk.Image({
+            icon_name: "pan-end-symbolic"
+        });
+        headerRow.add_suffix(chevron);
+        headerList.append(headerRow);
+        outer.append(headerList);
+        const revealer = new Gtk.Revealer({
+            transition_type: Gtk.RevealerTransitionType.SLIDE_DOWN,
+            reveal_child: false
+        });
+        outer.append(revealer);
+        let built = false;
+        const setExpanded = expanded => {
+            revealer.reveal_child = expanded;
+            chevron.icon_name = expanded ? "pan-down-symbolic" : "pan-end-symbolic";
+            if (expanded && !built) {
+                built = true;
+                const content = category.build();
+                content.vexpand = false;
+                revealer.set_child(content);
+            }
+        };
+        headerList.connect("row-activated", () => setExpanded(!revealer.reveal_child));
+        return {
+            widget: outer,
+            expand: () => setExpanded(true)
+        };
+    }
+    _buildComingSoonCategory(title, description) {
+        return new Adw.StatusPage({
+            icon_name: "view-more-symbolic",
+            title: title,
+            description: description,
+            vexpand: true
+        });
+    }
+    _buildImportExportCategory(window, storage, discoveredWidgets) {
+        const page = new Adw.PreferencesPage;
+        const group = new Adw.PreferencesGroup({
+            title: this._tr("importexport.group.title", "Theme file (.gwct)"),
+            description: this._tr("importexport.group.description", "Appearance, host preferences, and settings for your currently-enabled " + "widgets, with any passwords, API keys, usernames or emails left out. " + "Disabled widgets and the widgets themselves are not included — " + "importing on a machine missing one of these widgets will skip it.")
+        });
+        page.add(group);
+        const exportRow = new Adw.ActionRow({
+            title: this._tr("importexport.export.title", "Export theme…"),
+            subtitle: this._tr("importexport.export.subtitle", "Save the current appearance and widget settings to a .gwct file."),
+            activatable: true
+        });
+        const exportProgress = new Gtk.ProgressBar({
+            visible: false,
+            show_text: true,
+            hexpand: true,
+            valign: Gtk.Align.CENTER
+        });
+        exportRow.add_suffix(exportProgress);
+        exportRow.add_suffix(new Gtk.Image({
+            icon_name: "document-save-symbolic"
+        }));
+        exportRow.connect("activated", async () => {
+            const path = await chooseFile(window, {
+                action: "save",
+                title: this._tr("importexport.export.filechooser_title", "Export theme"),
+                initialName: "gnome-widget-center.gwct",
+                pattern: "*.gwct"
+            });
+            if (!path) return;
+            exportRow.sensitive = false;
+            exportProgress.fraction = 0;
+            exportProgress.text = this._tr("importexport.export.progress_start", "Collecting widget settings…");
+            exportProgress.visible = true;
+            await new Promise(resolve => GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+                resolve();
+                return GLib.SOURCE_REMOVE;
+            }));
+            try {
+                const theme = new ThemeService;
+                theme.init();
+                const {document: document, redactedFields: redactedFields} = await buildGwctDocumentAsync(discoveredWidgets, {
+                    storage: storage,
+                    theme: theme,
+                    settings: this._settings
+                }, (done, total) => {
+                    exportProgress.fraction = total > 0 ? done / total : 1;
+                    exportProgress.text = this._tr("importexport.export.progress_counted", "Collecting widget settings… ({done}/{total})").replace("{done}", done).replace("{total}", total);
+                });
+                exportProgress.fraction = 1;
+                exportProgress.text = this._tr("importexport.export.progress_writing", "Writing file…");
+                const finalPath = writeGwctFile(path, document);
+                const lines = [ this._tr("importexport.result.saved_to", "Saved to {path}").replace("{path}", finalPath), this._tr("importexport.result.widgets_exported", "Widgets exported: {count}").replace("{count}", document.widgets.length) ];
+                if (redactedFields.length > 0) {
+                    lines.push("", this._tr("importexport.result.left_out", "Left out (secrets are never exported):"));
+                    for (const r of redactedFields) lines.push(`  ${r.widgetId}: ${r.keys.join(", ")}`);
+                }
+                showReportDialog(window, this._tr("importexport.result.export_heading", "Theme exported"), lines.join("\n"));
+            } catch (e) {
+                logError(e, "[widget-center] prefs: theme export failed");
+                showReportDialog(window, this._tr("importexport.result.export_failed_heading", "Export failed"), e.message);
+            } finally {
+                exportRow.sensitive = true;
+                exportProgress.visible = false;
+            }
+        });
+        group.add(exportRow);
+        const importRow = new Adw.ActionRow({
+            title: this._tr("importexport.import.title", "Import theme…"),
+            subtitle: this._tr("importexport.import.subtitle", "Apply appearance and widget settings from a .gwct file."),
+            activatable: true
+        });
+        importRow.add_suffix(new Gtk.Image({
+            icon_name: "document-open-symbolic"
+        }));
+        importRow.connect("activated", async () => {
+            const path = await chooseFile(window, {
+                action: "open",
+                title: this._tr("importexport.import.filechooser_title", "Import theme"),
+                pattern: "*.gwct"
+            });
+            if (!path) return;
+            const confirmBody = this._tr("importexport.import.confirm_body", "This installs the chosen file as a theme pack, removes every widget on your desktop and loads the theme's own widgets, layout, colors and shadows.");
+            const confirmed = await confirmOverwrite(window, this._tr("importexport.import.confirm_heading", "Import this theme?"), confirmBody, this._tr("importexport.import.confirm_button", "Import"));
+            if (!confirmed) return;
+            try {
+                const document = await readGwctFile(path);
+                // Importing is not an in-place rewrite of the widgets that are on screen:
+                // the file is installed as a theme pack and the shell is asked to load it,
+                // i.e. unload the current widgets and load the pack's own widgets.
+                const userThemepacksDir = GLib.build_filenamev([ GLib.get_user_config_dir(), "gnome-widget-center", "themepacks" ]);
+                const existing = await new ThemePackRegistry([ { path: userThemepacksDir, source: "user" } ]).discover();
+                const wantedId = document.packMeta?.id;
+                const sameId = wantedId ? existing.find(e => e.id === wantedId) : null;
+                let installedPath;
+                if (sameId) {
+                    writeGwctFile(sameId.path, document);
+                    installedPath = sameId.path;
+                } else {
+                    installedPath = installGwctAsThemePack(document, userThemepacksDir);
+                }
+                const packId = wantedId || GLib.path_get_basename(installedPath).replace(/\.gwct$/, "");
+                if (!this._settings?.isReady) throw new Error("Widget Center settings are not available.");
+                this._settings.setGlobalValue("active-theme-pack", packId);
+                this._settings.setGlobalValue("theme-pack-apply-request", `${packId}|${GLib.get_monotonic_time()}`);
+                const loadingText = this._tr("importexport.result.loading_theme", "The theme is being loaded: current widgets are removed and the theme's widgets are placed.");
+                const installedText = this._tr("importexport.importpack.result_body_short", "Installed to {path}.").replace("{path}", installedPath);
+                const lines = [ loadingText, "", installedText ];
+                showReportDialog(window, this._tr("importexport.result.import_heading", "Theme imported"), lines.join("\n"));
+            } catch (e) {
+                logError(e, "[widget-center] prefs: theme import failed");
+                showReportDialog(window, this._tr("importexport.result.import_failed_heading", "Import failed"), e.message);
+            }
+        });
+        group.add(importRow);
+        const packGroup = new Adw.PreferencesGroup({
+            title: this._tr("importexport.packgroup.title", "Theme pack (.gwct, shareable)"),
+            description: this._tr("importexport.packgroup.description", "Package the current appearance and enabled widgets as a named, described, " + "screenshotted theme pack other people can drop into their own Widget Center.")
+        });
+        page.add(packGroup);
+        const exportPackRow = new Adw.ActionRow({
+            title: this._tr("importexport.exportpack.title", "Export Theme…"),
+            subtitle: this._tr("importexport.exportpack.subtitle", "Name, description, author, URL and screenshot, saved to a file you choose."),
+            activatable: true
+        });
+        exportPackRow.add_suffix(new Gtk.Image({
+            icon_name: "send-to-symbolic"
+        }));
+        exportPackRow.connect("activated", () => {
+            const theme = new ThemeService;
+            theme.init();
+            openThemePackExportDialog(window, {
+                storage: storage,
+                theme: theme,
+                settings: this._settings,
+                discoveredWidgets: discoveredWidgets,
+                tr: (key, fallback) => this._tr(key, fallback)
+            });
+        });
+        packGroup.add(exportPackRow);
+        const importPackRow = new Adw.ActionRow({
+            title: this._tr("importexport.importpack.title", "Import Theme Pack…"),
+            subtitle: this._tr("importexport.importpack.subtitle", "Install a .gwct theme pack (with its name, description and screenshot) " + "so it shows up as a card in the Themes tab, ready to switch on."),
+            activatable: true
+        });
+        importPackRow.add_suffix(new Gtk.Image({
+            icon_name: "list-add-symbolic"
+        }));
+        importPackRow.connect("activated", async () => {
+            const path = await chooseFile(window, {
+                action: "open",
+                title: this._tr("importexport.importpack.filechooser_title", "Import theme pack"),
+                pattern: "*.gwct"
+            });
+            if (!path) return;
+            try {
+                const document = await readGwctFile(path);
+                const meta = document.packMeta;
+                const heading = this._tr("importexport.importpack.confirm_heading", "Install this theme pack?");
+                const body = meta ? [ meta.name, meta.description, meta.author ? this._tr("importexport.importpack.by_author", "by {author}").replace("{author}", meta.author) : null, this._tr("importexport.importpack.widget_count", "{count} widget(s)").replace("{count}", (document.widgets ?? []).length) ].filter(Boolean).join("\n") : this._tr("importexport.importpack.confirm_body_nometa", "\"{name}\" doesn't carry a name/description (it wasn't made with Export Theme…), but it can still be installed — it'll show up under its file name.").replace("{name}", GLib.path_get_basename(path));
+                const confirmed = await confirmOverwrite(window, heading, body, this._tr("importexport.importpack.confirm_button", "Install"));
+                if (!confirmed) return;
+                const userThemepacksDir = GLib.build_filenamev([ GLib.get_user_config_dir(), "gnome-widget-center", "themepacks" ]);
+                const installedPath = installGwctAsThemePack(document, userThemepacksDir);
+                showReportDialog(window, this._tr("importexport.importpack.result_heading", "Theme pack installed"), this._tr("importexport.importpack.result_body", "Installed to {path}.\nOpen the Themes tab to switch it on.").replace("{path}", installedPath));
+            } catch (e) {
+                logError(e, "[widget-center] prefs: theme pack import failed");
+                showReportDialog(window, this._tr("importexport.importpack.failed_heading", "Import failed"), e.message);
+            }
+        });
+        packGroup.add(importPackRow);
+        const shareShortcutRow = new Adw.ActionRow({
+            title: this._tr("importexport.sharekeybind.title", "Desktop share shortcut"),
+            subtitle: this._tr("importexport.sharekeybind.subtitle", "Press this any time — including while Export Theme… is open or closed — " + "to capture the desktop and attach it as the pack's screenshot."),
+            sensitive: this._settings.isReady
+        });
+        const currentShareAccel = this._settings.isReady ? this._settings.getGlobalValue("theme-screenshot-keybinding")?.[0] ?? "" : "<Super>Delete";
+        const shareRecordButton = new Gtk.Button({
+            label: currentShareAccel || "Disabled",
+            valign: Gtk.Align.CENTER,
+            sensitive: this._settings.isReady
+        });
+        let recordingShare = false;
+        shareRecordButton.connect("clicked", () => {
+            recordingShare = true;
+            shareRecordButton.label = "Press shortcut…";
+            shareRecordButton.grab_focus();
+        });
+        const shareKeyController = new Gtk.EventControllerKey;
+        shareKeyController.connect("key-pressed", (_controller, keyval, _keycode, state) => {
+            if (!recordingShare) return false;
+            if (keyval === Gdk.KEY_Escape) {
+                recordingShare = false;
+                shareRecordButton.label = currentShareAccel || "Disabled";
+                return true;
+            }
+            if (isModifierKeyval(keyval)) return true;
+            const mask = state & Gtk.accelerator_get_default_mod_mask();
+            if (!Gtk.accelerator_valid(keyval, mask)) return true;
+            const accel = Gtk.accelerator_name(keyval, mask);
+            recordingShare = false;
+            shareRecordButton.label = accel;
+            try {
+                this._settings.setGlobalValue("theme-screenshot-keybinding", [ accel ]);
+            } catch (e) {
+                logError(e, "could not save theme-screenshot-keybinding");
+            }
+            return true;
+        });
+        shareRecordButton.add_controller(shareKeyController);
+        shareShortcutRow.add_suffix(shareRecordButton);
+        shareShortcutRow.activatable_widget = shareRecordButton;
+        packGroup.add(shareShortcutRow);
+
+        // ── Pollinations API key (✦ AI) ──────────────────────────────────────
+        // Required for the ✦ AI buttons - see generateAiMeta() in
+        // themePackExportDialog.js, which calls Pollinations directly.
+        const pollinationsKeyRow = new Adw.PasswordEntryRow({
+            title: this._tr("importexport.pollinationskey.title", "Pollinations API key (✦ AI)"),
+            sensitive: this._settings.isReady
+        });
+        pollinationsKeyRow.text = this._settings.isReady
+            ? this._settings.getGlobalValue("pollinations-api-key") || ""
+            : "";
+        pollinationsKeyRow.connect("notify::text", () => {
+            try {
+                this._settings.setGlobalValue("pollinations-api-key", pollinationsKeyRow.text.trim());
+            } catch (e) {
+                logError(e, "could not save pollinations-api-key");
+            }
+        });
+        const pollinationsKeyUrl = "https://enter.pollinations.ai";
+        const pollinationsKeyHint = new Adw.ActionRow({
+            title: this._tr("importexport.pollinationskey.subtitle", "Get a free key"),
+            subtitle: pollinationsKeyUrl,
+            activatable: true
+        });
+        pollinationsKeyHint.add_suffix(new Gtk.Image({
+            icon_name: "adw-external-link-symbolic"
+        }));
+        pollinationsKeyHint.connect("activated", () => Gtk.show_uri(window, pollinationsKeyUrl, Gdk.CURRENT_TIME));
+        packGroup.add(pollinationsKeyRow);
+        packGroup.add(pollinationsKeyHint);
+        return page;
+    }
+    _buildBackupCategory(window, settings, storage, discoveredWidgets, widgetPaths) {
+        const page = new Adw.PreferencesPage;
+        const group = new Adw.PreferencesGroup({
+            title: this._tr("backup.group.title", "Full backup (.gwcbak)"),
+            description: this._tr("backup.group.description", "Everything — appearance, every widget's settings (including passwords/API " + "keys), host preferences, and the widget files themselves for anything you've " + "installed yourself. Password-protected (AES-256, PBKDF2-derived key) — see the " + "file itself for what that does and doesn't protect against.")
+        });
+        page.add(group);
+        const backupRow = new Adw.ActionRow({
+            title: this._tr("backup.create.title", "Create backup…"),
+            activatable: true
+        });
+        backupRow.add_suffix(new Gtk.Image({
+            icon_name: "drive-multidisk-symbolic"
+        }));
+        backupRow.connect("activated", async () => {
+            const password = await promptPassword(window, this._tr("backup.password_prompt.heading", "Backup password"), this._tr("backup.password_prompt.create_body", "Choose a password to protect this backup file. You'll need it to restore."));
+            if (!password) return;
+            const path = await chooseFile(window, {
+                action: "save",
+                title: this._tr("backup.create.filechooser_title", "Create backup"),
+                initialName: "gnome-widget-center.gwcbak",
+                pattern: "*.gwcbak"
+            });
+            if (!path) return;
+            try {
+                const theme = new ThemeService;
+                theme.init();
+                const userWidgets = discoveredWidgets.filter(w => w.path.startsWith(widgetPaths.userWidgetsPath));
+                const finalPath = await createBackup(path, password, userWidgets, {
+                    storage: storage,
+                    theme: theme,
+                    settings: settings
+                });
+                showReportDialog(window, this._tr("backup.result.created_heading", "Backup created"), `${this._tr("importexport.result.saved_to", "Saved to {path}").replace("{path}", finalPath)}\n` + `${this._tr("backup.result.widgets_included", "Widgets included: {count}").replace("{count}", userWidgets.length)}`);
+            } catch (e) {
+                logError(e, "[widget-center] prefs: backup failed");
+                showReportDialog(window, this._tr("backup.result.create_failed_heading", "Backup failed"), e.message);
+            }
+        });
+        group.add(backupRow);
+        const restoreRow = new Adw.ActionRow({
+            title: this._tr("backup.restore.title", "Restore backup…"),
+            activatable: true
+        });
+        restoreRow.add_suffix(new Gtk.Image({
+            icon_name: "snapshots-alt-symbolic"
+        }));
+        restoreRow.connect("activated", async () => {
+            const path = await chooseFile(window, {
+                action: "open",
+                title: this._tr("backup.restore.filechooser_title", "Restore backup"),
+                pattern: "*.gwcbak"
+            });
+            if (!path) return;
+            const password = await promptPassword(window, this._tr("backup.password_prompt.heading", "Backup password"), this._tr("backup.password_prompt.restore_body", "Enter this backup's password."));
+            if (!password) return;
+            const confirmed = await confirmOverwrite(window, this._tr("backup.restore.confirm_heading", "Restore this backup?"), this._tr("backup.restore.confirm_body", "This overwrites appearance, host preferences, and settings for every widget " + "in the backup with the values it contains, and reinstalls the widget files it " + "includes. This cannot be undone."), this._tr("backup.restore.confirm_button", "Restore"));
+            if (!confirmed) return;
+            try {
+                const theme = new ThemeService;
+                theme.init();
+                const {restoredWidgetIds: restoredWidgetIds, restoredWidgetFileIds: restoredWidgetFileIds, dependencyWarnings: dependencyWarnings} = await restoreBackup(path, password, {
+                    storage: storage,
+                    theme: theme,
+                    settings: settings,
+                    userWidgetsDir: widgetPaths.userWidgetsPath
+                });
+                const lines = [ this._tr("backup.result.settings_restored", "Restored settings for {count} widget(s).").replace("{count}", restoredWidgetIds.length), this._tr("backup.result.files_restored", "Restored files for {count} widget(s).").replace("{count}", restoredWidgetFileIds.length), this._tr("backup.result.reopen_hint", "Reopen this window (or restart the widgets) to see everything.") ];
+                if (dependencyWarnings.length > 0) {
+                    lines.push("", this._tr("shared.result.missing_dependencies", "Missing system dependencies:"));
+                    for (const d of dependencyWarnings) {
+                        lines.push(`  ${d.widgetId}: ${d.bin}${d.reason ? ` — ${d.reason}` : ""}`);
+                        if (d.suggestedCommand) lines.push(`    ${this._tr("shared.result.install_with", "install with:")} ${d.suggestedCommand}`);
+                    }
+                }
+                showReportDialog(window, this._tr("backup.result.restored_heading", "Backup restored"), lines.join("\n"));
+            } catch (e) {
+                logError(e, "[widget-center] prefs: restore failed");
+                showReportDialog(window, this._tr("backup.result.restore_failed_heading", "Restore failed"), e.message);
+            }
+        });
+        group.add(restoreRow);
+        return page;
+    }
+    _buildAboutCategory() {
+        const page = new Adw.PreferencesPage;
+        const group = new Adw.PreferencesGroup;
+        page.add(group);
+        group.add(new Adw.StatusPage({
+            icon_name: "preferences-desktop-applications-symbolic",
+            title: this.metadata.name ?? "GNOME Widget Center",
+            description: this.metadata.description ?? ""
+        }));
+        const versionRow = new Adw.ActionRow({
+            title: this._tr("about.version", "Version")
+        });
+        versionRow.add_suffix(new Gtk.Label({
+            label: String(this.metadata["version-name"] ?? "—"),
+            css_classes: [ "dim-label" ]
+        }));
+        group.add(versionRow);
+        if (this.metadata.url) {
+            const linkRow = new Adw.ActionRow({
+                title: this._tr("about.source", "Source code"),
+                subtitle: this.metadata.url,
+                activatable: true
+            });
+            linkRow.add_suffix(new Gtk.Image({
+                icon_name: "adw-external-link-symbolic"
+            }));
+            linkRow.connect("activated", () => {
+                Gtk.show_uri(null, this.metadata.url, Gdk.CURRENT_TIME);
+            });
+            group.add(linkRow);
+        }
+        return page;
+    }
+    _buildColorSchemeGroup(storage, discoveredWidgets, sharedTheme) {
+        const ROLE_TITLES = {
+            "card-background": "Card background", "card-border": "Card border", "card-shadow": "Card shadow",
+            "text-1": "Text 1 (primary)", "text-2": "Text 2 (secondary)",
+            "ring-1": "Ring 1", "ring-2": "Ring 2", "ring-3": "Ring 3", "ring-4": "Ring 4",
+            "accent": "Accent"
+        };
+        const group = new Adw.PreferencesGroup({
+            title: this._tr("appearance.scheme.title", "Card Color Scheme"),
+            description: this._tr("appearance.scheme.description", "Shared palette saved into theme packs (.gwct). Widgets you add later start with these colors. Widgets already on the desktop keep their own colors unless you press \"Apply to all widgets\".")
+        });
+        const theme = sharedTheme ?? new ThemeService;
+        theme.init();
+        const scheme = { ...DEFAULT_COLOR_SCHEME, ...theme.getColorScheme() ?? {} };
+        for (const role of COLOR_SCHEME_ROLES) {
+            const key = schemeKey(role);
+            const row = new Adw.ActionRow({
+                title: this._tr(`appearance.scheme.${role}`, ROLE_TITLES[role] ?? role)
+            });
+            const button = new Gtk.ColorDialogButton({
+                dialog: new Gtk.ColorDialog({ with_alpha: true }),
+                valign: Gtk.Align.CENTER
+            });
+            const rgba = new Gdk.RGBA;
+            rgba.parse(scheme[key]);
+            button.set_rgba(rgba);
+            button.connect("notify::rgba", () => {
+                try {
+                    scheme[key] = rgbaToHex8(button.rgba);
+                    theme.setColorScheme(scheme);
+                } catch (e) {
+                    logError(e, `could not save color scheme ${key}`);
+                }
+            });
+            row.add_suffix(button);
+            row.activatable_widget = button;
+            group.add(row);
+        }
+        const applyRow = new Adw.ActionRow({
+            title: this._tr("appearance.scheme.apply.title", "Apply to all widgets"),
+            subtitle: this._tr("appearance.scheme.apply.subtitle", "Overwrites the matching colors of every widget that supports the scheme.")
+        });
+        const applyButton = new Gtk.Button({ label: this._tr("appearance.scheme.apply.button", "Apply"), valign: Gtk.Align.CENTER });
+        applyButton.connect("clicked", () => {
+            try {
+                theme.setColorScheme(scheme);
+                const changed = applyColorSchemeToWidgets(scheme, { storage: storage, discoveredWidgets: discoveredWidgets });
+                applyButton.label = this._tr("appearance.scheme.apply.done", "Applied to {count}").replace("{count}", changed.length);
+            } catch (e) {
+                logError(e, "could not apply color scheme");
+            }
+        });
+        applyRow.add_suffix(applyButton);
+        group.add(applyRow);
+        const clearRow = new Adw.ActionRow({
+            title: this._tr("appearance.scheme.clear.title", "Stop using a color scheme"),
+            subtitle: this._tr("appearance.scheme.clear.subtitle", "New widgets go back to their own default colors. Existing widgets are not changed.")
+        });
+        const clearButton = new Gtk.Button({ label: this._tr("appearance.scheme.clear.button", "Clear"), valign: Gtk.Align.CENTER });
+        clearButton.connect("clicked", () => {
+            try {
+                theme.setColorScheme(null);
+                clearButton.label = this._tr("appearance.scheme.clear.done", "Cleared");
+            } catch (e) {
+                logError(e, "could not clear color scheme");
+            }
+        });
+        clearRow.add_suffix(clearButton);
+        group.add(clearRow);
+        return group;
+    }
+    _buildCardSettingsGroup(storage, discoveredWidgets, sharedTheme) {
+        const ROW_TITLES = {
+            "card-background-color": "Background color",
+            "card-opacity": "Opacity (%)",
+            "card-corner-radius-enabled": "Round card corners",
+            "card-corner-radius": "Corner radius (px)",
+            "card-border-enabled": "Enable border",
+            "card-border-color": "Border color",
+            "card-border-width": "Border width (px)",
+            "card-shadow-enabled": "Enable shadow",
+            "card-shadow-color": "Shadow color",
+            "card-shadow-opacity": "Shadow transparency (%)",
+            "card-shadow-blur": "Shadow blur (px)",
+            "card-shadow-angle": "Shadow angle (°)",
+            "card-shadow-distance": "Shadow distance (px)",
+            "card-blur-enabled": "Enable background blur",
+            "card-blur-radius": "Blur radius (px)"
+        };
+        const group = new Adw.PreferencesGroup({
+            title: this._tr("appearance.card.title", "Card Settings"),
+            description: this._tr("appearance.card.description", "Every card setting (background, corners, border, shadow, blur, opacity) saved into theme packs (.gwct). A widget you open for the first time starts with these values, so you don't have to set them one by one. Widgets already on the desktop keep their own settings unless you press \"Apply to all widgets\".")
+        });
+        const theme = sharedTheme ?? new ThemeService;
+        theme.init();
+        const values = { ...DEFAULT_CARD_SETTINGS, ...theme.getCardSettings() ?? {} };
+        const save = id => {
+            try {
+                theme.setCardSettings(values);
+            } catch (e) {
+                logError(e, `could not save card setting ${id}`);
+            }
+        };
+        for (const id of CARD_SETTING_IDS) {
+            const spec = CARD_SETTING_SPECS[id];
+            const title = this._tr(`appearance.card.${id}`, ROW_TITLES[id] ?? id);
+            if (spec.type === "bool") {
+                const row = new Adw.SwitchRow({ title: title, active: !!values[id] });
+                row.connect("notify::active", () => {
+                    values[id] = row.active;
+                    save(id);
+                });
+                group.add(row);
+            } else if (spec.type === "number") {
+                const row = new Adw.SpinRow({
+                    title: title,
+                    adjustment: new Gtk.Adjustment({
+                        lower: spec.min,
+                        upper: spec.max,
+                        step_increment: 1,
+                        value: values[id]
+                    })
+                });
+                row.connect("notify::value", () => {
+                    values[id] = Math.round(row.value);
+                    save(id);
+                });
+                group.add(row);
+            } else {
+                const row = new Adw.ActionRow({ title: title });
+                const button = new Gtk.ColorDialogButton({
+                    dialog: new Gtk.ColorDialog({ with_alpha: true }),
+                    valign: Gtk.Align.CENTER
+                });
+                const rgba = new Gdk.RGBA;
+                rgba.parse(values[id]);
+                button.set_rgba(rgba);
+                button.connect("notify::rgba", () => {
+                    values[id] = rgbaToHex8(button.rgba);
+                    save(id);
+                });
+                row.add_suffix(button);
+                row.activatable_widget = button;
+                group.add(row);
+            }
+        }
+        const applyRow = new Adw.ActionRow({
+            title: this._tr("appearance.card.apply.title", "Apply to all widgets"),
+            subtitle: this._tr("appearance.card.apply.subtitle", "Overwrites the matching card settings of every widget that has them. Colors from the Card Color Scheme are applied separately.")
+        });
+        const applyButton = new Gtk.Button({ label: this._tr("appearance.card.apply.button", "Apply"), valign: Gtk.Align.CENTER });
+        applyButton.connect("clicked", () => {
+            try {
+                theme.setCardSettings(values);
+                const changed = applyCardSettingsToWidgets(values, { storage: storage, discoveredWidgets: discoveredWidgets });
+                applyButton.label = this._tr("appearance.card.apply.done", "Applied to {count}").replace("{count}", changed.length);
+            } catch (e) {
+                logError(e, "could not apply card settings");
+            }
+        });
+        applyRow.add_suffix(applyButton);
+        group.add(applyRow);
+        const clearRow = new Adw.ActionRow({
+            title: this._tr("appearance.card.clear.title", "Stop using card settings"),
+            subtitle: this._tr("appearance.card.clear.subtitle", "New widgets go back to their own default card look. Existing widgets are not changed.")
+        });
+        const clearButton = new Gtk.Button({ label: this._tr("appearance.card.clear.button", "Clear"), valign: Gtk.Align.CENTER });
+        clearButton.connect("clicked", () => {
+            try {
+                theme.setCardSettings(null);
+                clearButton.label = this._tr("appearance.card.clear.done", "Cleared");
+            } catch (e) {
+                logError(e, "could not clear card settings");
+            }
+        });
+        clearRow.add_suffix(clearButton);
+        group.add(clearRow);
+        return group;
+    }
+    _buildFontSettingsGroup(storage, discoveredWidgets, sharedTheme) {
+        const ROLE_TITLES = { "text-1": "Text 1 font (primary)", "text-2": "Text 2 font (secondary)" };
+        const group = new Adw.PreferencesGroup({
+            title: this._tr("appearance.font.title", "Text Fonts"),
+            description: this._tr("appearance.font.description", "Font face and size for the shared text roles, saved into theme packs (.gwct). Widgets you add later start with these fonts. Widgets already on the desktop keep their own fonts unless you press \"Apply to all widgets\".")
+        });
+        const theme = sharedTheme ?? new ThemeService;
+        theme.init();
+        const values = { ...DEFAULT_FONT_SETTINGS, ...theme.getFontSettings() ?? {} };
+        for (const role of FONT_ROLES) {
+            const key = fontKey(role);
+            const row = new Adw.ActionRow({ title: this._tr(`appearance.font.${role}`, ROLE_TITLES[role] ?? role) });
+            const button = new Gtk.FontDialogButton({ dialog: new Gtk.FontDialog, valign: Gtk.Align.CENTER });
+            try {
+                button.set_font_desc(Pango.FontDescription.from_string(values[key]));
+            } catch (e) {
+                button.set_font_desc(Pango.FontDescription.from_string(DEFAULT_FONT_SETTINGS[key]));
+            }
+            button.connect("notify::font-desc", () => {
+                try {
+                    const desc = button.get_font_desc();
+                    if (!desc) return;
+                    values[key] = desc.to_string();
+                    theme.setFontSettings(values);
+                } catch (e) {
+                    logError(e, `could not save font setting ${key}`);
+                }
+            });
+            row.add_suffix(button);
+            row.activatable_widget = button;
+            group.add(row);
+        }
+        const applyRow = new Adw.ActionRow({
+            title: this._tr("appearance.font.apply.title", "Apply to all widgets"),
+            subtitle: this._tr("appearance.font.apply.subtitle", "Overwrites the matching font (face and size) of every widget that supports text roles.")
+        });
+        const applyButton = new Gtk.Button({ label: this._tr("appearance.font.apply.button", "Apply"), valign: Gtk.Align.CENTER });
+        applyButton.connect("clicked", () => {
+            try {
+                theme.setFontSettings(values);
+                const changed = applyFontSettingsToWidgets(values, { storage: storage, discoveredWidgets: discoveredWidgets });
+                applyButton.label = this._tr("appearance.font.apply.done", "Applied to {count}").replace("{count}", changed.length);
+            } catch (e) {
+                logError(e, "could not apply font settings");
+            }
+        });
+        applyRow.add_suffix(applyButton);
+        group.add(applyRow);
+        const clearRow = new Adw.ActionRow({
+            title: this._tr("appearance.font.clear.title", "Stop using text fonts"),
+            subtitle: this._tr("appearance.font.clear.subtitle", "New widgets go back to their own default fonts. Existing widgets are not changed.")
+        });
+        const clearButton = new Gtk.Button({ label: this._tr("appearance.font.clear.button", "Clear"), valign: Gtk.Align.CENTER });
+        clearButton.connect("clicked", () => {
+            try {
+                theme.setFontSettings(null);
+                clearButton.label = this._tr("appearance.font.clear.done", "Cleared");
+            } catch (e) {
+                logError(e, "could not clear font settings");
+            }
+        });
+        clearRow.add_suffix(clearButton);
+        group.add(clearRow);
+        return group;
+    }
+    _buildThemeDefaultsGroup(theme, storage, discoveredWidgets) {
+        const group = new Adw.PreferencesGroup({
+            title: this._tr("appearance.defaults.title", "Theme Defaults"),
+            description: this._tr("appearance.defaults.description", "Card settings, color scheme and text fonts below are saved together into theme packs (.gwct). Widgets you add later start with these values.")
+        });
+        const applyRow = new Adw.ActionRow({
+            title: this._tr("appearance.defaults.apply.title", "Apply all to widgets"),
+            subtitle: this._tr("appearance.defaults.apply.subtitle", "Overwrites card settings, colors and fonts of every widget that supports them.")
+        });
+        const applyButton = new Gtk.Button({ label: this._tr("appearance.defaults.apply.button", "Apply all"), valign: Gtk.Align.CENTER });
+        applyButton.connect("clicked", () => {
+            try {
+                const ctx = { storage: storage, discoveredWidgets: discoveredWidgets };
+                const card = { ...DEFAULT_CARD_SETTINGS, ...theme.getCardSettings() ?? {} };
+                const scheme = { ...DEFAULT_COLOR_SCHEME, ...theme.getColorScheme() ?? {} };
+                const fonts = { ...DEFAULT_FONT_SETTINGS, ...theme.getFontSettings() ?? {} };
+                theme.setGlobalTheme({ cardSettings: card, colorScheme: scheme, fontSettings: fonts });
+                const changed = new Set([
+                    ...applyCardSettingsToWidgets(card, ctx),
+                    ...applyColorSchemeToWidgets(scheme, ctx),
+                    ...applyFontSettingsToWidgets(fonts, ctx)
+                ]);
+                applyButton.label = this._tr("appearance.defaults.apply.done", "Applied to {count}").replace("{count}", changed.size);
+            } catch (e) {
+                logError(e, "could not apply theme defaults");
+            }
+        });
+        applyRow.add_suffix(applyButton);
+        group.add(applyRow);
+        const clearRow = new Adw.ActionRow({
+            title: this._tr("appearance.defaults.clear.title", "Stop using theme defaults"),
+            subtitle: this._tr("appearance.defaults.clear.subtitle", "New widgets go back to their own defaults. Existing widgets are not changed. Reopen Preferences to see the reset values.")
+        });
+        const clearButton = new Gtk.Button({ label: this._tr("appearance.defaults.clear.button", "Clear all"), valign: Gtk.Align.CENTER });
+        clearButton.connect("clicked", () => {
+            try {
+                theme.setGlobalTheme({ cardSettings: null, colorScheme: null, fontSettings: null });
+                clearButton.label = this._tr("appearance.defaults.clear.done", "Cleared");
+            } catch (e) {
+                logError(e, "could not clear theme defaults");
+            }
+        });
+        clearRow.add_suffix(clearButton);
+        group.add(clearRow);
+        return group;
+    }
+    _buildAppearanceCategory(settings, storage, discoveredWidgets) {
+        const ready = settings?.isReady;
+        const page = new Adw.PreferencesPage;
+        // One ThemeService for the whole Theme Defaults section: separate
+        // instances each cache theme.json and would overwrite each other's
+        // blocks (card settings / color scheme / fonts) on save.
+        const defaultsTheme = new ThemeService;
+        defaultsTheme.init();
+        page.add(this._buildThemeDefaultsGroup(defaultsTheme, storage, discoveredWidgets));
+        page.add(this._buildCardSettingsGroup(storage, discoveredWidgets, defaultsTheme));
+        page.add(this._buildColorSchemeGroup(storage, discoveredWidgets, defaultsTheme));
+        page.add(this._buildFontSettingsGroup(storage, discoveredWidgets, defaultsTheme));
+
+        const shadowGroup = new Adw.PreferencesGroup({
+            title: this._tr("appearance.shadow.title", "Global Shadow"),
+            description: this._tr("appearance.shadow.description", "Distance and angle apply to every widget's drop shadow. Each widget still sets its own shadow color, opacity, and blur in its own Appearance settings.")
+        });
+        page.add(shadowGroup);
+
+        const shadowDistanceRow = new Adw.SpinRow({
+            title: this._tr("appearance.shadow.distance.title", "Shadow distance"),
+            subtitle: this._tr("appearance.shadow.distance.subtitle", "0–30 px."),
+            sensitive: ready,
+            adjustment: new Gtk.Adjustment({
+                lower: 0,
+                upper: 30,
+                step_increment: 1,
+                value: ready ? settings.getGlobalValue("shadow-distance") : 4
+            })
+        });
+        shadowGroup.add(shadowDistanceRow);
+        shadowDistanceRow.connect("notify::value", () => {
+            if (!ready) return;
+            settings.setGlobalValue("shadow-distance", Math.round(shadowDistanceRow.value));
+        });
+
+        const shadowAngleRow = new Adw.ComboRow({
+            title: this._tr("appearance.shadow.angle.title", "Shadow angle"),
+            subtitle: this._tr("appearance.shadow.angle.subtitle", "Direction the shadow falls, in 45° steps."),
+            sensitive: ready,
+            model: Gtk.StringList.new(SHADOW_ANGLE_STEPS.map(a => `${a}°`))
+        });
+        const shadowAngleIndex = SHADOW_ANGLE_STEPS.indexOf(ready ? settings.getGlobalValue("shadow-angle") : 90);
+        shadowAngleRow.selected = shadowAngleIndex >= 0 ? shadowAngleIndex : SHADOW_ANGLE_STEPS.indexOf(90);
+        shadowGroup.add(shadowAngleRow);
+        shadowAngleRow.connect("notify::selected", () => {
+            if (!ready) return;
+            settings.setGlobalValue("shadow-angle", SHADOW_ANGLE_STEPS[shadowAngleRow.selected] ?? 90);
+        });
+
+        return page;
+    }
+    _buildGeneralCategory(settings) {
+        const page = new Adw.PreferencesPage;
+        const ready = settings.isReady;
+        const group = new Adw.PreferencesGroup({
+            title: this._tr("general.language.title", "Language"),
+            description: this._tr("general.language.description", "Overrides the system locale for this extension's own UI text and any widget that ships translations - only where a widget actually has that language available, otherwise it falls back to the system locale as before.")
+        });
+        page.add(group);
+        const locales = listAvailableLocales(GLib.build_filenamev([ this.path, "i18n" ]));
+        const codes = [ "", ...locales.map(l => l.code) ];
+        const labels = [ this._tr("general.language.system_default", "System default"), ...locales.map(l => l.name) ];
+        const row = new Adw.ComboRow({
+            title: this._tr("general.language.row.title", "UI language"),
+            subtitle: this._tr("general.language.row.subtitle", "Applies immediately, no restart needed."),
+            model: Gtk.StringList.new(labels),
+            selected: Math.max(0, codes.indexOf(ready ? settings.getGlobalValue("language") || "" : "")),
+            sensitive: ready
+        });
+        row.connect("notify::selected", () => {
+            if (!ready) {
+                logError(new Error("SettingsService not ready — could not save language"));
+                return;
+            }
+            try {
+                settings.setGlobalValue("language", codes[row.selected] ?? "");
+            } catch (e) {
+                logError(e, "could not save language");
+            }
+        });
+        group.add(row);
+        const widgetsGroup = new Adw.PreferencesGroup({
+            title: this._tr("general.widgets.title", "Widgets"),
+            description: this._tr("general.widgets.description", "What happens the first time a widget you installed yourself — into ~/.local/share/gnome-widget-center/widgets/, or dropped in by a theme pack — is found. Widgets bundled with the extension always start off and wait for you to enable them from Overview, regardless of this setting.")
+        });
+        page.add(widgetsGroup);
+        const autoEnableRow = new Adw.SwitchRow({
+            title: this._tr("general.autoenable.title", "Load new widgets automatically"),
+            subtitle: this._tr("general.autoenable.subtitle", "For widgets you install yourself. On: enabled the first time it's found (previous behavior). Off: it appears in Overview but stays off the desktop until you turn it on."),
+            active: ready ? !!settings.getGlobalValue("auto-enable-new-widgets") : true,
+            sensitive: ready
+        });
+        autoEnableRow.connect("notify::active", () => {
+            if (!ready) {
+                logError(new Error("SettingsService not ready — could not toggle auto-enable-new-widgets"));
+                return;
+            }
+            try {
+                settings.setGlobalValue("auto-enable-new-widgets", autoEnableRow.active);
+            } catch (e) {
+                logError(e, "could not toggle auto-enable-new-widgets");
+            }
+        });
+        widgetsGroup.add(autoEnableRow);
+        const shortcutGroup = new Adw.PreferencesGroup({
+            title: this._tr("general.shortcut.title", "Keyboard shortcut"),
+            description: this._tr("general.shortcut.description", "Opens/closes the Widget Center Overlay (lib/shell/widgetCenterOverlay.js). Also editable live from the overlay's own Preferences tab.")
+        });
+        page.add(shortcutGroup);
+        const currentAccel = ready ? settings.getGlobalValue("widget-center-overlay-keybinding")?.[0] ?? "" : "<Super>F12";
+        const shortcutRow = new Adw.ActionRow({
+            title: this._tr("general.shortcut.row.title", "Shortcut"),
+            subtitle: this._tr("general.shortcut.row.subtitle", "Click Record shortcut, then press the key combination."),
+            sensitive: ready
+        });
+        const recordButton = new Gtk.Button({
+            label: currentAccel || this._tr("general.shortcut.disabled", "Disabled"),
+            valign: Gtk.Align.CENTER,
+            sensitive: ready
+        });
+        let recording = false;
+        recordButton.connect("clicked", () => {
+            recording = true;
+            recordButton.label = this._tr("general.shortcut.press", "Press shortcut…");
+            recordButton.grab_focus();
+        });
+        const keyController = new Gtk.EventControllerKey;
+        keyController.connect("key-pressed", (_controller, keyval, _keycode, state) => {
+            if (!recording) return false;
+            if (keyval === Gdk.KEY_Escape) {
+                recording = false;
+                recordButton.label = currentAccel || this._tr("general.shortcut.disabled", "Disabled");
+                return true;
+            }
+            if (isModifierKeyval(keyval)) return true;
+            const mask = state & Gtk.accelerator_get_default_mod_mask();
+            if (!Gtk.accelerator_valid(keyval, mask)) return true;
+            const accel = Gtk.accelerator_name(keyval, mask);
+            recording = false;
+            recordButton.label = accel;
+            try {
+                settings.setGlobalValue("widget-center-overlay-keybinding", [ accel ]);
+            } catch (e) {
+                logError(e, "could not save widget-center-overlay-keybinding");
+            }
+            return true;
+        });
+        recordButton.add_controller(keyController);
+        shortcutRow.add_suffix(recordButton);
+        shortcutRow.activatable_widget = recordButton;
+        shortcutGroup.add(shortcutRow);
+        return page;
+    }
+    _buildInteractionsCategory(settings) {
+        const page = new Adw.PreferencesPage;
+        const ready = settings.isReady;
+        const lockGroup = new Adw.PreferencesGroup({
+            title: this._tr("interactions.lock.title", "Lock widgets"),
+            description: this._tr("interactions.lock.description", "Disables entering Edit Mode from the desktop - right-clicking a widget no longer opens its toolbar. Use this page to turn it back off if you get locked out.")
+        });
+        page.add(lockGroup);
+        const editModeLockedRow = new Adw.SwitchRow({
+            title: this._tr("interactions.lock.editmode.title", "Disable Edit Mode"),
+            subtitle: this._tr("interactions.lock.editmode.subtitle", "Right-click stops opening the Edit Mode toolbar on every widget."),
+            active: ready ? !!settings.getGlobalValue("edit-mode-locked") : false,
+            sensitive: ready
+        });
+        editModeLockedRow.connect("notify::active", () => {
+            if (!ready) return;
+            try {
+                settings.setGlobalValue("edit-mode-locked", editModeLockedRow.active);
+            } catch (e) {
+                logError(e, "could not save edit-mode-locked");
+            }
+        });
+        lockGroup.add(editModeLockedRow);
+        const snapGroup = new Adw.PreferencesGroup({
+            title: this._tr("interactions.snap.title", "Magnetic snapping"),
+            description: this._tr("interactions.snap.description", "Pulls a dragged widget toward screen edges and other widgets' edges.")
+        });
+        page.add(snapGroup);
+        const snapEnabledRow = new Adw.SwitchRow({
+            title: this._tr("interactions.snap.enable.title", "Enable snapping"),
+            active: ready ? !!settings.getGlobalValue("snap-enabled") : true,
+            sensitive: ready
+        });
+        snapEnabledRow.connect("notify::active", () => {
+            if (!ready) return;
+            try {
+                settings.setGlobalValue("snap-enabled", snapEnabledRow.active);
+            } catch (e) {
+                logError(e, "could not save snap-enabled");
+            }
+        });
+        snapGroup.add(snapEnabledRow);
+        const snapDistanceRow = new Adw.SpinRow({
+            title: this._tr("interactions.snap.distance.title", "Snap distance"),
+            subtitle: this._tr("interactions.snap.distance.subtitle", "How close (px) an edge must get before it's pulled the rest of the way."),
+            adjustment: new Gtk.Adjustment({
+                lower: 0,
+                upper: 128,
+                step_increment: 1,
+                value: ready ? settings.getGlobalValue("snap-distance") : 16
+            }),
+            sensitive: ready
+        });
+        snapDistanceRow.connect("notify::value", () => {
+            if (!ready) return;
+            try {
+                settings.setGlobalValue("snap-distance", Math.round(snapDistanceRow.value));
+            } catch (e) {
+                logError(e, "could not save snap-distance");
+            }
+        });
+        snapGroup.add(snapDistanceRow);
+        const guideColorRow = new Adw.ActionRow({
+            title: this._tr("interactions.snap.guidecolor.title", "Guide line color")
+        });
+        const guideColorButton = new Gtk.ColorDialogButton({
+            dialog: new Gtk.ColorDialog({
+                with_alpha: true
+            }),
+            valign: Gtk.Align.CENTER,
+            sensitive: ready
+        });
+        const initialGuideColor = new Gdk.RGBA;
+        initialGuideColor.parse(ready ? settings.getGlobalValue("guide-color") || "#F5A623E6" : "#F5A623E6");
+        guideColorButton.set_rgba(initialGuideColor);
+        guideColorButton.connect("notify::rgba", () => {
+            if (!ready) return;
+            try {
+                settings.setGlobalValue("guide-color", rgbaToHex(guideColorButton.rgba));
+            } catch (e) {
+                logError(e, "could not save guide-color");
+            }
+        });
+        guideColorRow.add_suffix(guideColorButton);
+        guideColorRow.activatable_widget = guideColorButton;
+        snapGroup.add(guideColorRow);
+        const gridGroup = new Adw.PreferencesGroup({
+            title: this._tr("interactions.grid.title", "Fixed grid snap"),
+            description: this._tr("interactions.grid.description", "Off by default. Rounds a dragged widget's position to the nearest grid cell, applied after magnetic snapping above.")
+        });
+        page.add(gridGroup);
+        const gridEnabledRow = new Adw.SwitchRow({
+            title: this._tr("interactions.grid.enable.title", "Snap to grid"),
+            active: ready ? !!settings.getGlobalValue("grid-snap-enabled") : false,
+            sensitive: ready
+        });
+        gridEnabledRow.connect("notify::active", () => {
+            if (!ready) return;
+            try {
+                settings.setGlobalValue("grid-snap-enabled", gridEnabledRow.active);
+            } catch (e) {
+                logError(e, "could not save grid-snap-enabled");
+            }
+        });
+        gridGroup.add(gridEnabledRow);
+        const gridSizeRow = new Adw.SpinRow({
+            title: this._tr("interactions.grid.size.title", "Grid size"),
+            subtitle: this._tr("interactions.grid.size.subtitle", "Cell size in pixels. Only applies while Snap to grid above is on."),
+            adjustment: new Gtk.Adjustment({
+                lower: 4,
+                upper: 128,
+                step_increment: 1,
+                value: ready ? settings.getGlobalValue("grid-size") : 16
+            }),
+            sensitive: ready
+        });
+        gridSizeRow.connect("notify::value", () => {
+            if (!ready) return;
+            try {
+                settings.setGlobalValue("grid-size", Math.round(gridSizeRow.value));
+            } catch (e) {
+                logError(e, "could not save grid-size");
+            }
+        });
+        gridGroup.add(gridSizeRow);
+        return page;
+    }
+    _buildAdvancedCategory(window, settings, storage, discoveredWidgets) {
+        const page = new Adw.PreferencesPage;
+        const group = new Adw.PreferencesGroup({
+            title: this._tr("advanced.dev.title", "Development"),
+            description: this._tr("advanced.dev.description", "For debugging the extension itself — safe to leave off otherwise.")
+        });
+        page.add(group);
+        const row = new Adw.SwitchRow({
+            title: this._tr("advanced.dev.mode.title", "Development Mode"),
+            subtitle: this._tr("advanced.dev.mode.subtitle", "Hot-reloads widgets on file change, and logs internal debug output (Edit Mode flips, drag start/stop, etc) to the system journal — view with: journalctl -f -o cat | grep widget-center"),
+            active: settings.isReady ? !!settings.getGlobalValue("dev-mode") : false,
+            sensitive: settings.isReady
+        });
+        row.connect("notify::active", () => {
+            if (!settings.isReady) {
+                logError(new Error("SettingsService not ready — could not toggle Development Mode"));
+                return;
+            }
+            try {
+                settings.setGlobalValue("dev-mode", row.active);
+            } catch (e) {
+                logError(e, "could not toggle Development Mode");
+            }
+        });
+        group.add(row);
+        const defaultsGroup = new Adw.PreferencesGroup({
+            title: this._tr("advanced.defaults.title", "Widget defaults"),
+            description: this._tr("advanced.defaults.description", "For widget authors — bakes the current live appearance/position of every widget into its own config.json/metadata.json, so that becomes the new out-of-the-box default. Writes directly to each widget's own folder on disk.")
+        });
+        page.add(defaultsGroup);
+        const saveDefaultsRow = new Adw.ActionRow({
+            title: this._tr("advanced.defaults.row.title", "Save current settings as defaults"),
+            subtitle: this._tr("advanced.defaults.row.subtitle", "Applies to every installed widget in one go — see the confirmation dialog before anything is written.")
+        });
+        const saveDefaultsButton = new Gtk.Button({
+            label: this._tr("advanced.defaults.button", "Save Defaults"),
+            valign: Gtk.Align.CENTER,
+            css_classes: [ "destructive-action" ]
+        });
+        saveDefaultsRow.add_suffix(saveDefaultsButton);
+        saveDefaultsRow.activatable_widget = saveDefaultsButton;
+        defaultsGroup.add(saveDefaultsRow);
+        saveDefaultsButton.connect("clicked", async () => {
+            const widgets = (discoveredWidgets ?? []).filter(w => w.hasConfigJson);
+            if (widgets.length === 0) {
+                showReportDialog(window, this._tr("advanced.defaults.nothing_heading", "Nothing to save"), this._tr("advanced.defaults.nothing_body", "No installed widget has a config.json with configurable fields."));
+                return;
+            }
+            const confirmed = await confirmOverwrite(window, this._tr("advanced.defaults.confirm_heading", "Save current settings as defaults?"), this._tr("advanced.defaults.confirm_body", "This overwrites config.json (and metadata.json's default-position) for all {count} widget(s) with configurable appearance, using whatever they're currently set to right now on your desktop. This cannot be undone.").replace("{count}", widgets.length), this._tr("advanced.defaults.button", "Save Defaults"));
+            if (!confirmed) return;
+            let configUpdated = 0;
+            let positionUpdated = 0;
+            const errors = [];
+            for (const widget of widgets) {
+                try {
+                    const currentValues = storage.getWidgetSettings(widget.id);
+                    const rawPosition = storage.getWidgetPosition(widget.id);
+                    const position = rawPosition ? {
+                        x: rawPosition.x,
+                        y: rawPosition.y,
+                        monitor: rawPosition.monitorIndex ?? 0
+                    } : null;
+                    const result = await saveCurrentSettingsAsWidgetDefaults(widget.path, currentValues, position);
+                    if (result.configUpdated) configUpdated++;
+                    if (result.positionUpdated) positionUpdated++;
+                    for (const err of result.errors) errors.push(`${widget.id}: ${err}`);
+                } catch (e) {
+                    errors.push(`${widget.id}: ${e.message}`);
+                }
+            }
+            const lines = [ this._tr("advanced.defaults.report.processed", "Widgets processed: {count}").replace("{count}", widgets.length), this._tr("advanced.defaults.report.config_updated", "config.json updated: {count}").replace("{count}", configUpdated), this._tr("advanced.defaults.report.position_updated", "metadata.json position updated: {count}").replace("{count}", positionUpdated) ];
+            if (errors.length > 0) {
+                lines.push("", this._tr("advanced.defaults.report.errors", "Errors:"));
+                for (const err of errors) lines.push(`  ${err}`);
+            }
+            showReportDialog(window, errors.length > 0 ? this._tr("advanced.defaults.result_errors_heading", "Saved with errors") : this._tr("advanced.defaults.result_heading", "Defaults saved"), lines.join("\n"));
+        });
+        return page;
+    }
+    _buildDesktopCategory(settings) {
+        const page = new Adw.PreferencesPage;
+        const group = new Adw.PreferencesGroup({
+            title: this._tr("desktop.placement.title", "Widget placement"),
+            description: this._tr("desktop.placement.description", "Applies while dragging widgets in Edit Mode.")
+        });
+        page.add(group);
+        const overlapRow = new Adw.SwitchRow({
+            title: this._tr("desktop.overlap.title", "Prevent widgets from overlapping"),
+            subtitle: this._tr("desktop.overlap.subtitle", "When off, widgets can be dropped on top of each other."),
+            active: settings.isReady ? !!settings.getGlobalValue("prevent-widget-overlap") : true,
+            sensitive: settings.isReady
+        });
+        overlapRow.connect("notify::active", () => {
+            if (!settings.isReady) {
+                logError(new Error("SettingsService not ready — could not toggle widget overlap prevention"));
+                return;
+            }
+            try {
+                settings.setGlobalValue("prevent-widget-overlap", overlapRow.active);
+            } catch (e) {
+                logError(e, "could not toggle prevent-widget-overlap");
+            }
+        });
+        group.add(overlapRow);
+        const marginRow = new Adw.SpinRow({
+            title: this._tr("desktop.margin.title", "Screen edge margin"),
+            subtitle: this._tr("desktop.margin.subtitle", "Minimum distance (px) a widget must keep from every edge of the screen."),
+            adjustment: new Gtk.Adjustment({
+                lower: 0,
+                upper: 256,
+                step_increment: 1,
+                value: settings.isReady ? settings.getGlobalValue("edge-margin") : 32
+            }),
+            sensitive: settings.isReady
+        });
+        marginRow.connect("notify::value", () => {
+            if (!settings.isReady) {
+                logError(new Error("SettingsService not ready — could not save edge margin"));
+                return;
+            }
+            try {
+                settings.setGlobalValue("edge-margin", Math.round(marginRow.value));
+            } catch (e) {
+                logError(e, "could not save edge-margin");
+            }
+        });
+        group.add(marginRow);
+        const spacingRow = new Adw.SpinRow({
+            title: this._tr("desktop.spacing.title", "Spacing between widgets"),
+            subtitle: this._tr("desktop.spacing.subtitle", "Minimum gap (px) kept between widgets while overlap prevention above is on."),
+            adjustment: new Gtk.Adjustment({
+                lower: 0,
+                upper: 256,
+                step_increment: 1,
+                value: settings.isReady ? settings.getGlobalValue("widget-spacing") : 16
+            }),
+            sensitive: settings.isReady
+        });
+        spacingRow.connect("notify::value", () => {
+            if (!settings.isReady) {
+                logError(new Error("SettingsService not ready — could not save widget spacing"));
+                return;
+            }
+            try {
+                settings.setGlobalValue("widget-spacing", Math.round(spacingRow.value));
+            } catch (e) {
+                logError(e, "could not save widget-spacing");
+            }
+        });
+        group.add(spacingRow);
+        return page;
+    }
+};

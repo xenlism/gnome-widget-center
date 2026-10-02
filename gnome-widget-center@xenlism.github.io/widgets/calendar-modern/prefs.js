@@ -12,7 +12,7 @@ export default class CalendarModernWidgetPrefs {
             title: "Colors"
         });
         page.add(group);
-        group.add(this._colorRow("cardColor", "Card color", "Background of the calendar card", "#ffffff"));
+        group.add(this._colorRow("card-background-color", "Card color", "Background of the calendar card", "#ffffff"));
         group.add(this._colorRow("accentColor", "Weekday color", "Color of the day-of-week text", "#d81f26"));
         group.add(this._colorRow("textColor", "Text color", "Color of the month and day number", "#1a1a1a"));
         return page;

@@ -79,7 +79,7 @@ export default class CalendarMiniEventsWidget {
         const s = this._settings;
 
         applyLayeredCardStyle(this._layers, s, {
-            backgroundColorKey: "cardColor",
+            backgroundColorKey: "card-background-color",
             cornerRadiusFallback: 20
         }, false);
         this._content.set_style("padding: 10px; spacing: 6px;");
@@ -137,8 +137,8 @@ export default class CalendarMiniEventsWidget {
                 style: `background-color: ${bg}; margin: ${inset}px;`
             });
             applyCardBlur(rowBlurInset, {
-                blurEnabled: true,
-                blurRadius: Number.isFinite(s.eventCardBlurRadius) ? s.eventCardBlurRadius : 12
+                "card-blur-enabled": true,
+                "card-blur-radius": Number.isFinite(s.eventCardBlurRadius) ? s.eventCardBlurRadius : 12
             });
             rowOuter.add_child(rowBlurInset);
         }

@@ -64,11 +64,11 @@ export default class CalendarModernWidget {
     }
     _render() {
         const now = GLib.DateTime.new_now_local();
-        const cardColor = this._settings.cardColor ?? "#ffffff";
+        const cardColor = this._settings["card-background-color"] ?? "#ffffff";
         const accentColor = this._settings.accentColor ?? "#d81f26";
         const textColor = this._settings.textColor ?? "#1a1a1a";
         applyLayeredCardStyle(this._layers, this._settings, {
-            backgroundColorKey: "cardColor",
+            backgroundColorKey: "card-background-color",
             cornerRadiusFallback: 22
         }, false);
         this._content.set_style(" padding: 18px 12px; spacing: 4px;");

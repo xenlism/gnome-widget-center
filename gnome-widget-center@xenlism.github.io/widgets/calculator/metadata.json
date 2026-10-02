@@ -4,7 +4,7 @@
     "description": "2x2 basic four-function calculator, styled after the macOS Calculator app - digit/function/operator button colors, a right-aligned display.",
     "version": "1.0.0",
     "author": "Community",
-    "api-version": 1,
+    "api-version": 2,
     "entry": "widget.js",
     "block-type": "2x2",
     "default-position": {

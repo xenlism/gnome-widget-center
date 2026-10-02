@@ -118,7 +118,7 @@ export default class DateModernWidget {
         const colorDow = this._settings.colorDow ?? "#1a1a1a";
         const colorDay = this._settings.colorDay ?? "#1a1a1a";
         applyLayeredCardStyle(this._layers, this._settings, {
-            backgroundColorKey: "cardColor",
+            backgroundColorKey: "card-background-color",
             cornerRadiusFallback: 18
         }, false);
         this._content.set_style(" padding: 12px 12px; spacing: 0px;");

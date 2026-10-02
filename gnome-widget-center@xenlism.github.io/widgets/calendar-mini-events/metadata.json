@@ -4,7 +4,7 @@
     "description": "Compact today view: big date, weekday, and a short event list.",
     "version": "1.0.0",
     "author": "Nattapong Pullkhow",
-    "api-version": 1,
+    "api-version": 2,
     "entry": "widget.js",
     "block-type": "1x1",
     "default-position": {

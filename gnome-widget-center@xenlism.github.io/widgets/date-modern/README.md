@@ -31,8 +31,8 @@ Configurable from the Control Center (`config.json`):
 | `colorMonth`        | color   | `#d81f26`      | Color of the month line                                      |
 | `colorDow`          | color   | `#1a1a1a`      | Color of the day-of-week line                                |
 | `colorDay`          | color   | `#1a1a1a`      | Color of the day-of-month line                               |
-| `cardColor`         | color   | `#ffffff`      | Background of the card                                       |
-| `cornerRadius`      | number  | `18`           | Corner radius of the card, in px                              |
+| `card-background-color`         | color   | `#ffffff`      | Background of the card                                       |
+| `card-corner-radius`      | number  | `18`           | Corner radius of the card, in px                              |
 | `launchOnClick`     | boolean | `false`        | Launch an app when the card is clicked                       |
 | `desktopFilePath`   | string  | `''`           | Path to the `.desktop` file to launch, chosen via a file picker |
 

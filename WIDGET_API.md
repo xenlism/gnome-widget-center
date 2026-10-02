@@ -43,7 +43,7 @@ folder instead, discovered the same way.
   "description": "One line, shown in the Control Center list.",
   "version": "1.0.0",
   "author": "your name",
-  "api-version": 1,
+  "api-version": 2,
   "entry": "widget.js",
   "block-type": "1x1",
   "default-position": { "x": 40, "y": 40, "monitor": 0 }
@@ -52,9 +52,15 @@ folder instead, discovered the same way.
 
 - `id` must match the folder name and be globally unique — the host
   rejects duplicates.
-- `api-version` is a compatibility check. A breaking host API change
-  bumps this; widgets built against an older number are disabled with a
-  notice instead of crashing.
+- `api-version` is a compatibility check. The current widget API is **2.0**
+  (write `2`; `"2.0"` is also accepted). A breaking host API change bumps this;
+  a widget that declares an older number, or none, is not loaded and shows a
+  notice in the widget list instead of crashing. A number newer than the host
+  supports is refused the same way. Logic and constants: `lib/apiVersion.js`
+  (`HOST_API_VERSION`, `MIN_SUPPORTED_API_VERSION`).
+  - **2.0** (breaking vs 1.x): the `card-*` setting keys (9.3.1), `appearance.cardSettings`
+    (9.3.3) and `appearance.colorScheme` / `schemeRole` (9.3.2). To port a 1.x widget, rename its
+    card keys with `CARD_KEYS` and set `"api-version": 2`.
 - `block-type` (a **name**, not `{cols, rows}`) is the on-screen size **in
   grid cells**, not pixels (see
   `development/architecture/specs/ui/size-constraints.md` — the
@@ -291,7 +297,7 @@ to 73.
 
 Declare fields directly in `metadata.json` and the Control Center
 generates a real GTK4/libadwaita page for you via
-`lib/settingsSchemaUI.js` — no `Gtk`/`Adw` knowledge needed for ordinary
+`lib/prefs/settingsSchemaUI.js` — no `Gtk`/`Adw` knowledge needed for ordinary
 settings:
 
 ```json
@@ -354,7 +360,7 @@ including a `Gtk.FileDialog` filtered to `.desktop` entries.
 
 ### 6.3 `lib/settingsApi.js`'s fluent builder
 
-`lib/settingsApi.js` (plus `lib/settingsRenderer.js` and
+`lib/settingsApi.js` (plus `lib/prefs/settingsRenderer.js` and
 `lib/settingsStore.js`) implement a **third**, more expressive way to
 declare settings: a per-widget `settings.js` file exporting
 `defineSettings(gwc)`, using a chainable builder —
@@ -388,7 +394,7 @@ Types available here: `font`, `color`, `date`, `boolean`, `option`,
 `showIf`-based conditional visibility). `setIcon`/`option` pair nicely
 with reverse-DNS icon names, e.g. from the wildfire symlink script.
 
-**Status:** `lib/settingsApi.js`, `lib/settingsRenderer.js`, and
+**Status:** `lib/settingsApi.js`, `lib/prefs/settingsRenderer.js`, and
 `lib/settingsStore.js` are plain ESM (`import`/`export`, `gi://...`
 imports) and are wired into `prefsWindowController.js`.
 `prefsWidgetList.js` reports `hasSettingsJs` for any widget shipping a
@@ -411,7 +417,7 @@ different files on disk.
 
 Drop a `config.json` next to `metadata.json` in your widget's folder and
 the Control Center generates a real GTK4/libadwaita page for you via
-`lib/widgetConfigUI.js` — no `Gtk`/`Adw` knowledge needed, same pitch as
+`lib/prefs/widgetConfigUI.js` — no `Gtk`/`Adw` knowledge needed, same pitch as
 §6.1 but with a much larger type list and a two-level tabs/groups
 structure instead of one flat array:
 
@@ -489,7 +495,7 @@ for URL-Chooser's own hardcoded-to-browsers `Core.autoDetectBrowsers()`.
 to-`scanDirectory` picker and icon/name resolution.
 
 **`fontpicker` stores one combined string, not a family/size pair:**
-`lib/widgetConfigUI.js` renders it with `Gtk.FontButton`
+`lib/prefs/widgetConfigUI.js` renders it with `Gtk.FontButton`
 (`use_font`/`use_size` both on, `font_set` signal) — the same widget and
 signal xenlism's own `showtime` extension uses in its shipped, real-
 hardware-tested `prefs.js` — rather than the newer GTK 4.10+
@@ -517,7 +523,7 @@ hand-written `prefs.js` or `settings` array if either is also present, or
 logs the validation errors and shows no Settings button if not.
 
 **Structure:** `tabs` -> `groups` -> `fields`, each with a unique `id`
-within its parent. Since `lib/prefsWindowController.js`'s
+within its parent. Since `lib/prefs/prefsWindowController.js`'s
 `_presentPrefsPage()` expects a single `Adw.PreferencesPage` back from
 whatever builds a widget's settings page (same contract a hand-written
 `prefs.js`'s `buildPrefsWidget()` already follows), `widgetConfigUI.js`
@@ -566,7 +572,7 @@ into the field.
 The lookup itself (`ip-api.com`, then `freeipapi.com`, then `ipwhois.io`
 as fallbacks — the same free, no-API-key endpoints and order every
 weather widget's own `widget.js` already uses for its first-run
-auto-detect default) lives once in `lib/widgetConfigUI.js`
+auto-detect default) lives once in `lib/prefs/widgetConfigUI.js`
 (`_locationRow()`/`_fetchIpLocationForPrefs()`), not in any per-widget
 file — every widget that declares `fieldType: "location"` gets
 identical UI and behavior for free, no `autocomplete.js` required. See
@@ -869,7 +875,7 @@ local copy, replace it with this import while you're in there.)
 **Shadow bleed past the block-type edge:** a widget's `box-shadow` is
 painted on the same root actor `widgetLoader.js`'s `_enforceBlockSize()`
 clips to the block-type footprint - by default that clip is exact, so a
-large `shadowBlur`/`shadowDistance` gets visibly cut off at a hard,
+large `card-shadow-blur`/`card-shadow-distance` gets visibly cut off at a hard,
 dead-straight line right at the widget's edge instead of fading out.
 As of the 2026-08 cleanup pass this is no longer a hard 0px clip: the
 clip is inflated by the current `widget-spacing` GSetting value (default
@@ -883,6 +889,115 @@ any two widgets while `prevent-widget-overlap` is on. Nothing in
 same as the block-size clip itself always was. If `prevent-widget-overlap`
 is off, collision-avoidance (and therefore this guarantee) is skipped
 entirely, same as it always has been for that setting.
+
+### 9.3.1 Card setting key naming (required)
+
+Every per-widget **card** setting uses one pattern: `card-[setting type]-[sub-setting]`.
+Never invent per-widget names such as `cardColor`, `paperColor`, `widgetCornerRadius`, `cornerRadius`.
+
+| Key | Type | Default |
+|---|---|---|
+| `card-background-color` | color (alpha) | `#000000F5` |
+| `card-opacity` | 0-100 | `100` |
+| `card-corner-radius-enabled` | boolean | `true` |
+| `card-corner-radius` | 0-64 px | `18` |
+| `card-border-enabled` | boolean | `false` |
+| `card-border-color` | color (alpha) | `#FFFFFF33` |
+| `card-border-width` | 0-16 px | `1` |
+| `card-shadow-enabled` | boolean | `false` |
+| `card-shadow-color` | color | `#000000` |
+| `card-shadow-opacity` | 0-100 | `30` |
+| `card-shadow-blur` | 0-100 px | `16` |
+| `card-shadow-angle` / `card-shadow-distance` | global override | `90` / `6` |
+| `card-blur-enabled` | boolean | `false` |
+| `card-blur-radius` | 0-100 px | `24` |
+
+Constants live in `lib/cardSettingKeys.js` (`CARD_KEYS`). Keys contain hyphens, so read them
+with brackets: `settings["card-background-color"]`. Old names are migrated automatically on load
+by `migrateCardSettings()` (storageService) - including old `.gwct` packs.
+
+### 9.3.2 Card Color Scheme (`schemeRole`)
+
+A theme pack (`.gwct`) can carry one shared palette under `appearance.colorScheme`:
+
+```json
+"appearance": { "colorScheme": {
+  "card-background-color": "#FFFFFF40", "card-border-color": "#FFFFFF99", "card-shadow-color": "#5AA9D6",
+  "text-1-color": "#0B3550", "text-2-color": "#2F6B8C",
+  "ring-1-color": "#2E9BD6", "ring-2-color": "#3CB8A5", "ring-3-color": "#F2A65A", "ring-4-color": "#8E7CC3",
+  "accent-color": "#2E9BD6" } }
+```
+
+A widget opts in per color field in `config.json`:
+
+```json
+{ "id": "ringColor", "fieldType": "colorpicker", "schemeRole": "ring-1", "default": "#4FC3F7" }
+```
+
+Roles: `card-background`, `card-border`, `card-shadow`, `text-1`, `text-2`, `ring-1`..`ring-4`, `accent`.
+The five card appearance fields are tagged automatically. Semantic status colors (battery low/mid/high,
+screen-time good/warn/over) deliberately have no role.
+
+Behaviour: when a widget loads, scheme colors beat the widget's own defaults but never override a saved value.
+Prefs -> Appearance -> Card Color Scheme edits the palette; "Apply to all widgets" overwrites saved colors.
+Importing a pack without `colorScheme` clears the current scheme. Logic: `lib/colorScheme.js`.
+
+Ring mapping used by bundled widgets: cpu = `ring-1`, mem = `ring-2`, disk/hdd = `ring-3`, net download = `ring-4`, upload = `ring-3`.
+
+### 9.3.3 Card Settings in .gwct (`appearance.cardSettings`)
+
+A theme pack (`.gwct`) can carry **every** card setting in one block, so a widget opened for the first time
+starts with the pack's card look instead of being tuned one setting at a time:
+
+```json
+"appearance": { "cardSettings": {
+  "card-background-color": "#FFFFFF40", "card-opacity": 100,
+  "card-corner-radius-enabled": true, "card-corner-radius": 24,
+  "card-border-enabled": true, "card-border-color": "#FFFFFF99", "card-border-width": 1,
+  "card-shadow-enabled": true, "card-shadow-color": "#5AA9D6", "card-shadow-opacity": 18,
+  "card-shadow-blur": 22, "card-shadow-angle": 90, "card-shadow-distance": 6,
+  "card-blur-enabled": false, "card-blur-radius": 28 } }
+```
+
+Keys, types and ranges live in `lib/cardDefaults.js` (`CARD_SETTING_SPECS`); the key names are the `CARD_KEYS`
+from 9.3.1. Invalid or unknown entries are dropped when the block is read.
+
+Behaviour (widgets need no code changes):
+- On load, `widgetRuntimeLoader._applyDefaults` fills the card keys the widget declares in `config.json`
+  (the shared Appearance fields are merged in automatically). Precedence, lowest to highest:
+  config.json / schema / `getDefaultSettings()` < **cardSettings** < Card Color Scheme (9.3.2).
+- Only keys missing from the widget's saved settings are filled; saved values are never overwritten,
+  except by Preferences -> Appearance -> Card Settings -> "Apply to all widgets".
+- Importing a pack without `cardSettings` clears the current block (same rule as `colorScheme`).
+- **Applying a theme pack replaces the desktop:** every widget currently shown is removed and the pack's
+  widgets are loaded in their place with the pack's saved settings and positions (folder packs: exactly the
+  widgets their `theme.json` lists). Widgets added afterwards, outside the pack, load the pack's
+  `cardSettings` and `colorScheme` first, before their own defaults.
+- Also stored in `theme.json` (`global.cardSettings`) and in `.gwcbak` backups.
+- Global shadow angle/distance (`shadow-angle`, `shadow-distance` gsettings) now travel with packs and backups too.
+  They override the per-widget `card-shadow-angle` / `card-shadow-distance` at render time.
+
+### 9.3.4 Text Fonts in .gwct (`appearance.fontSettings`, `fontRole`)
+
+A theme pack can carry the default **font face + size** for the two shared text roles, next to the color scheme:
+
+```json
+"appearance": { "fontSettings": { "text-1-font": "Sans Bold 22", "text-2-font": "Sans 12" } }
+```
+
+Values are Pango font strings (`Family [Style] Size`, size 1-200), the same format `fontpicker` fields store.
+A `fontpicker` field opts in with `"fontRole": "text-1"` (or `"text-2"`) in `config.json`; the mapping is data, so it
+can be edited per widget. Bundled widgets tag the font fields that sit next to a `text-1` / `text-2` color
+field, except display-size fonts (default size above 28: big clock digits, temperature, ...).
+
+- Code: `lib/fontScheme.js` (`normalizeFontSettings`, `fontSettingsDefaults`, `applyFontSettingsToSettings`,
+  `deriveFontSettings`). Plain module, shared by the Shell and prefs processes.
+- **Export:** `.gwct` and backup carry the block. If the user never set one, export derives it from the exported
+  widgets: for each role, the most common font among the widgets' `fontRole` fields (saved value, else config default).
+- On load, `_applyDefaults` fills missing keys. Precedence: config.json / schema / `getDefaultSettings()` <
+  cardSettings < **fontSettings** < Card Color Scheme. Saved values are never overwritten, except by
+  Preferences -> Appearance -> Text Fonts -> "Apply to all widgets".
+- Importing a pack without `fontSettings` clears the current block (same rule as `colorScheme`).
 
 ### 9.4 GNOME Shell internals (`resource:///org/gnome/shell/...`)
 

@@ -22,7 +22,7 @@ Use this file as context when asking ChatGPT to create or modify a widget.
 1. Create or edit only the requested widget folder. Do not edit the host
    extension's `extension.js`, `prefs.js`, schemas, or other widgets.
 2. Produce valid JSON with unique field ids. `metadata.json` must use
-   `api-version: 1` and a supported fixed `block-type`.
+   `api-version: 2` and a supported fixed `block-type`.
 3. Export one default widget class from `widget.js`.
 4. `buildActor()` must return an `St`/Clutter actor and must be safe with
    default settings.

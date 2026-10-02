@@ -4,7 +4,7 @@
     "description": "1x1 ring gauge showing live memory (RAM) usage percent, centered inside a single progress ring.",
     "version": "1.0.0",
     "author": "Nattapong Pullkhow",
-    "api-version": 1,
+    "api-version": 2,
     "entry": "widget.js",
     "block-type": "1x1",
     "default-position": {

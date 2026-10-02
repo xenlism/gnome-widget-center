@@ -18,7 +18,7 @@ Configurable from the Control Center (`prefs.js`):
 
 | Setting       | Type  | Default   | Description                          |
 |---------------|-------|-----------|---------------------------------------|
-| `cardColor`   | color | `#ffffff` | Background of the card                |
+| `card-background-color`   | color | `#ffffff` | Background of the card                |
 | `accentColor` | color | `#d81f26` | Color of the day-of-week text         |
 | `textColor`   | color | `#1a1a1a` | Color of the month and day number     |
 

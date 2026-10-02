@@ -267,7 +267,7 @@ export default class NoteWidget {
         const s = this._settings;
 
         applyLayeredCardStyle(this._layers, s, {
-            backgroundColorKey: "cardColor",
+            backgroundColorKey: "card-background-color",
             backgroundColorFallback: DEFAULT_CARD_COLOR,
             cornerRadiusFallback: DEFAULT_RADIUS
         });
@@ -326,7 +326,7 @@ export default class NoteWidget {
         }
 
         const s = this._settings;
-        const radius = Math.max(0, Math.min(s.cornerRadius ?? DEFAULT_RADIUS, w / 2, h));
+        const radius = Math.max(0, Math.min(s["card-corner-radius"] ?? DEFAULT_RADIUS, w / 2, h));
         const top = hexToRgba(s.headerColorTop ?? DEFAULT_HEADER_TOP);
         const bottom = hexToRgba(s.headerColorBottom ?? DEFAULT_HEADER_BOTTOM);
 

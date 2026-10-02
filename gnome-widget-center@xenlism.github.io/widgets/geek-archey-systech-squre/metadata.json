@@ -4,7 +4,7 @@
     "description": "archey4-style system info card: OS, host, kernel, uptime, packages, shell, resolution, DE, CPU, GPU, memory. Text only, square layout - no logo, no color palette.",
     "version": "1.0.0",
     "author": "Nattapong Pullkhow",
-    "api-version": 1,
+    "api-version": 2,
     "entry": "widget.js",
     "block-type": "2x2",
     "default-position": {

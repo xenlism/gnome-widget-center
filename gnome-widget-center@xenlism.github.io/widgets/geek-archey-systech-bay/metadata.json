@@ -4,7 +4,7 @@
     "description": "archey4-style card: ASCII distro logo plus OS, host, kernel, uptime, packages, shell, resolution, desktop, CPU, GPU, memory, and a 16-color palette strip. Wide layout, more room for long values.",
     "version": "1.0.0",
     "author": "Nattapong Pullkhow",
-    "api-version": 1,
+    "api-version": 2,
     "entry": "widget.js",
     "block-type": "4x2",
     "default-position": {

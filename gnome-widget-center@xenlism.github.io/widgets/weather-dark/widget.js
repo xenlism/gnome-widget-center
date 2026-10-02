@@ -369,7 +369,7 @@ export default class WeatherDarkWidget {
         const {family: tempFontFamily, size: tempFontSize} = _parseFontDescription(this._settings.tempFont ?? "Sans Bold 40", "Sans Bold", 40);
         _deferUntilMapped(this._actor, () => {
             applyLayeredCardStyle(this._layers, this._settings, {
-                backgroundColorKey: "cardColor",
+                backgroundColorKey: "card-background-color",
                 cornerRadiusFallback: 18
             }, false);
             this._content.set_style("padding: 20px 26px; spacing: 20px;");

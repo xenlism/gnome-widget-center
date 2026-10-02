@@ -193,7 +193,7 @@ export class XtileBaseWidget {
             const accent = getAccentColorForApp(appInfo, FALLBACK_ACCENT, strengthPct / 100);
             effectiveSettings = {
                 ...settings,
-                backgroundColor: accent
+                "card-background-color": accent
             };
         }
 

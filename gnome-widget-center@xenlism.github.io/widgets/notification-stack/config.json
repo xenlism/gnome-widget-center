@@ -46,7 +46,7 @@
                             "default": "#ffffff3b"
                         },
                         {
-                            "id": "cornerRadius",
+                            "id": "card-corner-radius",
                             "label": "Corner radius",
                             "description": "",
                             "dataType": "integer",
@@ -73,7 +73,7 @@
                     "description": "",
                     "fields": [
                         {
-                            "id": "blurEnabled",
+                            "id": "card-blur-enabled",
                             "label": "Enable background blur",
                             "description": "",
                             "dataType": "boolean",
@@ -81,7 +81,7 @@
                             "default": true
                         },
                         {
-                            "id": "blurRadius",
+                            "id": "card-blur-radius",
                             "label": "Blur radius",
                             "description": "",
                             "dataType": "integer",
@@ -91,7 +91,7 @@
                             "max": 100,
                             "step": 1,
                             "suffix": "px",
-                            "visibleIf": "blurEnabled"
+                            "visibleIf": "card-blur-enabled"
                         }
                     ]
                 },
@@ -106,7 +106,8 @@
                             "description": "",
                             "dataType": "string",
                             "fieldType": "fontpicker",
-                            "default": "Cantarell Bold 13"
+                            "default": "Cantarell Bold 13",
+                            "fontRole": "text-1"
                         },
                         {
                             "id": "titleColor",
@@ -115,7 +116,8 @@
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
-                            "default": "#000000"
+                            "default": "#000000",
+                            "schemeRole": "text-1"
                         },
                         {
                             "id": "bodyFont",
@@ -149,7 +151,7 @@
                     "description": "Off by default. Default color is black at 30% transparency.",
                     "fields": [
                         {
-                            "id": "shadowEnabled",
+                            "id": "card-shadow-enabled",
                             "label": "Enable drop shadow",
                             "description": "",
                             "dataType": "boolean",
@@ -157,16 +159,17 @@
                             "default": false
                         },
                         {
-                            "id": "shadowColor",
+                            "id": "card-shadow-color",
                             "label": "Shadow color",
                             "description": "",
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "default": "#000000",
-                            "visibleIf": "shadowEnabled"
+                            "visibleIf": "card-shadow-enabled",
+                            "schemeRole": "card-shadow"
                         },
                         {
-                            "id": "shadowOpacity",
+                            "id": "card-shadow-opacity",
                             "label": "Shadow transparency",
                             "description": "",
                             "dataType": "integer",
@@ -176,10 +179,10 @@
                             "max": 100,
                             "step": 1,
                             "suffix": "%",
-                            "visibleIf": "shadowEnabled"
+                            "visibleIf": "card-shadow-enabled"
                         },
                         {
-                            "id": "shadowAngle",
+                            "id": "card-shadow-angle",
                             "label": "Shadow angle",
                             "description": "",
                             "dataType": "integer",
@@ -189,10 +192,10 @@
                             "max": 360,
                             "step": 1,
                             "suffix": "°",
-                            "visibleIf": "shadowEnabled"
+                            "visibleIf": "card-shadow-enabled"
                         },
                         {
-                            "id": "shadowDistance",
+                            "id": "card-shadow-distance",
                             "label": "Shadow distance",
                             "description": "",
                             "dataType": "integer",
@@ -202,10 +205,10 @@
                             "max": 60,
                             "step": 1,
                             "suffix": "px",
-                            "visibleIf": "shadowEnabled"
+                            "visibleIf": "card-shadow-enabled"
                         },
                         {
-                            "id": "shadowBlur",
+                            "id": "card-shadow-blur",
                             "label": "Shadow blur",
                             "description": "",
                             "dataType": "integer",
@@ -215,7 +218,7 @@
                             "max": 100,
                             "step": 1,
                             "suffix": "px",
-                            "visibleIf": "shadowEnabled"
+                            "visibleIf": "card-shadow-enabled"
                         }
                     ]
                 }

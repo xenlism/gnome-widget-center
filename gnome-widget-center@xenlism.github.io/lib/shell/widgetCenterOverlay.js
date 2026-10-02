@@ -22,13 +22,13 @@ import { loadTranslations } from "../../i18n/index.js";
 
 import { pickTranslation } from "../i18nUtils.js";
 
-const SCHEMA_ID = "org.gnome.shell.extensions.widget-center";
-
 const KEYBINDING_KEY = "widget-center-overlay-keybinding";
 
 const DISABLED_KEY = "disabled-widgets";
 
 const ACTIVE_THEME_PACK_KEY = "active-theme-pack";
+
+const THEME_PACK_REQUEST_KEY = "theme-pack-apply-request";
 
 const PREFS_APP_ID = "io.github.xenlism.WidgetCenterPrefs";
 
@@ -86,7 +86,7 @@ export class WidgetCenterOverlay {
     }
     enable() {
         try {
-            this._gsettings = this._extension.getSettings(SCHEMA_ID);
+            this._gsettings = this._extension.getSettings();
         } catch (e) {
             this._logger?.error("overlay: could not resolve settings schema", e);
             return;
@@ -608,6 +608,7 @@ export class WidgetCenterOverlay {
     _loadThemePack(entry) {
         try {
             this._gsettings.set_string(ACTIVE_THEME_PACK_KEY, entry.id);
+            this._gsettings.set_string(THEME_PACK_REQUEST_KEY, `${entry.id}|${GLib.get_monotonic_time()}`);
             Gio.Settings.sync();
         } catch (e) {
             this._logger?.error("overlay: could not save active theme pack", e);

@@ -196,8 +196,8 @@ export default class CirclesNetWidget {
         }
     }
     _render() {
-        const backgroundColor = _toCssColor(this._settings.backgroundColor, "#FFFFFF00");
-        const cornerRadius = this._settings.cornerRadius ?? 18;
+        const backgroundColor = _toCssColor(this._settings["card-background-color"], "#FFFFFF00");
+        const cornerRadius = this._settings["card-corner-radius"] ?? 18;
         applyLayeredCardStyle(this._layers, this._settings, {
             cornerRadiusFallback: 18
         }, false);

@@ -35,7 +35,7 @@ Configurable from the Control Center (`prefs.js`):
 | `colorMM`           | color   | `#1a1a1a`   | Color of the MM line                                        |
 | `colorSS`           | color   | `#1a1a1a`   | Color of the SS line                                        |
 | `colorAmPm`         | color   | `#d81f26`   | Color of the am/pm line                                     |
-| `cardColor`         | color   | `#ffffff`   | Background of the card                                      |
+| `card-background-color`         | color   | `#ffffff`   | Background of the card                                      |
 | `launchOnClick`     | boolean | `false`     | Launch an app when the clock is clicked                     |
 | `desktopFilePath`   | string  | `''`        | Path to the `.desktop` file to launch, chosen via a file browser in prefs |
 

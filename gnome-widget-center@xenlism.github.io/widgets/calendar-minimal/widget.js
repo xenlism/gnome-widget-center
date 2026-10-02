@@ -51,7 +51,7 @@ export default class CalendarMinimalWidget {
         return {
             ...configJsonDefaults(import.meta.url),
             ...SHADOW_DEFAULTS,
-            cardColor: "#ffffff",
+            "card-background-color": "#ffffff",
         };
     }
     onSettingsChanged() {
@@ -63,7 +63,7 @@ export default class CalendarMinimalWidget {
         const accentColor = this._settings.accentColor ?? "#6b6b6b";
         const showMonth = this._settings.showMonth ?? true;
         applyLayeredCardStyle(this._layers, this._settings, {
-            backgroundColorKey: "cardColor",
+            backgroundColorKey: "card-background-color",
             cornerRadiusFallback: 22
         }, false);
         this._content.set_style(" padding: 18px 12px; spacing: 4px;");

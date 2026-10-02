@@ -4,7 +4,7 @@
     "description": "Architect Widget for the Geek series: a themeable 3-line clock/date/stat card. Click + Add Widget to spawn Child cards in Bar or Card sizes, each independently configurable.",
     "version": "1.0.0",
     "author": "Nattapong Pullkhow",
-    "api-version": 1,
+    "api-version": 2,
     "entry": "widget.js",
     "block-type": "3x1",
     "default-position": {

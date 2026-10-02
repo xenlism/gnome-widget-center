@@ -1,3 +1,9 @@
+import { schemeDefaults } from "../colorScheme.js";
+
+import { cardSettingsDefaults } from "../cardDefaults.js";
+
+import { fontSettingsDefaults } from "../fontScheme.js";
+
 import GLib from "gi://GLib";
 
 import { fileExists } from "../fsUtils.js";
@@ -140,10 +146,47 @@ export class WidgetRuntimeLoader extends WidgetLoader {
         try {
             const configJsonDefaults = this._configJsonDefaults(widgetInfo);
             const schemaDefaults = getSchemaDefaults(widgetInfo.metadata.settings);
+            // Card Color Scheme: for config.json fields tagged with a
+            // schemeRole, the global scheme beats the widget's own hard-coded
+            // defaults. Only fills keys that are still missing, so a widget
+            // the user already customized keeps its saved colors.
+            let colorSchemeDefaults = {};
+            try {
+                const scheme = this._themeService?.getColorScheme?.();
+                if (scheme) colorSchemeDefaults = schemeDefaults(readWidgetConfig(widgetInfo.path).config, scheme);
+            } catch (e) {
+                this._logger.warn?.(`[widget-loader] "${widgetInfo.id}": color scheme skipped: ${e.message}`);
+            }
+            // Card Settings (global): the pack's card look (corner radius,
+            // border, shadow, blur, opacity, ...) for every card-* field the
+            // widget declares. Sits above the widget's own hard-coded
+            // defaults and below the color scheme, and like the scheme it
+            // only fills keys that are still missing from saved settings.
+            let cardSettingsFill = {};
+            try {
+                const cardSettings = this._themeService?.getCardSettings?.();
+                if (cardSettings) cardSettingsFill = cardSettingsDefaults(readWidgetConfig(widgetInfo.path).config, cardSettings);
+            } catch (e) {
+                this._logger.warn?.(`[widget-loader] "${widgetInfo.id}": card settings skipped: ${e.message}`);
+            }
+            // Font Settings (global): the pack's text-1 / text-2 font (face +
+            // size) for every fontpicker field tagged with a fontRole. Same
+            // layer as the card settings: above the widget's own defaults,
+            // below the color scheme, only fills keys still missing.
+            let fontSettingsFill = {};
+            try {
+                const fontSettings = this._themeService?.getFontSettings?.();
+                if (fontSettings) fontSettingsFill = fontSettingsDefaults(readWidgetConfig(widgetInfo.path).config, fontSettings);
+            } catch (e) {
+                this._logger.warn?.(`[widget-loader] "${widgetInfo.id}": font settings skipped: ${e.message}`);
+            }
             const defaults = {
                 ...configJsonDefaults,
                 ...schemaDefaults,
-                ...instance?.getDefaultSettings?.() ?? {}
+                ...instance?.getDefaultSettings?.() ?? {},
+                ...cardSettingsFill,
+                ...fontSettingsFill,
+                ...colorSchemeDefaults
             };
             WidgetSettings.applyDefaults(settings, defaults);
             // applyDefaults() only *schedules* a write (each key it fills in

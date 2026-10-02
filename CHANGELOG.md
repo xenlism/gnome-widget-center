@@ -1,3 +1,31 @@
+## 2.0.0
+
+### Desktop right-click menu: Widgets Settings
+- New "Widgets Settings" item in GNOME Shell's desktop right-click menu. It launches the extension Preferences (`widget-center-prefs-app.js`), the same window the overlay and edit mode open. Logic lives in `lib/shell/desktopMenu.js`; it wraps `BackgroundMenu.open()` through `InjectionManager`, so it covers every monitor and survives monitor hot-plug, and it is removed again in `disable()`.
+- The label follows the extension's `language` override (key `menu.desktop.widgets_settings`) and updates live when the language changes.
+
+### i18n: Preferences strings for all locales
+- The Card Settings, Text Fonts, Theme Defaults and Card Color Scheme groups (67 keys) were only translated in `en` and `th`. They are now translated in all 46 locale files, together with the new `menu.desktop.widgets_settings` key (314 keys per locale, no English fallback needed).
+
+### Theme packs: text fonts
+- Exported theme packs (`.gwct`) and backups now carry `appearance.fontSettings`: default font face + size for `text-1` and `text-2`. If none was set in Preferences, export derives it from the exported widgets (most common value per role).
+- New `fontRole` on `fontpicker` fields in `config.json` (54 bundled fields tagged); new Preferences -> Appearance -> Text Fonts group; 32 bundled packs updated. See WIDGET_API.md 9.3.4.
+
+### Structure
+- Prefs-only modules moved to `lib/prefs/` (process isolation: nothing under `lib/prefs/` or `prefs.js` reaches St/Clutter/Meta/Shell, nothing the shell loads reaches Gtk/Adw/Gdk). Import paths and docs updated.
+- `metadata.json`: dropped `version` and `screenshots`, added `version-name` (2.0.0) and `settings-schema`; `getSettings()` no longer repeats the schema id.
+- Theme pack loading is isolated in `lib/shell/themePackSwitcher.js`, so a theme pack store can later be added as another source of packs without touching the switch logic.
+
+### Theme packs: loading a pack now replaces the desktop
+- Loading a pack (overlay, Themes tab, *Import theme…*) unloads every widget on screen first, then writes the pack and loads the pack's own widgets at the pack's positions. Loaded widgets are no longer re-colored in place.
+- New gsettings key `theme-pack-apply-request` (`<id>|<nonce>`) is the only trigger: every write reloads the pack from scratch, also when it is already the active pack. `active-theme-pack` is now only the "which one is loaded" marker.
+- Switching lives in `lib/shell/themePackSwitcher.js`, which owns its signal handler and cleanup (`extension.js` no longer carries the logic).
+- Requests are serialized and the newest wins; a failed switch restores the enabled widgets instead of leaving an empty desktop.
+- A pack widget without a saved position goes back to its default position (stale layout entry removed).
+- Loading a pack no longer overwrites `language`, `widget-center-overlay-keybinding` or `auto-enable-new-widgets`.
+- *Import theme…* installs the file as a theme pack and loads it through the same path.
+- Notification lists widgets/tools the pack needs that are not installed.
+
 # Changelog
 
 All notable changes to GNOME Widget Center are recorded here, grouped by the
@@ -10,6 +38,45 @@ syntax-checks / Node-mockable unit tests, but most of it has **not yet been
 confirmed end-to-end on real GNOME Shell hardware** — see `development/PROJECT_STATUS.md`
 for the exact status per item before relying on this changelog as a "works on my
 machine" guarantee.
+
+
+## Widget API 2.0
+
+- **Changed:** widget API is now **2.0** (`"api-version": 2` in metadata.json). All 74 bundled widgets and templates bumped.
+  2.0 is the `card-*` key rename plus `appearance.cardSettings` / `appearance.colorScheme`.
+- **Added:** `lib/apiVersion.js` (`HOST_API_VERSION` 2, `MIN_SUPPORTED_API_VERSION` 2). `WidgetLoader.discover()` now enforces it:
+  widgets with a missing/invalid `api-version`, one older than 2, or newer than the host are not loaded and are
+  reported in the error list. Before this the field was documented but never checked.
+- **Fixed:** applying a folder-style theme pack (theme.json) did not load its widgets (the disabled-widgets change
+  was ignored while the pack was being applied). Both pack types now unload the current widgets and load the pack's.
+
+## Card Settings in .gwct (load card look into new widgets)
+
+- **Added:** `appearance.cardSettings` in `.gwct`, backups and theme.json: all 15 `card-*` settings
+  (background, opacity, corner radius, border, shadow, blur). A widget opened for the first time loads them
+  as its defaults, so card settings no longer need to be set widget by widget. Saved values are not overwritten.
+- **Added:** Preferences -> Appearance -> Card Settings (edit, "Apply to all widgets", "Clear").
+- **Added:** `lib/cardDefaults.js`; all 34 bundled theme packs now include a `cardSettings` block
+  (most common value per key across the pack's widgets).
+- **Changed:** `shadow-angle` and `shadow-distance` are now saved in `.gwct` (hostSettings) and `.gwcbak`.
+- **Added:** English + Thai strings for the Card Settings and Card Color Scheme prefs groups (`appearance.card.*`, `appearance.scheme.*`).
+- **Fixed:** duplicate `import { readWidgetConfig }` in `lib/exportService.js` (module failed to load).
+
+## Card Color Scheme in .gwct
+
+- **Added:** `appearance.colorScheme` (card background/border/shadow, text 1-2, ring 1-4, accent) in `.gwct`, backups and theme.json.
+- **Added:** `schemeRole` on ~170 color fields across the bundled widgets; new widgets start from the scheme.
+- **Added:** Preferences -> Appearance -> Card Color Scheme (edit palette, "Apply to all widgets", "Clear").
+- **Added:** `lib/colorScheme.js`; sample scheme in `themepacks/Arctic-Glass.gwct`.
+
+## Card setting keys unified (`card-*`)
+
+- **Changed:** all per-widget card settings now follow `card-[type]-[sub-setting]`:
+  `card-background-color`, `card-opacity`, `card-corner-radius(-enabled)`, `card-border-(enabled|color|width)`,
+  `card-shadow-(enabled|color|opacity|blur|angle|distance)`, `card-blur-(enabled|radius)`.
+  Replaces `backgroundColor`, `cardColor`, `paperColor`, `cornerRadius`, `widgetCornerRadius`, `shadowEnabled`, etc.
+- **Added:** `lib/cardSettingKeys.js` with `CARD_KEYS` and `migrateCardSettings()`; `storageService` migrates
+  saved `settings.json` and imported `.gwct` packs on read/write. Bundled theme packs were rewritten to the new keys.
 
 ## [Unreleased] — version 1
 
@@ -56,7 +123,7 @@ still outstanding (multi-monitor, untested).
   `EditModeDragController` already is, so both drag paths enforce the same
   collision check.
 - **Fixed — Theme Pack export embedded the screenshot at full resolution:**
-  `lib/themePackExportDialog.js` base64-encoded whatever screenshot was
+  `lib/prefs/themePackExportDialog.js` base64-encoded whatever screenshot was
   picked or captured — a full desktop screenshot on a 4K panel, for
   instance — directly into the `.gwct` JSON with no resizing step, so export
   size scaled with the source display instead of staying fixed. Added
@@ -67,11 +134,11 @@ still outstanding (multi-monitor, untested).
   over from the old direct-embed path — screenshots are always re-encoded to
   PNG now, so per-extension MIME lookup no longer applies.
 
-- **Fixed:** `lib/themePackExportDialog.js`'s Export Theme Pack… success handler called
+- **Fixed:** `lib/prefs/themePackExportDialog.js`'s Export Theme Pack… success handler called
   `window.close()` immediately after `showReportDialog(window, ...)` presented a modal
   dialog transient to that same window — closing the parent out from under its own
   still-open modal child, which hung the whole prefs process instead of just closing it.
-  `lib/prefsDialogs.js`'s `showReportDialog()` now takes an optional `onClose` callback,
+  `lib/prefs/prefsDialogs.js`'s `showReportDialog()` now takes an optional `onClose` callback,
   fired on the dialog's own `response` signal, so the window only closes after the user
   dismisses the report.
 - **Fixed:** the overlay's widget/theme search (`lib/widgetCenterOverlay.js`) re-ran full

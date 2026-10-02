@@ -13,7 +13,7 @@ body to write.
   `pomodoro-timer`/`todo-list` use, so it survives a Shell restart.
 - The small dot in the top-right corner cycles through six preset
   paper colors (yellow, pink, green, blue, purple, gray) - the classic
-  Stickies palette - and writes straight into the same `paperColor`
+  Stickies palette - and writes straight into the same `card-background-color`
   field the Control Center's color picker uses, so either way of
   changing it stays in sync.
 - A left click opens the editor without disturbing how the widget is

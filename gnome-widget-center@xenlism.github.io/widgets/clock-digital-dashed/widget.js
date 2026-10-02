@@ -222,7 +222,7 @@ export default class ClockDigitalDashedWidget {
         if (s.showDashes ?? true) {
             const scale = FACE_SIZE / DASH_REF_CANVAS;
             cr.save();
-            const cornerRadius = Math.max(0, Math.min(radius, (s.cornerRadius ?? 28) * scale));
+            const cornerRadius = Math.max(0, Math.min(radius, (s["card-corner-radius"] ?? 28) * scale));
             cr.newSubPath();
             _roundedRectPath(cr, cx - radius, cy - radius, radius * 2, radius * 2, cornerRadius);
             cr.clip();

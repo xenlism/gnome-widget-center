@@ -25,7 +25,7 @@ look.
 - The header band is an `St.DrawingArea` (Cairo), painted as a top-to-
   bottom gradient (`headerColorTop` -> `headerColorBottom`) clipped to a
   rounded-top/flat-bottom path so its corners line up with the card's own
-  `cornerRadius` - same `repaint`-signal technique `sticky-note`'s folded
+  `card-corner-radius` - same `repaint`-signal technique `sticky-note`'s folded
   corner uses, just filling a full-width band instead of a small corner.
 - Below it, an optional thin dashed divider (Cairo `setDash`) gives a
   tear-off-perforation look; toggle it off in **Card** settings.

@@ -81,7 +81,7 @@ export default class CalendarPlainWidget {
         const s = this._settings;
 
         applyLayeredCardStyle(this._layers, s, {
-            backgroundColorKey: "cardColor",
+            backgroundColorKey: "card-background-color",
             cornerRadiusFallback: 24
         }, false);
         this._innerColumn.set_style("padding: 18px; spacing: 10px;");

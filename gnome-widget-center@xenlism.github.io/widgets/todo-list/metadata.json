@@ -4,7 +4,7 @@
     "description": "2x2 checklist widget - add, check off, reorder-by-completion, and clear tasks right on the desktop.",
     "version": "1.0.0",
     "author": "Community",
-    "api-version": 1,
+    "api-version": 2,
     "entry": "widget.js",
     "block-type": "2x2",
     "default-position": {

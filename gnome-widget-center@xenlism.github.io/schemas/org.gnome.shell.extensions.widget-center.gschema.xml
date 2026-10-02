@@ -203,6 +203,17 @@
       </description>
     </key>
 
+    <key name="theme-pack-apply-request" type="s">
+      <default>''</default>
+      <summary>Request to (re)load a theme pack</summary>
+      <description>
+        Written as "&lt;theme-pack-id&gt;|&lt;nonce&gt;" by the overlay and the
+        preferences window. Every write - even for the pack that is already
+        active - makes the shell remove all current widgets and load the
+        pack's own widgets, positions and appearance from scratch.
+      </description>
+    </key>
+
     <key name="auto-enable-new-widgets" type="b">
       <default>true</default>
       <summary>Automatically enable a widget the first time it's discovered</summary>

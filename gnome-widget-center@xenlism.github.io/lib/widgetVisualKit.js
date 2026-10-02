@@ -17,17 +17,17 @@ export function setGlobalShadowHelper(helper) {
 }
 
 export const SHADOW_DEFAULTS = {
-    shadowEnabled: false,
-    shadowColor: "#000000",
-    shadowOpacity: 30,
-    shadowAngle: 90,
-    shadowDistance: 6,
-    shadowBlur: 16
+    "card-shadow-enabled": false,
+    "card-shadow-color": "#000000",
+    "card-shadow-opacity": 30,
+    "card-shadow-angle": 90,
+    "card-shadow-distance": 6,
+    "card-shadow-blur": 16
 };
 
 export function boxShadowCss({color: color, opacityPercent: opacityPercent, angleDeg: angleDeg, distance: distance, blur: blur, spread: spread}) {
     const {offsetX: offsetX, offsetY: offsetY} = angleDistanceToOffset(angleDeg, distance);
-    let hex = (color ?? SHADOW_DEFAULTS.shadowColor).trim().replace(/^#/, "");
+    let hex = (color ?? SHADOW_DEFAULTS["card-shadow-color"]).trim().replace(/^#/, "");
     if (hex.length === 3) hex = hex.split("").map(c => c + c).join("");
     if (!/^[0-9a-fA-F]{6}$/.test(hex)) hex = "000000";
     const r = parseInt(hex.slice(0, 2), 16);
@@ -40,21 +40,21 @@ export function boxShadowCss({color: color, opacityPercent: opacityPercent, angl
 export function getBlurSettings(settings) {
     const s = settings ?? {};
     return {
-        enabled: s.blurEnabled ?? BLUR_DEFAULTS.blurEnabled,
-        radius: Number.isFinite(s.blurRadius) ? Math.max(0, s.blurRadius) : BLUR_DEFAULTS.blurRadius
+        enabled: s["card-blur-enabled"] ?? BLUR_DEFAULTS["card-blur-enabled"],
+        radius: Number.isFinite(s["card-blur-radius"]) ? Math.max(0, s["card-blur-radius"]) : BLUR_DEFAULTS["card-blur-radius"]
     };
 }
 
 export function shadowBoxShadowCss(settings) {
     const s = settings ?? {};
-    if (!(s.shadowEnabled ?? SHADOW_DEFAULTS.shadowEnabled)) return "";
+    if (!(s["card-shadow-enabled"] ?? SHADOW_DEFAULTS["card-shadow-enabled"])) return "";
     const globalDistanceAngle = _globalShadowHelper?.getGlobalShadowDistanceAngle?.();
     return boxShadowCss({
-        color: s.shadowColor ?? SHADOW_DEFAULTS.shadowColor,
-        opacityPercent: Number.isFinite(s.shadowOpacity) ? s.shadowOpacity : SHADOW_DEFAULTS.shadowOpacity,
-        angleDeg: globalDistanceAngle?.angle ?? (Number.isFinite(s.shadowAngle) ? s.shadowAngle : SHADOW_DEFAULTS.shadowAngle),
-        distance: globalDistanceAngle?.distance ?? (Number.isFinite(s.shadowDistance) ? s.shadowDistance : SHADOW_DEFAULTS.shadowDistance),
-        blur: Number.isFinite(s.shadowBlur) ? s.shadowBlur : SHADOW_DEFAULTS.shadowBlur,
+        color: s["card-shadow-color"] ?? SHADOW_DEFAULTS["card-shadow-color"],
+        opacityPercent: Number.isFinite(s["card-shadow-opacity"]) ? s["card-shadow-opacity"] : SHADOW_DEFAULTS["card-shadow-opacity"],
+        angleDeg: globalDistanceAngle?.angle ?? (Number.isFinite(s["card-shadow-angle"]) ? s["card-shadow-angle"] : SHADOW_DEFAULTS["card-shadow-angle"]),
+        distance: globalDistanceAngle?.distance ?? (Number.isFinite(s["card-shadow-distance"]) ? s["card-shadow-distance"] : SHADOW_DEFAULTS["card-shadow-distance"]),
+        blur: Number.isFinite(s["card-shadow-blur"]) ? s["card-shadow-blur"] : SHADOW_DEFAULTS["card-shadow-blur"],
         spread: 0
     });
 }
@@ -95,27 +95,27 @@ export function textShadowCss(settings) {
 }
 
 export const BORDER_DEFAULTS = {
-    borderEnabled: false,
-    borderWidth: 1,
-    borderColor: "#FFFFFF33"
+    "card-border-enabled": false,
+    "card-border-width": 1,
+    "card-border-color": "#FFFFFF33"
 };
 
 export function borderCss(settings, backgroundColorCss = null) {
     const s = settings ?? {};
-    if (!(s.borderEnabled ?? BORDER_DEFAULTS.borderEnabled)) return "";
-    const width = Number.isFinite(s.borderWidth) ? Math.max(0, s.borderWidth) : BORDER_DEFAULTS.borderWidth;
-    const rawColor = s.borderColor ?? backgroundColorCss ?? BORDER_DEFAULTS.borderColor;
+    if (!(s["card-border-enabled"] ?? BORDER_DEFAULTS["card-border-enabled"])) return "";
+    const width = Number.isFinite(s["card-border-width"]) ? Math.max(0, s["card-border-width"]) : BORDER_DEFAULTS["card-border-width"];
+    const rawColor = s["card-border-color"] ?? backgroundColorCss ?? BORDER_DEFAULTS["card-border-color"];
     const color = toCssColor(rawColor, rawColor);
     return `border: ${width}px solid ${color};`;
 }
 
 export const OPACITY_DEFAULTS = {
-    opacity: 100
+    "card-opacity": 100
 };
 
 export function opacityValue(settings) {
     const s = settings ?? {};
-    const percent = Number.isFinite(s.opacity) ? Math.min(100, Math.max(0, s.opacity)) : OPACITY_DEFAULTS.opacity;
+    const percent = Number.isFinite(s["card-opacity"]) ? Math.min(100, Math.max(0, s["card-opacity"])) : OPACITY_DEFAULTS["card-opacity"];
     return Math.round(percent / 100 * 255);
 }
 
@@ -124,23 +124,23 @@ export function applyCardOpacity(actor, settings) {
 }
 
 export const BLUR_DEFAULTS = {
-    blurEnabled: false,
-    blurRadius: 24
+    "card-blur-enabled": false,
+    "card-blur-radius": 24
 };
 
 export function blurCss() {
     return "";
 }
 
-export function resolveCornerRadius(settings, cornerRadiusFallback = 18, cornerRadiusKey = "cornerRadius") {
+export function resolveCornerRadius(settings, cornerRadiusFallback = 18, cornerRadiusKey = "card-corner-radius") {
     const s = settings ?? {};
-    if (!(s.cornerRadiusEnabled ?? true)) return 0;
+    if (!(s["card-corner-radius-enabled"] ?? true)) return 0;
     const raw = s[cornerRadiusKey];
     return Number.isFinite(raw) ? raw : cornerRadiusFallback;
 }
 
 export function cardStyleCss(settings, options = {}) {
-    const { backgroundColorKey: backgroundColorKey = "backgroundColor", backgroundColorFallback: backgroundColorFallback = "#000000F5", cornerRadiusKey: cornerRadiusKey = "cornerRadius", cornerRadiusFallback: cornerRadiusFallback = 18, includeShadow: includeShadow = true, includeBorder: includeBorder = true, includeBlur: includeBlur = true} = options;
+    const { backgroundColorKey: backgroundColorKey = "card-background-color", backgroundColorFallback: backgroundColorFallback = "#000000F5", cornerRadiusKey: cornerRadiusKey = "card-corner-radius", cornerRadiusFallback: cornerRadiusFallback = 18, includeShadow: includeShadow = true, includeBorder: includeBorder = true, includeBlur: includeBlur = true} = options;
     const backgroundColor = toCssColor(settings?.[backgroundColorKey], backgroundColorFallback);
     const cornerRadius = resolveCornerRadius(settings, cornerRadiusFallback, cornerRadiusKey);
     let css = `background-color: ${backgroundColor}; border-radius: ${cornerRadius}px;`;

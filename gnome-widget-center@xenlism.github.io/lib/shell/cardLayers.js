@@ -3,7 +3,7 @@ import { cardStyleCss, applyCardOpacity, getBlurSettings, toCssColor, resolveCor
 // St, Clutter and Shell are GNOME Shell process-only libraries. This module is
 // statically imported by many widgets/*/widget.js files, which are in turn
 // dynamically imported by the preferences process (for thumbnail metadata) -
-// see lib/prefsWidgetManagement.js. Importing gi://St, gi://Clutter or
+// see lib/prefs/prefsWidgetManagement.js. Importing gi://St, gi://Clutter or
 // gi://Shell at module top-level would therefore break (or be flagged by EGO
 // review as) a prefs-process import of shell-only libraries. To keep this
 // file safe to load from either process, the gi imports are deferred until a
@@ -124,9 +124,9 @@ export function createLayeredCard(options = {}) {
 }
 
 export function applyLayeredCardStyle(layers, settings, cardStyleOptions = {}) {
-    const cornerRadiusKey = cardStyleOptions.cornerRadiusKey ?? "cornerRadius";
+    const cornerRadiusKey = cardStyleOptions.cornerRadiusKey ?? "card-corner-radius";
     const cornerRadius = resolveCornerRadius(settings, cardStyleOptions.cornerRadiusFallback ?? 18, cornerRadiusKey);
-    const bgKey = cardStyleOptions.backgroundColorKey ?? "backgroundColor";
+    const bgKey = cardStyleOptions.backgroundColorKey ?? "card-background-color";
     const bgFallback = cardStyleOptions.backgroundColorFallback ?? "#000000F5";
     const bgColor = toCssColor(settings?.[bgKey], bgFallback);
     layers.card.set_style(cardStyleCss(settings, cardStyleOptions));

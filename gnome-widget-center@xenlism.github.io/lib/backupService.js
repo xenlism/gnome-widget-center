@@ -20,7 +20,7 @@ const GWCBAK_FORMAT = "gwcbak";
 
 const GWCBAK_VERSION = 2;
 
-const BACKUP_GSCHEMA_KEYS = [ "disabled-widgets", "dev-mode", "auto-enable-new-widgets", "known-widget-ids" ];
+const BACKUP_GSCHEMA_KEYS = [ "disabled-widgets", "dev-mode", "auto-enable-new-widgets", "known-widget-ids", "shadow-angle", "shadow-distance" ];
 
 const MAGIC = (new TextEncoder).encode("GWCBAK2");
 
@@ -149,7 +149,10 @@ export async function createBackup(destPath, password, userWidgets, {storage: st
                 },
                 dropShadow: {
                     ...globalTheme.dropShadow
-                }
+                },
+                ...globalTheme.colorScheme ? { colorScheme: { ...globalTheme.colorScheme } } : {},
+                ...globalTheme.cardSettings ? { cardSettings: { ...globalTheme.cardSettings } } : {},
+                ...globalTheme.fontSettings ? { fontSettings: { ...globalTheme.fontSettings } } : {}
             },
             widgets: widgetEntries
         };
@@ -236,7 +239,10 @@ export async function restoreBackup(srcPath, password, {storage: storage, theme:
         theme.setGlobalTheme({
             background: manifest.appearance?.background ?? {},
             cornerRadius: manifest.appearance?.cornerRadius ?? {},
-            dropShadow: manifest.appearance?.dropShadow ?? {}
+            dropShadow: manifest.appearance?.dropShadow ?? {},
+            colorScheme: manifest.appearance?.colorScheme ?? null,
+            cardSettings: manifest.appearance?.cardSettings ?? null,
+            fontSettings: manifest.appearance?.fontSettings ?? null
         });
         for (const entry of manifest.widgets ?? []) {
             if (typeof entry.id !== "string" || !/^[A-Za-z0-9._-]+$/.test(entry.id) || entry.id === "." || entry.id === "..") {

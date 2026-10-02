@@ -4,6 +4,8 @@ import Gio from "gi://Gio";
 
 import { validateSettingsSchema } from "./settingsSchema.js";
 
+import { checkApiVersion } from "./apiVersion.js";
+
 const REQUIRED_METADATA_FIELDS = [ "id", "name", "entry" ];
 
 // This class must stay reachable from BOTH extension.js (shell process)
@@ -56,6 +58,14 @@ export class WidgetLoader {
                         id: metadata.id ?? folderName,
                         path: widgetPath
                     }, `metadata.json missing required field(s): ${missing.join(", ")}`);
+                    continue;
+                }
+                const apiCheck = checkApiVersion(metadata);
+                if (!apiCheck.ok) {
+                    this._recordError({
+                        id: metadata.id,
+                        path: widgetPath
+                    }, apiCheck.reason);
                     continue;
                 }
                 if (found.has(metadata.id)) {

@@ -1,3 +1,9 @@
+import { applySchemeToSettings } from "./colorScheme.js";
+
+import { applyCardSettingsToSettings } from "./cardDefaults.js";
+
+import { applyFontSettingsToSettings, deriveFontSettings } from "./fontScheme.js";
+
 import GLib from "gi://GLib";
 
 import { writeJsonFile, readTextFileAsync, ensureDirectory, fileExists } from "./fsUtils.js";
@@ -14,15 +20,19 @@ const GWCT_FORMAT = "gwct";
 
 const GWCT_VERSION = 1;
 
-const HOST_SETTINGS_KEYS = [ "prevent-widget-overlap", "edge-margin", "widget-spacing", "language", "guide-color", "snap-enabled", "snap-distance", "grid-snap-enabled", "grid-size", "widget-center-overlay-keybinding", "auto-enable-new-widgets" ];
+const HOST_SETTINGS_KEYS = [ "prevent-widget-overlap", "edge-margin", "widget-spacing", "language", "guide-color", "snap-enabled", "snap-distance", "grid-snap-enabled", "grid-size", "shadow-angle", "shadow-distance", "widget-center-overlay-keybinding", "auto-enable-new-widgets" ];
+
+// Personal settings: exported with a pack, never overwritten when one is loaded.
+const PACK_APPLY_SKIP_HOST_KEYS = new Set([ "language", "widget-center-overlay-keybinding", "auto-enable-new-widgets" ]);
 
 export function ensureGwctExtension(path) {
     return path.endsWith(GWCT_EXTENSION) ? path : `${path}${GWCT_EXTENSION}`;
 }
 
-function _buildWidgetEntry(widget, {storage: storage, theme: theme}, redactedFields) {
+function _buildWidgetEntry(widget, {storage: storage, theme: theme}, redactedFields, fontItems) {
     const {config: config} = readWidgetConfig(widget.path);
     const rawSettings = storage.getWidgetSettings(widget.id);
+    fontItems?.push({ config: config, settings: rawSettings });
     const {redacted: redacted, removedKeys: removedKeys} = redactSecrets(rawSettings, config);
     if (removedKeys.length > 0) redactedFields.push({
         widgetId: widget.id,
@@ -48,8 +58,12 @@ function _buildWidgetEntry(widget, {storage: storage, theme: theme}, redactedFie
     };
 }
 
-function _buildDocumentShell(theme, settings, widgetEntries) {
+function _buildDocumentShell(theme, settings, widgetEntries, fontItems) {
     const globalTheme = theme.getGlobalTheme();
+    // Font defaults (text-1 / text-2 face + size): use the block the user set
+    // in Preferences, otherwise derive it from the exported widgets (most
+    // common value per role) so every exported pack carries them.
+    const fontSettings = globalTheme.fontSettings ?? deriveFontSettings(fontItems);
     const hostSettings = {};
     if (settings?.isReady) {
         for (const key of HOST_SETTINGS_KEYS) {
@@ -71,7 +85,10 @@ function _buildDocumentShell(theme, settings, widgetEntries) {
             },
             dropShadow: {
                 ...globalTheme.dropShadow
-            }
+            },
+            ...globalTheme.colorScheme ? { colorScheme: { ...globalTheme.colorScheme } } : {},
+            ...globalTheme.cardSettings ? { cardSettings: { ...globalTheme.cardSettings } } : {},
+            ...fontSettings ? { fontSettings: { ...fontSettings } } : {}
         },
         hostSettings: hostSettings,
         widgets: widgetEntries
@@ -94,19 +111,21 @@ function _idleTick() {
 
 export function buildGwctDocument(widgets, {storage: storage, theme: theme, settings: settings}) {
     const redactedFields = [];
+    const fontItems = [];
     const enabledWidgets = _enabledWidgets(widgets, storage, settings);
     const widgetEntries = enabledWidgets.map(widget => _buildWidgetEntry(widget, {
         storage: storage,
         theme: theme
-    }, redactedFields));
+    }, redactedFields, fontItems));
     return {
-        document: _buildDocumentShell(theme, settings, widgetEntries),
+        document: _buildDocumentShell(theme, settings, widgetEntries, fontItems),
         redactedFields: redactedFields
     };
 }
 
 export async function buildGwctDocumentAsync(widgets, {storage: storage, theme: theme, settings: settings}, onProgress) {
     const redactedFields = [];
+    const fontItems = [];
     const enabledWidgets = _enabledWidgets(widgets, storage, settings);
     const total = enabledWidgets.length;
     const widgetEntries = [];
@@ -114,12 +133,12 @@ export async function buildGwctDocumentAsync(widgets, {storage: storage, theme: 
         widgetEntries.push(_buildWidgetEntry(enabledWidgets[i], {
             storage: storage,
             theme: theme
-        }, redactedFields));
+        }, redactedFields, fontItems));
         onProgress?.(i + 1, total);
         if ((i + 1) % 5 === 0) await _idleTick();
     }
     return {
-        document: _buildDocumentShell(theme, settings, widgetEntries),
+        document: _buildDocumentShell(theme, settings, widgetEntries, fontItems),
         redactedFields: redactedFields
     };
 }
@@ -146,11 +165,18 @@ export function importGwctDocument(document, {storage: storage, theme: theme, se
     theme.setGlobalTheme({
         background: document.appearance?.background ?? {},
         cornerRadius: document.appearance?.cornerRadius ?? {},
-        dropShadow: document.appearance?.dropShadow ?? {}
+        dropShadow: document.appearance?.dropShadow ?? {},
+        // A pack without a colorScheme clears the current one, so the
+        // imported theme is self-contained.
+        colorScheme: document.appearance?.colorScheme ?? null,
+        // Same for card settings: a pack without them clears the current block.
+        cardSettings: document.appearance?.cardSettings ?? null,
+        // Same for font settings (text-1 / text-2 face + size).
+        fontSettings: document.appearance?.fontSettings ?? null
     });
     if (settings?.isReady && document.hostSettings) {
         for (const [key, value] of Object.entries(document.hostSettings)) {
-            if (!HOST_SETTINGS_KEYS.includes(key)) continue;
+            if (!HOST_SETTINGS_KEYS.includes(key) || PACK_APPLY_SKIP_HOST_KEYS.has(key)) continue;
             try {
                 settings.setGlobalValue(key, value);
             } catch (e) {}
@@ -176,13 +202,38 @@ export function importGwctDocument(document, {storage: storage, theme: theme, se
             });
         }
         storage.saveWidgetSettings(entry.id, entry.settings ?? {});
-        if (entry.position) storage.updateWidgetPosition(entry.id, entry.position.x, entry.position.y, entry.position.monitorIndex ?? 0);
+        if (entry.position) {
+            storage.updateWidgetPosition(entry.id, entry.position.x, entry.position.y, entry.position.monitorIndex ?? 0);
+        } else {
+            storage.removeWidgetLayoutEntry(entry.id);
+        }
         theme.setWidgetTheme(entry.id, {
             theme: entry.theme?.theme ?? undefined,
             config: entry.theme?.config ?? {}
         });
         disabledIds?.delete(entry.id);
         appliedWidgetIds.push(entry.id);
+    }
+    // The applied pack is the source of truth for every widget, not only the
+    // ones it lists. Widgets outside the pack are switched off right now, but
+    // may carry an old <id>.json from an earlier session; the loader only
+    // fills *missing* keys, so such a widget would come back with stale card
+    // colors the moment the user enables it. Overwrite the pack-covered keys
+    // (card settings, color scheme, fonts) on those widgets now, so enabling
+    // one later always matches the theme. Widgets that ARE in the pack are
+    // skipped: their own entry.settings above already won.
+    const packWidgetIds = new Set(appliedWidgetIds);
+    const outsidePack = [ ...discoveredWidgetsById.values() ].filter(w => !packWidgetIds.has(w.id)).map(w => ({
+        id: w.id,
+        path: w.path,
+        hasConfigJson: true // discover() doesn't set it; readWidgetConfig() returns null when absent
+    }));
+    if (outsidePack.length > 0) {
+        const ctx = { storage: storage, discoveredWidgets: outsidePack };
+        const appearance = document.appearance ?? {};
+        applyCardSettingsToWidgets(appearance.cardSettings ?? null, ctx);
+        applyColorSchemeToWidgets(appearance.colorScheme ?? null, ctx);
+        applyFontSettingsToWidgets(appearance.fontSettings ?? null, ctx);
     }
     if (disabledIds !== null) settings.setGlobalValue("disabled-widgets", Array.from(disabledIds));
     return {
@@ -206,4 +257,69 @@ export function installGwctAsThemePack(document, userThemepacksDir) {
     }
     writeJsonFile(destPath, document, 2);
     return destPath;
+}
+
+// Writes the color scheme into every widget that declares schemeRole fields,
+// overwriting those colors. Returns the ids of widgets that actually changed.
+export function applyColorSchemeToWidgets(scheme, {storage: storage, discoveredWidgets: discoveredWidgets}) {
+    const changedIds = [];
+    for (const widget of discoveredWidgets ?? []) {
+        if (!widget.hasConfigJson) continue;
+        try {
+            const { config } = readWidgetConfig(widget.path);
+            if (!config) continue;
+            const current = { ...storage.getWidgetSettings(widget.id) ?? {} };
+            if (applySchemeToSettings(config, current, scheme) > 0) {
+                storage.saveWidgetSettings(widget.id, current);
+                changedIds.push(widget.id);
+            }
+        } catch (e) {
+            logError(e, `could not apply color scheme to ${widget.id}`);
+        }
+    }
+    return changedIds;
+}
+
+// Writes the global card settings (radius, border, shadow, blur, opacity, ...)
+// into every widget that declares the matching card fields, overwriting those
+// values. Returns the ids of widgets that actually changed.
+export function applyCardSettingsToWidgets(cardSettings, {storage: storage, discoveredWidgets: discoveredWidgets}) {
+    const changedIds = [];
+    for (const widget of discoveredWidgets ?? []) {
+        if (!widget.hasConfigJson) continue;
+        try {
+            const { config } = readWidgetConfig(widget.path);
+            if (!config) continue;
+            const current = { ...storage.getWidgetSettings(widget.id) ?? {} };
+            if (applyCardSettingsToSettings(config, current, cardSettings) > 0) {
+                storage.saveWidgetSettings(widget.id, current);
+                changedIds.push(widget.id);
+            }
+        } catch (e) {
+            logError(e, `could not apply card settings to ${widget.id}`);
+        }
+    }
+    return changedIds;
+}
+
+// Writes the global font settings (text-1 / text-2 face + size) into every
+// widget that declares fields with a matching fontRole, overwriting those
+// values. Returns the ids of widgets that actually changed.
+export function applyFontSettingsToWidgets(fontSettings, {storage: storage, discoveredWidgets: discoveredWidgets}) {
+    const changedIds = [];
+    for (const widget of discoveredWidgets ?? []) {
+        if (!widget.hasConfigJson) continue;
+        try {
+            const { config } = readWidgetConfig(widget.path);
+            if (!config) continue;
+            const current = { ...storage.getWidgetSettings(widget.id) ?? {} };
+            if (applyFontSettingsToSettings(config, current, fontSettings) > 0) {
+                storage.saveWidgetSettings(widget.id, current);
+                changedIds.push(widget.id);
+            }
+        } catch (e) {
+            logError(e, `could not apply font settings to ${widget.id}`);
+        }
+    }
+    return changedIds;
 }

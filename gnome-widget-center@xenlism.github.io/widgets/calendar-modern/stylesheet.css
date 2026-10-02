@@ -9,7 +9,7 @@
  * This file documents the intended styling per the widget author
  * contract; the actual card look comes from the inline St `style`
  * strings set in widget.js's _render(), driven by this widget's
- * cardColor/accentColor/textColor settings.
+ * card-background-color/accentColor/textColor settings.
  */
 
 .calendar-modern-widget-root {

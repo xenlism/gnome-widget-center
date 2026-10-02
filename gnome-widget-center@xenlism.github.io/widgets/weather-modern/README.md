@@ -33,7 +33,7 @@ your approximate coordinates from your IP address and fills them in for
 you, no typing required.
 
 This one field type is shared by all three bundled weather widgets
-(implemented once in `lib/widgetConfigUI.js`, see `PROJECT_STATUS.md`'s
+(implemented once in `lib/prefs/widgetConfigUI.js`, see `PROJECT_STATUS.md`'s
 2026-07-31 entry) - replacing this widget's own earlier separate
 momentary "Detect automatically" switch, and, before that,
 weather-dark/weather-minimal's original two-field "Place" (city-name)
@@ -62,10 +62,10 @@ immediately (see `_armRefreshTimer()`/`onSettingsChanged()` in
 
 ## Background transparency
 
-`cardColor` is a `colorpicker` field with `"alpha": true`, which turns
+`card-background-color` is a `colorpicker` field with `"alpha": true`, which turns
 on `Gtk.ColorDialog`'s alpha slider - drag it down for a translucent or
 fully transparent card. Saved as `#rrggbbaa` when alpha is less than
-fully opaque (see `lib/widgetConfigUI.js`'s `_rgbaToHex()`).
+fully opaque (see `lib/prefs/widgetConfigUI.js`'s `_rgbaToHex()`).
 
 ## Block type
 
@@ -77,8 +77,8 @@ fully opaque (see `lib/widgetConfigUI.js`'s `_rgbaToHex()`).
 |-------------------|------------|----------------|--------------------------------------------------------|
 | `location`         | location   | `13.756331,100.501762` | `lat,lon` pair used for the weather fetch, with a built-in IP-detect button |
 | `refreshMinutes`    | dropdown   | `15`           | 5 / 10 / 15 / 30 / 45 / 60 minutes between forecast fetches |
-| `cardColor`         | color (alpha) | `#000000ff` | Card background color, alpha slider enabled             |
-| `cornerRadius`      | number     | `18`           | Card corner radius, px                                  |
+| `card-background-color`         | color (alpha) | `#000000ff` | Card background color, alpha slider enabled             |
+| `card-corner-radius`      | number     | `18`           | Card corner radius, px                                  |
 | `iconColor`         | color      | `#ffffff`      | Weather icon tint                                        |
 | `iconSize`          | number     | `72`           | Weather icon size, px                                     |
 | `conditionFont`     | font       | `Sans 18`      | Condition text face + size                                |

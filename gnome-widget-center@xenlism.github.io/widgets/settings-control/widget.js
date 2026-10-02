@@ -48,7 +48,7 @@ export default class SettingsControlWidget {
     }
 
     buildActor() {
-        const backgroundColor = this._settings?.backgroundColor ?? '#070000a5';
+        const backgroundColor = this._settings?.["card-background-color"] ?? '#070000a5';
         const cornerRadius = resolveCornerRadius(this._settings);
         this._iconOnColor = this._settings?.iconOnColor ?? '#3584E4E6';
         this._iconOffColor = this._settings?.iconOffColor ?? '#9A99961F';
@@ -201,7 +201,7 @@ export default class SettingsControlWidget {
         if (!this._actor)
             return;
 
-        const backgroundColor = settings?.backgroundColor ?? '#070000a5';
+        const backgroundColor = settings?.["card-background-color"] ?? '#070000a5';
         const cornerRadius = resolveCornerRadius(settings);
         this._layers.card.set_style(this._cardStyle(backgroundColor, cornerRadius));
         applyCardOpacity(this._layers.card, settings);

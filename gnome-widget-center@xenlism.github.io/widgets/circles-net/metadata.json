@@ -4,7 +4,7 @@
     "description": "1x1 dual-ring gauge: outer ring = download, inner ring = upload, each scaled against a configurable max speed, with live throughput numbers centered inside.",
     "version": "1.0.0",
     "author": "Nattapong Pullkhow",
-    "api-version": 1,
+    "api-version": 2,
     "entry": "widget.js",
     "block-type": "1x1",
     "default-position": {

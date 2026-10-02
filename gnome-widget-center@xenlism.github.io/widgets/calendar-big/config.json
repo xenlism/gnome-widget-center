@@ -35,7 +35,8 @@
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
-                            "default": "#1A1A1A"
+                            "default": "#1A1A1A",
+                            "schemeRole": "text-2"
                         },
                         {
                             "id": "calendarTextColor",
@@ -44,7 +45,8 @@
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
-                            "default": "#1A1A1A"
+                            "default": "#1A1A1A",
+                            "schemeRole": "text-1"
                         },
                         {
                             "id": "outOfMonthColor",
@@ -53,7 +55,8 @@
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
-                            "default": "#241f31"
+                            "default": "#241f31",
+                            "schemeRole": "text-2"
                         },
                         {
                             "id": "weekdayHeaderColor",
@@ -62,7 +65,8 @@
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
-                            "default": "#8E8E93"
+                            "default": "#8E8E93",
+                            "schemeRole": "text-2"
                         },
                         {
                             "id": "highlightDayColor",
@@ -71,7 +75,8 @@
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
-                            "default": "#FF3B30"
+                            "default": "#FF3B30",
+                            "schemeRole": "accent"
                         },
                         {
                             "id": "highlightDayTextColor",
@@ -90,17 +95,18 @@
                     "description": "Applies when this widget's own appearance isn't forced by the global theme.",
                     "fields": [
                         {
-                            "id": "cardColor",
+                            "id": "card-background-color",
                             "label": "Background",
                             "description": "",
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
                             "alpha": true,
-                            "default": "#bf404000"
+                            "default": "#bf404000",
+                            "schemeRole": "card-background"
                         },
                         {
-                            "id": "cornerRadius",
+                            "id": "card-corner-radius",
                             "label": "Corner radius",
                             "description": "",
                             "dataType": "integer",
@@ -126,7 +132,7 @@
                     "description": "Off by default. Default color is black at 30% transparency.",
                     "fields": [
                         {
-                            "id": "shadowAngle",
+                            "id": "card-shadow-angle",
                             "label": "Shadow angle",
                             "description": "",
                             "dataType": "integer",
@@ -136,10 +142,10 @@
                             "max": 360,
                             "step": 1,
                             "suffix": "°",
-                            "visibleIf": "shadowEnabled"
+                            "visibleIf": "card-shadow-enabled"
                         },
                         {
-                            "id": "shadowDistance",
+                            "id": "card-shadow-distance",
                             "label": "Shadow distance",
                             "description": "",
                             "dataType": "integer",
@@ -149,7 +155,7 @@
                             "max": 60,
                             "step": 1,
                             "suffix": "px",
-                            "visibleIf": "shadowEnabled"
+                            "visibleIf": "card-shadow-enabled"
                         }
                     ]
                 }

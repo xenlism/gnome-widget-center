@@ -38,13 +38,13 @@ import { GlobalShadowHelper } from "./lib/globalShadowHelper.js";
 
 import { WidgetCenterOverlay } from "./lib/shell/widgetCenterOverlay.js";
 
-import { ThemePackRegistry } from "./lib/themePackRegistry.js";
-
 import { createLogger } from "./lib/logger.js";
 
-import { importGwctDocument } from "./lib/exportService.js";
+import { ThemePackSwitcher } from "./lib/shell/themePackSwitcher.js";
 
 import { GlobalScreenshotKeybinding } from "./lib/shell/globalScreenshotKeybinding.js";
+
+import { DesktopMenu } from "./lib/shell/desktopMenu.js";
 
 import { applyAutoEnablePolicy } from "./lib/autoEnablePolicy.js";
 
@@ -56,7 +56,7 @@ export default class WidgetCenterExtension extends Extension {
         this._themeService.init();
         this._themeService.watch(() => this._reapplyTheme());
         try {
-            const shadowGSettings = this.getSettings("org.gnome.shell.extensions.widget-center");
+            const shadowGSettings = this.getSettings();
             this._globalShadowHelper = new GlobalShadowHelper(shadowGSettings);
             setGlobalShadowHelper(this._globalShadowHelper);
             this._globalShadowChangedId = this._globalShadowHelper.watch(() => {
@@ -154,7 +154,18 @@ export default class WidgetCenterExtension extends Extension {
             if (this._settings?.isReady) {
                 this._disabledChangedId = this._settings.onChanged("disabled-widgets", ids => this._applyDisabledWidgets(new Set(ids)));
                 this._languageChangedId = this._settings.onChanged("language", lang => loader.notifyHostLanguageChanged(lang ?? ""));
-                this._activeThemePackChangedId = this._settings.onChanged("active-theme-pack", id => this._applyActiveThemePack(id).catch(e => this._logger?.error(`failed to apply theme pack "${id}"`, e)));
+                this._themePackSwitcher = new ThemePackSwitcher({
+                    extensionPath: this.path,
+                    loader: loader,
+                    layer: this._layer,
+                    storage: this._storage,
+                    themeService: this._themeService,
+                    settings: this._settings,
+                    logger: this._logger,
+                    unloadAllWidgets: () => this._unloadAllWidgets(),
+                    placeEntry: entry => this._placeEntry(entry)
+                });
+                this._themePackSwitcher.enable();
             }
             return loader.loadAll(initialDisabled);
         }).then(started => {
@@ -181,15 +192,26 @@ export default class WidgetCenterExtension extends Extension {
         });
         this._widgetCenterOverlay.enable();
         try {
-            const keybindingGSettings = this.getSettings("org.gnome.shell.extensions.widget-center");
+            const keybindingGSettings = this.getSettings();
             this._globalScreenshotKeybinding = new GlobalScreenshotKeybinding(this, keybindingGSettings, this._logger);
             this._globalScreenshotKeybinding.enable();
         } catch (e) {
             this._logger?.error("could not set up the global screenshot keybinding", e);
             this._globalScreenshotKeybinding = null;
         }
+        try {
+            this._desktopMenu = new DesktopMenu(this, this.getSettings(), this._logger);
+            this._desktopMenu.enable();
+        } catch (e) {
+            this._logger?.error("could not set up the desktop right-click menu item", e);
+            this._desktopMenu = null;
+        }
     }
     disable() {
+        this._desktopMenu?.disable();
+        this._desktopMenu = null;
+        this._themePackSwitcher?.destroy();
+        this._themePackSwitcher = null;
         this._cancelLoad?.();
         this._cancelLoad = null;
         this._globalScreenshotKeybinding?.disable();
@@ -206,9 +228,6 @@ export default class WidgetCenterExtension extends Extension {
         this._disabledChangedId = null;
         if (this._settings && this._languageChangedId != null) this._settings.disconnect(this._languageChangedId);
         this._languageChangedId = null;
-        if (this._settings && this._activeThemePackChangedId != null) this._settings.disconnect(this._activeThemePackChangedId);
-        this._activeThemePackChangedId = null;
-        this._applyingThemePack = false;
         if (this._settings && this._devChangedId != null) this._settings.disconnect(this._devChangedId);
         this._devChangedId = null;
         if (this._settings && this._preventOverlapChangedId != null) this._settings.disconnect(this._preventOverlapChangedId);
@@ -502,7 +521,7 @@ export default class WidgetCenterExtension extends Extension {
     }
     _applyDisabledWidgets(disabledIds) {
         if (!this._loader || !this._layer) return;
-        if (this._applyingThemePack) return;
+        if (this._themePackSwitcher?.busy) return;
         const loadedIds = new Set(this._loader.instances.map(e => e.id));
         for (const id of loadedIds) {
             if (!disabledIds.has(id)) continue;
@@ -517,7 +536,7 @@ export default class WidgetCenterExtension extends Extension {
     }
     async _loadNewlyDiscoveredWidgets(disabledIds = null) {
         if (!this._loader || !this._layer) return;
-        if (this._applyingThemePack) return;
+        if (this._themePackSwitcher?.busy) return;
         const discovered = await this._loader.discover();
         if (!this._loader || !this._layer) return;
         let disabled = disabledIds ?? new Set(this._settings?.isReady ? this._settings.getGlobalValue("disabled-widgets") : []);
@@ -531,56 +550,14 @@ export default class WidgetCenterExtension extends Extension {
             this._loader.loadOne(widgetInfo).then(entry => entry && this._placeEntry(entry)).catch(e => this._logger?.error(`"${widgetInfo.id}" failed to load`, e));
         }
     }
-    async _discoverThemePackById(id) {
-        const bundledPath = GLib.build_filenamev([ this.path, "themepacks" ]);
-        const userPath = GLib.build_filenamev([ GLib.get_user_config_dir(), "gnome-widget-center", "themepacks" ]);
-        const registry = new ThemePackRegistry([ {
-            path: bundledPath,
-            source: "bundled"
-        }, {
-            path: userPath,
-            source: "user"
-        } ]);
-        const entries = await registry.discover();
-        return entries.find(entry => entry.id === id) ?? null;
-    }
-    async _applyActiveThemePack(id) {
-        if (!id || !this._loader || !this._layer || !this._storage || !this._themeService) return;
-        const entry = await this._discoverThemePackById(id);
-        if (!this._loader || !this._layer || !this._storage || !this._themeService) return;
-        if (!entry) {
-            this._logger?.warn(`active theme pack "${id}" not found on disk`);
-            return;
+    _unloadAllWidgets() {
+        for (const loadedEntry of this._loader.instances) {
+            this._devWatcher.unwatchWidget(loadedEntry.id);
+            this._drag.detach(loadedEntry.id);
+            this._editDrag.detach(loadedEntry.id);
+            this._editMode.detach(loadedEntry.id);
+            this._layer.removeWidgetActor(loadedEntry.id);
         }
-        this._applyingThemePack = true;
-        try {
-            if (entry.document) {
-                for (const loadedEntry of this._loader.instances) {
-                    this._devWatcher?.unwatchWidget(loadedEntry.id);
-                    this._drag?.detach(loadedEntry.id);
-                    this._editDrag?.detach(loadedEntry.id);
-                    this._editMode?.detach(loadedEntry.id);
-                    this._layer.removeWidgetActor(loadedEntry.id);
-                }
-                this._loader.unloadAll();
-                const discovered = new Map((await this._loader.discover()).map(w => [ w.id, w ]));
-                importGwctDocument(entry.document, {
-                    storage: this._storage,
-                    theme: this._themeService,
-                    settings: this._settings,
-                    discoveredWidgetsById: discovered
-                });
-                const disabled = this._settings?.isReady ? new Set(this._settings.getGlobalValue("disabled-widgets")) : new Set;
-                const started = await this._loader.loadAll(disabled);
-                for (const startedEntry of started) this._placeEntry(startedEntry);
-            } else {
-                const current = this._settings?.isReady ? new Set(this._settings.getGlobalValue("disabled-widgets")) : new Set;
-                for (const widgetId of entry.manifest?.widgets ?? []) current.delete(widgetId);
-                if (this._settings?.isReady) this._settings.setGlobalValue("disabled-widgets", Array.from(current));
-            }
-            Main.notify("GNOME Widget Center", `Theme "${entry.manifest?.name ?? id}" applied.`);
-        } finally {
-            this._applyingThemePack = false;
-        }
+        this._loader.unloadAll();
     }
 }

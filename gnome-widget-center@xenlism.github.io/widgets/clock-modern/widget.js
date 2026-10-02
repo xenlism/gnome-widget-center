@@ -117,7 +117,7 @@ export default class ClockModernWidget {
         const colorSS = this._settings.colorSS ?? "#1a1a1a";
         const colorAmPm = this._settings.colorAmPm ?? "#d81f26";
         applyLayeredCardStyle(this._layers, this._settings, {
-            backgroundColorKey: "cardColor",
+            backgroundColorKey: "card-background-color",
             cornerRadiusFallback: 18
         }, false);
         this._content.set_style("padding: 12px 12px; " + "spacing: 0px;");

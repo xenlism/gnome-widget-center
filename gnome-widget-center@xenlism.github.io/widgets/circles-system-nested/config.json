@@ -13,14 +13,15 @@
                     "description": "",
                     "fields": [
                         {
-                            "id": "backgroundColor",
+                            "id": "card-background-color",
                             "label": "Background color",
                             "description": "Card background. Use the alpha slider for transparency.",
                             "dataType": "string",
                             "fieldType": "colorpicker",
                             "format": "color",
                             "alpha": true,
-                            "default": "#000000a9"
+                            "default": "#000000a9",
+                            "schemeRole": "card-background"
                         }
                     ]
                 },
@@ -47,7 +48,8 @@
                             "fieldType": "colorpicker",
                             "format": "color",
                             "alpha": true,
-                            "default": "#33D17AFF"
+                            "default": "#33D17AFF",
+                            "schemeRole": "ring-1"
                         },
                         {
                             "id": "memRingColor",
@@ -57,7 +59,8 @@
                             "fieldType": "colorpicker",
                             "format": "color",
                             "alpha": true,
-                            "default": "#3584E4FF"
+                            "default": "#3584E4FF",
+                            "schemeRole": "ring-2"
                         },
                         {
                             "id": "hddRingColor",
@@ -67,7 +70,8 @@
                             "fieldType": "colorpicker",
                             "format": "color",
                             "alpha": true,
-                            "default": "#F5C211FF"
+                            "default": "#F5C211FF",
+                            "schemeRole": "ring-3"
                         },
                         {
                             "id": "ringThickness",
@@ -152,7 +156,7 @@
                     "description": "Off by default. Default color is black at 30% transparency.",
                     "fields": [
                         {
-                            "id": "shadowAngle",
+                            "id": "card-shadow-angle",
                             "label": "Shadow angle",
                             "description": "Direction of the shadow in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
                             "dataType": "integer",
@@ -162,10 +166,10 @@
                             "max": 360,
                             "step": 1,
                             "suffix": "°",
-                            "visibleIf": "shadowEnabled"
+                            "visibleIf": "card-shadow-enabled"
                         },
                         {
-                            "id": "shadowDistance",
+                            "id": "card-shadow-distance",
                             "label": "Shadow distance",
                             "description": "How far the shadow is offset, in pixels",
                             "dataType": "integer",
@@ -175,7 +179,7 @@
                             "max": 60,
                             "step": 1,
                             "suffix": "px",
-                            "visibleIf": "shadowEnabled"
+                            "visibleIf": "card-shadow-enabled"
                         }
                     ]
                 }

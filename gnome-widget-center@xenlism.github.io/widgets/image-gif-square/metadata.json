@@ -4,7 +4,7 @@
     "description": "1x1 desktop picture frame. Pick a static image or an animated GIF - GIFs loop in place; anything else is shown as a still image. Same widget as \"Image / Animated GIF\" but sized as a compact 1x1 square by default.",
     "version": "1.0.0",
     "author": "Nattapong Pullkhow",
-    "api-version": 1,
+    "api-version": 2,
     "entry": "widget.js",
     "block-type": "1x1",
     "default-position": {

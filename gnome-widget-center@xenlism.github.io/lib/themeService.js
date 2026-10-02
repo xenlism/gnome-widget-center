@@ -6,6 +6,12 @@ import { ensureDirectory, readTextFile, readTextFileAsync, writeTextFile } from 
 
 import { angleDistanceToOffset } from "./widgetVisualKit.js";
 
+import { normalizeColorScheme } from "./colorScheme.js";
+
+import { normalizeCardSettings } from "./cardDefaults.js";
+
+import { normalizeFontSettings } from "./fontScheme.js";
+
 const THEME_FILE_NAME = "theme.json";
 
 const DEFAULT_GLOBAL_THEME = Object.freeze({
@@ -177,8 +183,32 @@ export class ThemeService {
             opacity: {
                 ...DEFAULT_GLOBAL_THEME.opacity,
                 ...g.opacity ?? {}
-            }
+            },
+            colorScheme: normalizeColorScheme(g.colorScheme),
+            cardSettings: normalizeCardSettings(g.cardSettings),
+            fontSettings: normalizeFontSettings(g.fontSettings)
         };
+    }
+    getColorScheme() {
+        return this.getGlobalTheme().colorScheme;
+    }
+    getFontSettings() {
+        return this.getGlobalTheme().fontSettings;
+    }
+    // Pass null to clear (widgets go back to their own font defaults).
+    setFontSettings(fontSettings) {
+        this.setGlobalTheme({ fontSettings: fontSettings ?? null });
+    }
+    getCardSettings() {
+        return this.getGlobalTheme().cardSettings;
+    }
+    // Pass null to clear (widgets go back to their own card defaults).
+    setCardSettings(cardSettings) {
+        this.setGlobalTheme({ cardSettings: cardSettings ?? null });
+    }
+    // Pass null to clear (widgets go back to their own defaults).
+    setColorScheme(scheme) {
+        this.setGlobalTheme({ colorScheme: scheme ?? null });
     }
     getWidgetTheme(widgetId) {
         if (!this._isInitialized) this.init();
@@ -235,7 +265,10 @@ export class ThemeService {
                 opacity: {
                     ...current.opacity,
                     ...patch.opacity ?? {}
-                }
+                },
+                colorScheme: "colorScheme" in patch ? normalizeColorScheme(patch.colorScheme) : current.colorScheme,
+                cardSettings: "cardSettings" in patch ? normalizeCardSettings(patch.cardSettings) : current.cardSettings,
+                fontSettings: "fontSettings" in patch ? normalizeFontSettings(patch.fontSettings) : current.fontSettings
             },
             widgets: this._cache.widgets
         });

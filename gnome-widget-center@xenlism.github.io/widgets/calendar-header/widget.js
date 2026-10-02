@@ -94,7 +94,7 @@ export default class CalendarHeaderWidget {
         const headerTextColor = this._settings.headerTextColor ?? "#ffffff";
         const bodyColor = toCssColor(this._settings.bodyColor, "#ffffffFF");
         const dayColor = this._settings.dayColor ?? "#1a1a1a";
-        const cornerRadius = resolveCornerRadius(this._settings, 22, "cornerRadius");
+        const cornerRadius = resolveCornerRadius(this._settings, 22, "card-corner-radius");
         applyLayeredCardStyle(this._layers, this._settings, {
             cornerRadiusFallback: 22
         }, false);

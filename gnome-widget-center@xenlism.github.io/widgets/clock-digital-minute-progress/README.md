@@ -13,7 +13,7 @@ Cairo-drawing pattern as `clock-digital-dashed` / `circles-clock`.
 
 ## Settings (config.json)
 
-- **Card**: `backgroundColor`, `cornerRadius`.
+- **Card**: `card-background-color`, `card-corner-radius`.
 - **Minute progress ring**: `showDashes`, `dashCount` (how many dashes
   make up the ring - 60 gives one dash per minute), `dashColorElapsed`
   (dark - minutes already reached), `dashColorRemaining` (light -
