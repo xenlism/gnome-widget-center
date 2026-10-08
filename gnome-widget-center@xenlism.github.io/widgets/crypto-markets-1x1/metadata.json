@@ -1,0 +1,15 @@
+{
+    "id": "xenlism.github.io.crypto-markets-1x1",
+    "name": "Crypto Markets (1x1) By Xenlism",
+    "description": "1x1 crypto card - live price, 24h change and a line graph. CoinGecko (no key) or CoinMarketCap (API key).",
+    "version": "1.0.0",
+    "author": "Nattapong Pullkhow",
+    "api-version": 2,
+    "entry": "widget.js",
+    "block-type": "1x1",
+    "default-position": {
+        "x": 80,
+        "y": 300,
+        "monitor": 0
+    }
+}

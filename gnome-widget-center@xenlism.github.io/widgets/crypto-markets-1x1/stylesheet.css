@@ -1,0 +1,23 @@
+/* widgets/crypto-markets-1x1/stylesheet.css
+ *
+ * Namespaced with the crypto-markets-1x1- prefix per docs/WIDGET_API.md §1.
+ *
+ * NOTE: as with the other widgets, the host does not load a widget's
+ * stylesheet.css into the Shell's theme context. The real look comes from
+ * the inline St `style` strings set in widget.js's _render(), driven by this
+ * widget's font / color / graph settings. These rules document the defaults.
+ */
+
+.crypto-markets-1x1-root {
+    padding: 16px;
+}
+
+.crypto-markets-1x1-price {
+    font-weight: bold;
+}
+
+.crypto-markets-1x1-change {
+    font-weight: bold;
+    border-radius: 8px;
+    padding: 2px 9px;
+}
