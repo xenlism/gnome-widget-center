@@ -1,5 +1,16 @@
 ## 2.0.0
 
+### Block types: 1x1 to 6x6
+- `BLOCK_TYPES` now has every `<W>x<H>` from `1x1` to `6x6` (36 names, a tier `n` is `12n - 1` cells) plus `barx1`-`barx4`. The `{cols, rows}` object form of `block-type` is no longer accepted (unknown values resolve to `1x1`). Docs: WIDGET_API.md §2, CONTRIBUTING.md, docs/CREATING_WIDGETS.md.
+
+### Rounded background blur
+- Card blur uses `gi://Blur` ([gnome-rounded-blur](https://github.com/kancko/gnome-rounded-blur)) first, with `corner_radius` taken from the card, and falls back to `Shell.BlurEffect` when the library is missing. Install steps in README.md. `temp-*` widgets now use `lib/shell/cardLayers.js` instead of their own card/blur code.
+
+### Widgets
+- stock-markets (1x1, 2x1): extra providers Stooq, CNBC and Twelve Data (API key), Yahoo retries on `query2`, and `auto` tries them all in turn; "Starting symbol" applies when changed in Settings.
+- daily-wallpaper (1x1, 2x1): new "Auto apply as desktop wallpaper" switch.
+- `lib/widgetConfigUI.js` / `widgetConfigFieldRows.js`: fixed list and object fields failing with "Could not display this setting".
+
 ### Desktop right-click menu: Widgets Settings
 - New "Widgets Settings" item in GNOME Shell's desktop right-click menu. It launches the extension Preferences (`widget-center-prefs-app.js`), the same window the overlay and edit mode open. Logic lives in `lib/shell/desktopMenu.js`; it wraps `BackgroundMenu.open()` through `InjectionManager`, so it covers every monitor and survives monitor hot-plug, and it is removed again in `disable()`.
 - The label follows the extension's `language` override (key `menu.desktop.widgets_settings`) and updates live when the language changes.

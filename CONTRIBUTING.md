@@ -130,7 +130,7 @@ widgets/my-widget/
 | `author`            | Your name or handle.                                              |
 | `api-version`       | Currently `2` (2.0).                                                     |
 | `entry`             | Usually `widget.js`.                                               |
-| `block-type`        | Default footprint — see existing values (`1x1`, `2x1`, `2x2`, `3x1`, `4x2`, `barx2`, ...); reuse an existing one where it fits rather than inventing a new aspect ratio. |
+| `block-type`        | Default footprint — a name `<W>x<H>` with W and H from 1 to 6 (`1x1` ... `6x6`, e.g. `2x1`, `3x2`, `1x3`) or `barx1`-`barx4`; the object form `{cols, rows}` is not accepted. Reuse an existing one where it fits rather than inventing a new aspect ratio. |
 | `default-position`  | `{x, y, monitor}` — a sane default spot on first add.              |
 
 **`config.json`** describes the settings tabs/groups/fields rendered in

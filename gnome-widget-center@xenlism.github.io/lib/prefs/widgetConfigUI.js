@@ -4,9 +4,11 @@ import GLib from "gi://GLib";
 
 import { pickTranslation } from "../i18nUtils.js";
 
-import { setHostContext, _textRow, _locationRow, _textareaRow, _passwordRow, _switchRow, _checkboxRow, _dropdownRow, _spinRow, _sliderRow, _colorRow, _fontRow, _iconRow, _pathRow, _listRow, _objectRow, _autocompleteRow } from "./widgetConfigFieldRows.js";
+import { setRowBuilder, setHostContext, _textRow, _locationRow, _textareaRow, _passwordRow, _switchRow, _checkboxRow, _dropdownRow, _spinRow, _sliderRow, _colorRow, _fontRow, _iconRow, _pathRow, _listRow, _objectRow, _autocompleteRow } from "./widgetConfigFieldRows.js";
 
 let _hostT = (key, fallback) => fallback;
+
+setRowBuilder(_buildRow);
 
 export function buildConfigPage(config, settingsProxy, title, widgetPath, translations = {}, hostOptions = {}) {
     const tr = (key, fallback) => pickTranslation(translations, key, fallback);

@@ -37,8 +37,9 @@ template's legacy `settings.js` for a new widget.
 ## 3. Define `metadata.json`
 
 The `id` must exactly match the folder name and must be unique. Select one of
-the supported fixed `block-type` values: `barx1`, `barx2`, `barx3`, `barx4`,
-`1x1`, `2x1`, `2x2`, `3x1`, `3x2`, `3x3`, `4x1`, `4x2`, `4x3`, or `4x4`.
+the supported fixed `block-type` values: `barx1`, `barx2`, `barx3`, `barx4`, or
+any `<W>x<H>` from `1x1` to `6x6` (W = columns, H = rows, each 1-6; e.g. `2x1`,
+`1x3`, `5x4`). Sizes are in `WIDGET_API.md` §2.
 
 ```json
 {

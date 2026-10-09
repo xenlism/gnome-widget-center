@@ -12,6 +12,8 @@ import { cardStyleCss, applyCardOpacity, getBlurSettings, toCssColor, resolveCor
 let St = null;
 let Clutter = null;
 let Shell = null;
+// Optional: gi://Blur (rounded-corner blur). Absent on most shells -> Shell.BlurEffect.
+let Blur = null;
 
 // Fire off the (async) dynamic imports immediately, but without a top-level
 // await. This module is only ever *called into* from the real Shell process
@@ -32,6 +34,8 @@ const _libsReady = Promise.all([
     // metadata purposes only) - the functions below simply won't be called.
 });
 
+import("gi://Blur").then(m => { Blur = m.default; }).catch(() => {});
+
 function _ensureShellLibs() {
     if (!St || !Clutter || !Shell) {
         throw new Error(
@@ -43,7 +47,25 @@ function _ensureShellLibs() {
 
 const BLUR_EFFECT_NAME = "wc-card-blur";
 
-function _createBlurEffect(radius, logger) {
+// First choice: gi://Blur BlurEffect (supports corner_radius). Anything going
+// wrong there (library missing, property rejected) falls back to Shell.BlurEffect.
+function _createBlurEffect(radius, cornerRadius, logger) {
+    if (Blur) {
+        try {
+            return new Blur.BlurEffect({
+                mode: Blur.BlurMode.BACKGROUND,
+                radius,
+                brightness: 1,
+                corner_radius: cornerRadius
+            });
+        } catch (e) {
+            logger?.warn?.(`cardLayers: gi://Blur failed (${e.message}); using Shell.BlurEffect`);
+        }
+    }
+    return _createShellBlurEffect(radius, logger);
+}
+
+function _createShellBlurEffect(radius, logger) {
     const base = { mode: Shell.BlurMode.BACKGROUND, brightness: 1 };
     try {
         return new Shell.BlurEffect({ ...base, radius });
@@ -68,11 +90,13 @@ export function applyCardBlur(actor, settings, logger = null) {
     const shouldBlur = enabled && radius > 0;
     const existing = actor.get_effect(BLUR_EFFECT_NAME);
     if (shouldBlur) {
-        if (existing && existing._wcBlurRadius === radius) return;
+        const cornerRadius = resolveCornerRadius(settings);
+        const blurKey = `${radius}|${cornerRadius}|${Blur ? "b" : "s"}`;
+        if (existing && existing._wcBlurKey === blurKey) return;
         if (existing) actor.remove_effect(existing);
-        const effect = _createBlurEffect(radius, logger);
+        const effect = _createBlurEffect(radius, cornerRadius, logger);
         if (!effect) return;
-        effect._wcBlurRadius = radius;
+        effect._wcBlurKey = blurKey;
         actor.add_effect_with_name(BLUR_EFFECT_NAME, effect);
     } else if (existing) {
         actor.remove_effect(existing);

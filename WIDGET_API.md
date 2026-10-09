@@ -67,9 +67,17 @@ folder instead, discovered the same way.
   block-type system) and `lib/blockSizeManager.js`'s `BLOCK_TYPES` table
   for the authoritative list. The host multiplies the resolved cols/rows
   by `BlockSizeManager.BLOCK_CELL_SIZE` (currently 16px/cell) when placing
-  the widget. Names read as `<colsTier>x<rowsTier>`, where tier bar/1/2/3/4 map to
-  5/11/23/35/47 cells (NOT literal cols×rows — check the table for the
-  real cell counts):
+  the widget. Names read as `<W>x<H>`, where W (columns) and H (rows) are each a
+  tier from 1 to 6 and a tier `n` is `12n - 1` cells (NOT literal cols×rows — use
+  the table for the real cell counts):
+
+  | tier | 1  | 2  | 3  | 4  | 5  | 6  |
+  |------|----|----|----|----|----|----|
+  | cells | 11 | 23 | 35 | 47 | 59 | 71 |
+
+  Every combination from `1x1` to `6x6` exists (36 names), e.g. `1x2` = 11 × 23,
+  `5x3` = 59 × 35, `6x6` = 71 × 71. The four bar types are one row tier only
+  (always 5 cells high):
 
   | name    | cols × rows |
   |---------|-------------|
@@ -77,24 +85,13 @@ folder instead, discovered the same way.
   | `barx2` | 23 × 5      |
   | `barx3` | 35 × 5      |
   | `barx4` | 47 × 5      |
-  | `1x1`   | 11 × 11     |
-  | `2x1`   | 23 × 11     |
-  | `2x2`   | 23 × 23     |
-  | `3x1`   | 35 × 11     |
-  | `3x2`   | 35 × 23     |
-  | `3x3`   | 35 × 35     |
-  | `4x1`   | 47 × 11     |
-  | `4x2`   | 47 × 23     |
-  | `4x3`   | 47 × 35     |
-  | `4x4`   | 47 × 47     |
 
-  This is a **closed** list — these 10 sizes only, nothing else. Omit
+  This is a **closed** list — these 36 + 4 sizes only, nothing else. Omit
   the field entirely (or use an unrecognized name) and you get `1x1`
-  (10 × 10 cells). This size is fixed: **no min/max, and the user cannot
-  resize it themselves** (there is no `size-constraints` field). A legacy
-  `{cols, rows}` object shape is still accepted for backward compatibility
-  — sanitized/remapped rather than trusted as-is — but new widgets should
-  pick directly from the table above.
+  (11 × 11 cells). This size is fixed: **no min/max, and the user cannot
+  resize it themselves** (there is no `size-constraints` field). The old
+  `{cols, rows}` object shape is **no longer accepted** — it resolves to
+  `1x1` — so always give a name from the lists above.
 - `themeable` — removed. There is no more host-wide theme/Force
   Settings system that can paint a widget's card for it. Every widget
   always self-paints its own card via `applyLayeredCardStyle()`/

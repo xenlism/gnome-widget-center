@@ -1,0 +1,15 @@
+{
+    "id": "xenlism.github.io.stock-markets-1x1",
+    "name": "Stock Markets (1x1) By Xenlism",
+    "description": "1x1 stock card - live price, daily change and a line graph. Yahoo Finance or Nasdaq, no API key.",
+    "version": "1.0.0",
+    "author": "Nattapong Pullkhow",
+    "api-version": 2,
+    "entry": "widget.js",
+    "block-type": "1x1",
+    "default-position": {
+        "x": 480,
+        "y": 300,
+        "monitor": 0
+    }
+}

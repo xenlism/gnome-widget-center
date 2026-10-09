@@ -64,6 +64,7 @@ flowchart LR
 - [User files and folders](#-user-files-and-folders)
 - [Build your own widgets](#-build-your-own-widgets)
 - [Install](#-install)
+- [Rounded blur patch](#-rounded-blur-patch-recommended)
 - [Project layout](#-project-layout)
 - [Status & testing](#-status--testing)
 - [Support development](#-support-development)
@@ -138,6 +139,12 @@ Themeable widgets share one set of card controls, all following the `card-*` nam
 > **Blur note:** background blur depends on GNOME Shell and your graphics/compositor stack. A
 > known GNOME limitation can make blur unavailable or inconsistent on some systems. Every other
 > appearance setting keeps working regardless.
+>
+> **Round blur:** GNOME's built-in blur cannot follow a card's rounded corners, so the blur shows
+> as a square behind the card. To fix it, install the
+> [gnome-rounded-blur](https://github.com/kancko/gnome-rounded-blur) patch (see
+> [Rounded blur patch](#-rounded-blur-patch-recommended)). Widget Center uses it automatically
+> when present and falls back to the standard blur when it is not.
 
 There's no single "right" style. Mix transparency, blur and soft shadows for glassmorphism, or
 go opaque with square corners for a crisp dashboard. 🧊
@@ -284,6 +291,36 @@ log out and back in if it doesn't show up right away.
 
 Requires `git`, or `curl`/`wget` + `tar` as a fallback, plus `glib-compile-schemas` (ships
 with GLib on virtually every GNOME system).
+
+## 🪟 Rounded blur patch (recommended)
+
+Install this to fix blur that ignores the card's rounded corners. It provides the `gi://Blur`
+library ([gnome-rounded-blur](https://github.com/kancko/gnome-rounded-blur)): a copy of GNOME
+Shell's blur effect with a corner mask. It is a system library, so it is installed once on your
+machine and is **not** bundled with the extension.
+
+Requires GNOME Shell / mutter 50 or newer (the same versions as this extension).
+
+**Arch / Manjaro**
+
+```bash
+yay -S gnome-rounded-blur
+```
+
+**From source** (needs `git`, `meson`, `ninja`, `gobject-introspection` and the mutter 50
+development files)
+
+```bash
+git clone https://github.com/kancko/gnome-rounded-blur.git
+cd gnome-rounded-blur
+meson setup build
+meson compile -C build
+sudo meson install -C build
+```
+
+Then **log out and back in** so GNOME Shell loads the new library. Nothing to configure: cards
+with *Background blur* on now blur with the same corner radius as the card. If the library is
+missing or fails to load, Widget Center quietly uses the standard (square) blur instead.
 
 ## 🗂️ Project layout
 

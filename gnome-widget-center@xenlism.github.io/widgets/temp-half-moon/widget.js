@@ -2,11 +2,11 @@ import Clutter from "gi://Clutter";
 import St from "gi://St";
 import GLib from "gi://GLib";
 import Gio from "gi://Gio";
-import Shell from "gi://Shell";
+import { createLayeredCard, applyLayeredCardStyle } from "../../lib/shell/cardLayers.js";
 import Cairo from "cairo";
 
-// Self-contained: no imports from the extension's lib/ folder. Everything this
-// widget needs (card painting, sensor scan, ring drawing) lives in this file.
+// Card layers, card style and background blur come from the host's
+// lib/shell/cardLayers.js; sensor scan and ring drawing live in this file.
 
 // ---------------------------------------------------------------- settings
 const DEFAULTS = {
@@ -72,70 +72,6 @@ export const css = (hex, fb) => {
     const c = parseColor(hex, fb);
     return `rgba(${c.r}, ${c.g}, ${c.b}, ${Math.round(c.a * 1000) / 1000})`;
 };
-
-// ------------------------------------------------------------- card (all)
-export function cardStyles(s) {
-    const g = k => s?.[k] ?? CARD[k];
-    const radius = g("card-corner-radius-enabled") ? clamp(n(s?.["card-corner-radius"], 18), 0, 64) : 0;
-    const bg = css(g("card-background-color"), CARD["card-background-color"]);
-    let card = `background-color: ${bg}; border-radius: ${radius}px;`;
-    if (g("card-border-enabled"))
-        card += ` border: ${Math.max(0, n(s?.["card-border-width"], 1))}px solid ${css(g("card-border-color"))};`;
-    if (g("card-shadow-enabled")) {
-        const rad = n(s?.["card-shadow-angle"], 90) * Math.PI / 180;
-        const dist = n(s?.["card-shadow-distance"], 6);
-        const c = parseColor(g("card-shadow-color"), "#000000");
-        const a = clamp(n(s?.["card-shadow-opacity"], 30) / 100, 0, 1);
-        const r2 = v => Math.round(v * 100) / 100;
-        card += ` box-shadow: ${r2(Math.cos(rad) * dist)}px ${r2(Math.sin(rad) * dist)}px ` +
-            `${Math.max(0, n(s?.["card-shadow-blur"], 16))}px 0px rgba(${c.r}, ${c.g}, ${c.b}, ${a});`;
-    }
-    return { card, blur: `background-color: ${bg}; border-radius: ${radius}px;` };
-}
-
-// Same effect name as the host uses, so host re-application never stacks a second blur.
-function setBlur(actor, s) {
-    const radius = n(s?.["card-blur-radius"], 24);
-    const on = (s?.["card-blur-enabled"] ?? false) && radius > 0;
-    const old = actor.get_effect("wc-card-blur");
-    if (!on) {
-        if (old) actor.remove_effect(old);
-        return;
-    }
-    if (old?._wcBlurRadius === radius) return;
-    if (old) actor.remove_effect(old);
-    let fx = null;
-    for (const key of ["radius", "sigma"]) { // property name differs between Shell versions
-        try {
-            fx = new Shell.BlurEffect({ mode: Shell.BlurMode.BACKGROUND, brightness: 1, [key]: radius });
-            break;
-        } catch (_e) { /* try next */ }
-    }
-    if (!fx) return;
-    fx._wcBlurRadius = radius;
-    actor.add_effect_with_name("wc-card-blur", fx);
-}
-
-// {root, card, cardBlur, content}: same shape the host expects of `this._layers`.
-function createCard() {
-    const fill = { x_expand: true, y_expand: true };
-    const root = new St.Widget({ layout_manager: new Clutter.BinLayout(), ...fill, clip_to_allocation: false });
-    const card = new St.Widget({ layout_manager: new Clutter.BinLayout(), ...fill });
-    const cardBlur = new St.Widget({ ...fill, clip_to_allocation: true });
-    const content = new St.Widget({ layout_manager: new Clutter.BinLayout(), ...fill, clip_to_allocation: true });
-    card.add_child(cardBlur);
-    root.add_child(card);
-    root.add_child(content);
-    return { root, card, cardBlur, content };
-}
-
-function paintCard(layers, s) {
-    const st = cardStyles(s);
-    layers.card.set_style(st.card);
-    layers.cardBlur.set_style(st.blur);
-    layers.card.opacity = Math.round(clamp(n(s?.["card-opacity"], 100), 0, 100) / 100 * 255);
-    setBlur(layers.cardBlur, s);
-}
 
 // ----------------------------------------------------------------- sensors
 const HWMON = "/sys/class/hwmon";
@@ -372,7 +308,7 @@ export default class TempHalfMoonWidget {
     }
 
     buildActor() {
-        this._layers = createCard();
+        this._layers = createLayeredCard();
         this._actor = this._layers.root;
         // Card-wide row, no side padding: the ring sits flush against the card edge.
         this._row = new St.BoxLayout({ orientation: Clutter.Orientation.HORIZONTAL, x_expand: true, y_expand: true, style: "padding: 14px 0;" });
@@ -395,7 +331,7 @@ export default class TempHalfMoonWidget {
     _render() {
         if (!this._actor) return;
         const s = this._settings;
-        paintCard(this._layers, s);
+        applyLayeredCardStyle(this._layers, s);
         if (this._laidOut !== this._side()) { // re-order only when the side changed
             this._laidOut = this._side();
             this._row.remove_all_children();

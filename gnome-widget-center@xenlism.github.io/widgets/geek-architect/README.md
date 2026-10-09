@@ -80,7 +80,7 @@ the same direction instead of 3 lines potentially fighting each other
 
 Edit `BLOCK_TYPE_PRESETS` at the top of `widget.js` - each entry is
 `{id, label, blockType, fontOverrides}`. `blockType` must be one of the
-10 valid names in `lib/blockSizeManager.js` (`WIDGET_API.md` §2's
+valid names in `lib/blockSizeManager.js` (`WIDGET_API.md` §2's
 table). No other file needs to change; `child/config.json` already
 carries the full field schema every preset's `fontOverrides` writes
 into.

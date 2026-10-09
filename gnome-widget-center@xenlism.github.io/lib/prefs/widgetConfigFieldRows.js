@@ -16,6 +16,22 @@ import Soup from "gi://Soup?version=3.0";
 
 import { getSpecialFolderInfo } from "../fsUtils.js";
 
+// _listRow() / _objectRow() build their nested rows through _buildRow(), which
+// lives in widgetConfigUI.js. widgetConfigUI.js registers it here at load time
+// (circular imports avoided); without this, any list-of-strings field that has
+// items - and any object field - threw a ReferenceError and the settings page
+// showed "Could not display this setting - see logs."
+let _rowBuilder = null;
+
+export function setRowBuilder(fn) {
+    _rowBuilder = fn;
+}
+
+function _buildRow(field, settings, notifyChange, ctx) {
+    if (!_rowBuilder) throw new Error("widgetConfigFieldRows: row builder not registered");
+    return _rowBuilder(field, settings, notifyChange, ctx);
+}
+
 let _hostTr = (key, fallback) => fallback;
 
 let _hostLanguage = "en";
