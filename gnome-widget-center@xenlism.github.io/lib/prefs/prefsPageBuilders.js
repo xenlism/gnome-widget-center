@@ -14,7 +14,9 @@ import { saveCurrentSettingsAsWidgetDefaults } from "../devConfigDefaults.js";
 
 import { ThemeService } from "../themeService.js";
 
-import { buildStorePage } from "./storePage.js";
+import { buildStoreSettings } from "./storePage.js";
+
+import { buildStoreBrowsePage } from "./storeBrowsePage.js";
 import { buildGwctDocumentAsync, writeGwctFile, readGwctFile, importGwctDocument, installGwctAsThemePack, applyColorSchemeToWidgets, applyCardSettingsToWidgets, applyFontSettingsToWidgets } from "../exportService.js";
 
 import { COLOR_SCHEME_ROLES, DEFAULT_COLOR_SCHEME, schemeKey } from "../colorScheme.js";
@@ -45,13 +47,20 @@ function isModifierKeyval(keyval) {
 }
 
 export const PrefsPageBuildersMixin = Base => class extends Base {
+    // The "Store" TAB: browse + install. Its settings live in Preferences > Store (_buildStoreCategory).
     _buildStorePage(window) {
-        const page = new Adw.PreferencesPage({
-            title: this._tr("tab.store.label", "Store"),
-            icon_name: "system-search-symbolic"
+        const page = buildStoreBrowsePage(window, (k, d) => this._tr(k, d), {
+            onOpenSettings: () => this.showStoreSettings(window)
         });
         window.add(page);
-        buildStorePage(page, window, (k, d) => this._tr(k, d)).catch(e => logError(e, "[widget-center] prefs: store page failed"));
+        this._storePage = page;
+        return page;
+    }
+    // Preferences > Store: release channel, update interval, repositories, rollback.
+    _buildStoreCategory(window) {
+        const page = new Adw.PreferencesPage;
+        buildStoreSettings(page, window, (k, d) => this._tr(k, d)).catch(e => logError(e, "[widget-center] prefs: store settings failed"));
+        return page;
     }
     _buildPreferencesPage(window, settings, storage, discoveredWidgets, widgetPaths, options = {}) {
         const page = new Adw.PreferencesPage({
@@ -85,6 +94,12 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
             subtitle: this._tr("category.interactions.subtitle", "Dragging, animations and actions"),
             icon: "input-mouse-symbolic",
             build: () => this._buildInteractionsCategory(settings)
+        }, {
+            id: "store",
+            title: this._tr("category.store", "Store"),
+            subtitle: this._tr("category.store.subtitle", "Release channel, repositories and rollback"),
+            icon: "folder-download-symbolic",
+            build: () => this._buildStoreCategory(window)
         }, {
             id: "backup",
             title: this._tr("category.backup", "Backup and Restore"),

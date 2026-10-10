@@ -1,5 +1,6 @@
 export default {
     "tab.overview.label": "Ringkasan",
+    "tab.widgets.label": "Widget",
     "tab.themes.label": "Tema",
     "tab.store.label": "Toko",
     "tab.about.label": "Tentang",

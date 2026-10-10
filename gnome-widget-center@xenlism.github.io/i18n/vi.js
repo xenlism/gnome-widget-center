@@ -1,5 +1,6 @@
 export default {
     "tab.overview.label": "Tổng quan",
+    "tab.widgets.label": "Tiện ích",
     "tab.themes.label": "Chủ đề",
     "tab.store.label": "Cửa hàng",
     "tab.about.label": "Giới thiệu",

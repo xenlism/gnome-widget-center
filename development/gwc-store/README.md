@@ -66,6 +66,6 @@ Only public keys and fingerprints go into `store.config.json` / `authors.json`.
 
 ## Keeping `gwc-repo-maker` in step
 `gwc-repo-maker/backend/tools` is a copy of this repository's `tools/`. After changing `tools/` run
-`gwc-repo-maker/sync-backend.sh path/to/gwc-store`; a test fails if the two drift apart (when the apps sit side by side).
+`sync-backend.sh path/to/gwc-store` (in the separate `gwc-repo-maker` repository); a test fails if the two drift apart (when the apps sit side by side).
 
 License: GPL-3.0 (see `LICENSE`).

@@ -1,5 +1,6 @@
 export default {
     "tab.overview.label": "Επισκόπηση",
+    "tab.widgets.label": "Γραφικά στοιχεία",
     "tab.themes.label": "Θέματα",
     "tab.store.label": "Κατάστημα",
     "tab.about.label": "Σχετικά",

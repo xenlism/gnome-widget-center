@@ -1,5 +1,6 @@
 export default {
     "tab.overview.label": "Áttekintés",
+    "tab.widgets.label": "Modulok",
     "tab.themes.label": "Témák",
     "tab.store.label": "Áruház",
     "tab.about.label": "Névjegy",

@@ -1,5 +1,6 @@
 export default {
     "tab.overview.label": "总览",
+    "tab.widgets.label": "小组件",
     "tab.themes.label": "主题",
     "tab.store.label": "商店",
     "tab.about.label": "关于",

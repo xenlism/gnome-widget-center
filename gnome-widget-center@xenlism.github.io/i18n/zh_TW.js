@@ -1,5 +1,6 @@
 export default {
     "tab.overview.label": "總覽",
+    "tab.widgets.label": "小元件",
     "tab.themes.label": "主題",
     "tab.store.label": "商店",
     "tab.about.label": "關於",

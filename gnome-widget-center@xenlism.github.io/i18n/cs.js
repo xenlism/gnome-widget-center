@@ -1,5 +1,6 @@
 export default {
     "tab.overview.label": "Přehled",
+    "tab.widgets.label": "Widgety",
     "tab.themes.label": "Motivy",
     "tab.store.label": "Obchod",
     "tab.about.label": "O aplikaci",

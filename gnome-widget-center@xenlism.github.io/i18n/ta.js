@@ -1,5 +1,6 @@
 export default {
     "tab.overview.label": "மேலோட்டப் பார்வை",
+    "tab.widgets.label": "விட்ஜெட்கள்",
     "tab.themes.label": "தீம்கள்",
     "tab.store.label": "அங்காடி",
     "tab.about.label": "பற்றி",

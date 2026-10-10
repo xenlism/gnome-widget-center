@@ -1,5 +1,6 @@
 export default {
   "tab.overview.label": "Prezentare generală",
+    "tab.widgets.label": "Widgeturi",
   "tab.themes.label": "Teme",
   "tab.store.label": "Magazin",
   "tab.about.label": "Despre",

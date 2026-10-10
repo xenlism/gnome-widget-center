@@ -1,3 +1,15 @@
+## gwc-repo-maker moved to its own repository
+
+- `development/gwc-repo-maker/` is removed from this archive; it ships as a separate project (`gwc-repo-maker.zip`) with its own git history. Nothing in the extension imports it. `development/README.md` and `gwc-store/README.md` now describe the side-by-side layout.
+
+## Store tab, "Widgets" tab, Preferences > Store
+
+- **Overview is now "Widgets"** in the overlay and in the prefs window (new key `tab.widgets.label`, translated in every locale; `tab.overview.label` is no longer used).
+- **New "Store" tab** in the overlay and in the prefs window. Prefs: browse widgets / theme packs of the enabled repositories (`lib/prefs/storeBrowsePage.js`), search, Install / Update / Installed; installing goes through `lib/store/openUri.js` `handleOpen()`, so the consent dialog and signature/hash checks are the same as for a `gwc://` link. Overlay: browse-only cards (`widgetCenterOverlay.js` `_buildStoreTab()`); Install hands the `gwc://` link to the external prefs window.
+- **Store settings moved to Preferences > Store** (accordion category `store`, `lib/prefs/storePage.js` -> `buildStoreSettings()`): release channel, update-check interval (new), repositories with tier badge, rollback. The old "Coming soon" placeholder is gone.
+- `widget-center-prefs-app.js`: `--focus=store` (Store tab), `--focus=store-settings` (Preferences > Store), and `--open <gwc:// link | file>...` (the `prefs-app-open.patch` from `development/gwc-client/patches/`, now applied).
+- Not run on real GNOME Shell 50 / GTK yet (no gjs in the build environment): syntax-checked and the existing gwc-client tests pass (118). The official store's `OFFICIAL_KEYS` is still empty, so it shows "Could not verify this repository" until a key is added.
+
 ## gwc-store completed, gwc-repo-maker: Browse / Generate key
 
 - **gwc-store:** `tools/` brought up to date (`gwc_repo.py` gained `scan-source`, `list-keys`, `export-key`, `import-key`); added `README.md`, `LICENSE`, `.gitignore`; Python tests for the new commands (84 total). `gwc-repo-maker` now sits in `development/` next to it, so the backend-in-sync test runs instead of being skipped.

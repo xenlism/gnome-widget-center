@@ -1,5 +1,6 @@
 export default {
     "tab.overview.label": "نظرة عامة",
+    "tab.widgets.label": "الودجات",
     "tab.themes.label": "السمات",
     "tab.store.label": "المتجر",
     "tab.about.label": "حول",

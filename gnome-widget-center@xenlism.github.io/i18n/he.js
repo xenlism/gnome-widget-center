@@ -1,5 +1,6 @@
 export default {
     "tab.overview.label": "סקירה כללית",
+    "tab.widgets.label": "וידג'טים",
     "tab.themes.label": "ערכות נושא",
     "tab.store.label": "חנות",
     "tab.about.label": "אודות",

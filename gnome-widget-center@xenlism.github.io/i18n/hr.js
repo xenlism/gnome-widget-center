@@ -1,5 +1,6 @@
 export default {
     "tab.overview.label": "Pregled",
+    "tab.widgets.label": "Widgeti",
     "tab.themes.label": "Teme",
     "tab.store.label": "Trgovina",
     "tab.about.label": "O programu",

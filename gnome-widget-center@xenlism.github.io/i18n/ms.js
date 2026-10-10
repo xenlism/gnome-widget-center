@@ -1,5 +1,6 @@
 export default {
     "tab.overview.label": "Gambaran Keseluruhan",
+    "tab.widgets.label": "Widget",
     "tab.themes.label": "Tema",
     "tab.store.label": "Kedai",
     "tab.about.label": "Perihal",

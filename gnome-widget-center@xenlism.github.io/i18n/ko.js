@@ -1,5 +1,6 @@
 export default {
     "tab.overview.label": "개요",
+    "tab.widgets.label": "위젯",
     "tab.themes.label": "테마",
     "tab.store.label": "스토어",
     "tab.about.label": "정보",

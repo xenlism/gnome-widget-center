@@ -69,7 +69,11 @@ export class WidgetCenterOverlay {
         this._contentBin = null;
         this._tabButtons = {};
         this._activeSearchEntry = null;
-        this._activeTab = "overview";
+        this._activeTab = "widgets";
+        this._storeKind = "widgets";
+        this._storeSearch = "";
+        this._storeCache = {};
+        this._storeLoading = new Set();
         this._keyPressId = 0;
         this._modalGrab = null;
         this._themePackRegistry = null;
@@ -269,7 +273,7 @@ export class WidgetCenterOverlay {
         const tabsBox = new St.BoxLayout({
             style_class: "wc-overlay-tabs"
         });
-        for (const [id, key, fallback] of [ [ "overview", "tab.overview.label", "Overview" ], [ "themes", "tab.themes.label", "Themes" ] ]) {
+        for (const [id, key, fallback] of [ [ "widgets", "tab.widgets.label", "Widgets" ], [ "themes", "tab.themes.label", "Themes" ], [ "store", "tab.store.label", "Store" ] ]) {
             const button = new St.Button({
                 style_class: "wc-overlay-tab",
                 label: this._tr(key, fallback),
@@ -309,7 +313,11 @@ export class WidgetCenterOverlay {
             content = this._buildThemesTab();
             break;
 
-          case "overview":
+          case "store":
+            content = this._buildStoreTab();
+            break;
+
+          case "widgets":
           default:
             content = this._buildOverviewTab();
             break;
@@ -438,7 +446,7 @@ export class WidgetCenterOverlay {
             });
             const changed = JSON.stringify(resolved.map(e => e.id)) !== JSON.stringify((this._widgetDiscoveryCache ?? []).map(e => e.id));
             this._widgetDiscoveryCache = resolved;
-            if (changed && this._activeTab === "overview") this._renderTab(this._activeTab);
+            if (changed && this._activeTab === "widgets") this._renderTab(this._activeTab);
         } catch (e) {
             this._logger?.error("overlay: widget discovery refresh failed", e);
         } finally {
@@ -486,6 +494,192 @@ export class WidgetCenterOverlay {
             this._setWidgetEnabled(id, false);
         }
         this._renderTab(this._activeTab);
+    }
+    _buildStoreTab() {
+        // Browse-only: installing needs the GTK consent dialog (signature / permission / trust info), so "Install"
+        // hands the gwc:// link to the external prefs window, exactly like the other heavy actions of this overlay.
+        const outer = new St.BoxLayout({
+            orientation: Clutter.Orientation.VERTICAL,
+            x_expand: true,
+            y_expand: true
+        });
+        const gridBin = new St.Bin({
+            x_expand: true,
+            y_expand: true
+        });
+        const bar = new St.BoxLayout({
+            style_class: "wc-overlay-sortbar",
+            width: this._gridContentWidth(),
+            x_expand: false,
+            x_align: Clutter.ActorAlign.CENTER
+        });
+        for (const [ id, key, fallback ] of [ [ "widgets", "store.kind.widgets", "Widgets" ], [ "themepacks", "store.kind.themepacks", "Theme packs" ] ]) {
+            const button = new St.Button({
+                style_class: id === this._storeKind ? "wc-overlay-tab wc-overlay-tab-active" : "wc-overlay-tab",
+                label: this._tr(key, fallback),
+                can_focus: true,
+                reactive: true
+            });
+            button.connect("clicked", () => {
+                if (this._storeKind === id) return;
+                this._storeKind = id;
+                this._renderTab("store");
+            });
+            bar.add_child(button);
+        }
+        bar.add_child(new St.Widget({
+            x_expand: true
+        }));
+        bar.add_child(this._buildIconTextButton("emblem-system-symbolic", this._tr("store.settings.open", "Store settings"), () => this._launchExternalPrefsWindow([ "--focus=store-settings" ])));
+        bar.add_child(this._buildIconTextButton("view-refresh-symbolic", this._tr("store.refresh", "Refresh"), () => {
+            this._storeCache = {};
+            this._renderTab("store");
+        }));
+        bar.add_child(this._buildSearchEntry(this._tr("store.search.placeholder", "Search the store…"), this._storeSearch, text => {
+            this._storeSearch = text;
+            this._refreshStoreGrid(gridBin);
+        }));
+        outer.add_child(bar);
+        outer.add_child(gridBin);
+        if (this._storeCache[this._storeKind]) {
+            this._refreshStoreGrid(gridBin);
+        } else {
+            gridBin.set_child(this._buildLoadingSpinner(this._tr("overlay.loading.store", "Loading the store…")));
+            this._loadStoreItems(this._storeKind);
+        }
+        return outer;
+    }
+    async _loadStoreItems(kind) {
+        if (this._storeLoading.has(kind)) return;
+        this._storeLoading.add(kind);
+        try {
+            const [ repoConfig, storeClient, installRegistry, semver ] = await Promise.all([ import("../store/repoConfig.js"), import("../store/storeClient.js"), import("../store/installRegistry.js"), import("../store/semver.js") ]);
+            const cfg = await repoConfig.loadRepoConfig();
+            const registry = await installRegistry.InstallRegistry.load();
+            const entries = [];
+            const errors = [];
+            await Promise.all(cfg.repos.filter(r => r.enabled !== false).map(async repo => {
+                try {
+                    const client = new storeClient.StoreClient(repo, {
+                        intervalHours: cfg.checkIntervalHours,
+                        channel: cfg.channel
+                    });
+                    for (const item of await client.getAllItems(kind)) entries.push({ repo, client, item });
+                } catch (e) {
+                    this._logger?.error(`overlay: store repo "${repo.id}" failed`, e);
+                    errors.push({ repo, error: e });
+                }
+            }));
+            this._storeCache[kind] = { entries, errors, registry, cmpVersion: semver.cmpVersion };
+        } catch (e) {
+            this._logger?.error("overlay: store modules failed", e);
+            this._storeCache[kind] = { entries: [], errors: [ { repo: { id: "store", name: this._tr("tab.store.label", "Store") }, error: e } ], registry: null, cmpVersion: () => null };
+        } finally {
+            this._storeLoading.delete(kind);
+            if (this._overlay && this._activeTab === "store" && this._storeKind === kind) this._renderTab("store");
+        }
+    }
+    _refreshStoreGrid(gridBin) {
+        const kind = this._storeKind;
+        const data = this._storeCache[kind];
+        if (!data) return;
+        let entries = this._sortEntries(data.entries, "name", {
+            name: e => e.item.n ?? e.item.id
+        });
+        entries = this._filterEntries(entries, this._storeSearch, e => [ e.item.n, e.item.id, e.item.a, e.item.d, e.item.c ]);
+        const grid = this._buildGrid(entries, entry => this._buildStoreCard(entry, data, kind));
+        if (!data.errors.length) {
+            gridBin.set_child(grid);
+            return;
+        }
+        const wrap = new St.BoxLayout({
+            orientation: Clutter.Orientation.VERTICAL,
+            x_expand: true,
+            y_expand: true
+        });
+        for (const { repo, error } of data.errors) {
+            wrap.add_child(new St.Label({
+                text: `${repo.name ?? repo.id}: ${this._tr("store.repo.unverified", "Could not verify this repository")} (${error.message})`,
+                style_class: "wc-overlay-empty"
+            }));
+        }
+        wrap.add_child(grid);
+        gridBin.set_child(wrap);
+    }
+    _buildStoreCard({ repo, client, item }, data, kind) {
+        const card = new St.BoxLayout({
+            orientation: Clutter.Orientation.VERTICAL,
+            style_class: "wc-overlay-card"
+        });
+        card.add_child(this._buildStoreCover(client, item));
+        card.add_child(new St.Label({
+            text: item.n ?? item.id,
+            style_class: "wc-overlay-card-title"
+        }));
+        if (item.d) {
+            const desc = new St.Label({
+                text: item.d,
+                style_class: "wc-overlay-card-desc"
+            });
+            desc.clutter_text.line_wrap = true;
+            card.add_child(desc);
+        }
+        const meta = [ item.a ? `by ${item.a}` : null, `v${item.v}`, item.c, item.ch === "beta" ? this._tr("store.beta", "beta") : null ].filter(Boolean).join(" · ");
+        card.add_child(new St.Label({
+            text: meta,
+            style_class: "wc-overlay-card-author"
+        }));
+        const controls = new St.BoxLayout({
+            style_class: "wc-overlay-card-controls"
+        });
+        controls.add_child(new St.Widget({
+            x_expand: true
+        }));
+        const live = data.registry?.get(kind, item.id)?.v ?? null;
+        const newer = live ? data.cmpVersion(item.v, live) === 1 : true;
+        if (live && !newer) {
+            controls.add_child(new St.Label({
+                text: `${this._tr("store.installed", "Installed")} · v${live}`,
+                style_class: "wc-overlay-card-author",
+                y_align: Clutter.ActorAlign.CENTER
+            }));
+        } else {
+            const label = live ? this._tr("store.update", "Update") : this._tr("store.install", "Install");
+            controls.add_child(this._buildIconTextButton("folder-download-symbolic", label, () => this._installFromStore(kind, repo, item)));
+        }
+        card.add_child(controls);
+        return card;
+    }
+    _buildStoreCover(client, item) {
+        const bin = new St.Bin({
+            style_class: "wc-overlay-card-screenshot",
+            x_expand: true
+        });
+        const width = 456;
+        const height = Math.round(width / 3);
+        bin.height = height;
+        bin.set_child(new St.Icon({
+            icon_name: "image-x-generic-symbolic",
+            icon_size: 48,
+            style_class: "wc-overlay-card-screenshot-fallback"
+        }));
+        if (item.cv) {
+            let alive = true;
+            bin.connect("destroy", () => {
+                alive = false;
+            });
+            client.getCoverPath(item.cv).then(path => {
+                if (!alive || !path) return;
+                bin.set_child(null);
+                bin.set_style(this._coverBackgroundStyle(path, Gio.File.new_for_path(path).get_uri(), width, height));
+            }).catch(() => {});
+        }
+        return bin;
+    }
+    _installFromStore(kind, repo, item) {
+        const param = kind === "widgets" ? "w" : "t";
+        const link = `gwc://install?repo=${encodeURIComponent(repo.url)}&${param}=${encodeURIComponent(item.id)}`;
+        this._launchExternalPrefsWindow([ "--open", link ]);        // --open must stay last: it takes every argument after it
     }
     _buildThemesTab() {
         const outer = new St.BoxLayout({

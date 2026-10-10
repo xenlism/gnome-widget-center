@@ -1,5 +1,6 @@
 export default {
     "tab.overview.label": "بررسی اجمالی",
+    "tab.widgets.label": "ابزارک‌ها",
     "tab.themes.label": "تم‌ها",
     "tab.store.label": "فروشگاه",
     "tab.about.label": "درباره",

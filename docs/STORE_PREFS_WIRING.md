@@ -1,3 +1,6 @@
+> **Status:** wired. The channel / tier / rollback code below now lives in `lib/prefs/storePage.js` (`buildStoreSettings`) and is shown
+> under Preferences > Store; the browse/install UI is the Store tab (`lib/prefs/storeBrowsePage.js`). The snippets are kept as reference.
+
 # Wiring channel / rollback / tier into the prefs window
 
 NOT tested against the real prefs file (it is not in this archive) and not run under GTK. The logic it calls IS tested

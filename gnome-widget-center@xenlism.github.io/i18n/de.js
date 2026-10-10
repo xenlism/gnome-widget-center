@@ -1,5 +1,6 @@
 export default {
     "tab.overview.label": "Übersicht",
+    "tab.widgets.label": "Widgets",
     "tab.themes.label": "Themen",
     "tab.store.label": "Store",
     "tab.about.label": "Info",

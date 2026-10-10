@@ -1,5 +1,6 @@
 export default {
     "tab.overview.label": "Pārskats",
+    "tab.widgets.label": "Logrīki",
     "tab.themes.label": "Tēmas",
     "tab.store.label": "Veikals",
     "tab.about.label": "Par",

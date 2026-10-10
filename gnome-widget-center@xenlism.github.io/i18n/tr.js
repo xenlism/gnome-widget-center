@@ -1,5 +1,6 @@
 export default {
     "tab.overview.label": "Genel Bakış",
+    "tab.widgets.label": "Widget'lar",
     "tab.themes.label": "Temalar",
     "tab.store.label": "Mağaza",
     "tab.about.label": "Hakkında",

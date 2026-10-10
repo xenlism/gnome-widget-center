@@ -1,5 +1,6 @@
 export default {
     "tab.overview.label": "概要",
+    "tab.widgets.label": "ウィジェット",
     "tab.themes.label": "テーマ",
     "tab.store.label": "ストア",
     "tab.about.label": "情報",

@@ -1,8 +1,10 @@
-// storePage.js - Store page of the prefs window: release channel, repositories with their tier badge, rollback.
+// storePage.js - STORE SETTINGS, shown in the prefs window under Preferences > Store: release channel, update-check
+// interval, repositories with their tier badge, rollback. (Browsing / installing is the "Store" tab: storeBrowsePage.js.)
 // Wording/rules: lib/store/prefsModel.js (pure, unit-tested). The page itself is only widget plumbing.
-// Store modules are imported lazily so a failure there leaves a "Coming soon" page instead of breaking prefs.
+// Store modules are imported lazily so a failure there leaves a status page instead of breaking prefs.
 import Adw from "gi://Adw";
 import Gio from "gi://Gio";
+import GLib from "gi://GLib";
 import Gtk from "gi://Gtk";
 
 import { CHANNELS, channelNote, channelRow, rollbackConfirm, rollbackState, tierBadge, withChannel } from "../store/prefsModel.js";
@@ -28,14 +30,14 @@ function placeholder(page, tr, reason) {
     const g = new Adw.PreferencesGroup;
     page.add(g);
     g.add(new Adw.StatusPage({
-        icon_name: "folder-download-symbolic",
-        title: tr("store.title", "Coming soon"),
-        description: tr("store.description", "A widget store is planned but not built yet — for now, install third-party widgets manually into\n~/.local/share/gnome-widget-center/widgets/.") + (reason ? `\n\n(${reason})` : ""),
+        icon_name: "dialog-warning-symbolic",
+        title: tr("store.modules.title", "Store unavailable"),
+        description: tr("store.modules.description", "The store modules could not be loaded.") + (reason ? `\n\n(${reason})` : ""),
         vexpand: true,
     }));
 }
 
-export async function buildStorePage(page, window, tr) {
+export async function buildStoreSettings(page, window, tr) {
     let repoConfig, integrity, rollback, registryMod, fmt, clientMod;
     try {
         [ repoConfig, integrity, rollback, registryMod, fmt, clientMod ] = await Promise.all([
@@ -70,6 +72,24 @@ export async function buildStorePage(page, window, tr) {
     });
     channelGroup.add(channelRowW);
 
+    const intervalRow = new Adw.SpinRow({
+        title: tr("store.interval.title", "Check for updates every (hours)"),
+        subtitle: tr("store.interval.subtitle", "How long the store catalogue is kept before it is checked again."),
+        adjustment: new Gtk.Adjustment({ lower: 1, upper: 168, step_increment: 1, page_increment: 6, value: cfg.checkIntervalHours ?? 12 }),
+    });
+    let intervalTimer = 0;
+    intervalRow.connect("notify::value", () => {
+        if (intervalTimer) GLib.source_remove(intervalTimer);
+        intervalTimer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {      // debounce: one write per burst of clicks
+            intervalTimer = 0;
+            cfg = { ...cfg, checkIntervalHours: Math.round(intervalRow.value) };
+            repoConfig.saveRepoConfig(cfg).catch(e => { logError(e, "[widget-center] prefs: saving check interval failed"); window.add_toast(new Adw.Toast({ title: e.message })); });
+            return GLib.SOURCE_REMOVE;
+        });
+    });
+    intervalRow.connect("destroy", () => { if (intervalTimer) { GLib.source_remove(intervalTimer); intervalTimer = 0; } });
+    channelGroup.add(intervalRow);
+
     // --- Repositories + tier badge (needs the signed manifest, so it is filled in after the page shows) ----
     const repoGroup = new Adw.PreferencesGroup({ title: tr("store.repo.title", "Repositories") });
     page.add(repoGroup);
@@ -80,7 +100,7 @@ export async function buildStorePage(page, window, tr) {
         repoGroup.add(row);
         (async () => {
             try {
-                const { manifest } = await new clientMod.StoreClient(repo, { channel: cfg.channel }).getManifest();
+                const { manifest } = await new clientMod.StoreClient(repo, { intervalHours: cfg.checkIntervalHours, channel: cfg.channel }).getManifest();
                 const b = tierBadge(integrity.effectiveTier(repo, manifest));      // never manifest.tier alone
                 row.remove(spinner);
                 row.add_suffix(new Gtk.Label({ label: b.text, css_classes: [ "caption", b.style ], valign: Gtk.Align.CENTER, tooltip_text: b.tooltip }));

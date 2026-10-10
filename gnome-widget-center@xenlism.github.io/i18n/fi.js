@@ -1,5 +1,6 @@
 export default {
     "tab.overview.label": "Yleiskatsaus",
+    "tab.widgets.label": "Widgetit",
     "tab.themes.label": "Teemat",
     "tab.store.label": "Kauppa",
     "tab.about.label": "Tietoja",

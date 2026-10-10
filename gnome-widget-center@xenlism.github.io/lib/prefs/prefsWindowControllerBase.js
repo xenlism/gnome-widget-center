@@ -36,6 +36,7 @@ class PrefsWindowControllerBase {
         this._storage = null;
         this._discovered = [];
         this._preferencesPage = null;
+        this._storePage = null;
     }
     showPreferencesPage(window) {
         if (!this._preferencesPage) return;
@@ -44,6 +45,30 @@ class PrefsWindowControllerBase {
                 window.set_visible_page(this._preferencesPage);
             } catch (e) {
                 logError(e, "[widget-center] prefs: showPreferencesPage() failed");
+            }
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+    showStorePage(window) {
+        if (!this._storePage) return;
+        GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            try {
+                window.set_visible_page(this._storePage);
+            } catch (e) {
+                logError(e, "[widget-center] prefs: showStorePage() failed");
+            }
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+    // Preferences > Store (channel, interval, repositories, rollback)
+    showStoreSettings(window) {
+        if (!this._preferencesPage || !this._accordionCategoriesById?.store) return;
+        GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            try {
+                window.set_visible_page(this._preferencesPage);
+                this._accordionCategoriesById.store.expand();
+            } catch (e) {
+                logError(e, "[widget-center] prefs: showStoreSettings() failed");
             }
             return GLib.SOURCE_REMOVE;
         });

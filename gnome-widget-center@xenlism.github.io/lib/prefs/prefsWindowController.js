@@ -85,6 +85,7 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
         window.set_default_size(900, geometry.height);
         this._buildOverviewCardsTab(window, settings, ok);
         await this._buildThemesCardsTab(window, settings, storage, ok);
+        this._buildStorePage(window);
         this._preferencesPage = this._buildPreferencesPage(window, settings, storage, ok, {
             bundledWidgetsPath: bundledWidgetsPath,
             userWidgetsPath: userWidgetsPath
@@ -339,7 +340,7 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
         });
         container.append(toolbar);
         container.append(scroll);
-        const page = this._buildClampedCardPage(this._tr("tab.overview.label", "Overview"), "view-grid-symbolic", container);
+        const page = this._buildClampedCardPage(this._tr("tab.widgets.label", "Widgets"), "view-grid-symbolic", container);
         window.add(page);
         this._overviewPage = page;
     }

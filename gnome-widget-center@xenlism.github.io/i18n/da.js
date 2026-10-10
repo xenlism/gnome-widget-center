@@ -1,5 +1,6 @@
 export default {
     "tab.overview.label": "Oversigt",
+    "tab.widgets.label": "Widgets",
     "tab.themes.label": "Temaer",
     "tab.store.label": "Butik",
     "tab.about.label": "Om",

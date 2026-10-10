@@ -1,5 +1,6 @@
 export default {
     "tab.overview.label": "Resum",
+    "tab.widgets.label": "Ginys",
     "tab.themes.label": "Temes",
     "tab.store.label": "Botiga",
     "tab.about.label": "Quant a",

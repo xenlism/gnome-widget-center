@@ -1,5 +1,6 @@
 export default {
     "tab.overview.label": "Преглед",
+    "tab.widgets.label": "Виџети",
     "tab.themes.label": "Теме",
     "tab.store.label": "Продавница",
     "tab.about.label": "О програму",

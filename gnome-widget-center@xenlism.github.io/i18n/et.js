@@ -1,5 +1,6 @@
 export default {
     "tab.overview.label": "Ülevaade",
+    "tab.widgets.label": "Vidinad",
     "tab.themes.label": "Teemad",
     "tab.store.label": "Pood",
     "tab.about.label": "Teave",

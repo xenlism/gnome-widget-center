@@ -1,5 +1,6 @@
 export default {
     "tab.overview.label": "Apžvalga",
+    "tab.widgets.label": "Valdikliai",
     "tab.themes.label": "Temos",
     "tab.store.label": "Parduotuvė",
     "tab.about.label": "Apie",

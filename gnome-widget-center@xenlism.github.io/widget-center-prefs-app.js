@@ -15,6 +15,10 @@ import { PrefsWindowControllerV2 } from "./lib/prefs/prefsWindowController.js";
 
 import { WidgetSettings } from "./lib/widgetSettings.js";
 
+import { InstallRegistry } from "./lib/store/installRegistry.js";
+
+import { handleOpen } from "./lib/store/openUri.js";
+
 const APPLICATION_ID = "io.github.xenlism.WidgetCenterPrefs";
 
 const EXTENSION_PATH = GLib.path_get_dirname(GLib.filename_from_uri(import.meta.url)[0]);
@@ -96,7 +100,7 @@ async function presentWindow(requestedWidgetId, focusTarget = null, exportThemeI
     }
     await buildPromise;
     if (!window) return;
-    if (requestedWidgetId) controller.jumpToWidget(window, requestedWidgetId); else if (focusTarget === "backup") controller.showBackupPage(window); else if (focusTarget === "preferences") controller.showPreferencesPage(window);
+    if (requestedWidgetId) controller.jumpToWidget(window, requestedWidgetId); else if (focusTarget === "backup") controller.showBackupPage(window); else if (focusTarget === "preferences") controller.showPreferencesPage(window); else if (focusTarget === "store") controller.showStorePage(window); else if (focusTarget === "store-settings") controller.showStoreSettings(window);
     window.present();
     if (exportThemeId) await controller.openExportThemeDialogForPack(window, exportThemeId); else if (exportThemeNew) controller.openExportThemeDialog(window, attachScreenshotPath ? {
         screenshotPath: attachScreenshotPath
@@ -114,10 +118,19 @@ app.connect("command-line", (application, commandLine) => {
     let exportThemeId = null;
     let exportThemeNew = false;
     let attachScreenshotPath = null;
+    const opens = [];
+    let openMode = false;
     for (const arg of argv) {
+        if (arg === "--open") { openMode = true; continue; }
+        if (openMode) { opens.push(arg); continue; }
         if (arg.startsWith("--widget-id=")) requestedWidgetId = arg.slice("--widget-id=".length); else if (arg.startsWith("--focus=")) focusTarget = arg.slice("--focus=".length); else if (arg.startsWith("--export-theme-id=")) exportThemeId = arg.slice("--export-theme-id=".length); else if (arg === "--export-theme-new") exportThemeNew = true; else if (arg.startsWith("--attach-screenshot=")) attachScreenshotPath = arg.slice("--attach-screenshot=".length);
     }
-    presentWindow(requestedWidgetId, focusTarget, exportThemeId, exportThemeNew, attachScreenshotPath).catch(e => logError(e, "[widget-center] widget-center-prefs-app: command-line handling failed"));
+    presentWindow(requestedWidgetId, focusTarget, exportThemeId, exportThemeNew, attachScreenshotPath).then(async () => {
+        // gwc:// links and .gwcw/.gwct files handed over by the desktop entry (see data/*.desktop.in)
+        if (!opens.length || !window) return;
+        const registry = await InstallRegistry.load();
+        for (const uri of opens) await handleOpen(window, uri, { registry });
+    }).catch(e => logError(e, "[widget-center] widget-center-prefs-app: command-line handling failed"));
     return 0;
 });
 

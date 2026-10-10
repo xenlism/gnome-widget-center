@@ -1,5 +1,6 @@
 export default {
     "tab.overview.label": "अवलोकन",
+    "tab.widgets.label": "विजेट",
     "tab.themes.label": "थीम",
     "tab.store.label": "स्टोर",
     "tab.about.label": "परिचय",

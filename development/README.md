@@ -13,6 +13,7 @@ see `../gnome-widget-center@xenlism.github.io/WIDGET_API.md`.
 
 ## Projects under `development/`
 - `gwc-store/` - the store repository (widgets, theme packs, build/sign tools, CI). Python tests: `cd gwc-store && python3 -m unittest discover -s tests`.
-- `gwc-repo-maker/` - the GTK4/libadwaita app that edits a store. Its `backend/tools` is a copy of `gwc-store/tools`
-  (`gwc-repo-maker/sync-backend.sh ../gwc-store`); a test in `gwc-store` fails when they drift.
+- `gwc-repo-maker` - the GTK4/libadwaita app that edits a store. It is its own git repository now and is no longer in this
+  archive. Its `backend/tools` is a copy of `gwc-store/tools` (`./sync-backend.sh ../gwc-store` from its checkout); the drift
+  test in `gwc-store` only runs when the two checkouts sit side by side.
 - `gwc-client/` - Node tests for the extension's `lib/store`.

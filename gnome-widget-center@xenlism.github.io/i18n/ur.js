@@ -1,5 +1,6 @@
 export default {
     "tab.overview.label": "مجموعی جائزہ",
+    "tab.widgets.label": "ویجٹس",
     "tab.themes.label": "تھیمز",
     "tab.store.label": "اسٹور",
     "tab.about.label": "متعلق",
