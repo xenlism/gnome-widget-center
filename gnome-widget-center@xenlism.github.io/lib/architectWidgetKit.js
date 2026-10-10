@@ -94,3 +94,40 @@ function _applyFieldDefaultOverrides(config, overrides) {
         }
     }
 }
+
+// ---- recreating a child that a theme pack refers to but this machine does not have --------------------------------------
+// Children are local copies of an Architect widget's child/ template, named by generateChildId():
+//   <parentId>-<name>-<14 digit timestamp>      e.g. xenlism.github.io.xtile-firefox-20260826174310
+// A theme pack lists the child by that id (and carries its position + settings), so the child is recreated under the SAME id
+// and the pack's settings then apply to it exactly as they did on the machine that exported the pack.
+
+/** Every way an id can be read as <parent>-<name>-<timestamp>. The caller picks the parent that really exists (longest wins). */
+export function childIdCandidates(childId) {
+    const out = [];
+    for (let i = childId.indexOf("-"); i !== -1; i = childId.indexOf("-", i + 1)) {
+        const parentId = childId.slice(0, i), m = /^(.+)-\d{14}$/.exec(childId.slice(i + 1));
+        if (m && parentId) out.push({ parentId, name: m[1] });
+    }
+    return out.sort((a, b) => b.parentId.length - a.parentId.length);
+}
+
+export function hasChildTemplate(parentPath) {
+    return fileExists(GLib.build_filenamev([parentPath, "child", "metadata.json"]));
+}
+
+/** Copy <parentPath>/child into the user widgets folder as <childId> and point it at its parent. Returns { id, path } or null if it already exists. */
+export async function restoreChildWidget({ parentPath, parentId, childId, name }) {
+    if (!/^[A-Za-z0-9][A-Za-z0-9._-]{1,200}$/.test(childId)) throw new Error(`Invalid child widget id: ${childId}`);
+    const srcDir = GLib.build_filenamev([parentPath, "child"]);
+    if (!hasChildTemplate(parentPath)) throw new Error(`"${parentId}" has no child/ template`);
+    const destDir = GLib.build_filenamev([userWidgetsRoot(), childId]);
+    if (fileExists(destDir)) return null;
+    _copyDirRecursive(srcDir, destDir);
+    const metadataPath = GLib.build_filenamev([destDir, "metadata.json"]);
+    const metadata = JSON.parse(await readTextFileAsync(metadataPath));
+    metadata.id = childId;
+    metadata.parent = parentId;
+    if (name) metadata.name = name;
+    writeJsonFile(metadataPath, metadata);
+    return { id: childId, path: destDir };
+}

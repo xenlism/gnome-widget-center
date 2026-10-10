@@ -396,6 +396,11 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
             this._openWidgetPrefs(window, this._storage, widget).catch(e => logError(e, `[widget-center] prefsV2: opening settings for "${widget.id}" failed`));
         });
         controls.append(settingsButton);
+        const shareWidgetButton = this._buildIconTextButton("emblem-shared-symbolic", this._tr("overview.card.share", "Share"));
+        shareWidgetButton.connect("clicked", () => {
+            this.shareWidgetById(window, widget.id, widget.path).catch(e => logError(e, `[widget-center] prefsV2: sharing widget "${widget.id}" failed`));
+        });
+        controls.append(shareWidgetButton);
         if (isUser) {
             const removeButton = this._buildIconTextButton("user-trash-symbolic", this._tr("overview.card.remove", "Uninstall"), [ "destructive-action" ]);
             removeButton.connect("clicked", async () => {
@@ -403,7 +408,9 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
                 if (!confirmed) return;
                 this._removeUserWidget(settings, widget);
                 this._discovered = this._discovered.filter(w => w.id !== widget.id);
-                this._buildOverviewCardsTab(window, settings, this._discovered);
+                // rebuild every page in its original order (adding one page alone puts it after "About") and
+                // let the store / overlay see that the widget is gone, so they offer Install again
+                await this.refreshAfterInstall(window);
             });
             controls.append(removeButton);
         }
@@ -545,6 +552,11 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
             margin_end: 14
         });
         card.append(controls);
+        const shareThemeButton = this._buildIconTextButton("emblem-shared-symbolic", this._tr("themes.card.share", "Share"));
+        shareThemeButton.connect("clicked", () => {
+            this.shareThemePackById(window, entry.id).catch(e => logError(e, `[widget-center] prefsV2: sharing theme pack "${entry.id}" failed`));
+        });
+        controls.append(shareThemeButton);
         controls.append(new Gtk.Box({
             hexpand: true
         }));
@@ -584,11 +596,7 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
                     logError(e, `[widget-center] prefsV2: could not remove theme pack "${entry.id}"`);
                     return;
                 }
-                if (this._themesPage) {
-                    window.remove(this._themesPage);
-                    this._themesPage = null;
-                }
-                this._buildThemesCardsTab(window, settings, this._storage, this._discovered).catch(e => logError(e, "[widget-center] prefsV2: rebuilding themes tab after remove failed"));
+                await this.refreshAfterInstall(window);
             });
             const overlay = new Gtk.Overlay;
             const banner = card.get_first_child();
@@ -607,6 +615,53 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
             return false;
         }
     }
+    /**
+     * Something was installed (a widget, a theme pack, a recreated child): rebuild the Widgets, Themes, Store and Preferences
+     * pages from disk, keep the page the user was on, and tell the shell overlay (a separate process) to refresh its tabs too.
+     */
+    async refreshAfterInstall(window) {
+        if (!window || !this._settings) return;
+        if (this._refreshing) { this._refreshAgain = true; return; }
+        this._refreshing = true;
+        try {
+            do {
+                this._refreshAgain = false;
+                const named = [ [ "overview", this._overviewPage ], [ "themes", this._themesPage ], [ "store", this._storePage ], [ "preferences", this._preferencesPage ] ];
+                const visible = window.get_visible_page?.();
+                const was = named.find(([ , p ]) => p && p === visible)?.[0] ?? null;
+                const { ok } = await new PrefsWidgetList([ this._bundledWidgetsPath, this._userWidgetsPath ]).list();
+                this._discovered = ok;
+                // remove every page, then add them back in the original order (Adw adds at the end)
+                for (const p of [ this._overviewPage, this._themesPage, this._storePage, this._preferencesPage, this._aboutPage ]) {
+                    if (p) { try { window.remove(p); } catch (e) { logError(e, "[widget-center] prefsV2: could not remove a page"); } }
+                }
+                this._overviewPage = this._themesPage = this._storePage = this._preferencesPage = this._aboutPage = null;
+                this._buildOverviewCardsTab(window, this._settings, ok);
+                await this._buildThemesCardsTab(window, this._settings, this._storage, ok);
+                this._buildStorePage(window);
+                this._preferencesPage = this._buildPreferencesPage(window, this._settings, this._storage, ok, {
+                    bundledWidgetsPath: this._bundledWidgetsPath, userWidgetsPath: this._userWidgetsPath
+                }, { includeAbout: false, layout: "accordion" });
+                this._buildAboutTab(window);
+                const back = { overview: this._overviewPage, themes: this._themesPage, store: this._storePage, preferences: this._preferencesPage }[was];
+                if (back) window.set_visible_page(back);
+            } while (this._refreshAgain);
+            this._notifyInstalled();
+        } catch (e) {
+            logError(e, "[widget-center] prefsV2: refreshAfterInstall failed");
+        } finally {
+            this._refreshing = false;
+        }
+    }
+    /** The shell overlay lives in another process: it watches this key and refreshes its Widgets / Themes / Store tabs. */
+    _notifyInstalled() {
+        try { if (this._settings?.isReady) this._settings.setGlobalValue("install-stamp", String(GLib.get_real_time())); }
+        catch (e) { logError(e, "[widget-center] prefsV2: could not signal the install"); }
+    }
+    /** Ask the shell to apply a theme pack again (used after its missing widgets were installed). */
+    requestThemePackApply(id) {
+        if (this._settings?.isReady) this._applyThemePack(this._settings, { id });
+    }
     _applyThemePack(settings, entry) {
         if (!settings.isReady) return;
         try {
@@ -622,6 +677,7 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
             icon_name: "help-about-symbolic"
         });
         window.add(page);
+        this._aboutPage = page;
         const headerGroup = new Adw.PreferencesGroup;
         page.add(headerGroup);
         const headerBox = new Gtk.Box({

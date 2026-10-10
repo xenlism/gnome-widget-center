@@ -1,3 +1,5 @@
+import Adw from "gi://Adw";
+
 import GLib from "gi://GLib";
 
 import { readTextFileAsync } from "../fsUtils.js";
@@ -7,6 +9,8 @@ import { pickTranslation } from "../i18nUtils.js";
 import { ThemeService } from "../themeService.js";
 
 import { ThemePackRegistry } from "../themePackRegistry.js";
+
+import { InstallRegistry } from "../store/installRegistry.js";
 
 import { openThemePackExportDialog } from "./themePackExportDialog.js";
 
@@ -111,6 +115,57 @@ class PrefsWindowControllerBase {
             url: entry.manifest.url ?? "",
             widgetIds: entry.manifest.widgets ?? []
         });
+    }
+    _toast(window, title) {
+        try {
+            window.add_toast(new Adw.Toast({ title }));
+        } catch (e) {
+            logError(e, "[widget-center] prefs: toast failed");
+        }
+    }
+    // Share a theme pack. From a store repo -> copies the https link; anything else -> saves the .gwct file.
+    // A folder-style pack can't be saved as a single file, so it falls back to the Export dialog.
+    async shareThemePackById(window, themePackId) {
+        const registry = new ThemePackRegistry([ {
+            path: GLib.build_filenamev([ this.path, "themepacks" ]),
+            source: "bundled"
+        }, {
+            path: GLib.build_filenamev([ GLib.get_user_config_dir(), "gnome-widget-center", "themepacks" ]),
+            source: "user"
+        } ]);
+        const entry = (await registry.discover()).find(e => e.id === themePackId);
+        if (!entry) {
+            this._toast(window, this._tr("share.error.notfound", "Theme pack not found"));
+            return;
+        }
+        if (!entry.path.endsWith(".gwct")) {
+            await this.openExportThemeDialogForPack(window, themePackId);
+            return;
+        }
+        try {
+            const { shareThemePack } = await import("../store/shareService.js");
+            const res = await shareThemePack(window, await InstallRegistry.load(), themePackId, entry.path);
+            this._reportShare(window, res);
+        } catch (e) {
+            logError(e, "[widget-center] prefs: share theme pack failed");
+            this._toast(window, e.message);
+        }
+    }
+    // Share a widget. From a store repo -> copies the https link; anything else -> saves a self-contained .gwcw.
+    async shareWidgetById(window, widgetId, widgetDir = null) {
+        try {
+            const { shareWidget } = await import("../store/shareService.js");
+            const res = await shareWidget(window, await InstallRegistry.load(), widgetId, widgetDir);
+            this._reportShare(window, res);
+        } catch (e) {
+            logError(e, "[widget-center] prefs: share widget failed");
+            this._toast(window, e.message);
+        }
+    }
+    _reportShare(window, res) {
+        if (!res) return;   // save dialog cancelled
+        if (res.kind === "link") this._toast(window, this._tr("share.link.copied", "Share link copied to the clipboard"));
+        else this._toast(window, this._tr("share.file.saved", "Saved to {path}").replace("{path}", res.path));
     }
     // build() calls this before anything reads this.metadata. It's a no-op
     // when we were constructed from the extension object (shell hands us

@@ -21,7 +21,7 @@ import {
     COVER_REL, MAX, REL_OK, TrustError, checkCover, checkManifest, checkPackage, checkShard, describeOfferedKey,
     findRevoked, findUpdates as _findUpdates, searchEntries, visibleIn, checkPackageZip,
 } from "./integrity.js";
-import { OFFICIAL_KEYS, normalizeRepoUrl } from "./repoConfig.js";
+import { OFFICIAL_KEYS, canonicalRepoUrl, normalizeRepoUrl } from "./repoConfig.js";
 import { sha256, sha512 } from "./hashes.js";
 
 Gio._promisify(Soup.Session.prototype, "send_async", "send_finish");
@@ -54,7 +54,7 @@ export class StoreClient {
         this.base = normalizeRepoUrl(repo.url);
         const uri = GLib.Uri.parse(this.base, GLib.UriFlags.NONE);
         this.host = uri.get_host(); this.scheme = uri.get_scheme();
-        this.keys = repo.official ? OFFICIAL_KEYS : (repo.keys ?? []);
+        this.keys = repo.official ? [ ...OFFICIAL_KEYS, ...(repo.keys ?? []) ] : (repo.keys ?? []);   // official: embedded keys + any the user pinned by fingerprint
         this.intervalMs = intervalHours * 3600 * 1000;
         const key = GLib.compute_checksum_for_string(GLib.ChecksumType.SHA1, this.base, -1).slice(0, 10);
         this.dir = GLib.build_filenamev([ GLib.get_user_cache_dir(), "gnome-widget-center", "store", key ]);
@@ -332,7 +332,7 @@ export class StoreClient {
     async revocations(registry) {
         const { manifest } = await this.getManifest();
         const mine = kind => Object.fromEntries(Object.entries(registry.map(kind)).filter(([ , r ]) => {
-            try { return r.src === "store" && normalizeRepoUrl(r.repo) === this.base; } catch (_e) { return false; }
+            try { return r.src === "store" && canonicalRepoUrl(r.repo) === canonicalRepoUrl(this.base); } catch (_e) { return false; }
         }));
         return findRevoked(manifest.revoked, { widgets: mine("widgets"), themepacks: mine("themepacks") });
     }

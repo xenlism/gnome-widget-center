@@ -7,11 +7,12 @@ import Gio from "gi://Gio";
 import GLib from "gi://GLib";
 import Gtk from "gi://Gtk";
 
+import { childIdCandidates, restoreChildWidget, userWidgetsRoot } from "../architectWidgetKit.js";
 import { readBytesFileAsync, readTextFileAsync } from "../fsUtils.js";
 import { CODE_WARNING, installDialog } from "./dialogText.js";
 import { installGwcw, installGwct, parseGwcw, parseGwct } from "./gwcFormat.js";
 import { sha256, sha512 } from "./hashes.js";
-import { checkAuthor, checkAuthorPin, effectiveTier } from "./integrity.js";
+import { ID_RE, checkAuthor, checkAuthorPin, effectiveTier } from "./integrity.js";
 import { addRepo, findRepoByUrl, loadRepoConfig, makeRepo, normalizeRepoUrl, saveRepoConfig } from "./repoConfig.js";
 import { StoreChangedError, StoreClient } from "./storeClient.js";
 
@@ -32,14 +33,44 @@ export function parseOpenArg(arg) {
     return { type: "file", path, kind: ext === "gwcw" ? "widgets" : "themepacks" };
 }
 
-async function confirm(parent, { heading, body, cover = null, ok = "Install", danger = false }) {
+async function confirm(parent, { heading, body, cover = null, extra = null, ok = "Install", danger = false }) {
     const d = new Adw.AlertDialog({ heading, body, body_use_markup: false });
     if (cover) d.set_extra_child(new Gtk.Picture({ paintable: cover, height_request: 135, content_fit: Gtk.ContentFit.CONTAIN }));
+    else if (extra) d.set_extra_child(extra);
     d.add_response("cancel", "Cancel");
     d.add_response("ok", ok);
     d.set_response_appearance("ok", danger ? Adw.ResponseAppearance.DESTRUCTIVE : Adw.ResponseAppearance.SUGGESTED);
     d.set_default_response("cancel");
     return (await d.choose(parent, null)) === "ok";
+}
+
+const esc = t => GLib.markup_escape_text(String(t ?? ""), -1);
+
+/** One row per widget to install (name, version, author); open a row for its permissions / trust details. */
+function missingWidgetsList(ready, plan) {
+    const list = new Gtk.ListBox({ selection_mode: Gtk.SelectionMode.NONE, css_classes: [ "boxed-list" ] });
+    for (const r of ready) {
+        const row = new Adw.ExpanderRow({
+            title: esc(r.item.n ?? r.id),
+            subtitle: esc([ r.item.a ? `by ${r.item.a}` : null, `v${r.item.v}`, r.id ].filter(Boolean).join(" · ")),
+        });
+        row.add_prefix(new Gtk.Image({ icon_name: "puzzle-piece-symbolic" }));
+        row.add_row(new Gtk.Label({
+            label: r.dlg.body.replace(CODE_WARNING, "").trim(), wrap: true, xalign: 0, selectable: true,
+            margin_top: 8, margin_bottom: 8, margin_start: 12, margin_end: 12, css_classes: [ "caption" ],
+        }));
+        list.append(row);
+    }
+    for (const c of plan) {
+        list.append(new Adw.ActionRow({
+            title: esc(c.name ?? c.id),
+            subtitle: esc(`${c.id} · child of ${c.parentId} (no new code)`),
+        }));
+    }
+    return new Gtk.ScrolledWindow({
+        child: list, hscrollbar_policy: Gtk.PolicyType.NEVER, propagate_natural_height: true,
+        max_content_height: 320, min_content_width: 420,
+    });
 }
 
 const toast = (parent, title) => parent?.add_toast?.(new Adw.Toast({ title }));
@@ -151,4 +182,124 @@ async function _openStoreLink(parent, t, deps, carry = null) {
     if (author.status === "verified") rec.author = { kid: author.signer.kid, fp: author.signer.fingerprint };
     await registry.record(t.kind, t.id, rec);
     onInstalled?.(t.kind, t.id); toast(parent, `Installed ${item.n}`);
+}
+
+/** { id -> folder } of every widget on disk (bundled + user). Sync: a few dozen tiny metadata.json files. */
+function installedWidgetPaths(extensionPath) {
+    const map = new Map();
+    for (const root of [ GLib.build_filenamev([ extensionPath, "widgets" ]), userWidgetsRoot() ]) {
+        try {
+            const en = Gio.File.new_for_path(root).enumerate_children("standard::name,standard::type", Gio.FileQueryInfoFlags.NONE, null);
+            for (let i = en.next_file(null); i; i = en.next_file(null)) {
+                if (i.get_file_type() !== Gio.FileType.DIRECTORY) continue;
+                const dir = GLib.build_filenamev([ root, i.get_name() ]);
+                try {
+                    const [ , bytes ] = Gio.File.new_for_path(GLib.build_filenamev([ dir, "metadata.json" ])).load_contents(null);
+                    const id = JSON.parse(new TextDecoder().decode(bytes)).id;
+                    if (typeof id === "string") map.set(id, dir);
+                } catch (_e) { /* not a widget folder */ }
+            }
+        } catch (_e) { /* root does not exist yet */ }
+    }
+    return map;
+}
+
+/**
+ * A theme pack was applied but some of its widgets are not installed. For each missing id:
+ *   - a widget listed in the ENABLED repositories (the user's own list, never an unknown store) is downloaded;
+ *   - a CHILD of an Architect widget (<parent>-<name>-<timestamp>, local to the machine that made the pack) is recreated from
+ *     its parent's child/ template under the same id; the parent is downloaded first when it is missing too.
+ * One consent dialog with the same trust information as a single install (permissions, author signature, tier), then it installs.
+ * Returns { installed: [ids], children: [ids], notFound: [ids], failed: [{id, message}], cancelled }.
+ */
+export async function handleInstallMissing(parent, ids, { registry, extensionPath, packName = null, onInstalled = null } = {}) {
+    const out = { installed: [], children: [], notFound: [], failed: [], cancelled: false };
+    let have = installedWidgetPaths(extensionPath);
+    const wanted = [ ...new Set(ids) ].filter(id => ID_RE.test(id) && !have.has(id));
+    if (!wanted.length) return out;
+
+    // ids to look up in the stores: the wanted ones, plus every possible parent of one that may be a child
+    const lookup = new Set(wanted);
+    for (const id of wanted) for (const c of childIdCandidates(id)) if (!have.has(c.parentId) && ID_RE.test(c.parentId)) lookup.add(c.parentId);
+
+    const cfg = await loadRepoConfig();
+    const found = new Map();                                   // id -> { repo, client, item }
+    for (const repo of cfg.repos.filter(r => r.enabled !== false && (r.official || r.keys?.length))) {
+        const todo = [ ...lookup ].filter(id => !found.has(id));
+        if (!todo.length) break;
+        const client = new StoreClient(repo, { intervalHours: cfg.checkIntervalHours, channel: cfg.channel });
+        try {
+            const first = await client.getManifest();
+            if (first.stale && first.refused) { logError(new Error(first.error), `[widget-center] install-missing: ${repo.name} refused`); continue; }
+            for (const id of todo) {
+                const item = await client.getItem("widgets", id);
+                if (item) found.set(id, { repo, client, item });
+            }
+        } catch (e) { logError(e, `[widget-center] install-missing: repo "${repo.id}" failed`); }
+    }
+
+    // what is a child: not listed itself, but a parent of it is installed or listed
+    const children = [], needed = new Set(wanted.filter(id => found.has(id)));
+    for (const id of wanted) {
+        if (found.has(id)) continue;
+        const c = childIdCandidates(id).find(x => have.has(x.parentId) || found.has(x.parentId));
+        if (c) { children.push({ id, ...c }); if (!have.has(c.parentId)) needed.add(c.parentId); }
+        else out.notFound.push(id);
+    }
+
+    // everything is verified BEFORE the dialog: a bad signature / forbidden author is reported as failed, not installed
+    const ready = [];
+    for (const id of needed) {
+        const f = found.get(id);
+        try {
+            const { expired, manifest, tier: manifestTier } = await f.client.getManifest();
+            const tier = effectiveTier(f.repo, { tier: manifestTier });
+            const author = checkAuthor(f.item, manifest, { sha512, sha256 });
+            const prior = registry.get("widgets", id);
+            const pin = prior?.src === "store" ? checkAuthorPin(prior.author, author) : "new";
+            ready.push({ id, ...f, author, dlg: installDialog({ item: f.item, isW: true, repo: f.repo, tier, expired, manifest, author, pin }) });
+        } catch (e) { out.failed.push({ id, message: e.message }); }
+    }
+    const okParents = new Set([ ...have.keys(), ...ready.map(r => r.id) ]);
+    const plan = children.filter(c => okParents.has(c.parentId));
+    for (const c of children) if (!okParents.has(c.parentId)) out.failed.push({ id: c.id, message: `Its parent widget "${c.parentId}" could not be installed` });
+    if (!ready.length && !plan.length) return out;
+
+    let body = "Open a widget to see its permissions and who signed it.";
+    if (ready.length) body += `\n\n${CODE_WARNING}`;
+    if (out.notFound.length) body += `\n\nNot found in your stores: ${out.notFound.join(", ")}`;
+    const total = ready.length + plan.length;
+    const ok = await confirm(parent, {
+        heading: `Install ${total} missing widget${total === 1 ? "" : "s"}${packName ? ` for “${packName}”` : ""}?`,
+        body, extra: missingWidgetsList(ready, plan), danger: ready.some(r => r.dlg.danger), ok: "Install all",
+    });
+    if (!ok) { out.cancelled = true; return out; }
+
+    for (const r of ready) {
+        try {
+            const bytes = await r.client.download(r.item, { kind: "widgets" });
+            const zip = r.item.z ? await r.client.downloadPackage(r.item, { kind: "widgets" }) : null;
+            const g = parseGwcw(new TextDecoder().decode(bytes));
+            if ((g.version === 2) !== Boolean(r.item.z) || (r.item.z && g.package.file !== r.item.z.split("/").pop())) throw new Error("The package does not match its listing");
+            installGwcw(g, { expect: { id: r.item.id, version: r.item.v, td: r.item.td, en: r.item.en, perm: r.item.perm }, zip });
+            const rec = { src: "store", repo: r.repo.url, v: r.item.v, h: r.item.h, ch: r.item.ch ?? "stable" };
+            if (r.author.status === "verified") rec.author = { kid: r.author.signer.kid, fp: r.author.signer.fingerprint };
+            await registry.record("widgets", r.id, rec);
+            out.installed.push(r.id); onInstalled?.("widgets", r.id);
+        } catch (e) { logError(e, `[widget-center] install-missing: ${r.id} failed`); out.failed.push({ id: r.id, message: e.message }); }
+    }
+    have = installedWidgetPaths(extensionPath);                // parents are on disk now
+    for (const c of plan) {
+        try {
+            const parentPath = have.get(c.parentId);
+            if (!parentPath) throw new Error(`Its parent widget "${c.parentId}" is not installed`);
+            const made = await restoreChildWidget({ parentPath, parentId: c.parentId, childId: c.id, name: c.name });
+            if (made) { out.children.push(c.id); onInstalled?.("widgets", c.id); }
+        } catch (e) { logError(e, `[widget-center] install-missing: child ${c.id} failed`); out.failed.push({ id: c.id, message: e.message }); }
+    }
+    const bits = [ `Installed ${out.installed.length + out.children.length}` ];
+    if (out.failed.length) bits.push(`${out.failed.length} failed`);
+    if (out.notFound.length) bits.push(`${out.notFound.length} not found`);
+    toast(parent, bits.join(" · "));
+    return out;
 }

@@ -8,6 +8,8 @@ import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
 
 import { WidgetRuntimeLoader } from "./lib/shell/widgetRuntimeLoader.js";
 
+import { ensureHostLibLink } from "./lib/hostLibLink.js";
+
 import { WidgetLayer } from "./lib/shell/widgetLayer.js";
 
 import { StorageService } from "./lib/storageService.js";
@@ -136,6 +138,7 @@ export default class WidgetCenterExtension extends Extension {
         const bundledWidgetsPath = GLib.build_filenamev([ this.path, "widgets" ]);
         const userWidgetsPath = GLib.build_filenamev([ GLib.get_user_data_dir(), "gnome-widget-center", "widgets" ]);
         this._userWidgetsPath = userWidgetsPath;
+        this._ensureHostLibLink();
         const loader = new WidgetRuntimeLoader([ bundledWidgetsPath, userWidgetsPath ], this._storage, this._logger, this._settings?.isReady ? this._settings.getGlobalValue("widget-spacing") : 0, this._settings, this._themeService, () => this._loadNewlyDiscoveredWidgets().catch(e => this._logger?.error("rescan-triggered _loadNewlyDiscoveredWidgets failed", e)));
         this._loader = loader;
         let cancelled = false;
@@ -163,7 +166,8 @@ export default class WidgetCenterExtension extends Extension {
                     settings: this._settings,
                     logger: this._logger,
                     unloadAllWidgets: () => this._unloadAllWidgets(),
-                    placeEntry: entry => this._placeEntry(entry)
+                    placeEntry: entry => this._placeEntry(entry),
+                    launchPrefs: args => Gio.Subprocess.new([ "gjs", "-m", GLib.build_filenamev([ this.path, "widget-center-prefs-app.js" ]), ...args ], Gio.SubprocessFlags.NONE)
                 });
                 this._themePackSwitcher.enable();
             }
@@ -299,6 +303,12 @@ export default class WidgetCenterExtension extends Extension {
         } catch (e) {
             this._logger?.error(`Failed to apply blur for "${entry.id}"`, e);
         }
+    }
+    // Widgets import the host kit as "../../lib/<file>.js". Next to the bundled widgets that is <extension>/lib, but a widget
+    // installed into ~/.local/share/gnome-widget-center/widgets/<id>/ resolves it to ~/.local/share/gnome-widget-center/lib,
+    // which did not exist ("Error opening file ... lib/systemMetricsApi.js"). Point that path at the extension's own lib.
+    _ensureHostLibLink() {
+        ensureHostLibLink(GLib.build_filenamev([ this.path, "lib" ]), this._logger);
     }
     _placeEntry(entry) {
         const fallback = entry.metadata["default-position"] ?? {

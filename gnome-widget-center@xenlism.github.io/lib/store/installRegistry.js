@@ -5,8 +5,15 @@
 import GLib from "gi://GLib";
 
 import { readTextFileAsync, writeTextFileAsync } from "../fsUtils.js";
+import { canonicalRepoUrl } from "./repoConfig.js";
 
 const path = () => GLib.build_filenamev([ GLib.get_user_config_dir(), "gnome-widget-center", "store-installed.json" ]);
+
+const onDisk = (kind, id) => kind === "widgets"
+    ? GLib.file_test(GLib.build_filenamev([ GLib.get_user_data_dir(), "gnome-widget-center", "widgets", id ]), GLib.FileTest.EXISTS)
+    : GLib.file_test(GLib.build_filenamev([ GLib.get_user_config_dir(), "gnome-widget-center", "themepacks", `${id}.gwct` ]), GLib.FileTest.EXISTS);
+
+const safeCanonical = u => { try { return canonicalRepoUrl(u); } catch (_e) { return u; } };   // old official address -> current one
 
 export class InstallRegistry {
     static async load() {
@@ -15,7 +22,24 @@ export class InstallRegistry {
             const d = JSON.parse(await readTextFileAsync(path()) ?? "{}");
             r.data = { version: 1, widgets: d.widgets ?? {}, themepacks: d.themepacks ?? {} };
         } catch (_e) { r.data = { version: 1, widgets: {}, themepacks: {} }; }
+        await r._pruneMissing();
         return r;
+    }
+    /**
+     * A widget / pack that was deleted outside the store (Uninstall button, rm, the shell) must not stay "Installed":
+     * drop the records whose files are gone, so the store offers Install again. Records of items that were never
+     * written to the usual folders are left alone only if they still exist there - there is no other place to look.
+     */
+    async _pruneMissing() {
+        let changed = false;
+        for (const kind of [ "widgets", "themepacks" ]) {
+            for (const id of Object.keys(this.data[kind])) {
+                if (onDisk(kind, id)) continue;
+                delete this.data[kind][id];
+                changed = true;
+            }
+        }
+        if (changed) { try { await this._save(); } catch (_e) { /* the in-memory registry is already correct */ } }
     }
     get(kind, id) { return this.data[kind][id] ?? null; }
     map(kind) { return this.data[kind]; }
@@ -51,7 +75,7 @@ export class InstallRegistry {
     /** { mode: "link", repoUrl } | { mode: "file" } */
     shareMode(kind, id) {
         const r = this.get(kind, id);
-        return r?.src === "store" && r.repo ? { mode: "link", repoUrl: r.repo } : { mode: "file" };
+        return r?.src === "store" && r.repo ? { mode: "link", repoUrl: safeCanonical(r.repo) } : { mode: "file" };
     }
     _save() {
         GLib.mkdir_with_parents(GLib.path_get_dirname(path()), 0o755);

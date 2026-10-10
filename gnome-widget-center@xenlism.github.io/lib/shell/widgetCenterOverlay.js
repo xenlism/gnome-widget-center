@@ -87,6 +87,17 @@ export class WidgetCenterOverlay {
         this._prefsWatchWindow = null;
         this._i18n = {};
         this._languageChangedId = 0;
+        this._installStampId = 0;
+    }
+    // The prefs app installed a widget / theme pack: forget what was cached, rediscover, and redraw the open tab.
+    _onExternalInstall() {
+        this._storeCache = {};
+        this._widgetDiscoveryCache = undefined;
+        this._themePackDiscoveryCache = undefined;
+        this._themePackRegistry = null;
+        this._discoverWidgets();                               // each starts a refresh that redraws the tab when the list changed
+        this._discoverThemePacks();
+        if (this._overlay && this._contentBin) this._renderTab(this._activeTab);
     }
     enable() {
         try {
@@ -105,6 +116,7 @@ export class WidgetCenterOverlay {
         // language was active at enable()-time, only picking up the change
         // after a full disable()/enable() cycle. Re-run it live instead.
         this._languageChangedId = this._gsettings.connect("changed::language", () => this._loadI18n());
+        this._installStampId = this._gsettings.connect("changed::install-stamp", () => this._onExternalInstall());
     }
     _loadI18n() {
         let languageOverride;
@@ -139,6 +151,10 @@ export class WidgetCenterOverlay {
         this._clearPrefsWatch();
         this._removeKeybinding();
         this._unexportDBus();
+        if (this._gsettings && this._installStampId) {
+            this._gsettings.disconnect(this._installStampId);
+            this._installStampId = 0;
+        }
         if (this._gsettings && this._languageChangedId) {
             this._gsettings.disconnect(this._languageChangedId);
         }
@@ -400,6 +416,7 @@ export class WidgetCenterOverlay {
             x_expand: true
         }));
         controls.add_child(this._buildIconTextButton("emblem-system-symbolic", this._tr("overview.card.settings", "Settings"), () => this._openWidgetSettings(id)));
+        controls.add_child(this._buildIconTextButton("emblem-shared-symbolic", this._tr("overview.card.share", "Share"), () => this._shareWidget(id, path)));
         if (entry.source === "user") {
             controls.add_child(this._buildIconTextButton("user-trash-symbolic", this._tr("overview.card.remove", "Uninstall"), () => this._uninstallUserWidget(id)));
         }
@@ -486,6 +503,7 @@ export class WidgetCenterOverlay {
         this._renderTab(this._activeTab);
     }
     _uninstallUserWidget(id) {
+        this._storeCache = {};   // the Store tab must offer Install again
         if (this._services.onWidgetUninstall) {
             this._services.onWidgetUninstall(id);
         } else if (this._services.onWidgetRemove) {
@@ -785,7 +803,7 @@ export class WidgetCenterOverlay {
         controls.add_child(new St.Widget({
             x_expand: true
         }));
-        controls.add_child(this._buildIconTextButton("emblem-shared-symbolic", this._tr("overlay.theme.share", "Share"), () => this._exportThemePack(entry)));
+        controls.add_child(this._buildIconTextButton("emblem-shared-symbolic", this._tr("overlay.theme.share", "Share"), () => this._shareThemePack(entry)));
         if (entry.source === "user") {
             controls.add_child(this._buildIconTextButton("user-trash-symbolic", this._tr("themes.card.remove", "Uninstall"), () => this._removeThemePack(entry)));
         }
@@ -818,6 +836,12 @@ export class WidgetCenterOverlay {
         }
         this._renderTab("themes");
     }
+    _shareThemePack(entry) {
+        this._launchExternalPrefsWindow([ `--share-theme-id=${entry.id}` ]);
+    }
+    _shareWidget(id, widgetDir) {
+        this._launchExternalPrefsWindow([ `--share-widget-id=${id}`, `--share-widget-dir=${widgetDir ?? ""}` ]);
+    }
     _exportThemePack(entry) {
         this._launchExternalPrefsWindow([ `--export-theme-id=${entry.id}` ]);
     }
@@ -829,6 +853,7 @@ export class WidgetCenterOverlay {
         this._openExtensionPreferences();
     }
     _removeThemePack(entry) {
+        this._storeCache = {};   // the Store tab must offer Install again
         if (this._services.onThemePackRemove) {
             this._services.onThemePackRemove(entry);
             this._themePackRegistry = null;

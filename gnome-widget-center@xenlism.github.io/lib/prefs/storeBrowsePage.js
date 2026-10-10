@@ -28,7 +28,7 @@ function statusPage(icon, title, description) {
  * @param o.onOpenSettings  called by the "Store settings" button (jumps to Preferences > Store)
  * @returns Adw.PreferencesPage (not yet added to the window)
  */
-export function buildStoreBrowsePage(window, tr, { onOpenSettings = null } = {}) {
+export function buildStoreBrowsePage(window, tr, { onOpenSettings = null, onInstalled = null } = {}) {
     const page = new Adw.PreferencesPage({ title: tr("tab.store.label", "Store"), icon_name: "folder-download-symbolic" });
     const group = new Adw.PreferencesGroup;
     page.add(group);
@@ -111,7 +111,7 @@ export function buildStoreBrowsePage(window, tr, { onOpenSettings = null } = {})
             const link = `gwc://install?repo=${encodeURIComponent(repo.url)}&${k.param}=${encodeURIComponent(item.id)}`;
             btn.sensitive = false;
             try {
-                await mods.openUri.handleOpen(window, link, { registry, onInstalled: () => render() });
+                await mods.openUri.handleOpen(window, link, { registry, onInstalled: () => { render(); onInstalled?.(); } });
             } catch (e) {
                 logError(e, "[widget-center] prefs: store install failed");
                 window.add_toast(new Adw.Toast({ title: e.message }));

@@ -13,7 +13,7 @@ const ACTIVE_KEY = "active-theme-pack";
 // Replaces the whole desktop with a theme pack: unload every widget, write the
 // pack, load the pack's own widgets. Requests run one at a time, newest wins.
 export class ThemePackSwitcher {
-    constructor({extensionPath, loader, layer, storage, themeService, settings, logger, unloadAllWidgets, placeEntry}) {
+    constructor({extensionPath, loader, layer, storage, themeService, settings, logger, unloadAllWidgets, placeEntry, launchPrefs = null}) {
         this._extensionPath = extensionPath;
         this._loader = loader;
         this._layer = layer;
@@ -23,6 +23,8 @@ export class ThemePackSwitcher {
         this._logger = logger;
         this._unloadAllWidgets = unloadAllWidgets;
         this._placeEntry = placeEntry;
+        this._launchPrefs = launchPrefs;
+        this._askedMissing = new Set();
         this._requestHandlerId = null;
         this._queue = Promise.resolve();
         this._latestRequest = 0;
@@ -52,6 +54,7 @@ export class ThemePackSwitcher {
         this._settings = null;
         this._unloadAllWidgets = null;
         this._placeEntry = null;
+        this._launchPrefs = null;
     }
 
     _request(id) {
@@ -65,6 +68,9 @@ export class ThemePackSwitcher {
             } catch (e) {
                 this._logger.error(`theme pack "${id}" failed to apply`, e);
             } finally {
+                // GSettings change notifications arrive after the writes above; stay "busy" until they have been
+                // delivered, or the auto-enable policy re-disables the widgets the pack just switched on
+                await new Promise(resolve => GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => { resolve(); return GLib.SOURCE_REMOVE; }));
                 this._running--;
             }
         };
@@ -100,6 +106,7 @@ export class ThemePackSwitcher {
             const discovered = new Map((await this._loader.discover()).map(w => [w.id, w]));
             if (!this._loader)
                 return;
+            this._markKnown(discovered);
             report = this._writePack(pack, discovered);
             const started = await this._loader.loadAll(this._disabledIds());
             if (!this._loader)
@@ -115,6 +122,41 @@ export class ThemePackSwitcher {
         }
 
         Main.notify("GNOME Widget Center", this._summary(name, report));
+        this._offerMissingWidgets(id, name, report);
+    }
+
+    // Widgets the pack uses that are not installed: hand them to the prefs app, which looks them up in the user's enabled
+    // repositories and asks for consent once (installing code needs a dialog, so it cannot happen silently in the shell).
+    // Asked once per pack + set of missing ids per session, so a widget no store has cannot cause a loop.
+    _offerMissingWidgets(id, name, report) {
+        const ids = (report?.missingWidgets ?? []).map(w => w.id).filter(Boolean);
+        if (!ids.length || !this._launchPrefs) return;
+        const key = `${id}|${[...ids].sort().join(",")}`;
+        if (this._askedMissing.has(key)) return;
+        this._askedMissing.add(key);
+        try {
+            // --open takes every argument after it, so these flags only work because none of them is --open
+            this._launchPrefs([`--install-widgets=${ids.join(",")}`, `--apply-theme=${id}`, `--theme-name=${name}`]);
+        } catch (e) {
+            this._logger.error("could not open the prefs app to install missing widgets", e);
+        }
+    }
+
+    // Widgets the host has not "seen" yet (just installed from the store) would be switched off by applyAutoEnablePolicy
+    // the next time it runs, undoing the pack's own enabled list. Mark everything found right now as known first.
+    _markKnown(discovered) {
+        try {
+            const known = new Set(this._settings.getGlobalValue("known-widget-ids"));
+            let changed = false;
+            for (const widgetId of discovered.keys()) {
+                if (known.has(widgetId)) continue;
+                known.add(widgetId);
+                changed = true;
+            }
+            if (changed) this._settings.setGlobalValue("known-widget-ids", Array.from(known));
+        } catch (e) {
+            this._logger.error("theme pack: could not update known-widget-ids", e);
+        }
     }
 
     _writePack(pack, discovered) {

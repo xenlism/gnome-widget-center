@@ -203,6 +203,15 @@
       </description>
     </key>
 
+    <key name="install-stamp" type="s">
+      <default>''</default>
+      <summary>Written by the preferences app after it installed something</summary>
+      <description>
+        Any change tells the shell overlay to refresh its Widgets, Themes and
+        Store tabs (the preferences app is a separate process).
+      </description>
+    </key>
+
     <key name="theme-pack-apply-request" type="s">
       <default>''</default>
       <summary>Request to (re)load a theme pack</summary>

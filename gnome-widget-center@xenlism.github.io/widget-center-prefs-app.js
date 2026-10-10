@@ -17,7 +17,7 @@ import { WidgetSettings } from "./lib/widgetSettings.js";
 
 import { InstallRegistry } from "./lib/store/installRegistry.js";
 
-import { handleOpen } from "./lib/store/openUri.js";
+import { handleInstallMissing, handleOpen } from "./lib/store/openUri.js";
 
 const APPLICATION_ID = "io.github.xenlism.WidgetCenterPrefs";
 
@@ -59,7 +59,7 @@ let controller = null;
 
 let buildPromise = null;
 
-async function presentWindow(requestedWidgetId, focusTarget = null, exportThemeId = null, exportThemeNew = false, attachScreenshotPath = null) {
+async function presentWindow(requestedWidgetId, focusTarget = null, exportThemeId = null, exportThemeNew = false, attachScreenshotPath = null, share = null) {
     if (!controller) {
         window = new Adw.PreferencesWindow({
             application: app,
@@ -102,7 +102,7 @@ async function presentWindow(requestedWidgetId, focusTarget = null, exportThemeI
     if (!window) return;
     if (requestedWidgetId) controller.jumpToWidget(window, requestedWidgetId); else if (focusTarget === "backup") controller.showBackupPage(window); else if (focusTarget === "preferences") controller.showPreferencesPage(window); else if (focusTarget === "store") controller.showStorePage(window); else if (focusTarget === "store-settings") controller.showStoreSettings(window);
     window.present();
-    if (exportThemeId) await controller.openExportThemeDialogForPack(window, exportThemeId); else if (exportThemeNew) controller.openExportThemeDialog(window, attachScreenshotPath ? {
+    if (share?.themeId) await controller.shareThemePackById(window, share.themeId); else if (share?.widgetId) await controller.shareWidgetById(window, share.widgetId, share.widgetDir); else if (exportThemeId) await controller.openExportThemeDialogForPack(window, exportThemeId); else if (exportThemeNew) controller.openExportThemeDialog(window, attachScreenshotPath ? {
         screenshotPath: attachScreenshotPath
     } : {});
 }
@@ -118,18 +118,33 @@ app.connect("command-line", (application, commandLine) => {
     let exportThemeId = null;
     let exportThemeNew = false;
     let attachScreenshotPath = null;
+    const share = { themeId: null, widgetId: null, widgetDir: null };
     const opens = [];
+    let installWidgets = null, applyTheme = null, applyThemeName = null;
     let openMode = false;
     for (const arg of argv) {
         if (arg === "--open") { openMode = true; continue; }
         if (openMode) { opens.push(arg); continue; }
-        if (arg.startsWith("--widget-id=")) requestedWidgetId = arg.slice("--widget-id=".length); else if (arg.startsWith("--focus=")) focusTarget = arg.slice("--focus=".length); else if (arg.startsWith("--export-theme-id=")) exportThemeId = arg.slice("--export-theme-id=".length); else if (arg === "--export-theme-new") exportThemeNew = true; else if (arg.startsWith("--attach-screenshot=")) attachScreenshotPath = arg.slice("--attach-screenshot=".length);
+        if (arg.startsWith("--share-theme-id=")) { share.themeId = arg.slice("--share-theme-id=".length); continue; }
+        if (arg.startsWith("--share-widget-id=")) { share.widgetId = arg.slice("--share-widget-id=".length); continue; }
+        if (arg.startsWith("--share-widget-dir=")) { share.widgetDir = arg.slice("--share-widget-dir=".length) || null; continue; }
+        if (arg.startsWith("--widget-id=")) requestedWidgetId = arg.slice("--widget-id=".length); else if (arg.startsWith("--focus=")) focusTarget = arg.slice("--focus=".length); else if (arg.startsWith("--export-theme-id=")) exportThemeId = arg.slice("--export-theme-id=".length); else if (arg === "--export-theme-new") exportThemeNew = true; else if (arg.startsWith("--attach-screenshot=")) attachScreenshotPath = arg.slice("--attach-screenshot=".length); else if (arg.startsWith("--install-widgets=")) installWidgets = arg.slice("--install-widgets=".length).split(",").filter(Boolean); else if (arg.startsWith("--apply-theme=")) applyTheme = arg.slice("--apply-theme=".length); else if (arg.startsWith("--theme-name=")) applyThemeName = arg.slice("--theme-name=".length);
     }
-    presentWindow(requestedWidgetId, focusTarget, exportThemeId, exportThemeNew, attachScreenshotPath).then(async () => {
+    presentWindow(requestedWidgetId, focusTarget, exportThemeId, exportThemeNew, attachScreenshotPath, share).then(async () => {
         // gwc:// links and .gwcw/.gwct files handed over by the desktop entry (see data/*.desktop.in)
+        let installedAny = false;
+        const onInstalled = () => { installedAny = true; };
+        if (installWidgets?.length && window) {
+            // widgets a just-applied theme pack needs: ask once, install, then apply the pack again so they get their place and settings
+            const registry = await InstallRegistry.load();
+            const res = await handleInstallMissing(window, installWidgets, { registry, extensionPath: EXTENSION_PATH, packName: applyThemeName, onInstalled });
+            if (installedAny) await controller?.refreshAfterInstall(window);
+            if (applyTheme && installedAny) controller?.requestThemePackApply(applyTheme);
+        }
         if (!opens.length || !window) return;
         const registry = await InstallRegistry.load();
-        for (const uri of opens) await handleOpen(window, uri, { registry });
+        for (const uri of opens) await handleOpen(window, uri, { registry, onInstalled });
+        if (installedAny) await controller?.refreshAfterInstall(window);
     }).catch(e => logError(e, "[widget-center] widget-center-prefs-app: command-line handling failed"));
     return 0;
 });

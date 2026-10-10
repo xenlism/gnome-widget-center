@@ -8,6 +8,8 @@ import GLib from "gi://GLib";
 
 import { fileExists } from "../fsUtils.js";
 
+import { ensureHostLibLink } from "../hostLibLink.js";
+
 import { deferUntilMapped, applyCardOpacity } from "../widgetVisualKit.js";
 
 import { WidgetSettings } from "../widgetSettings.js";
@@ -107,6 +109,8 @@ export class WidgetRuntimeLoader extends WidgetLoader {
             this._recordError(widgetInfo, `entry file "${entry}" not found`);
             return null;
         }
+        // a store-installed widget resolves "../../lib/..." next to itself: make sure that link exists (self-healing)
+        ensureHostLibLink(GLib.path_get_dirname(GLib.path_get_dirname(GLib.filename_from_uri(import.meta.url)[0])), this._logger);
         try {
             const module = await (import(`file://${entryPath}`));
             if (typeof module.default !== "function") {

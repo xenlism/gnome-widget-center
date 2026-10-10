@@ -50,7 +50,9 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
     // The "Store" TAB: browse + install. Its settings live in Preferences > Store (_buildStoreCategory).
     _buildStorePage(window) {
         const page = buildStoreBrowsePage(window, (k, d) => this._tr(k, d), {
-            onOpenSettings: () => this.showStoreSettings(window)
+            onOpenSettings: () => this.showStoreSettings(window),
+            // the store page is rebuilt by the refresh, so leave the handler first
+            onInstalled: () => GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => { this.refreshAfterInstall(window); return GLib.SOURCE_REMOVE; })
         });
         window.add(page);
         this._storePage = page;
