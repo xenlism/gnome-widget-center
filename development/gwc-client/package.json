@@ -1,0 +1,7 @@
+{
+  "name": "gwc-client-tests",
+  "private": true,
+  "type": "module",
+  "description": "Only used to run the pure-module tests in Node. The extension itself is loaded by GJS and does not use npm.",
+  "scripts": { "test": "GWC_STORE_DIR=../gwc-store node --test tests/*.test.mjs" }
+}

@@ -1,0 +1,18 @@
+/* widgets/_template/stylesheet.css
+ *
+ * Optional (see docs/WIDGET_API.md §1). Namespace every class with your
+ * widget's own prefix so two widgets never collide - this template uses
+ * `template-widget-`. TODO: rename the prefix to match your widget's id.
+ *
+ * NOTE: as of this template, the host does not yet load a widget's
+ * stylesheet.css into the Shell's theme context automatically - see
+ * extension/widgets/clock/stylesheet.css for the same caveat. Until that
+ * lands, style_class names are still useful as documentation/hooks but
+ * actual appearance has to come from inline St properties in widget.js
+ * (style_class + explicit style="..." strings both work on St actors).
+ */
+
+.template-widget-label {
+    padding: 12px 16px;
+    color: #ffffff;
+}

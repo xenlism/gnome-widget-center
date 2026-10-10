@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=GWC Repo Maker
+Name[th]=ตัวสร้างคลัง GWC
+Comment=Create and publish a GNOME Widget Center store repository
+Comment[th]=สร้างและเผยแพร่คลังวิดเจ็ตสำหรับ GNOME Widget Center
+Exec=gwc-repo-maker
+Icon=folder-publicshare-symbolic
+Terminal=false
+Categories=Development;

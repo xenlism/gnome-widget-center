@@ -1,0 +1,32 @@
+name: PR check
+# Runs on every pull request. No secrets, no deploy, nothing is signed: it only proves the sources build and verify.
+on:
+  pull_request:
+permissions: { contents: read }
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262          # v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065      # v5
+        with: { python-version: "3.12" }
+      - run: pip install --require-hashes --no-deps -r tools/requirements.txt
+      - run: test ! -d tests || python -m unittest discover -s tests          # a freshly created repo has no tests/ of its own
+      - name: "Build with a throw-away key (validates sources - allowlist, ids, versions, covers, hashes)"
+        run: |
+          python - <<'PY' > /tmp/ci.env
+          import base64, json, sys
+          sys.path.insert(0, "tools")
+          import gwc_sign
+          from cryptography.hazmat.primitives import serialization
+          from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+          k = Ed25519PrivateKey.generate()
+          seed = base64.b64encode(k.private_bytes(serialization.Encoding.Raw, serialization.PrivateFormat.Raw, serialization.NoEncryption())).decode()
+          cfg = json.load(open("store.config.json"))
+          cfg["trust"] = {"signKid": "pr-check", "expiryDays": 1, "keys": [{"kid": "pr-check", "pub": gwc_sign.public_b64(k)}]}
+          json.dump(cfg, open("/tmp/pr-config.json", "w"))
+          print(seed)
+          PY
+          GWC_SIGNING_KEY="$(cat /tmp/ci.env)" python tools/build_store.py --config /tmp/pr-config.json --out /tmp/pr-dist --first-publish
+          python tools/verify_store.py /tmp/pr-dist --config /tmp/pr-config.json

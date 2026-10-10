@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Open in GNOME Widget Center</title>
+<style>
+:root{color-scheme:light dark;--bg:#fafafa;--fg:#222;--ac:#3584e4}
+@media (prefers-color-scheme:dark){:root{--bg:#242424;--fg:#eee}}
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif}
+main{max-width:30rem;padding:2rem;text-align:center}
+a.btn{display:inline-block;margin:1rem 0;padding:.6rem 1.2rem;border-radius:.6rem;background:var(--ac);color:#fff;text-decoration:none}
+code{word-break:break-all;font-size:.8em;opacity:.7}
+</style></head><body><main>
+<h1>🧩 GNOME Widget Center</h1>
+<p id="msg">Opening…</p>
+<a class="btn" id="go" href="#">Open in Widget Center</a>
+<p><small>Nothing happens? Install <b>GNOME Widget Center</b> (v2+) first, then click the button again.</small></p>
+<code id="url"></code>
+<script>
+(function(){
+  var q=new URLSearchParams(location.search), kind=q.get("w")?"w":q.get("t")?"t":null, id=q.get(kind||"");
+  var msg=document.getElementById("msg");
+  if(!kind||!/^[a-z0-9][a-z0-9._-]{1,80}$/.test(id||"")){msg.textContent="Invalid link.";document.getElementById("go").hidden=true;return}
+  // repo base = this page's URL up to and excluding "open/"
+  var base=location.origin+location.pathname.replace(/open\/?(index\.html)?$/,"");
+  var u="gwc://install?repo="+encodeURIComponent(base)+"&"+kind+"="+encodeURIComponent(id);
+  document.getElementById("go").href=u;
+  document.getElementById("url").textContent=u;
+  msg.textContent=(kind==="w"?"Widget: ":"Theme pack: ")+id;
+  setTimeout(function(){location.href=u},300);
+})();
+</script></main></body></html>

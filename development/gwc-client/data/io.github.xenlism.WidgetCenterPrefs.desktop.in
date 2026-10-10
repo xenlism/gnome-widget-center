@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=GNOME Widget Center
+Comment=Manage desktop widgets, theme packs and the widget store
+Exec=gjs -m @EXT_DIR@/widget-center-prefs-app.js --open %U
+Icon=@EXT_DIR@/assets/icon.svg
+Categories=GNOME;GTK;Settings;
+StartupNotify=true
+MimeType=application/x-gwcw;application/x-gwct;x-scheme-handler/gwc;

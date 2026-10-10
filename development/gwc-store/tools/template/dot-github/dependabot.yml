@@ -1,0 +1,8 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions        # keeps the SHA pins in workflows fresh, as reviewable PRs
+    directory: "/"
+    schedule: { interval: weekly }
+  - package-ecosystem: pip
+    directory: "/tools"
+    schedule: { interval: weekly }

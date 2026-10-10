@@ -1,0 +1,404 @@
+{
+  "format": "gwct",
+  "version": 1,
+  "exportedAt": "2026-09-24T18:08:23.000Z",
+  "appearance": {
+    "background": {
+      "transparent": true,
+      "color": "#1B1036",
+      "blur": 0
+    },
+    "cornerRadius": {
+      "value": 12
+    },
+    "dropShadow": {
+      "enabled": true,
+      "transparent": false,
+      "color": "#000000",
+      "opacity": 0.35,
+      "angle": 90,
+      "distance": 4,
+      "blurRadius": 12,
+      "spread": 0
+    },
+    "cardSettings": {
+      "card-background-color": "#241548F0",
+      "card-opacity": 100,
+      "card-corner-radius-enabled": true,
+      "card-corner-radius": 12,
+      "card-border-enabled": true,
+      "card-border-color": "#FF77E955",
+      "card-border-width": 1,
+      "card-shadow-enabled": true,
+      "card-shadow-color": "#000000",
+      "card-shadow-opacity": 35,
+      "card-shadow-blur": 18,
+      "card-shadow-angle": 90,
+      "card-shadow-distance": 6,
+      "card-blur-enabled": false,
+      "card-blur-radius": 24
+    },
+    "fontSettings": {
+      "text-1-font": "Sans Bold 22",
+      "text-2-font": "Sans 12"
+    }
+  },
+  "hostSettings": {
+    "prevent-widget-overlap": true,
+    "edge-margin": 0,
+    "widget-spacing": 16,
+    "language": "en",
+    "guide-color": "#F5A623E6",
+    "snap-enabled": true,
+    "snap-distance": 16,
+    "grid-snap-enabled": false,
+    "grid-size": 16,
+    "widget-center-overlay-keybinding": [
+      "<Super>F12"
+    ],
+    "auto-enable-new-widgets": true
+  },
+  "widgets": [
+    {
+      "id": "xenlism.github.io.circles-year",
+      "name": "Circles Year By Xenlism",
+      "position": {
+        "x": 48,
+        "y": 48,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "yearFont": "Sans Bold 26",
+        "yearColor": "#FDEBFF",
+        "showDayCount": true,
+        "dayFont": "Sans 11",
+        "dayColor": "#C9A9E8",
+        "circleBaseColor": "#FFFFFF20",
+        "ringColor": "#FF77E9",
+        "ringThickness": 10,
+        "refreshRateSeconds": 300,
+        "launchEnabled": false,
+        "launchAppPath": "",
+        "card-background-color": "#241548F0",
+        "card-shadow-enabled": true,
+        "card-shadow-opacity": 30,
+        "card-shadow-angle": 90,
+        "card-shadow-distance": 6,
+        "card-shadow-blur": 16,
+        "card-corner-radius": 12,
+        "card-corner-radius-enabled": true,
+        "card-blur-enabled": false,
+        "card-blur-radius": 24,
+        "card-shadow-color": "#000000",
+        "card-border-enabled": true,
+        "card-border-color": "#FF77E955",
+        "card-border-width": 1,
+        "card-opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.media-player-circle",
+      "name": "Media Player (Circle) By Xenlism",
+      "position": {
+        "x": 242,
+        "y": 48,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "ringColor": "#FF77E9",
+        "infoFont": "Sans Bold 11",
+        "infoColor": "#FDEBFF",
+        "buttonColor": "#FDEBFF",
+        "desktopFilePath": "",
+        "card-background-color": "#24154899",
+        "card-shadow-angle": 90,
+        "card-shadow-distance": 6,
+        "card-corner-radius": 12,
+        "card-corner-radius-enabled": true,
+        "card-blur-enabled": false,
+        "card-blur-radius": 24,
+        "card-shadow-enabled": true,
+        "card-shadow-color": "#000000",
+        "card-shadow-opacity": 35,
+        "card-shadow-blur": 18,
+        "card-border-enabled": true,
+        "card-border-color": "#FF77E955",
+        "card-border-width": 1,
+        "card-opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.circles-battery-half",
+      "name": "Battery (Half Ring) By Xenlism",
+      "position": {
+        "x": 436,
+        "y": 48,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "circleBaseColor": "#FFFFFF20",
+        "ringColorLow": "#FF77E9",
+        "ringColorMid": "#FFD36E",
+        "ringColorHigh": "#67E8D6",
+        "ringColorCharging": "#8C7BFF",
+        "ringThickness": 10,
+        "ringSide": "left",
+        "captionText": "BATTERY",
+        "captionFont": "Sans 10",
+        "captionColor": "#C9A9E8",
+        "percentFont": "Sans Bold 24",
+        "percentColor": "#FDEBFF",
+        "refreshRateSeconds": 5,
+        "card-background-color": "#24154899",
+        "card-shadow-angle": 90,
+        "card-shadow-distance": 6,
+        "card-corner-radius": 12,
+        "card-corner-radius-enabled": true,
+        "card-blur-enabled": false,
+        "card-blur-radius": 24,
+        "card-shadow-enabled": true,
+        "card-shadow-color": "#000000",
+        "card-shadow-opacity": 35,
+        "card-shadow-blur": 18,
+        "card-border-enabled": true,
+        "card-border-color": "#FF77E955",
+        "card-border-width": 1,
+        "card-opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.circles-cpu",
+      "name": "Circles CPU By Xenlism",
+      "position": {
+        "x": 48,
+        "y": 242,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "labelFont": "Sans 12",
+        "labelColor": "#C9A9E8",
+        "percentFont": "Sans Bold 22",
+        "percentColor": "#FDEBFF",
+        "circleBaseColor": "#FFFFFF20",
+        "ringColor": "#FF77E9",
+        "ringThickness": 10,
+        "refreshRateSeconds": 2,
+        "launchEnabled": false,
+        "launchAppPath": "",
+        "card-background-color": "#241548F0",
+        "card-shadow-angle": 90,
+        "card-shadow-distance": 6,
+        "card-corner-radius": 12,
+        "card-corner-radius-enabled": true,
+        "card-blur-enabled": false,
+        "card-blur-radius": 24,
+        "card-shadow-enabled": true,
+        "card-shadow-color": "#000000",
+        "card-shadow-opacity": 35,
+        "card-shadow-blur": 18,
+        "card-border-enabled": true,
+        "card-border-color": "#FF77E955",
+        "card-border-width": 1,
+        "card-opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.circles-mem",
+      "name": "Circles MEM By Xenlism",
+      "position": {
+        "x": 242,
+        "y": 242,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "labelFont": "Sans 12",
+        "labelColor": "#C9A9E8",
+        "percentFont": "Sans Bold 22",
+        "percentColor": "#FDEBFF",
+        "circleBaseColor": "#FFFFFF20",
+        "ringColor": "#67E8D6",
+        "ringThickness": 10,
+        "refreshRateSeconds": 2,
+        "launchEnabled": false,
+        "launchAppPath": "/usr/share/applications/org.gnome.SystemMonitor.desktop",
+        "card-background-color": "#241548F0",
+        "card-shadow-angle": 90,
+        "card-shadow-distance": 6,
+        "card-corner-radius": 12,
+        "card-corner-radius-enabled": true,
+        "card-blur-enabled": false,
+        "card-blur-radius": 24,
+        "card-shadow-enabled": true,
+        "card-shadow-color": "#000000",
+        "card-shadow-opacity": 35,
+        "card-shadow-blur": 18,
+        "card-border-enabled": true,
+        "card-border-color": "#FF77E955",
+        "card-border-width": 1,
+        "card-opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.circles-disk",
+      "name": "Circles Disk By Xenlism",
+      "position": {
+        "x": 436,
+        "y": 242,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "labelFont": "Sans 12",
+        "labelColor": "#C9A9E8",
+        "percentFont": "Sans Bold 22",
+        "percentColor": "#FDEBFF",
+        "circleBaseColor": "#FFFFFF20",
+        "ringColor": "#8C7BFF",
+        "ringThickness": 10,
+        "diskPath": "/",
+        "refreshRateSeconds": 2,
+        "launchEnabled": false,
+        "launchAppPath": "",
+        "card-background-color": "#241548F0",
+        "card-shadow-angle": 90,
+        "card-shadow-distance": 6,
+        "card-corner-radius": 12,
+        "card-corner-radius-enabled": true,
+        "card-blur-enabled": false,
+        "card-blur-radius": 24,
+        "card-shadow-enabled": true,
+        "card-shadow-color": "#000000",
+        "card-shadow-opacity": 35,
+        "card-shadow-blur": 18,
+        "card-border-enabled": true,
+        "card-border-color": "#FF77E955",
+        "card-border-width": 1,
+        "card-opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.weather-dark",
+      "name": "Weather (Dark) By Xenlism",
+      "position": {
+        "x": 48,
+        "y": 436,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "location": "8.61501,98.23994",
+        "iconColor": "#FF77E9",
+        "iconSize": 72,
+        "conditionFont": "Sans 18",
+        "conditionColor": "#C9A9E8",
+        "tempFont": "Sans Bold 40",
+        "tempColor": "#FDEBFF",
+        "tempUnit": "celsius",
+        "card-background-color": "#241548F0",
+        "card-corner-radius": 12,
+        "card-shadow-angle": 90,
+        "card-shadow-distance": 6,
+        "card-corner-radius-enabled": true,
+        "card-blur-enabled": false,
+        "card-blur-radius": 24,
+        "card-shadow-enabled": true,
+        "card-shadow-color": "#000000",
+        "card-shadow-opacity": 35,
+        "card-shadow-blur": 18,
+        "card-border-enabled": true,
+        "card-border-color": "#FF77E955",
+        "card-border-width": 1,
+        "card-opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    },
+    {
+      "id": "xenlism.github.io.todo-list-mini",
+      "name": "To-Do List (Mini)",
+      "position": {
+        "x": 434,
+        "y": 436,
+        "monitorIndex": 0
+      },
+      "settings": {
+        "_schemaVersion": 1,
+        "titleText": "To-Do",
+        "maxVisibleItems": 3,
+        "autoSortDone": true,
+        "titleFont": "Sans Bold 10",
+        "titleColor": "#FDEBFF",
+        "itemFont": "Sans 9",
+        "itemColor": "#FDEBFF",
+        "completedColor": "#C9A9E8",
+        "accentColor": "#FF77E9",
+        "card-background-color": "#241548F0",
+        "card-corner-radius": 12,
+        "card-shadow-angle": 90,
+        "card-shadow-distance": 6,
+        "card-corner-radius-enabled": true,
+        "card-blur-enabled": false,
+        "card-blur-radius": 24,
+        "card-shadow-enabled": true,
+        "card-shadow-color": "#000000",
+        "card-shadow-opacity": 35,
+        "card-shadow-blur": 18,
+        "card-border-enabled": true,
+        "card-border-color": "#FF77E955",
+        "card-border-width": 1,
+        "card-opacity": 100
+      },
+      "theme": {
+        "theme": null,
+        "config": {}
+      },
+      "dependencies": []
+    }
+  ],
+  "packMeta": {
+    "id": "vaporwave-grid",
+    "name": "Vaporwave Grid",
+    "description": "Pink-and-teal vaporwave gradients across a nostalgic 90s-internet aesthetic grid.",
+    "author": "Keal",
+    "email": "ixenatt@gmail.com",
+    "url": "https://github.com/xenlism"
+  }
+}

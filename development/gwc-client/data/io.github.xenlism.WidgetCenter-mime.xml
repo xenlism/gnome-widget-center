@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-gwcw">
+    <comment>GNOME Widget Center widget</comment>
+    <sub-class-of type="application/json"/>
+    <glob pattern="*.gwcw"/>
+  </mime-type>
+  <mime-type type="application/x-gwct">
+    <comment>GNOME Widget Center theme pack</comment>
+    <sub-class-of type="application/json"/>
+    <glob pattern="*.gwct"/>
+  </mime-type>
+</mime-info>

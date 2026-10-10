@@ -1,0 +1,22 @@
+{
+  "widgets": [
+    { "id": "clock",        "name": { "en": "Clock",        "th": "นาฬิกา" },    "icon": "preferences-system-time-symbolic" },
+    { "id": "weather",      "name": { "en": "Weather",      "th": "สภาพอากาศ" }, "icon": "weather-clear-symbolic" },
+    { "id": "system",       "name": { "en": "System",       "th": "ระบบ" },      "icon": "utilities-system-monitor-symbolic" },
+    { "id": "media",        "name": { "en": "Media",        "th": "มีเดีย" },    "icon": "multimedia-player-symbolic" },
+    { "id": "productivity", "name": { "en": "Productivity", "th": "งาน/โน้ต" },  "icon": "document-edit-symbolic" },
+    { "id": "launcher",     "name": { "en": "Launcher",     "th": "ทางลัด" },    "icon": "view-app-grid-symbolic" },
+    { "id": "calendar",     "name": { "en": "Calendar",     "th": "ปฏิทิน" },    "icon": "x-office-calendar-symbolic" },
+    { "id": "decoration",   "name": { "en": "Decoration",   "th": "ตกแต่ง" },    "icon": "applications-graphics-symbolic" },
+    { "id": "other",        "name": { "en": "Other",        "th": "อื่น ๆ" },    "icon": "view-more-symbolic" }
+  ],
+  "themepacks": [
+    { "id": "dark",    "name": { "en": "Dark",    "th": "มืด" } },
+    { "id": "light",   "name": { "en": "Light",   "th": "สว่าง" } },
+    { "id": "glass",   "name": { "en": "Glass",   "th": "กระจก" } },
+    { "id": "neon",    "name": { "en": "Neon",    "th": "นีออน" } },
+    { "id": "minimal", "name": { "en": "Minimal", "th": "มินิมอล" } },
+    { "id": "retro",   "name": { "en": "Retro",   "th": "เรโทร" } },
+    { "id": "other",   "name": { "en": "Other",   "th": "อื่น ๆ" } }
+  ]
+}

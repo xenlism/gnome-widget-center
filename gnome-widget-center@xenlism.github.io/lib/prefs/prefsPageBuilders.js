@@ -14,6 +14,7 @@ import { saveCurrentSettingsAsWidgetDefaults } from "../devConfigDefaults.js";
 
 import { ThemeService } from "../themeService.js";
 
+import { buildStorePage } from "./storePage.js";
 import { buildGwctDocumentAsync, writeGwctFile, readGwctFile, importGwctDocument, installGwctAsThemePack, applyColorSchemeToWidgets, applyCardSettingsToWidgets, applyFontSettingsToWidgets } from "../exportService.js";
 
 import { COLOR_SCHEME_ROLES, DEFAULT_COLOR_SCHEME, schemeKey } from "../colorScheme.js";
@@ -50,14 +51,7 @@ export const PrefsPageBuildersMixin = Base => class extends Base {
             icon_name: "system-search-symbolic"
         });
         window.add(page);
-        const group = new Adw.PreferencesGroup;
-        page.add(group);
-        group.add(new Adw.StatusPage({
-            icon_name: "folder-download-symbolic",
-            title: this._tr("store.title", "Coming soon"),
-            description: this._tr("store.description", "A widget store is planned but not built yet — for now, install third-party widgets manually into\n~/.local/share/gnome-widget-center/widgets/."),
-            vexpand: true
-        }));
+        buildStorePage(page, window, (k, d) => this._tr(k, d)).catch(e => logError(e, "[widget-center] prefs: store page failed"));
     }
     _buildPreferencesPage(window, settings, storage, discoveredWidgets, widgetPaths, options = {}) {
         const page = new Adw.PreferencesPage({

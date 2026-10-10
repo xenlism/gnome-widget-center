@@ -1,0 +1,19 @@
+{
+  "id": "xenlism",
+  "name": "Xenlism Official Store",
+  "baseUrl": "https://xenlism.github.io/gwc-store/",
+  "cover": {
+    "width": 460,
+    "height": 270,
+    "format": "jpeg",
+    "quality": 72
+  },
+  "tier": "official",
+  "mirrors": [],
+  "requireAuthorSig": false,
+  "trust": {
+    "signKid": "",
+    "expiryDays": 30,
+    "keys": []
+  }
+}

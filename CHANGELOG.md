@@ -1,3 +1,9 @@
+## gwc-store completed, gwc-repo-maker: Browse / Generate key
+
+- **gwc-store:** `tools/` brought up to date (`gwc_repo.py` gained `scan-source`, `list-keys`, `export-key`, `import-key`); added `README.md`, `LICENSE`, `.gitignore`; Python tests for the new commands (84 total). `gwc-repo-maker` now sits in `development/` next to it, so the backend-in-sync test runs instead of being skipped.
+- **gwc-repo-maker:** forms can carry **Browse…** and **Generate key / Suggest** buttons. New repository: folder picker in the form, unused signing key id suggested. Add author: browse a `.pub.json` or generate an author key. Sign as author: generate a key when none exists. Keys dialog: **Import…** an existing private key file (`import-key`, never overwrites, mode 0600).
+- **gwc-repo-maker fix:** rows no longer parse their text as Pango markup (the publish steps showed GTK warnings and lost text such as `<key>`).
+
 ## 2.0.0
 
 ### Block types: 1x1 to 6x6
@@ -50,6 +56,14 @@ confirmed end-to-end on real GNOME Shell hardware** — see `development/PROJECT
 for the exact status per item before relying on this changelog as a "works on my
 machine" guarantee.
 
+
+## Store page: channel / tier / rollback
+
+- **Added:** `lib/store/` (full P1-P3 client: storeClient, integrity, signatures, gwcFormat, rollback, installRegistry, ...), `lib/vendor/noble-ed25519.js`, `lib/prefs/storePage.js`. The Store tab shows the release channel, each repository with a tier badge (`effectiveTier()` on the verified manifest), and rollback buttons for items with a kept previous version.
+- **Added:** `development/gwc-client/` (Node tests, run against the extension's own `lib/store`), `development/gwc-store/` (the GTK4 Repo Maker app now lives in its own project, `gwc-repo-maker`), `development/P2-P3-CHANGES.md`.
+- **Fixed:** `repoConfig.js` used `structuredClone`, which older GJS (GNOME <= 46) does not have, so the Store page failed to load its config there. A test now keeps `lib/store` off such APIs.
+- **Tests:** Node 112, Python 82, GJS rollback test all pass; the Store page was also run under real GTK4/libadwaita (channel saved, rollback rows, unverifiable repo message). Not run inside GNOME Shell.
+- **Open:** `OFFICIAL_KEYS` in `repoConfig.js` is still empty, so the official store is refused until a real signing key is added. Page strings have English fallbacks only.
 
 ## Widget API 2.0
 
