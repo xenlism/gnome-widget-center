@@ -7,15 +7,12 @@ import Adw from "gi://Adw";
 import GLib from "gi://GLib";
 
 import Pango from "gi://Pango";
-
-function _esc(text) {
-    return GLib.markup_escape_text(String(text ?? ""), -1);
-}
+import { escapeMarkup } from "./prefsUtils.js";
 
 function _makeActionRow(field) {
     const row = new Adw.ActionRow({
-        title: _esc(field.label),
-        subtitle: _esc(field.hint || "")
+        title: escapeMarkup(field.label),
+        subtitle: escapeMarkup(field.hint || "")
     });
     return row;
 }
@@ -24,7 +21,7 @@ function _buildFontRow(field, store) {
     const row = _makeActionRow(field);
     const button = new Gtk.FontDialogButton({
         dialog: new Gtk.FontDialog({
-            title: `Choose font — ${_esc(field.label)}`
+            title: `Choose font — ${escapeMarkup(field.label)}`
         }),
         valign: Gtk.Align.CENTER
     });
@@ -42,7 +39,7 @@ function _buildFontRow(field, store) {
 function _buildColorRow(field, store) {
     const row = _makeActionRow(field);
     const dialog = new Gtk.ColorDialog({
-        title: `Choose color — ${_esc(field.label)}`,
+        title: `Choose color — ${escapeMarkup(field.label)}`,
         with_alpha: !!field.useAlpha
     });
     const button = new Gtk.ColorDialogButton({
@@ -110,8 +107,8 @@ function _formatIsoDate(iso) {
 
 function _buildNumberRow(field, store) {
     const row = new Adw.SpinRow({
-        title: _esc(field.label),
-        subtitle: _esc(field.hint || ""),
+        title: escapeMarkup(field.label),
+        subtitle: escapeMarkup(field.hint || ""),
         digits: field.digits ?? 0,
         adjustment: new Gtk.Adjustment({
             lower: field.min,
@@ -152,7 +149,7 @@ function _buildRangeRow(field, store) {
 
 function _buildTextRow(field, store) {
     const row = new Adw.EntryRow({
-        title: _esc(field.label),
+        title: escapeMarkup(field.label),
         text: store.get(field.key) ?? field.default ?? ""
     });
     if (field.hint) {
@@ -184,7 +181,7 @@ function _buildActionRow(field, store) {
 function _buildIconRow(field, store) {
     const initial = store.get(field.key) || field.default;
     const row = new Adw.EntryRow({
-        title: _esc(field.label),
+        title: escapeMarkup(field.label),
         text: initial
     });
     if (field.hint) {
@@ -207,12 +204,12 @@ function _buildIconRow(field, store) {
 function _buildMultiOptionRow(field, store) {
     const selected = new Set(store.get(field.key) || field.default || []);
     const expander = new Adw.ExpanderRow({
-        title: _esc(field.label),
-        subtitle: _esc(field.hint || _summarizeSelection(selected, field.choices))
+        title: escapeMarkup(field.label),
+        subtitle: escapeMarkup(field.hint || _summarizeSelection(selected, field.choices))
     });
     for (const choiceKey of Object.keys(field.choices)) {
         const checkRow = new Adw.ActionRow({
-            title: _esc(field.choices[choiceKey])
+            title: escapeMarkup(field.choices[choiceKey])
         });
         const check = new Gtk.CheckButton({
             active: selected.has(choiceKey),
@@ -243,8 +240,8 @@ function _summarizeSelection(selectedSet, choices) {
 
 function _buildBooleanRow(field, store) {
     const row = new Adw.SwitchRow({
-        title: _esc(field.label),
-        subtitle: _esc(field.hint || ""),
+        title: escapeMarkup(field.label),
+        subtitle: escapeMarkup(field.hint || ""),
         active: !!store.get(field.key)
     });
     row.connect("notify::active", () => {
@@ -257,8 +254,8 @@ function _buildOptionRow(field, store) {
     const keys = Object.keys(field.choices);
     const labels = keys.map(k => field.choices[k]);
     const row = new Adw.ComboRow({
-        title: _esc(field.label),
-        subtitle: _esc(field.hint || ""),
+        title: escapeMarkup(field.label),
+        subtitle: escapeMarkup(field.hint || ""),
         model: Gtk.StringList.new(labels)
     });
     const currentValue = String(store.get(field.key));
@@ -300,7 +297,7 @@ export function buildGroup(schema, store, opts = {}) {
         const groupTitle = field.group || fallbackTitle;
         if (!groupsByTitle.has(groupTitle)) {
             const adwGroup = new Adw.PreferencesGroup({
-                title: _esc(groupTitle),
+                title: escapeMarkup(groupTitle),
                 description: field.group ? null : opts.description || null
             });
             groupsByTitle.set(groupTitle, adwGroup);

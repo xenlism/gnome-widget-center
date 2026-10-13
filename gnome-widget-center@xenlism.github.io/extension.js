@@ -167,7 +167,11 @@ export default class WidgetCenterExtension extends Extension {
                     logger: this._logger,
                     unloadAllWidgets: () => this._unloadAllWidgets(),
                     placeEntry: entry => this._placeEntry(entry),
-                    launchPrefs: args => Gio.Subprocess.new([ "gjs", "-m", GLib.build_filenamev([ this.path, "widget-center-prefs-app.js" ]), ...args ], Gio.SubprocessFlags.NONE)
+                    // via the overlay when it exists: it closes itself (it would cover the consent dialog) and raises the prefs window
+                    launchPrefs: args => {
+                        if (this._widgetCenterOverlay) this._widgetCenterOverlay.launchPrefs(args);
+                        else Gio.Subprocess.new([ "gjs", "-m", GLib.build_filenamev([ this.path, "widget-center-prefs-app.js" ]), ...args ], Gio.SubprocessFlags.NONE);
+                    }
                 });
                 this._themePackSwitcher.enable();
             }

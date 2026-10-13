@@ -5,9 +5,12 @@
 //      This is the breaking change: v1 widgets read the old key names
 //      (backgroundColor, cornerRadius, ...) that saved settings no longer contain.
 //
+// 3.0  api.host.kit (lib/shell/hostKit.js): the host's helper modules handed to the widget instead of
+//      "../../lib/<file>.js" imports. Widgets of API 2 keep importing by path and still load.
+//
 // Plain module (no gi:// imports): shared by the Shell and GTK4 prefs processes.
 
-export const HOST_API_VERSION = 2;
+export const HOST_API_VERSION = 3;
 
 // Oldest widget API this host still loads. Lower this (e.g. to 1) to let old
 // widgets keep loading; they would then need the card-* key rename themselves.

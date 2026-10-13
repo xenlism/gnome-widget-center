@@ -1,5 +1,5 @@
 // storePage.js - STORE SETTINGS, shown in the prefs window under Preferences > Store: release channel, update-check
-// interval, repositories with their tier badge, rollback. (Browsing / installing is the "Store" tab: storeBrowsePage.js.)
+// interval, repositories with their tier badge, rollback. (Browsing / installing happens in the Widgets and Themes tabs: prefsStoreCards.js.)
 // Wording/rules: lib/store/prefsModel.js (pure, unit-tested). The page itself is only widget plumbing.
 // Store modules are imported lazily so a failure there leaves a status page instead of breaking prefs.
 import Adw from "gi://Adw";

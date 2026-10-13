@@ -4,7 +4,6 @@ import Adw from "gi://Adw";
 
 import Gtk from "gi://Gtk";
 
-import Gdk from "gi://Gdk";
 
 import { fileExists } from "../fsUtils.js";
 
@@ -25,8 +24,6 @@ import { createGwcContext, validateSchema } from "../settingsApi.js";
 import { SettingsStore } from "../settingsStore.js";
 
 import { buildGroup as buildSettingsJsGroup } from "./settingsRenderer.js";
-
-import { rgbaToHex } from "../colorUtils.js";
 
 import { loadTranslations } from "../../i18n/index.js";
 

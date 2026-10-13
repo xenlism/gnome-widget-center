@@ -26,6 +26,8 @@ const KEYBINDING_KEY = "widget-center-overlay-keybinding";
 
 const DISABLED_KEY = "disabled-widgets";
 
+// sort key that puts store-only cards after the installed ones when sorting by size
+const STORE_LAST = 1e9;
 const ACTIVE_THEME_PACK_KEY = "active-theme-pack";
 
 const THEME_PACK_REQUEST_KEY = "theme-pack-apply-request";
@@ -69,9 +71,8 @@ export class WidgetCenterOverlay {
         this._contentBin = null;
         this._tabButtons = {};
         this._activeSearchEntry = null;
-        this._activeTab = "widgets";
-        this._storeKind = "widgets";
-        this._storeSearch = "";
+        this._activeTab = "themes";
+        this._sourceFilter = { widgets: "all", themepacks: "all" };    // All / Installed / Store, per tab
         this._storeCache = {};
         this._storeLoading = new Set();
         this._keyPressId = 0;
@@ -289,7 +290,7 @@ export class WidgetCenterOverlay {
         const tabsBox = new St.BoxLayout({
             style_class: "wc-overlay-tabs"
         });
-        for (const [id, key, fallback] of [ [ "widgets", "tab.widgets.label", "Widgets" ], [ "themes", "tab.themes.label", "Themes" ], [ "store", "tab.store.label", "Store" ] ]) {
+        for (const [id, key, fallback] of [ [ "themes", "tab.themes.label", "Themes" ], [ "widgets", "tab.widgets.label", "Widgets" ] ]) {
             const button = new St.Button({
                 style_class: "wc-overlay-tab",
                 label: this._tr(key, fallback),
@@ -329,10 +330,6 @@ export class WidgetCenterOverlay {
             content = this._buildThemesTab();
             break;
 
-          case "store":
-            content = this._buildStoreTab();
-            break;
-
           case "widgets":
           default:
             content = this._buildOverviewTab();
@@ -355,6 +352,8 @@ export class WidgetCenterOverlay {
             this._widgetSort = mode;
             this._refreshOverviewGrid(gridBin);
         });
+        this._addSourceFilter(bar, "widgets", () => this._refreshOverviewGrid(gridBin));
+        this._addStoreButtons(bar);
         bar.add_child(this._buildSearchEntry(this._tr("overview.search.placeholder", "Search widgets…"), this._widgetSearch, text => {
             this._widgetSearch = text;
             this._refreshOverviewGrid(gridBin);
@@ -372,13 +371,21 @@ export class WidgetCenterOverlay {
     }
     _refreshOverviewGrid(gridBin) {
         const disabled = new Set(this._getDisabledWidgets());
-        let entries = this._sortEntries(this._widgetDiscoveryCache ?? this._discoverWidgets(), this._widgetSort, {
-            name: e => e.metadata?.name ?? e.id,
-            size: e => this._blockSizeCells(e.metadata?.["block-type"]),
-            mtime: e => e.mtimeUnix ?? 0
+        const filter = this._sourceFilter.widgets;
+        const local = this._widgetDiscoveryCache ?? this._discoverWidgets();
+        const store = this._storeOnlyEntries("widgets", new Set(local.map(e => e.id)));
+        let entries = [ ...(filter === "store" ? [] : local), ...(filter === "installed" ? [] : store) ];
+        entries = this._sortEntries(entries, this._widgetSort, {
+            name: e => e._store ? (e.item.n ?? e.item.id) : (e.metadata?.name ?? e.id),
+            size: e => e._store ? STORE_LAST : this._blockSizeCells(e.metadata?.["block-type"]),
+            mtime: e => e._store ? 0 : (e.mtimeUnix ?? 0)
         });
-        entries = this._filterEntries(entries, this._widgetSearch, e => [ e.metadata?.name, e.id, e.metadata?.description ]);
-        gridBin.set_child(this._buildGrid(entries, entry => this._buildWidgetCard(entry, disabled)));
+        entries = this._filterEntries(entries, this._widgetSearch, e => e._store
+            ? [ e.item.n, e.item.id, e.item.a, e.item.d, e.item.c ]
+            : [ e.metadata?.name, e.id, e.metadata?.description, e.metadata?.author ]);
+        const data = this._storeCache.widgets;
+        const grid = this._buildGrid(entries, entry => entry._store ? this._buildStoreCard(entry, data, "widgets") : this._buildWidgetCard(entry, disabled));
+        gridBin.set_child(this._withStoreErrors("widgets", grid));
     }
     _blockSizeCells(blockType) {
         const match = /^(\d+)x(\d+)$/.exec(blockType ?? "");
@@ -420,6 +427,7 @@ export class WidgetCenterOverlay {
         if (entry.source === "user") {
             controls.add_child(this._buildIconTextButton("user-trash-symbolic", this._tr("overview.card.remove", "Uninstall"), () => this._uninstallUserWidget(id)));
         }
+        this._addUpdateButton("widgets", id, controls);
         card.add_child(controls);
         return card;
     }
@@ -503,7 +511,7 @@ export class WidgetCenterOverlay {
         this._renderTab(this._activeTab);
     }
     _uninstallUserWidget(id) {
-        this._storeCache = {};   // the Store tab must offer Install again
+        this._storeCache = {};   // the widget must show up as an Install card again
         if (this._services.onWidgetUninstall) {
             this._services.onWidgetUninstall(id);
         } else if (this._services.onWidgetRemove) {
@@ -513,59 +521,65 @@ export class WidgetCenterOverlay {
         }
         this._renderTab(this._activeTab);
     }
-    _buildStoreTab() {
-        // Browse-only: installing needs the GTK consent dialog (signature / permission / trust info), so "Install"
-        // hands the gwc:// link to the external prefs window, exactly like the other heavy actions of this overlay.
-        const outer = new St.BoxLayout({
-            orientation: Clutter.Orientation.VERTICAL,
-            x_expand: true,
-            y_expand: true
-        });
-        const gridBin = new St.Bin({
-            x_expand: true,
-            y_expand: true
-        });
-        const bar = new St.BoxLayout({
-            style_class: "wc-overlay-sortbar",
-            width: this._gridContentWidth(),
-            x_expand: false,
-            x_align: Clutter.ActorAlign.CENTER
-        });
-        for (const [ id, key, fallback ] of [ [ "widgets", "store.kind.widgets", "Widgets" ], [ "themepacks", "store.kind.themepacks", "Theme packs" ] ]) {
-            const button = new St.Button({
-                style_class: id === this._storeKind ? "wc-overlay-tab wc-overlay-tab-active" : "wc-overlay-tab",
-                label: this._tr(key, fallback),
-                can_focus: true,
-                reactive: true
-            });
+    // --- store items live inside the Widgets / Themes tabs (there is no Store tab) -----------------
+    // Browse-only: installing needs the GTK consent dialog (signature / permission / trust info), so "Install" and "Update"
+    // hand the gwc:// link to the external prefs window, exactly like the other heavy actions of this overlay.
+    /** All / Installed / Store toggle appended to a tab's bar. */
+    _addSourceFilter(bar, kind, onChange) {
+        const buttons = {};
+        const cls = active => active ? "wc-overlay-tab wc-overlay-tab-active" : "wc-overlay-tab";
+        for (const [ id, key, fallback ] of [ [ "all", "store.filter.all", "All" ], [ "installed", "store.filter.installed", "Installed" ], [ "store", "store.filter.store", "Store" ] ]) {
+            const button = new St.Button({ style_class: cls(id === this._sourceFilter[kind]), label: this._tr(key, fallback), can_focus: true, reactive: true });
             button.connect("clicked", () => {
-                if (this._storeKind === id) return;
-                this._storeKind = id;
-                this._renderTab("store");
+                if (this._sourceFilter[kind] === id) return;
+                this._sourceFilter[kind] = id;
+                for (const [ other, b ] of Object.entries(buttons)) b.set_style_class_name(cls(other === id));
+                onChange();
             });
+            buttons[id] = button;
             bar.add_child(button);
         }
-        bar.add_child(new St.Widget({
-            x_expand: true
-        }));
-        bar.add_child(this._buildIconTextButton("emblem-system-symbolic", this._tr("store.settings.open", "Store settings"), () => this._launchExternalPrefsWindow([ "--focus=store-settings" ])));
-        bar.add_child(this._buildIconTextButton("view-refresh-symbolic", this._tr("store.refresh", "Refresh"), () => {
+    }
+    _addStoreButtons(bar) {
+        bar.add_child(this._buildIconButton("view-refresh-symbolic", () => {
             this._storeCache = {};
-            this._renderTab("store");
+            this._renderTab(this._activeTab);
         }));
-        bar.add_child(this._buildSearchEntry(this._tr("store.search.placeholder", "Search the store…"), this._storeSearch, text => {
-            this._storeSearch = text;
-            this._refreshStoreGrid(gridBin);
-        }));
-        outer.add_child(bar);
-        outer.add_child(gridBin);
-        if (this._storeCache[this._storeKind]) {
-            this._refreshStoreGrid(gridBin);
-        } else {
-            gridBin.set_child(this._buildLoadingSpinner(this._tr("overlay.loading.store", "Loading the store…")));
-            this._loadStoreItems(this._storeKind);
+        bar.add_child(this._buildIconButton("emblem-system-symbolic", () => this._launchExternalPrefsWindow([ "--focus=store-settings" ])));
+    }
+    /** Store items of `kind` that are not installed yet, tagged _store. Starts the (cached) store load the first time. */
+    _storeOnlyEntries(kind, localIds) {
+        const data = this._storeCache[kind];
+        if (!data) {
+            this._loadStoreItems(kind);
+            return [];
         }
-        return outer;
+        return data.entries.filter(e => !localIds.has(e.item.id)).map(e => ({ ...e, _store: true }));
+    }
+    /** An installed card whose store version is newer gets an Update button in front of its controls. */
+    _addUpdateButton(kind, id, controls) {
+        const data = this._storeCache[kind];
+        const found = data?.entries.find(e => e.item.id === id);
+        if (!found) return;
+        const live = data.registry?.get(kind, id)?.v ?? null;
+        if (!live || data.cmpVersion(found.item.v, live) !== 1) return;
+        const button = this._buildIconTextButton("software-update-available-symbolic", this._tr("store.update", "Update"), () => this._installFromStore(kind, found.repo, found.item));
+        button.set_accessible_name(`${this._tr("store.update", "Update")} v${live} → v${found.item.v}`);
+        controls.insert_child_at_index(button, 0);
+    }
+    /** Repos that could not be verified are listed above the grid. */
+    _withStoreErrors(kind, grid) {
+        const errors = this._storeCache[kind]?.errors ?? [];
+        if (!errors.length) return grid;
+        const wrap = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, x_expand: true, y_expand: true });
+        for (const { repo, error } of errors) {
+            wrap.add_child(new St.Label({
+                text: `${repo.name ?? repo.id}: ${this._tr("store.repo.unverified", "Could not verify this repository")} (${error.message})`,
+                style_class: "wc-overlay-empty"
+            }));
+        }
+        wrap.add_child(grid);
+        return wrap;
     }
     async _loadStoreItems(kind) {
         if (this._storeLoading.has(kind)) return;
@@ -594,35 +608,8 @@ export class WidgetCenterOverlay {
             this._storeCache[kind] = { entries: [], errors: [ { repo: { id: "store", name: this._tr("tab.store.label", "Store") }, error: e } ], registry: null, cmpVersion: () => null };
         } finally {
             this._storeLoading.delete(kind);
-            if (this._overlay && this._activeTab === "store" && this._storeKind === kind) this._renderTab("store");
+            if (this._overlay && this._activeTab === (kind === "themepacks" ? "themes" : "widgets")) this._renderTab(this._activeTab);
         }
-    }
-    _refreshStoreGrid(gridBin) {
-        const kind = this._storeKind;
-        const data = this._storeCache[kind];
-        if (!data) return;
-        let entries = this._sortEntries(data.entries, "name", {
-            name: e => e.item.n ?? e.item.id
-        });
-        entries = this._filterEntries(entries, this._storeSearch, e => [ e.item.n, e.item.id, e.item.a, e.item.d, e.item.c ]);
-        const grid = this._buildGrid(entries, entry => this._buildStoreCard(entry, data, kind));
-        if (!data.errors.length) {
-            gridBin.set_child(grid);
-            return;
-        }
-        const wrap = new St.BoxLayout({
-            orientation: Clutter.Orientation.VERTICAL,
-            x_expand: true,
-            y_expand: true
-        });
-        for (const { repo, error } of data.errors) {
-            wrap.add_child(new St.Label({
-                text: `${repo.name ?? repo.id}: ${this._tr("store.repo.unverified", "Could not verify this repository")} (${error.message})`,
-                style_class: "wc-overlay-empty"
-            }));
-        }
-        wrap.add_child(grid);
-        gridBin.set_child(wrap);
     }
     _buildStoreCard({ repo, client, item }, data, kind) {
         const card = new St.BoxLayout({
@@ -714,6 +701,8 @@ export class WidgetCenterOverlay {
             this._refreshThemesGrid(gridBin);
         });
         bar.add_child(this._buildIconTextButton("emblem-shared-symbolic", this._tr("overlay.theme.share_desktop", "Share desktop"), () => this._launchExternalPrefsWindow([ "--export-theme-new" ])));
+        this._addSourceFilter(bar, "themepacks", () => this._refreshThemesGrid(gridBin));
+        this._addStoreButtons(bar);
         bar.add_child(this._buildSearchEntry(this._tr("themes.search.placeholder", "Search themes…"), this._themeSearch, text => {
             this._themeSearch = text;
             this._refreshThemesGrid(gridBin);
@@ -730,13 +719,21 @@ export class WidgetCenterOverlay {
         return outer;
     }
     _refreshThemesGrid(gridBin) {
-        let entries = this._sortEntries(this._themePackDiscoveryCache ?? this._discoverThemePacks(), this._themeSort, {
-            name: e => e.manifest?.name ?? e.id,
-            size: e => e.widgetCount ?? (e.manifest?.widgets?.length ?? 0),
-            mtime: e => e.mtimeUnix ?? 0
+        const filter = this._sourceFilter.themepacks;
+        const local = this._themePackDiscoveryCache ?? this._discoverThemePacks();
+        const store = this._storeOnlyEntries("themepacks", new Set(local.map(e => e.id)));
+        let entries = [ ...(filter === "store" ? [] : local), ...(filter === "installed" ? [] : store) ];
+        entries = this._sortEntries(entries, this._themeSort, {
+            name: e => e._store ? (e.item.n ?? e.item.id) : (e.manifest?.name ?? e.id),
+            size: e => e._store ? STORE_LAST : (e.widgetCount ?? (e.manifest?.widgets?.length ?? 0)),
+            mtime: e => e._store ? 0 : (e.mtimeUnix ?? 0)
         });
-        entries = this._filterEntries(entries, this._themeSearch, e => [ e.manifest?.name, e.id, e.manifest?.description ]);
-        gridBin.set_child(this._buildGrid(entries, entry => this._buildThemePackCard(entry)));
+        entries = this._filterEntries(entries, this._themeSearch, e => e._store
+            ? [ e.item.n, e.item.id, e.item.a, e.item.d, e.item.c ]
+            : [ e.manifest?.name, e.id, e.manifest?.description, e.manifest?.author ]);
+        const data = this._storeCache.themepacks;
+        const grid = this._buildGrid(entries, entry => entry._store ? this._buildStoreCard(entry, data, "themepacks") : this._buildThemePackCard(entry));
+        gridBin.set_child(this._withStoreErrors("themepacks", grid));
     }
     _userThemepacksRoots() {
         const roots = [ GLib.build_filenamev([ GLib.get_user_config_dir(), "gnome-widget-center", "themepacks" ]) ];
@@ -807,6 +804,7 @@ export class WidgetCenterOverlay {
         if (entry.source === "user") {
             controls.add_child(this._buildIconTextButton("user-trash-symbolic", this._tr("themes.card.remove", "Uninstall"), () => this._removeThemePack(entry)));
         }
+        this._addUpdateButton("themepacks", id, controls);
         card.add_child(controls);
         return card;
     }
@@ -853,7 +851,7 @@ export class WidgetCenterOverlay {
         this._openExtensionPreferences();
     }
     _removeThemePack(entry) {
-        this._storeCache = {};   // the Store tab must offer Install again
+        this._storeCache = {};   // the theme pack must show up as an Install card again
         if (this._services.onThemePackRemove) {
             this._services.onThemePackRemove(entry);
             this._themePackRegistry = null;
@@ -951,6 +949,14 @@ export class WidgetCenterOverlay {
         const q = (query ?? "").trim().toLowerCase();
         if (!q) return entries;
         return entries.filter(entry => fieldsFn(entry).some(field => String(field ?? "").toLowerCase().includes(q)));
+    }
+    /**
+     * Public entry for other parts of the extension (e.g. the theme pack switcher asking the prefs app to install missing
+     * widgets): spawns the prefs app AND closes this overlay. The overlay is modal chrome above every window, so a GTK consent
+     * dialog opened while it is still up would sit underneath it.
+     */
+    launchPrefs(args) {
+        this._launchExternalPrefsWindow(args);
     }
     _launchExternalPrefsWindow(args) {
         const scriptPath = GLib.build_filenamev([ this._path, "widget-center-prefs-app.js" ]);

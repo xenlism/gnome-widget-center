@@ -23,6 +23,7 @@ import { SettingsService } from "../settingsService.js";
 import { StorageService } from "../storageService.js";
 
 import { PrefsWidgetList } from "../prefsWidgetList.js";
+import { newExtensionIcon } from "./extensionIcon.js";
 
 import { WidgetSettings } from "../widgetSettings.js";
 
@@ -83,9 +84,8 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
         const monitor = display.get_monitors().get_item(0);
         const geometry = monitor.get_geometry();
         window.set_default_size(900, geometry.height);
+        await this._buildThemesCardsTab(window, settings, storage, ok);        // Themes is the first tab
         this._buildOverviewCardsTab(window, settings, ok);
-        await this._buildThemesCardsTab(window, settings, storage, ok);
-        this._buildStorePage(window);
         this._preferencesPage = this._buildPreferencesPage(window, settings, storage, ok, {
             bundledWidgetsPath: bundledWidgetsPath,
             userWidgetsPath: userWidgetsPath
@@ -163,7 +163,7 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
         if (!match) return 0;
         return Number(match[1]) * Number(match[2]);
     }
-    _buildCardToolbar(flow, searchPlaceholder, initialSort, initialSearch, onSortChange, onSearchChange) {
+    _buildCardToolbar(flow, searchPlaceholder, initialSort, initialSearch, onSortChange, onSearchChange, sourceKind = null) {
         const bar = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
             spacing: 8,
@@ -194,6 +194,25 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
             sortBox.append(button);
         }
         bar.append(sortBox);
+        flow._toolbar = bar;
+        flow._sourceFilter = sourceKind ? (this._sourceFilter?.[sourceKind] ?? "all") : "all";
+        if (sourceKind) {
+            // All / Installed / Store: installed cards and the not-yet-installed store cards share one grid
+            const sourceBox = new Gtk.Box({ spacing: 4, css_classes: [ "linked" ] });
+            let firstToggle = null;
+            for (const [ id, key, fallback ] of [ [ "all", "store.filter.all", "All" ], [ "installed", "store.filter.installed", "Installed" ], [ "store", "store.filter.store", "Store" ] ]) {
+                const toggle = new Gtk.ToggleButton({ label: this._tr(key, fallback), active: id === flow._sourceFilter });
+                if (firstToggle) toggle.set_group(firstToggle); else firstToggle = toggle;
+                toggle.connect("toggled", () => {
+                    if (!toggle.get_active()) return;
+                    flow._sourceFilter = id;
+                    (this._sourceFilter ??= {})[sourceKind] = id;
+                    flow.invalidate_filter();
+                });
+                sourceBox.append(toggle);
+            }
+            bar.append(sourceBox);
+        }
         const search = new Gtk.SearchEntry({
             placeholder_text: searchPlaceholder,
             hexpand: true
@@ -208,10 +227,12 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
         });
         bar.append(search);
         flow.set_filter_func(child => {
-            const query = flow._searchQuery;
-            if (!query) return true;
             const card = child.get_child();
-            if (!card || card._searchText === undefined) return true;
+            if (!card) return true;
+            const source = flow._sourceFilter;
+            if (source && source !== "all" && (card._source ?? "installed") !== source) return false;
+            const query = flow._searchQuery;
+            if (!query || card._searchText === undefined) return true;
             return card._searchText.includes(query);
         });
         this._applyFlowSort(flow, initialSort);
@@ -252,7 +273,7 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
             css_classes: cssClasses
         });
     }
-    _buildCardBanner(path) {
+    _buildCardBanner(path, isWidget = true) {
         const banner = new Gtk.Box({
             css_classes: [ "wc-card-banner" ],
             height_request: 160,
@@ -267,13 +288,9 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
             picture.set_filename(path);
             banner.append(picture);
         } else {
-            banner.append(new Gtk.Image({
-                icon_name: "image-x-generic-symbolic",
-                pixel_size: 48,
-                hexpand: true,
-                vexpand: true,
-                css_classes: [ "dim-label" ]
-            }));
+            banner.append(isWidget
+                ? newExtensionIcon(48)
+                : new Gtk.Image({ icon_name: "image-x-generic-symbolic", pixel_size: 48, hexpand: true, vexpand: true, css_classes: [ "dim-label" ] }));
         }
         return banner;
     }
@@ -315,37 +332,42 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
         scroll.set_child(flow);
         this.applyAutoEnablePolicy(settings, discovered, this._userWidgetsPath);
         const disabled = new Set(settings.isReady ? settings.getGlobalValue("disabled-widgets") : []);
+        const localCards = [];
         if (discovered.length === 0) {
-            flow.append(new Gtk.Label({
+            flow._emptyLabel = new Gtk.Label({
                 label: this._tr("overview.empty", "No widgets found"),
                 css_classes: [ "dim-label" ],
                 margin_top: 48
-            }));
+            });
+            flow.append(flow._emptyLabel);
         }
         for (const widget of discovered) {
             const isUser = pathIsUnder(widget.path, this._userWidgetsPath);
             const card = this._buildWidgetCard(window, settings, widget, disabled.has(widget.id), isUser);
-            card._searchText = [ widget.name, widget.id, widget.description ].filter(Boolean).join(" ").toLowerCase();
+            card._searchText = [ widget.name, widget.id, widget.description, widget.metadata?.author ].filter(Boolean).join(" ").toLowerCase();
             card._sortKey = {
                 name: (widget.name ?? widget.id).toLowerCase(),
                 size: this._blockSizeCells(widget.metadata?.["block-type"]),
                 mtime: this._pathMtimeUnix(widget.path)
             };
+            localCards.push(card);
             flow.append(card);
         }
         const toolbar = this._buildCardToolbar(flow, this._tr("overview.search.placeholder", "Search widgets…"), this._overviewSort ?? "name", this._overviewSearch ?? "", mode => {
             this._overviewSort = mode;
         }, text => {
             this._overviewSearch = text;
-        });
+        }, "widgets");
         container.append(toolbar);
         container.append(scroll);
         const page = this._buildClampedCardPage(this._tr("tab.widgets.label", "Widgets"), "view-grid-symbolic", container);
         window.add(page);
         this._overviewPage = page;
+        this._attachStore(window, "widgets", page, container, flow, localCards);
     }
     _buildWidgetCard(window, settings, widget, isDisabled, isUser) {
         const card = this._buildCardShell();
+        card._id = widget.id;
         card.append(this._buildCardBanner(this._resolveScreenshotPath(widget.path, widget.metadata)));
         const body = new Gtk.Box({
             orientation: Gtk.Orientation.VERTICAL,
@@ -390,6 +412,7 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
             margin_end: 14
         });
         card.append(controls);
+        card._controls = controls;
         const settingsButton = this._buildIconTextButton("emblem-system-symbolic", this._tr("overview.card.settings", "Settings"));
         settingsButton.sensitive = widget.hasConfigJson || widget.hasPrefs || widget.hasSettingsJs || widget.hasSettingsSchema;
         settingsButton.connect("clicked", () => {
@@ -465,33 +488,37 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
         const flow = this._buildCardFlowBox();
         scroll.set_child(flow);
         const entries = await this._discoverThemePacks();
+        const localCards = [];
         if (entries.length === 0) {
-            flow.append(new Gtk.Label({
+            flow._emptyLabel = new Gtk.Label({
                 label: this._tr("themes.empty", "No theme packs found"),
                 css_classes: [ "dim-label" ],
                 margin_top: 48
-            }));
+            });
+            flow.append(flow._emptyLabel);
         }
         for (const entry of entries) {
             const card = this._buildThemeCard(window, settings, entry);
-            card._searchText = [ entry.manifest?.name, entry.id, entry.manifest?.description ].filter(Boolean).join(" ").toLowerCase();
+            card._searchText = [ entry.manifest?.name, entry.id, entry.manifest?.description, entry.manifest?.author ].filter(Boolean).join(" ").toLowerCase();
             card._sortKey = {
                 name: (entry.manifest?.name ?? entry.id).toLowerCase(),
                 size: entry.widgetCount ?? (entry.manifest?.widgets?.length ?? 0),
                 mtime: this._pathMtimeUnix(entry.path)
             };
+            localCards.push(card);
             flow.append(card);
         }
         const toolbar = this._buildCardToolbar(flow, this._tr("themes.search.placeholder", "Search themes…"), this._themesSort ?? "name", this._themesSearch ?? "", mode => {
             this._themesSort = mode;
         }, text => {
             this._themesSearch = text;
-        });
+        }, "themepacks");
         container.append(toolbar);
         container.append(scroll);
         const page = this._buildClampedCardPage(this._tr("tab.themes.label", "Themes"), "preferences-desktop-wallpaper-symbolic", container);
         window.add(page);
         this._themesPage = page;
+        this._attachStore(window, "themepacks", page, container, flow, localCards);
     }
     async _discoverThemePacks() {
         const bundledPath = GLib.build_filenamev([ this.path, "themepacks" ]);
@@ -509,7 +536,8 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
     _buildThemeCard(window, settings, entry) {
         const {manifest: manifest, path: path, source: source} = entry;
         const card = this._buildCardShell();
-        card.append(this._buildCardBanner(this._resolveScreenshotPath(path, manifest)));
+        card._id = entry.id;
+        card.append(this._buildCardBanner(this._resolveScreenshotPath(path, manifest), false));
         const body = new Gtk.Box({
             orientation: Gtk.Orientation.VERTICAL,
             spacing: 4,
@@ -552,6 +580,7 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
             margin_end: 14
         });
         card.append(controls);
+        card._controls = controls;
         const shareThemeButton = this._buildIconTextButton("emblem-shared-symbolic", this._tr("themes.card.share", "Share"));
         shareThemeButton.connect("clicked", () => {
             this.shareThemePackById(window, entry.id).catch(e => logError(e, `[widget-center] prefsV2: sharing theme pack "${entry.id}" failed`));
@@ -616,7 +645,7 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
         }
     }
     /**
-     * Something was installed (a widget, a theme pack, a recreated child): rebuild the Widgets, Themes, Store and Preferences
+     * Something was installed (a widget, a theme pack, a recreated child): rebuild the Widgets, Themes and Preferences
      * pages from disk, keep the page the user was on, and tell the shell overlay (a separate process) to refresh its tabs too.
      */
     async refreshAfterInstall(window) {
@@ -626,24 +655,24 @@ export class PrefsWindowControllerV2 extends PrefsWindowController {
         try {
             do {
                 this._refreshAgain = false;
-                const named = [ [ "overview", this._overviewPage ], [ "themes", this._themesPage ], [ "store", this._storePage ], [ "preferences", this._preferencesPage ] ];
+                const named = [ [ "themes", this._themesPage ], [ "overview", this._overviewPage ], [ "preferences", this._preferencesPage ] ];
                 const visible = window.get_visible_page?.();
                 const was = named.find(([ , p ]) => p && p === visible)?.[0] ?? null;
+                await this._storeCatalog?.reloadRegistry();
                 const { ok } = await new PrefsWidgetList([ this._bundledWidgetsPath, this._userWidgetsPath ]).list();
                 this._discovered = ok;
                 // remove every page, then add them back in the original order (Adw adds at the end)
-                for (const p of [ this._overviewPage, this._themesPage, this._storePage, this._preferencesPage, this._aboutPage ]) {
+                for (const p of [ this._themesPage, this._overviewPage, this._preferencesPage, this._aboutPage ]) {
                     if (p) { try { window.remove(p); } catch (e) { logError(e, "[widget-center] prefsV2: could not remove a page"); } }
                 }
-                this._overviewPage = this._themesPage = this._storePage = this._preferencesPage = this._aboutPage = null;
-                this._buildOverviewCardsTab(window, this._settings, ok);
+                this._overviewPage = this._themesPage = this._preferencesPage = this._aboutPage = null;
                 await this._buildThemesCardsTab(window, this._settings, this._storage, ok);
-                this._buildStorePage(window);
+                this._buildOverviewCardsTab(window, this._settings, ok);
                 this._preferencesPage = this._buildPreferencesPage(window, this._settings, this._storage, ok, {
                     bundledWidgetsPath: this._bundledWidgetsPath, userWidgetsPath: this._userWidgetsPath
                 }, { includeAbout: false, layout: "accordion" });
                 this._buildAboutTab(window);
-                const back = { overview: this._overviewPage, themes: this._themesPage, store: this._storePage, preferences: this._preferencesPage }[was];
+                const back = { overview: this._overviewPage, themes: this._themesPage, preferences: this._preferencesPage }[was];
                 if (back) window.set_visible_page(back);
             } while (this._refreshAgain);
             this._notifyInstalled();

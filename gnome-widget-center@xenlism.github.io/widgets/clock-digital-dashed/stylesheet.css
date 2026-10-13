@@ -1,0 +1,10 @@
+/* widgets/clock-digital-dashed/stylesheet.css
+ *
+ * Namespaced with the clock-digital-dashed- prefix. All actual
+ * appearance for this widget comes from Cairo drawing in widget.js
+ * (see the host stylesheet-loading caveat in
+ * widgets/_template/stylesheet.css).
+ */
+
+.clock-digital-dashed-root {
+}

@@ -116,7 +116,8 @@ async function _openFile(parent, t, { registry, onInstalled }) {
         const g = parseGwct(text), pm = g.packMeta ?? {};
         const cover = g.screenshot?.base64 ? texture(GLib.base64_decode(g.screenshot.base64)) : null;
         if (!await confirm(parent, { heading: `Add theme pack “${pm.name ?? pm.id}”?`, cover,
-            body: `${pm.description ?? ""}\n\nBy ${pm.author ?? "unknown"} · ${g.widgets.length} widgets` })) return;
+            body: `${pm.description ?? ""}\n\nBy ${pm.author ?? "unknown"} · ${g.widgets.length} widgets\n\nIt is applied right after it is added: your current widgets are replaced by the pack's.`,
+            ok: "Add & apply" })) return;
         const id = installGwct(g);
         await registry.record("themepacks", id, { src: "file" });
         onInstalled?.("themepacks", id); toast(parent, `Added ${pm.name ?? id}`);
@@ -157,7 +158,11 @@ async function _openStoreLink(parent, t, deps, carry = null) {
     const coverPath = item.cv ? await client.getCoverPath(item.cv).catch(() => null) : null;
     const cover = coverPath ? Gdk.Texture.new_from_filename(coverPath) : null;
     const dlg = installDialog({ item, isW, repo, tier, expired, manifest, author, pin });
-    const ok = await confirm(parent, { heading: dlg.heading, cover, danger: dlg.danger, body: dlg.body });
+    const ok = await confirm(parent, {
+        heading: dlg.heading, cover, danger: dlg.danger,
+        body: isW ? dlg.body : `${dlg.body}\n\nIt is applied right after download: your current widgets are replaced by the pack's.`,
+        ok: isW ? "Install" : "Download & apply",
+    });
     if (!ok) return;
     let bytes, zip = null;
     try {

@@ -5,6 +5,7 @@ import GLib from "gi://GLib";
 import { pickTranslation } from "../i18nUtils.js";
 
 import { setRowBuilder, setHostContext, _textRow, _locationRow, _textareaRow, _passwordRow, _switchRow, _checkboxRow, _dropdownRow, _spinRow, _sliderRow, _colorRow, _fontRow, _iconRow, _pathRow, _listRow, _objectRow, _autocompleteRow } from "./widgetConfigFieldRows.js";
+import { escapeMarkup } from "./prefsUtils.js";
 
 let _hostT = (key, fallback) => fallback;
 
@@ -54,7 +55,6 @@ export function buildConfigPage(config, settingsProxy, title, widgetPath, transl
             rowUpdaters.set(fieldId, updater);
         }
     };
-    const escapeMarkup = text => GLib.markup_escape_text(String(text ?? ""), -1);
     for (const tab of config.tabs) {
         const tabLabel = escapeMarkup(tr(`tab.${tab.id}.label`, tab.label));
         for (const group of tab.groups) {

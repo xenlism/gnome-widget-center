@@ -10,6 +10,8 @@ import { fileExists } from "../fsUtils.js";
 
 import { ensureHostLibLink } from "../hostLibLink.js";
 
+import { HOST_KIT } from "./hostKit.js";
+
 import { deferUntilMapped, applyCardOpacity } from "../widgetVisualKit.js";
 
 import { WidgetSettings } from "../widgetSettings.js";
@@ -370,8 +372,15 @@ export class WidgetRuntimeLoader extends WidgetLoader {
         };
         let ModuleClass;
         try {
-            const entryName = widgetInfo.metadata.entry ?? "widget.js";
-            const entryPath = GLib.build_filenamev([ widgetInfo.path, entryName ]);
+            let entryName = widgetInfo.metadata.entry ?? "widget.js";
+            let entryPath = GLib.build_filenamev([ widgetInfo.path, entryName ]);
+            // a child widget runs its parent's code (see loadModule()): reload the parent's file, not the child's own folder
+            if (widgetInfo.metadata.parent) {
+                const parentPath = this._pathById?.get(widgetInfo.metadata.parent);
+                if (!parentPath) throw new Error(`parent widget "${widgetInfo.metadata.parent}" not found`);
+                entryName = "widget.js";
+                entryPath = GLib.build_filenamev([ parentPath, entryName ]);
+            }
             if (!fileExists(entryPath)) throw new Error(`entry file "${entryName}" not found`);
             const module = await (import(`file://${entryPath}?t=${Date.now()}`));
             if (typeof module.default !== "function") throw new Error(`${entryName} has no default export class`);
@@ -470,6 +479,8 @@ export class WidgetRuntimeLoader extends WidgetLoader {
             monitorInfo: null,
             position: this._buildPositionApi(widgetInfo),
             host: {
+                // widget API 3: the host's helper modules, one shared instance (replaces "../../lib/..." imports)
+                kit: HOST_KIT,
                 rescan: () => {
                     try {
                         this._onRescanRequested?.();

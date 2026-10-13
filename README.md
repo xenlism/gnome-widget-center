@@ -1,9 +1,10 @@
-# 🧩 GNOME Widget Center **v2**
+# 🧩 GNOME Widget Center 
 
 **Live desktop widgets for GNOME Shell. Drag them, style them, theme them, share them. 🎨**
 
 [![GNOME Shell](https://img.shields.io/badge/GNOME%20Shell-50--51-4A86CF?logo=gnome&logoColor=white)](https://www.gnome.org/)
-[![Version](https://img.shields.io/badge/Version-2.0.0-brightgreen)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-3.0.0-brightgreen)](CHANGELOG.md)
+[![Widget API](https://img.shields.io/badge/Widget%20API-3.0-8A63D2)](WIDGET_API.md)
 [![Language](https://img.shields.io/badge/Language-GJS%20%2F%20JavaScript-yellow)](https://gjs.guide/)
 [![Toolkit](https://img.shields.io/badge/Toolkit-GTK%204%20%2F%20Libadwaita-blue)](https://www.gtk.org/)
 [![License](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
@@ -12,47 +13,63 @@
 
 [![Watch the video on YouTube](assets/desktop.png)](https://www.youtube.com/watch?v=LaN50RX_Dcw)
 
-> **Clocks, weather, system monitors, media controls, launchers** and **69 ready-made widgets**
-> ready to land on your desktop, plus **33 theme packs** that restyle the whole thing in one click.
+> **Clocks, weather, system monitors, media controls, launchers** and **79 ready-made widgets**
+> ready to land on your desktop, plus **theme packs** that restyle the whole thing in one click.
 
 ---
 
-## 🚀 What's new in v2
+## 🚀 What's new in v3
 
-v2 is a bigger change under the hood than it looks. The extension core stays lean, and the
-things that grow fastest (widgets and theme packs) get their own homes so they can ship on
-their own schedule.
+v3 finishes what v2 started. Widgets no longer reach into the extension's files by path:
+the host now **hands them its helper modules** through the Widget API, so every widget, bundled
+or installed from the Store, runs against the same single copy of the host code.
 
 ```mermaid
 flowchart LR
-    Core["🏠 gnome-widget-center<br/>loader · prefs · overlay"]
-    W["🧱 widgets repo<br/>one folder per widget"]
-    T["🎨 themepacks repo<br/>.gwct files"]
-    S["🛒 GWC Store<br/>browse &amp; install"]
-    W --> S
-    T --> S
-    S --> Core
+    Host["🏠 Host<br/>loader · prefs · overlay"]
+    Kit["🧰 api.host.kit<br/>one shared instance"]
+    W1["🧱 Bundled widgets"]
+    W2["🛒 Store-installed widgets"]
+    Host --> Kit
+    Kit --> W1
+    Kit --> W2
 ```
 
 | | What changed |
 | --- | --- |
-| 🧱 **Split repositories** | The extension core, the widgets, and the theme packs now live in separate repositories. New widgets and packs can be published without cutting a new extension release. |
-| 🛒 **GWC Store** *(in progress)* | A catalog layer on top of those repositories, so you can browse and install widgets and theme packs without leaving the app. |
-| 🎨 **Theme packs got smarter** | A `.gwct` now carries **card settings**, a **color scheme** (text 1/2, ring 1-4, accent) and **fonts**, not just per-widget values. Widgets you add later start from the pack's look instead of their own defaults. |
-| 🎯 **One theme, every widget** | Applying a pack also updates widgets that are *not* in it, so enabling one afterwards matches your active theme. No more mystery dark card next to a glass one. |
-| 🔑 **Unified card settings** | Card options share one naming pattern, `card-[setting]-[sub-setting]` (`card-background-color`, `card-corner-radius`, `card-opacity`, ...), so every widget speaks the same language. |
-| 🌍 **45 UI languages** | Region-aware locale loading (`pt_BR`, `pt_PT`, `zh_CN`, `zh_TW`) and a full set of translations. |
-| 📥 **Easier install** | One `curl`/`wget` line, a plain `git clone`, or a release archive, and all three go through the same `install.sh`. |
+| 🧰 **Widget API 3 (`api.host.kit`)** | Widgets get the host's helpers (card layers, visual/style helpers, system metrics, media, calendar, crypto and stock markets, file utilities, tooltips, gauge, Architect kit, ...) from `api.host.kit.<name>` instead of `import ... from "../../lib/<file>.js"`. Widgets now work from any folder, and there is no second copy of a module with its own state. |
+| ✅ **All 79 bundled widgets migrated** | Every widget declares `"api-version": 3` and uses the kit. Child widgets (such as the Xtile app tiles) are loaded through their parent, so they follow automatically. |
+| 🛒 **Store-installed widgets just work** | A widget installed from the Store no longer needs a `lib/` folder next to it, which used to fail with *"Error opening file ... lib/systemMetricsApi.js"*. |
+| 🔖 **Version 3.0.0 everywhere** | The extension and every bundled widget are now `3.0.0`, and the extension `metadata.json` carries the numeric `version` that extensions.gnome.org expects. |
+| 🛍️ **Store and Widgets tabs** | *Overview* is now **Widgets**, and a new **Store** tab lets you browse and install widgets and theme packs. Store settings (release channel, update checks, repositories) live in **Preferences → Store**. |
+| 🌍 **45 UI languages** | Region-aware locale loading (`pt_BR`, `pt_PT`, `zh_CN`, `zh_TW`) with full translations. |
 
-> ⚠️ **Heads-up for existing users and widget authors:** because widgets and packs are leaving the
-> core repository, anything that relied on them being bundled will need updating. Your existing
-> widgets, settings and theme packs keep working from their current folders (see
-> [User files and folders](#-user-files-and-folders)).
+> ℹ️ **Compatibility:** the host still loads **API 2** widgets that import by path, so existing
+> user widgets keep working. API 2 is deprecated and support for it will be dropped in a later
+> release. Widgets built for API 3 need Widget Center 3 or newer; older hosts refuse them with an
+> "update Widget Center" message.
+>
+> **Widget authors:** see [Build your own widgets](#-build-your-own-widgets) and the
+> [Widget API reference](WIDGET_API.md).
+
+<details>
+<summary><b>Earlier: what v2 introduced</b></summary>
+
+| | What changed |
+| --- | --- |
+| 🧱 **Split repositories** | The extension core, the widgets, and the theme packs live in separate repositories, so new widgets and packs can ship without a new extension release. |
+| 🎨 **Theme packs got smarter** | A `.gwct` carries **card settings**, a **color scheme** (text 1/2, ring 1-4, accent) and **fonts**, not just per-widget values. Widgets you add later start from the pack's look. |
+| 🎯 **One theme, every widget** | Applying a pack also updates widgets that are *not* in it, so enabling one afterwards matches your active theme. |
+| 🔑 **Unified card settings** | Card options share one naming pattern, `card-[setting]-[sub-setting]` (`card-background-color`, `card-corner-radius`, `card-opacity`, ...). |
+| 📥 **Easier install** | One `curl`/`wget` line, a plain `git clone`, or a release archive, all through the same `install.sh`. |
+
+</details>
 
 ---
 
 ## 📚 Table of contents
 
+- [What's new in v3](#-whats-new-in-v3)
 - [What it is](#-what-it-is)
 - [Highlights](#-highlights)
 - [Edit Mode](#-edit-mode)
@@ -93,6 +110,8 @@ up. No Shell restart needed. 🙌
 - 💾 **Password-protected backups** (`.gwcbak`, AES-256 / PBKDF2) covering widget settings, host preferences and installed widget files.
 - 🧱 **Bring your own widgets** without touching the extension itself.
 - 🏗️ **Widget-Architects**: one design that spawns any number of independently configured children.
+- 🧰 **Widget API 3**: widgets share the host's helper modules through `api.host.kit`.
+- 🛒 **Store tab** to browse and install widgets and theme packs.
 - 🌍 **45 languages**, including RTL (Arabic, Hebrew, Persian, Urdu).
 
 ## ✏️ Edit Mode
@@ -242,6 +261,24 @@ Start from the templates:
 - [`development/widget-templates/template`](development/widget-templates/template): a normal widget.
 - [`development/widget-templates/architect-template`](development/widget-templates/architect-template): an Architect that creates configurable children.
 
+Widgets are written against **Widget API 3**. Declare it in `metadata.json` and take the host's
+helpers from the kit instead of importing the extension's files by path:
+
+```json
+{ "id": "my.widget", "version": "3.0.0", "api-version": 3, "entry": "widget.js" }
+```
+
+```js
+export default class MyWidget {
+    constructor(api) {
+        // widget API 3: the host's helpers, one shared instance
+        const { createLayeredCard, applyLayeredCardStyle } = api.host.kit.layers;
+        const { SystemMetricsService } = api.host.kit.metrics;
+        // ...
+    }
+}
+```
+
 Then read [Creating Widgets](docs/CREATING_WIDGETS.md) and the [Widget API reference](WIDGET_API.md).
 
 ## 📥 Install
@@ -330,8 +367,8 @@ gnome-widget-center-main/
 │   ├── extension.js, prefs.js               # entry points
 │   ├── lib/                                 # host logic (loader, layout, settings, themes...)
 │   ├── i18n/                                # 45 UI translations
-│   ├── widgets/                             # 69 widgets
-│   ├── themepacks/                          # 33 Theme Packs
+│   ├── widgets/                             # 79 widgets (API 3)
+│   ├── themepacks/                          # Theme Packs (also delivered via the Store)
 │   └── schemas/                             # GSettings schema
 ├── development/                             # roadmap, status, templates, tests
 ├── docs/                                    # user-facing docs
@@ -339,13 +376,13 @@ gnome-widget-center-main/
 └── install.sh                               # installer
 ```
 
-> In v2 the `widgets/` and `themepacks/` content is being moved into dedicated repositories
-> that the GWC Store will index.
+> The `widgets/` and `themepacks/` content also lives in dedicated repositories that the GWC
+> Store indexes, so new widgets and packs can ship without a new extension release.
 
 ## 🧪 Status & testing
 
 GNOME Widget Center has been submitted to [extensions.gnome.org](https://extensions.gnome.org/)
-and is pending review. `shell-version` currently declares **GNOME Shell 50 and 51**.
+and is pending review. `shell-version` currently declares **GNOME Shell 50 and 51** (version **3.0.0**).
 
 The current feature set was functionally tested and **passed verification by Nox (Codex Mode)**:
 Control Center and widget management, live settings, Edit Mode, appearance controls, Theme Pack

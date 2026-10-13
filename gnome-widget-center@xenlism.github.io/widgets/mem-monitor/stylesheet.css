@@ -1,0 +1,23 @@
+/* widgets/mem-monitor/stylesheet.css
+ *
+ * Documentation only - the host does not load this file into the Shell's
+ * theme context. Actual styling is applied inline in widget.js via
+ * set_style(), driven by the widget's settings. Shipped anyway for the
+ * class-name hooks, per WIDGET_API.md §3's note on stylesheet.css.
+ */
+
+.mem-monitor-root {
+    /* background-color + border-radius set from settings in widget.js */
+}
+
+.mem-monitor-value {
+    /* big "NN%" text - font + color set from settings in widget.js */
+}
+
+.mem-monitor-caption {
+    /* small "MEM" label under the value */
+}
+
+.mem-monitor-graph {
+    /* sparkline strip - background set from settings, line drawn via Cairo */
+}

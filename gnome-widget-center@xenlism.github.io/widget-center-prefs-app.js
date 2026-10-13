@@ -132,8 +132,8 @@ app.connect("command-line", (application, commandLine) => {
     }
     presentWindow(requestedWidgetId, focusTarget, exportThemeId, exportThemeNew, attachScreenshotPath, share).then(async () => {
         // gwc:// links and .gwcw/.gwct files handed over by the desktop entry (see data/*.desktop.in)
-        let installedAny = false;
-        const onInstalled = () => { installedAny = true; };
+        let installedAny = false, installedPack = null;
+        const onInstalled = (kind, id) => { installedAny = true; if (kind === "themepacks") installedPack = id; };
         if (installWidgets?.length && window) {
             // widgets a just-applied theme pack needs: ask once, install, then apply the pack again so they get their place and settings
             const registry = await InstallRegistry.load();
@@ -145,6 +145,8 @@ app.connect("command-line", (application, commandLine) => {
         const registry = await InstallRegistry.load();
         for (const uri of opens) await handleOpen(window, uri, { registry, onInstalled });
         if (installedAny) await controller?.refreshAfterInstall(window);
+        // a downloaded theme pack is applied straight away (the shell switcher also offers any widgets it is missing)
+        if (installedPack) controller?.requestThemePackApply(installedPack);
     }).catch(e => logError(e, "[widget-center] widget-center-prefs-app: command-line handling failed"));
     return 0;
 });

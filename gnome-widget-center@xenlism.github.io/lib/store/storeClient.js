@@ -328,13 +328,17 @@ export class StoreClient {
         }
     }
 
+    /** Registry records of `kind` that were installed from THIS repo: { id: record }. */
+    ownInstalls(registry, kind) {
+        return Object.fromEntries(Object.entries(registry.map(kind)).filter(([ , r ]) => {
+            try { return r.src === "store" && canonicalRepoUrl(r.repo) === canonicalRepoUrl(this.base); } catch (_e) { return false; }
+        }));
+    }
+
     /** Items installed FROM THIS REPO that its signed manifest withdraws (revoked[]). 0 extra requests. */
     async revocations(registry) {
         const { manifest } = await this.getManifest();
-        const mine = kind => Object.fromEntries(Object.entries(registry.map(kind)).filter(([ , r ]) => {
-            try { return r.src === "store" && canonicalRepoUrl(r.repo) === canonicalRepoUrl(this.base); } catch (_e) { return false; }
-        }));
-        return findRevoked(manifest.revoked, { widgets: mine("widgets"), themepacks: mine("themepacks") });
+        return findRevoked(manifest.revoked, { widgets: this.ownInstalls(registry, "widgets"), themepacks: this.ownInstalls(registry, "themepacks") });
     }
 
     /** Which installed items are outdated? Pure local compare, 0 requests. Never proposes a downgrade. */

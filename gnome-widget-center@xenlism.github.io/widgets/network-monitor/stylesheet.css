@@ -1,0 +1,26 @@
+/* widgets/network-monitor/stylesheet.css
+ *
+ * Documentation only - the host does not load this file into the Shell's
+ * theme context. Actual styling is applied inline in widget.js via
+ * set_style(), driven by the widget's settings.
+ */
+
+.network-monitor-root {
+    /* background-color + border-radius set from settings in widget.js */
+}
+
+.network-monitor-download {
+    /* "↓ 1.2 MB/s" - colored with downloadLineColor */
+}
+
+.network-monitor-upload {
+    /* "↑ 340 KB/s" - colored with uploadLineColor */
+}
+
+.network-monitor-caption {
+    /* small "NET" label */
+}
+
+.network-monitor-graph {
+    /* two-line sparkline strip - background set from settings, lines drawn via Cairo */
+}

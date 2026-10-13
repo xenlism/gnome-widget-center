@@ -1,6 +1,6 @@
 # Handover: ส่ง kit ให้ widget ผ่าน `api.host.kit`
 
-สถานะ: **ยังไม่ได้ implement** (วางแผนไว้เท่านั้น)
+สถานะ: **เฟส 1–3 เสร็จแล้ว** — `api.host.kit` (kit.version 1, เพิ่ม `cryptoMarkets` + `stockMarkets`), widget ทั้ง 79 ตัวย้ายเป็น `api-version: 3` ด้วย `tools/migrate-widgets-v3.mjs` (child ของ xtile: metadata เท่านั้น; stub `widget.js` ของ child ไม่ถูก import เพราะ loader ใช้ของ parent). `HOST_API_VERSION = 3`, `MIN_SUPPORTED_API_VERSION = 2` และ symlink `lib/` (`hostLibLink.js`) **คงไว้** เพื่อให้ widget v2 ที่ import ผ่าน path ยังโหลดได้. เหลือเฟส 4 (ลบ symlink) เมื่อพร้อมตั้ง MIN = 3
 ที่ทำไปแล้วและใช้เป็นทางออกชั่วคราว: symlink `~/.local/share/gnome-widget-center/lib` → `<extension>/lib` (ดูหัวข้อ 1)
 
 ---

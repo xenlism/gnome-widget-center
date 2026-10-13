@@ -1,0 +1,29 @@
+/* Not loaded by the host - see SKILL.md §2. Kept for documentation/
+ * class-name reference only; the real styling is applied inline in
+ * widget.js via actor.set_style(). */
+
+.power-menu-widget-root {
+    /* background is rgba(color, opacity) and border-radius come from
+     * settings in widget.js (defaults: #ffffff @ 0.85 opacity, 18px) */
+}
+
+.power-menu-widget-button {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-radius: 50%; /* circular - actual value set inline as BUTTON_SIZE/2 */
+}
+
+.power-menu-widget-button:hover {
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+.power-menu-widget-button St.Icon {
+    /* color is set from settings in widget.js (default: #ffffff) */
+}
+
+.power-menu-widget-tooltip {
+    background-color: rgba(20, 20, 20, 0.95);
+    color: #ffffff;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 6px;
+}

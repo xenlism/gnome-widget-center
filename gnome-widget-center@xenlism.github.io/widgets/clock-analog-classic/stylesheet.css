@@ -1,0 +1,10 @@
+/* widgets/clock-analog-classic/stylesheet.css
+ *
+ * Namespaced with the clock-analog-classic- prefix. All actual
+ * appearance for this widget comes from Cairo drawing in widget.js
+ * (see the host stylesheet-loading caveat in
+ * widgets/_template/stylesheet.css).
+ */
+
+.clock-analog-classic-root {
+}

@@ -8,5 +8,6 @@
   ],
   "url": "https://github.com/xenlism/gnome-widget-center",
   "settings-schema": "org.gnome.shell.extensions.widget-center",
-  "version-name": "2.0.0"
+  "version-name": "3.0.0",
+  "version": 3
 }

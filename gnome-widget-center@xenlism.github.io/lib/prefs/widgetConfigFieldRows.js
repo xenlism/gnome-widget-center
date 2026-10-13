@@ -15,6 +15,7 @@ import GLib from "gi://GLib";
 import Soup from "gi://Soup?version=3.0";
 
 import { getSpecialFolderInfo } from "../fsUtils.js";
+import { escapeMarkup } from "./prefsUtils.js";
 
 // _listRow() / _objectRow() build their nested rows through _buildRow(), which
 // lives in widgetConfigUI.js. widgetConfigUI.js registers it here at load time
@@ -55,13 +56,9 @@ function _getLocationSearchSession() {
     return _locationSearchSession;
 }
 
-function _esc(text) {
-    return GLib.markup_escape_text(String(text ?? ""), -1);
-}
-
 export function _textRow(field, current, set) {
     const row = new Adw.EntryRow({
-        title: _esc(field.label),
+        title: escapeMarkup(field.label),
         text: String(current ?? ""),
         show_apply_button: Boolean(field.pattern || field.minLength || field.maxLength)
     });
@@ -86,7 +83,7 @@ export function _textRow(field, current, set) {
 
 export function _locationRow(field, current, set) {
     const row = new Adw.EntryRow({
-        title: _esc(field.label),
+        title: escapeMarkup(field.label),
         text: String(current ?? ""),
         show_apply_button: Boolean(field.pattern || field.minLength || field.maxLength)
     });
@@ -279,7 +276,7 @@ async function _fetchIpLocationForPrefs() {
 
 export function _autocompleteRow(field, current, set, ctx) {
     const row = new Adw.EntryRow({
-        title: _esc(field.label),
+        title: escapeMarkup(field.label),
         text: String(current ?? "")
     });
     if (field.description) row.set_tooltip_text(field.description);
@@ -428,7 +425,7 @@ export function _textareaRow(field, current, set) {
 
 export function _passwordRow(field, current, set) {
     const row = new Adw.PasswordEntryRow({
-        title: _esc(field.label),
+        title: escapeMarkup(field.label),
         text: String(current ?? "")
     });
     if (field.description) row.set_tooltip_text(field.description);
@@ -438,8 +435,8 @@ export function _passwordRow(field, current, set) {
 
 export function _switchRow(field, current, set) {
     const row = new Adw.SwitchRow({
-        title: _esc(field.label),
-        subtitle: _esc(field.description || ""),
+        title: escapeMarkup(field.label),
+        subtitle: escapeMarkup(field.description || ""),
         active: Boolean(current)
     });
     row.connect("notify::active", () => set(row.active));
@@ -448,8 +445,8 @@ export function _switchRow(field, current, set) {
 
 export function _checkboxRow(field, current, set) {
     const row = new Adw.ActionRow({
-        title: _esc(field.label),
-        subtitle: _esc(field.description || "")
+        title: escapeMarkup(field.label),
+        subtitle: escapeMarkup(field.description || "")
     });
     const check = new Gtk.CheckButton({
         active: Boolean(current),
@@ -470,8 +467,8 @@ export function _dropdownRow(field, current, set) {
         strings: options.map(opt => opt.label)
     });
     const row = new Adw.ComboRow({
-        title: _esc(field.label),
-        subtitle: _esc(field.description || ""),
+        title: escapeMarkup(field.label),
+        subtitle: escapeMarkup(field.description || ""),
         model: model,
         enable_search: Boolean(field.searchable)
     });
@@ -492,8 +489,8 @@ export function _spinRow(field, current, set) {
         value: current
     });
     const row = new Adw.SpinRow({
-        title: _esc(field.label),
-        subtitle: _esc(field.description || (hasBounds ? `${field.min}–${field.max}${field.unit ?? ""}` : "")),
+        title: escapeMarkup(field.label),
+        subtitle: escapeMarkup(field.description || (hasBounds ? `${field.min}–${field.max}${field.unit ?? ""}` : "")),
         adjustment: adjustment,
         digits: field.decimals ?? (Number.isInteger(step) ? 0 : 2)
     });
@@ -505,8 +502,8 @@ export function _sliderRow(field, current, set) {
     const min = field.min ?? 0;
     const max = field.max ?? 100;
     const row = new Adw.ActionRow({
-        title: _esc(field.label),
-        subtitle: _esc(field.description || "")
+        title: escapeMarkup(field.label),
+        subtitle: escapeMarkup(field.description || "")
     });
     const scale = new Gtk.Scale({
         orientation: Gtk.Orientation.HORIZONTAL,
@@ -529,8 +526,8 @@ export function _sliderRow(field, current, set) {
 
 export function _colorRow(field, current, set) {
     const row = new Adw.ActionRow({
-        title: _esc(field.label),
-        subtitle: _esc(field.description || "")
+        title: escapeMarkup(field.label),
+        subtitle: escapeMarkup(field.description || "")
     });
     const rgba = new Gdk.RGBA;
     rgba.parse(typeof current === "string" ? current : String(field.default));
@@ -555,8 +552,8 @@ function _rgbaToHex(rgba) {
 
 export function _fontRow(field, current, set) {
     const row = new Adw.ActionRow({
-        title: _esc(field.label),
-        subtitle: _esc(field.description || "")
+        title: escapeMarkup(field.label),
+        subtitle: escapeMarkup(field.description || "")
     });
     const button = new Gtk.FontDialogButton({
         dialog: new Gtk.FontDialog,
@@ -581,7 +578,7 @@ export function _fontRow(field, current, set) {
 
 export function _iconRow(field, current, set) {
     const row = new Adw.EntryRow({
-        title: _esc(field.label),
+        title: escapeMarkup(field.label),
         text: String(current ?? "")
     });
     if (field.description) row.set_tooltip_text(field.description);
@@ -598,7 +595,7 @@ export function _iconRow(field, current, set) {
 
 export function _pathRow(field, current, set, {folder: folder}) {
     const row = new Adw.ActionRow({
-        title: _esc(field.label),
+        title: escapeMarkup(field.label),
         subtitle: current || field.placeholder || _h("configui.path.not_set", "Not set")
     });
     const button = new Gtk.Button({
@@ -642,8 +639,8 @@ export function _pathRow(field, current, set, {folder: folder}) {
 
 export function _objectRow(field, current, set) {
     const row = new Adw.ExpanderRow({
-        title: _esc(field.label),
-        subtitle: _esc(field.description || "")
+        title: escapeMarkup(field.label),
+        subtitle: escapeMarkup(field.description || "")
     });
     const base = current && typeof current === "object" ? current : {};
     for (const [key, propField] of Object.entries(field.properties)) {
@@ -1051,28 +1048,4 @@ function _buildStagingControl(itemSchema) {
             entry.set_text("");
         }
     };
-}
-
-function _scanApplications(directory, pattern) {
-    const results = [];
-    let regex = null;
-    if (pattern) {
-        try {
-            regex = new RegExp(pattern, "i");
-        } catch (e) {
-            regex = null;
-        }
-    }
-    try {
-        const dir = Gio.File.new_for_path(directory);
-        const enumerator = dir.enumerate_children("standard::name", Gio.FileQueryInfoFlags.NONE, null);
-        let info;
-        while ((info = enumerator.next_file(null)) !== null) {
-            const name = info.get_name();
-            if (!name.endsWith(".desktop")) continue;
-            if (regex && !regex.test(name)) continue;
-            results.push(GLib.build_filenamev([ directory, name ]));
-        }
-    } catch (e) {}
-    return results;
 }

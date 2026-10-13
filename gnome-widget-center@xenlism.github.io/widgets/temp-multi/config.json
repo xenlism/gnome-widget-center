@@ -1,0 +1,678 @@
+{
+    "version": "1.0",
+    "tabs": [
+        {
+            "id": "general",
+            "label": "Multi Ring",
+            "description": "Concentric temperature rings",
+            "icon": "temperature-symbolic",
+            "groups": [
+                {
+                    "id": "ring-1",
+                    "label": "Ring 1 (outer)",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "ring-1-enabled",
+                            "label": "Show ring 1",
+                            "description": "",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": true
+                        },
+                        {
+                            "id": "ring-1-sensor",
+                            "label": "Sensor source",
+                            "description": "Which temperature this ring reads. Hottest match wins when several sensors fit.",
+                            "dataType": "string",
+                            "fieldType": "dropdown",
+                            "default": "cpu",
+                            "options": [
+                                {
+                                    "value": "auto",
+                                    "label": "Hottest sensor (auto)"
+                                },
+                                {
+                                    "value": "cpu",
+                                    "label": "CPU"
+                                },
+                                {
+                                    "value": "gpu",
+                                    "label": "GPU"
+                                },
+                                {
+                                    "value": "nvme",
+                                    "label": "NVMe drive"
+                                },
+                                {
+                                    "value": "disk",
+                                    "label": "Disk (drivetemp)"
+                                },
+                                {
+                                    "value": "wifi",
+                                    "label": "Wi-Fi card"
+                                },
+                                {
+                                    "value": "battery",
+                                    "label": "Battery"
+                                },
+                                {
+                                    "value": "acpi",
+                                    "label": "ACPI thermal zone"
+                                },
+                                {
+                                    "value": "custom",
+                                    "label": "Custom (name or /sys path)"
+                                }
+                            ],
+                            "visibleIf": "ring-1-enabled"
+                        },
+                        {
+                            "id": "ring-1-custom-sensor",
+                            "label": "Custom sensor",
+                            "description": "A sensor name to look for (e.g. \"Tctl\", \"Package\") or a full path such as /sys/class/hwmon/hwmon2/temp1_input",
+                            "dataType": "string",
+                            "fieldType": "text",
+                            "default": "",
+                            "visibleIf": "ring-1-sensor == 'custom'"
+                        },
+                        {
+                            "id": "ring-1-color",
+                            "label": "Ring color",
+                            "description": "Color of the temperature arc",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#FF6B4A",
+                            "format": "color",
+                            "alpha": true,
+                            "schemeRole": "ring-1"
+                        },
+                        {
+                            "id": "ring-1-thickness",
+                            "label": "Ring thickness",
+                            "description": "Stroke width of this ring",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 9,
+                            "min": 2,
+                            "max": 30,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "ring-1-enabled"
+                        },
+                        {
+                            "id": "ring-1-min",
+                            "label": "Empty at",
+                            "description": "Temperature (°C) where the ring is empty",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 30,
+                            "min": 0,
+                            "max": 150,
+                            "step": 1,
+                            "suffix": "°C",
+                            "visibleIf": "ring-1-enabled"
+                        },
+                        {
+                            "id": "ring-1-max",
+                            "label": "Full at",
+                            "description": "Temperature (°C) where the ring is full",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 100,
+                            "min": 1,
+                            "max": 200,
+                            "step": 1,
+                            "suffix": "°C",
+                            "visibleIf": "ring-1-enabled"
+                        }
+                    ]
+                },
+                {
+                    "id": "ring-2",
+                    "label": "Ring 2",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "ring-2-enabled",
+                            "label": "Show ring 2",
+                            "description": "",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": true
+                        },
+                        {
+                            "id": "ring-2-sensor",
+                            "label": "Sensor source",
+                            "description": "Which temperature this ring reads. Hottest match wins when several sensors fit.",
+                            "dataType": "string",
+                            "fieldType": "dropdown",
+                            "default": "gpu",
+                            "options": [
+                                {
+                                    "value": "auto",
+                                    "label": "Hottest sensor (auto)"
+                                },
+                                {
+                                    "value": "cpu",
+                                    "label": "CPU"
+                                },
+                                {
+                                    "value": "gpu",
+                                    "label": "GPU"
+                                },
+                                {
+                                    "value": "nvme",
+                                    "label": "NVMe drive"
+                                },
+                                {
+                                    "value": "disk",
+                                    "label": "Disk (drivetemp)"
+                                },
+                                {
+                                    "value": "wifi",
+                                    "label": "Wi-Fi card"
+                                },
+                                {
+                                    "value": "battery",
+                                    "label": "Battery"
+                                },
+                                {
+                                    "value": "acpi",
+                                    "label": "ACPI thermal zone"
+                                },
+                                {
+                                    "value": "custom",
+                                    "label": "Custom (name or /sys path)"
+                                }
+                            ],
+                            "visibleIf": "ring-2-enabled"
+                        },
+                        {
+                            "id": "ring-2-custom-sensor",
+                            "label": "Custom sensor",
+                            "description": "A sensor name to look for (e.g. \"Tctl\", \"Package\") or a full path such as /sys/class/hwmon/hwmon2/temp1_input",
+                            "dataType": "string",
+                            "fieldType": "text",
+                            "default": "",
+                            "visibleIf": "ring-2-sensor == 'custom'"
+                        },
+                        {
+                            "id": "ring-2-color",
+                            "label": "Ring color",
+                            "description": "Color of the temperature arc",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#FFB74D",
+                            "format": "color",
+                            "alpha": true,
+                            "schemeRole": "ring-2"
+                        },
+                        {
+                            "id": "ring-2-thickness",
+                            "label": "Ring thickness",
+                            "description": "Stroke width of this ring",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 9,
+                            "min": 2,
+                            "max": 30,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "ring-2-enabled"
+                        },
+                        {
+                            "id": "ring-2-min",
+                            "label": "Empty at",
+                            "description": "Temperature (°C) where the ring is empty",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 30,
+                            "min": 0,
+                            "max": 150,
+                            "step": 1,
+                            "suffix": "°C",
+                            "visibleIf": "ring-2-enabled"
+                        },
+                        {
+                            "id": "ring-2-max",
+                            "label": "Full at",
+                            "description": "Temperature (°C) where the ring is full",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 100,
+                            "min": 1,
+                            "max": 200,
+                            "step": 1,
+                            "suffix": "°C",
+                            "visibleIf": "ring-2-enabled"
+                        }
+                    ]
+                },
+                {
+                    "id": "ring-3",
+                    "label": "Ring 3",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "ring-3-enabled",
+                            "label": "Show ring 3",
+                            "description": "",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": true
+                        },
+                        {
+                            "id": "ring-3-sensor",
+                            "label": "Sensor source",
+                            "description": "Which temperature this ring reads. Hottest match wins when several sensors fit.",
+                            "dataType": "string",
+                            "fieldType": "dropdown",
+                            "default": "nvme",
+                            "options": [
+                                {
+                                    "value": "auto",
+                                    "label": "Hottest sensor (auto)"
+                                },
+                                {
+                                    "value": "cpu",
+                                    "label": "CPU"
+                                },
+                                {
+                                    "value": "gpu",
+                                    "label": "GPU"
+                                },
+                                {
+                                    "value": "nvme",
+                                    "label": "NVMe drive"
+                                },
+                                {
+                                    "value": "disk",
+                                    "label": "Disk (drivetemp)"
+                                },
+                                {
+                                    "value": "wifi",
+                                    "label": "Wi-Fi card"
+                                },
+                                {
+                                    "value": "battery",
+                                    "label": "Battery"
+                                },
+                                {
+                                    "value": "acpi",
+                                    "label": "ACPI thermal zone"
+                                },
+                                {
+                                    "value": "custom",
+                                    "label": "Custom (name or /sys path)"
+                                }
+                            ],
+                            "visibleIf": "ring-3-enabled"
+                        },
+                        {
+                            "id": "ring-3-custom-sensor",
+                            "label": "Custom sensor",
+                            "description": "A sensor name to look for (e.g. \"Tctl\", \"Package\") or a full path such as /sys/class/hwmon/hwmon2/temp1_input",
+                            "dataType": "string",
+                            "fieldType": "text",
+                            "default": "",
+                            "visibleIf": "ring-3-sensor == 'custom'"
+                        },
+                        {
+                            "id": "ring-3-color",
+                            "label": "Ring color",
+                            "description": "Color of the temperature arc",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#81C784",
+                            "format": "color",
+                            "alpha": true,
+                            "schemeRole": "ring-3"
+                        },
+                        {
+                            "id": "ring-3-thickness",
+                            "label": "Ring thickness",
+                            "description": "Stroke width of this ring",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 9,
+                            "min": 2,
+                            "max": 30,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "ring-3-enabled"
+                        },
+                        {
+                            "id": "ring-3-min",
+                            "label": "Empty at",
+                            "description": "Temperature (°C) where the ring is empty",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 30,
+                            "min": 0,
+                            "max": 150,
+                            "step": 1,
+                            "suffix": "°C",
+                            "visibleIf": "ring-3-enabled"
+                        },
+                        {
+                            "id": "ring-3-max",
+                            "label": "Full at",
+                            "description": "Temperature (°C) where the ring is full",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 100,
+                            "min": 1,
+                            "max": 200,
+                            "step": 1,
+                            "suffix": "°C",
+                            "visibleIf": "ring-3-enabled"
+                        }
+                    ]
+                },
+                {
+                    "id": "ring-4",
+                    "label": "Ring 4",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "ring-4-enabled",
+                            "label": "Show ring 4",
+                            "description": "",
+                            "dataType": "boolean",
+                            "fieldType": "switch",
+                            "default": false
+                        },
+                        {
+                            "id": "ring-4-sensor",
+                            "label": "Sensor source",
+                            "description": "Which temperature this ring reads. Hottest match wins when several sensors fit.",
+                            "dataType": "string",
+                            "fieldType": "dropdown",
+                            "default": "wifi",
+                            "options": [
+                                {
+                                    "value": "auto",
+                                    "label": "Hottest sensor (auto)"
+                                },
+                                {
+                                    "value": "cpu",
+                                    "label": "CPU"
+                                },
+                                {
+                                    "value": "gpu",
+                                    "label": "GPU"
+                                },
+                                {
+                                    "value": "nvme",
+                                    "label": "NVMe drive"
+                                },
+                                {
+                                    "value": "disk",
+                                    "label": "Disk (drivetemp)"
+                                },
+                                {
+                                    "value": "wifi",
+                                    "label": "Wi-Fi card"
+                                },
+                                {
+                                    "value": "battery",
+                                    "label": "Battery"
+                                },
+                                {
+                                    "value": "acpi",
+                                    "label": "ACPI thermal zone"
+                                },
+                                {
+                                    "value": "custom",
+                                    "label": "Custom (name or /sys path)"
+                                }
+                            ],
+                            "visibleIf": "ring-4-enabled"
+                        },
+                        {
+                            "id": "ring-4-custom-sensor",
+                            "label": "Custom sensor",
+                            "description": "A sensor name to look for (e.g. \"Tctl\", \"Package\") or a full path such as /sys/class/hwmon/hwmon2/temp1_input",
+                            "dataType": "string",
+                            "fieldType": "text",
+                            "default": "",
+                            "visibleIf": "ring-4-sensor == 'custom'"
+                        },
+                        {
+                            "id": "ring-4-color",
+                            "label": "Ring color",
+                            "description": "Color of the temperature arc",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#4FC3F7",
+                            "format": "color",
+                            "alpha": true,
+                            "schemeRole": "ring-4"
+                        },
+                        {
+                            "id": "ring-4-thickness",
+                            "label": "Ring thickness",
+                            "description": "Stroke width of this ring",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 9,
+                            "min": 2,
+                            "max": 30,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "ring-4-enabled"
+                        },
+                        {
+                            "id": "ring-4-min",
+                            "label": "Empty at",
+                            "description": "Temperature (°C) where the ring is empty",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 30,
+                            "min": 0,
+                            "max": 150,
+                            "step": 1,
+                            "suffix": "°C",
+                            "visibleIf": "ring-4-enabled"
+                        },
+                        {
+                            "id": "ring-4-max",
+                            "label": "Full at",
+                            "description": "Temperature (°C) where the ring is full",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 100,
+                            "min": 1,
+                            "max": 200,
+                            "step": 1,
+                            "suffix": "°C",
+                            "visibleIf": "ring-4-enabled"
+                        }
+                    ]
+                },
+                {
+                    "id": "rings",
+                    "label": "Rings",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "ring-gap",
+                            "label": "Ring gap",
+                            "description": "Space between neighbouring rings",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 4,
+                            "min": 0,
+                            "max": 20,
+                            "step": 1,
+                            "suffix": "px"
+                        },
+                        {
+                            "id": "ring-track-color",
+                            "label": "Ring track color",
+                            "description": "Background track drawn behind the arc(s)",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#FFFFFF26",
+                            "format": "color",
+                            "alpha": true
+                        }
+                    ]
+                },
+                {
+                    "id": "text",
+                    "label": "Text",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "center-text",
+                            "label": "Center text",
+                            "description": "What the middle of the widget shows",
+                            "dataType": "string",
+                            "fieldType": "dropdown",
+                            "default": "max",
+                            "options": [
+                                {
+                                    "value": "max",
+                                    "label": "Hottest ring"
+                                },
+                                {
+                                    "value": "avg",
+                                    "label": "Average"
+                                },
+                                {
+                                    "value": "none",
+                                    "label": "Nothing"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "text-font-size",
+                            "label": "Text font size",
+                            "description": "Size of the temperature value",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 20,
+                            "min": 8,
+                            "max": 64,
+                            "step": 1,
+                            "suffix": "px"
+                        },
+                        {
+                            "id": "text-color",
+                            "label": "Text color",
+                            "description": "Color of the temperature value",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#FFFFFFFF",
+                            "format": "color",
+                            "alpha": true,
+                            "schemeRole": "text-1"
+                        },
+                        {
+                            "id": "label-font-size",
+                            "label": "Label font size",
+                            "description": "Size of the caption under the value",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 10,
+                            "min": 6,
+                            "max": 40,
+                            "step": 1,
+                            "suffix": "px"
+                        },
+                        {
+                            "id": "label-color",
+                            "label": "Label color",
+                            "description": "Color of the caption",
+                            "dataType": "string",
+                            "fieldType": "colorpicker",
+                            "default": "#FFFFFFB3",
+                            "format": "color",
+                            "alpha": true,
+                            "schemeRole": "text-2"
+                        }
+                    ]
+                },
+                {
+                    "id": "behavior",
+                    "label": "Behavior",
+                    "description": "",
+                    "fields": [
+                        {
+                            "id": "unit",
+                            "label": "Unit",
+                            "description": "Temperature unit shown on the widget",
+                            "dataType": "string",
+                            "fieldType": "dropdown",
+                            "default": "C",
+                            "options": [
+                                {
+                                    "value": "C",
+                                    "label": "Celsius (°C)"
+                                },
+                                {
+                                    "value": "F",
+                                    "label": "Fahrenheit (°F)"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "refresh-seconds",
+                            "label": "Refresh rate",
+                            "description": "How often the sensors are read",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 3,
+                            "min": 1,
+                            "max": 60,
+                            "step": 1,
+                            "suffix": "s"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "shadow",
+            "label": "Shadow",
+            "description": "Drop shadow behind this widget.",
+            "groups": [
+                {
+                    "id": "shadow",
+                    "label": "Shadow effect",
+                    "description": "Off by default. Enable it under Appearance.",
+                    "fields": [
+                        {
+                            "id": "card-shadow-angle",
+                            "label": "Shadow angle",
+                            "description": "Direction in degrees (0 = right, 90 = down, 180 = left, 270 = up)",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 90,
+                            "min": 0,
+                            "max": 360,
+                            "step": 1,
+                            "suffix": "°",
+                            "visibleIf": "card-shadow-enabled"
+                        },
+                        {
+                            "id": "card-shadow-distance",
+                            "label": "Shadow distance",
+                            "description": "How far the shadow is offset, in pixels",
+                            "dataType": "integer",
+                            "fieldType": "spinbutton",
+                            "default": 6,
+                            "min": 0,
+                            "max": 60,
+                            "step": 1,
+                            "suffix": "px",
+                            "visibleIf": "card-shadow-enabled"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

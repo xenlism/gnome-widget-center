@@ -6,11 +6,7 @@ import Gdk from "gi://Gdk";
 
 import Pango from "gi://Pango";
 
-import GLib from "gi://GLib";
-
-function _esc(text) {
-    return GLib.markup_escape_text(String(text ?? ""), -1);
-}
+import { escapeMarkup } from "./prefsUtils.js";
 
 export function buildSettingsPage(schema, settingsProxy, title) {
     const page = new Adw.PreferencesPage({
@@ -51,7 +47,7 @@ function _buildRow(field, settingsProxy) {
 
       default:
         return new Adw.ActionRow({
-            title: _esc(field.label ?? field.id),
+            title: escapeMarkup(field.label ?? field.id),
             subtitle: `Unknown setting type "${field.type}"`,
             sensitive: false
         });
@@ -60,7 +56,7 @@ function _buildRow(field, settingsProxy) {
 
 function _stringRow(field, settingsProxy, current) {
     const row = new Adw.EntryRow({
-        title: _esc(field.label),
+        title: escapeMarkup(field.label),
         text: String(current ?? "")
     });
     if (field.description) row.set_tooltip_text(field.description);
@@ -78,7 +74,7 @@ function _numberRow(field, settingsProxy, current) {
         value: current
     });
     const row = new Adw.SpinRow({
-        title: _esc(field.label),
+        title: escapeMarkup(field.label),
         adjustment: adjustment
     });
     if (field.description) row.set_tooltip_text(field.description);
@@ -97,7 +93,7 @@ function _rangeRow(field, settingsProxy, current) {
         value: current
     });
     const row = new Adw.SpinRow({
-        title: _esc(field.label),
+        title: escapeMarkup(field.label),
         subtitle: `${field.min}–${field.max}`,
         adjustment: adjustment,
         digits: Number.isInteger(step) ? 0 : 2
@@ -111,10 +107,10 @@ function _rangeRow(field, settingsProxy, current) {
 
 function _booleanRow(field, settingsProxy, current) {
     const row = new Adw.SwitchRow({
-        title: _esc(field.label),
+        title: escapeMarkup(field.label),
         active: Boolean(current)
     });
-    if (field.description) row.set_subtitle(_esc(field.description));
+    if (field.description) row.set_subtitle(escapeMarkup(field.description));
     row.connect("notify::active", () => {
         settingsProxy[field.id] = row.active;
     });
@@ -130,7 +126,7 @@ function _dropdownRow(field, settingsProxy, current) {
         strings: options.map(opt => opt.label)
     });
     const row = new Adw.ComboRow({
-        title: _esc(field.label),
+        title: escapeMarkup(field.label),
         model: model
     });
     if (field.description) row.set_tooltip_text(field.description);
@@ -144,9 +140,9 @@ function _dropdownRow(field, settingsProxy, current) {
 
 function _colorRow(field, settingsProxy, current) {
     const row = new Adw.ActionRow({
-        title: _esc(field.label)
+        title: escapeMarkup(field.label)
     });
-    if (field.description) row.set_subtitle(_esc(field.description));
+    if (field.description) row.set_subtitle(escapeMarkup(field.description));
     const rgba = new Gdk.RGBA;
     rgba.parse(typeof current === "string" ? current : String(field.default));
     const button = new Gtk.ColorDialogButton({
@@ -171,7 +167,7 @@ function _sizeRow(field, settingsProxy, current) {
         value: current
     });
     const row = new Adw.SpinRow({
-        title: _esc(field.label),
+        title: escapeMarkup(field.label),
         subtitle: hasBounds ? `${field.min}–${field.max} px` : "px",
         adjustment: adjustment,
         digits: Number.isInteger(field.step ?? 1) ? 0 : 2
@@ -185,9 +181,9 @@ function _sizeRow(field, settingsProxy, current) {
 
 function _fontRow(field, settingsProxy, current) {
     const row = new Adw.ActionRow({
-        title: _esc(field.label)
+        title: escapeMarkup(field.label)
     });
-    if (field.description) row.set_subtitle(_esc(field.description));
+    if (field.description) row.set_subtitle(escapeMarkup(field.description));
     const button = new Gtk.FontDialogButton({
         dialog: new Gtk.FontDialog,
         valign: Gtk.Align.CENTER

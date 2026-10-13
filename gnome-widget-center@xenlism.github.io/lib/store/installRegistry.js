@@ -69,6 +69,11 @@ export class InstallRegistry {
         const r = this.data[kind][id]; if (!r) return Promise.resolve();
         r.revoked = { reason, at: Math.floor(Date.now() / 1000) }; return this._save();
     }
+    /** The store no longer withdraws this item: drop the flag (nothing else changes). */
+    clearRevoked(kind, id) {
+        const r = this.data[kind][id]; if (!r?.revoked) return Promise.resolve();
+        delete r.revoked; return this._save();
+    }
     revokedList() {
         return [ "widgets", "themepacks" ].flatMap(k => Object.entries(this.data[k]).filter(([ , r ]) => r.revoked).map(([ id, r ]) => ({ kind: k, id, reason: r.revoked.reason })));
     }

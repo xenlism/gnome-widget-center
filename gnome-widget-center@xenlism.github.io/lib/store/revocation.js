@@ -5,12 +5,23 @@
 //      ~/.local/share/gnome-widget-center/quarantine/<kind>/ (reversible, nothing is deleted)
 import { quarantine } from "./gwcFormat.js";
 
-/** @returns { all: [{kind,id,reason}], fresh: [...] }  fresh = newly flagged this time (show a notification for these) */
+/**
+ * @returns { all: [{kind,id,reason}], fresh: [...], cleared: [{kind,id}] }
+ *   fresh   = newly flagged this time (show a notification for these)
+ *   cleared = flagged earlier but the store no longer withdraws them (flag dropped)
+ */
 export async function checkRevocations(client, registry) {
     const all = await client.revocations(registry);
     const fresh = all.filter(h => !registry.get(h.kind, h.id)?.revoked);
     for (const h of fresh) await registry.markRevoked(h.kind, h.id, h.reason);
-    return { all, fresh };
+    const still = new Set(all.map(h => `${h.kind}/${h.id}`));
+    const cleared = [];
+    for (const kind of [ "widgets", "themepacks" ]) {
+        for (const id of Object.keys(client.ownInstalls(registry, kind))) {
+            if (registry.get(kind, id)?.revoked && !still.has(`${kind}/${id}`)) { await registry.clearRevoked(kind, id); cleared.push({ kind, id }); }
+        }
+    }
+    return { all, fresh, cleared };
 }
 
 export function quarantineRevoked(registry, { kind, id }) {

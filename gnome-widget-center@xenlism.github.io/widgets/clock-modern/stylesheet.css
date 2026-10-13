@@ -1,0 +1,30 @@
+/* widgets/clock-modern/stylesheet.css
+ *
+ * Namespaced with the clock-modern-widget- prefix per docs/WIDGET_API.md §1.
+ *
+ * NOTE: as with widgets/clock/stylesheet.css and
+ * widgets/calendar-modern/stylesheet.css, the host does not yet load a
+ * widget's stylesheet.css into the Shell's theme context automatically.
+ * This file documents the intended styling per the widget author
+ * contract; the actual card look comes from the inline St `style` strings
+ * set in widget.js's _render(), driven by this widget's font/color
+ * settings.
+ */
+
+.clock-modern-widget-root {
+    padding: 20px 20px;
+}
+
+.clock-modern-widget-ampm {
+    font-weight: bold;
+    font-size: 10px;
+    text-align: center;
+}
+
+.clock-modern-widget-hh,
+.clock-modern-widget-mm,
+.clock-modern-widget-ss {
+    font-weight: bold;
+    font-size: 30px;
+    text-align: center;
+}

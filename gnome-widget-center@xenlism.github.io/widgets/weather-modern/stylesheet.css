@@ -1,0 +1,31 @@
+/* widgets/weather-panel/stylesheet.css
+ *
+ * Namespaced with the weather-panel-widget- prefix per docs/WIDGET_API.md §1.
+ *
+ * NOTE: as with widgets/clock-modern/stylesheet.css and
+ * widgets/date-modern/stylesheet.css, the host does not yet load a
+ * widget's stylesheet.css into the Shell's theme context automatically.
+ * This file documents the intended styling per the widget author
+ * contract; the actual card look comes from the inline St `style`
+ * strings set in widget.js's _render(), driven by this widget's
+ * font/color/icon settings.
+ */
+
+.weather-panel-widget-root {
+    padding: 14px 14px;
+}
+
+.weather-panel-widget-icon {
+    padding-bottom: 4px;
+}
+
+.weather-panel-widget-temp {
+    font-weight: bold;
+    font-size: 32px;
+    text-align: center;
+}
+
+.weather-panel-widget-condition {
+    font-size: 14px;
+    text-align: center;
+}

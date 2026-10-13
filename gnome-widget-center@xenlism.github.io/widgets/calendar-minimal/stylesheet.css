@@ -1,0 +1,27 @@
+/* widgets/calendar-minimal/stylesheet.css
+ *
+ * Namespaced with the calendar-minimal-widget- prefix per
+ * docs/WIDGET_API.md §1.
+ *
+ * NOTE: as with widgets/clock/stylesheet.css and
+ * widgets/_template/stylesheet.css, the host does not yet load a
+ * widget's stylesheet.css into the Shell's theme context automatically.
+ * This file documents the intended styling per the widget author
+ * contract; the actual chromeless look comes from the inline St `style`
+ * strings set in widget.js's _render(), driven by this widget's
+ * textColor/accentColor/showMonth settings.
+ */
+
+.calendar-minimal-widget-root {
+    padding: 10px;
+}
+
+.calendar-minimal-widget-day {
+    font-weight: 300;
+    font-size: 64px;
+}
+
+.calendar-minimal-widget-subtitle {
+    font-weight: bold;
+    font-size: 12px;
+}

@@ -18,7 +18,7 @@ my-widget/
 ├── metadata.json      # required
 ├── widget.js          # required — runs in the Shell process, draws on the desktop
 ├── config.json        # recommended default — declarative settings UI, see §6.4. Every
-│                       #   bundled widget (73/73 as of this writing) ships one.
+│                       #   bundled widget (79/79 as of widget API 3) ships one.
 ├── prefs.js           # optional — hand-written settings UI for anything config.json
 │                       #   can't express (file pickers, custom layout). Only 4 bundled
 │                       #   widgets use this today, alongside their own config.json.
@@ -41,9 +41,9 @@ folder instead, discovered the same way.
   "id": "my-widget",
   "name": "My Widget",
   "description": "One line, shown in the Control Center list.",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "author": "your name",
-  "api-version": 2,
+  "api-version": 3,
   "entry": "widget.js",
   "block-type": "1x1",
   "default-position": { "x": 40, "y": 40, "monitor": 0 }
@@ -52,15 +52,28 @@ folder instead, discovered the same way.
 
 - `id` must match the folder name and be globally unique — the host
   rejects duplicates.
-- `api-version` is a compatibility check. The current widget API is **2.0**
-  (write `2`; `"2.0"` is also accepted). A breaking host API change bumps this;
-  a widget that declares an older number, or none, is not loaded and shows a
-  notice in the widget list instead of crashing. A number newer than the host
-  supports is refused the same way. Logic and constants: `lib/apiVersion.js`
-  (`HOST_API_VERSION`, `MIN_SUPPORTED_API_VERSION`).
+- `api-version` is a compatibility check. The current widget API is **3.0**
+  (write `3`; `"3.0"` is also accepted). A breaking host API change bumps this;
+  a widget that declares an older number than the host still supports, or none,
+  is not loaded and shows a notice in the widget list instead of crashing. A
+  number newer than the host supports is refused the same way ("update Widget
+  Center"). Logic and constants: `lib/apiVersion.js` (`HOST_API_VERSION = 3`,
+  `MIN_SUPPORTED_API_VERSION = 2`).
+  - **3.0**: the host's helper modules are handed to the widget as `api.host.kit`
+    (§9.0) instead of `import ... from "../../lib/<file>.js"`. A widget that
+    imports by path only works inside the bundled `widgets/` folder and loads a
+    second copy of each module; a widget on the kit works from any folder
+    (including Store installs) and shares one instance. **API 2 widgets that
+    still import by path keep loading, but API 2 is deprecated** and will be
+    dropped (`MIN_SUPPORTED_API_VERSION` becomes 3) in a later release. To port
+    one: replace each `../../lib/...` import with a destructure from
+    `api.host.kit.<namespace>` in the constructor (§9.0), then set
+    `"api-version": 3`.
   - **2.0** (breaking vs 1.x): the `card-*` setting keys (9.3.1), `appearance.cardSettings`
     (9.3.3) and `appearance.colorScheme` / `schemeRole` (9.3.2). To port a 1.x widget, rename its
-    card keys with `CARD_KEYS` and set `"api-version": 2`.
+    card keys (see the table in 9.3.1) and set `"api-version": 2` or higher.
+- `version` is the widget's own version string, independent of the extension's.
+  The bundled widgets are `3.0.0` at the v3 release.
 - `block-type` (a **name**, not `{cols, rows}`) is the on-screen size **in
   grid cells**, not pixels (see
   `development/architecture/specs/ui/size-constraints.md` — the
@@ -254,6 +267,8 @@ can always do more than a schema (file pickers, custom layout, anything
 | `api.path.me` | Absolute path (string) to this widget's own folder on disk — for reading a bundled asset (icons/, a template, etc.) that ships alongside `widget.js`. |
 | `api.path.id(widgetId)` | Absolute path (string) to another widget's folder by id, or `null` if no widget with that id is installed. Works for any discovered widget, loaded or not. |
 | `api.logger` | Logging pre-tagged with this widget's id. |
+| `api.host.kit` | **Widget API 3.** The host's helper modules, one shared frozen instance for every widget: `config`, `layers`, `visual`, `metrics`, `tooltip`, `fs`, `utils`, `gauge`, `media`, `calendar`, `architect`, `iconAccent`, `cryptoMarkets`, `stockMarkets`, plus `version` (the kit's own version). Take what you need in the constructor; see §9.0. |
+| `api.host.rescan()` | Asks the host to rescan the widget folders (used by Architect widgets after they create a child). Safe to call; call it as `api.host?.rescan?.()`. |
 | `api.hostLanguage` | 2026-08-04. The host-level UI language override (gschema key `language`), as a locale code string (e.g. `"th"`) or `''` meaning "no override, use `GLib.get_language_names()`'s system locale order" — the same thing `lib/i18nUtils.js`-adjacent `i18n/index.js` files' `pickLocale()` already do by default. A **live getter**, not a snapshot — always reflects the current value. Pass it as `pickLocale()`'s optional override argument; see `widgets/weather-dark/widget.js` for the pattern. See also `onHostLanguageChanged()` in §3 for reacting to a change immediately instead of on next render. |
 
 ## 6. Settings — four systems, in order of precedence
@@ -717,18 +732,79 @@ complete worked example.
 
 ## 9. Accessing external system state from `widget.js`
 
-### 9.1 DBus services (e.g. media players via MPRIS2)
+### 9.0 The host kit (`api.host.kit`, widget API 3)
 
-For bundled widgets, use `lib/mediaApi.js`'s `MprisMediaService` instead
-of talking to `Gio.DBusProxy` directly — it already handles player
-discovery, `NameOwnerChanged` tracking, signal cleanup, and GVariant
-unpacking:
+Widgets never import the extension's `lib/` files by path. Everything the host
+offers comes from `api.host.kit`, a single frozen object created once per Shell
+process (`lib/shell/hostKit.js`) and shared by every widget, bundled or
+installed from the Store. Each namespace is a frozen plain copy of the named
+host modules' exports.
+
+| Namespace | Host module(s) | What you get (main exports) |
+|---|---|---|
+| `config` | `widgetConfigDefaults.js` | `configJsonDefaults` |
+| `layers` | `shell/cardLayers.js` | `createLayeredCard`, `applyLayeredCardStyle`, `applyCardBlur` |
+| `visual` | `widgetVisualKit.js` | `SHADOW_DEFAULTS`, `BORDER_DEFAULTS`, `OPACITY_DEFAULTS`, `BLUR_DEFAULTS`, `TEXT_SHADOW_DEFAULTS`, `shadowBoxShadowCss`, `textShadowCss`, `borderCss`, `cardStyleCss`, `hexToRgba`, `toCssColor`, `parseFontDescription`, `resolveCornerRadius`, `applyCardOpacity`, `deferUntilMapped` |
+| `metrics` | `systemMetricsApi.js` | `SystemMetricsService` (§9.2) |
+| `tooltip` | `shell/widgetTooltip.js` | `attachTooltip` |
+| `fs` | `fsUtils.js` | `readTextFileAsync`, `writeTextFileAsync`, `writeJsonFile`, `getSpecialFolderInfo`, `fileExists`, `ensureDirectory`, ... |
+| `utils` | `utils.js` | `getAppInfoFromFilename`, `findAppInfoByQuery` |
+| `gauge` | `shell/halfCircleGaugeKit.js` | `HalfCircleGauge`, `CARD_PADDING`, `RING_GAP`, ... |
+| `media` | `mediaApi.js` | `MprisMediaService` (§9.1) |
+| `calendar` | `systemCalendarEvents.js`, `calendarGridKit.js` | `SystemCalendarEvents`, `buildMonthGrid`, `weekdayLabels` |
+| `architect` | `architectWidgetKit.js` | `createChildWidgetFromParent`, `restoreChildWidget`, ... |
+| `iconAccent` | `iconAccentColor.js` | `getAccentColorForApp`, `clearAccentColorCache` |
+| `cryptoMarkets` | `cryptoMarketsKit.js` | `parseCoinList`, `fetchMarkets`, `seriesForRange`, `createSoupFetcher`, `paintSparkline`, ... |
+| `stockMarkets` | `stockMarketsKit.js` | `parseSymbolList`, `fetchStocks`, `createStockFetcher`, `seriesForQuote`, `paintSparkline`, ... |
+
+The namespaces hold exactly what the host modules export, so the source file is
+the full reference for a namespace.
 
 ```js
-import {MprisMediaService} from '../../lib/mediaApi.js';
-// bundled widgets only - see the path restriction below
+// module scope: filled in by the constructor (the kit only exists once the host builds the widget)
+let createLayeredCard, applyLayeredCardStyle, SystemMetricsService;
 
-this._media = new MprisMediaService(api.logger);
+export default class MyWidget {
+    constructor(api) {
+        ({ createLayeredCard, applyLayeredCardStyle } = api.host.kit.layers);
+        ({ SystemMetricsService } = api.host.kit.metrics);
+        this._api = api;
+    }
+}
+```
+
+Rules:
+
+- **Fill the names in the constructor** (or in `static async createInstance(api)`),
+  never at module top level: `api` does not exist yet there.
+- **Do not import host files by path** (`../../lib/...`). It breaks for Store installs,
+  where no `lib/` sits next to the widget, and it creates a second copy of the module
+  with its own state. Standard imports (`gi://...`, `resource:///org/gnome/shell/...`,
+  your own widget files such as `./i18n/index.js`) are fine.
+- **Adding to the kit does not bump `kit.version`; removing or changing the meaning of
+  an export does.** Feature-detect optional names (`api.host.kit.visual.someNewHelper?.(...)`)
+  if your widget must also run on a slightly older host, and check `api.host.kit.version`
+  only when you depend on a specific kit generation (currently `1`).
+- Child widgets (those whose `metadata.json` has a `parent`) are loaded through the
+  parent's code, so they get the same `api` and need no kit code of their own; their
+  `widget.js` is a stub that is never imported.
+- Something you need is not in the kit? That is a host change: export it from the host
+  module (and add the module to `lib/shell/hostKit.js` if it is new) and document it here.
+  Do not work around it with a path import.
+
+### 9.1 DBus services (e.g. media players via MPRIS2)
+
+Use the kit's `MprisMediaService` (`api.host.kit.media`) instead of talking to
+`Gio.DBusProxy` directly. It already handles player discovery, `NameOwnerChanged`
+tracking, signal cleanup, and GVariant unpacking:
+
+```js
+let MprisMediaService;   // filled in by the constructor
+
+constructor(api) {
+    ({ MprisMediaService } = api.host.kit.media);
+    this._media = new MprisMediaService(api.logger);
+}
 
 enable() {
     this._media.start((state) => {
@@ -749,20 +825,10 @@ disable() {
 Playback controls: `playPause()`, `play()`, `pause()`, `stopPlayback()`,
 `next()`, `previous()`, `seek(offsetMs)`, `setVolume(0..1)`,
 `setShuffle(bool)`, `setLoop(mode)`, `raise()`, `quit()`. See
-`widgets/media-player/widget.js` for a complete worked example.
+`widgets/media-player-wide/widget.js` for a complete worked example.
 
-**Path restriction:** the relative import above only works for widgets
-bundled inside this extension (like `media-player`). Third-party widgets
-installed under `~/.local/share/gnome-widget-center/widgets/` **cannot**
-import this file — there's no path connecting the two folders (same
-restriction as `lib/systemMetricsApi.js` in §9.2), and it isn't exposed
-as `api.media` yet. Exposing it that way would be an intentional API
-addition (`widgetLoader.js`'s `_buildApi()` + this doc, together), not a
-side effect of something else.
-
-A third-party widget (or a bundled widget talking to a DBus service
-`mediaApi.js` doesn't cover) still works directly against
-`Gio.DBusProxy`:
+A widget talking to a DBus service `mediaApi.js` doesn't cover still works
+directly against `Gio.DBusProxy`:
 
 ```js
 import Gio from 'gi://Gio';
@@ -793,10 +859,12 @@ same choice if you roll your own).
 ### 9.2 System metrics (CPU/RAM/network)
 
 ```js
-import {SystemMetricsService} from '../../lib/systemMetricsApi.js';
-// bundled widgets only - see the path restriction below
+let SystemMetricsService;   // filled in by the constructor
 
-this._metrics = new SystemMetricsService(); // one instance per widget instance
+constructor(api) {
+    ({ SystemMetricsService } = api.host.kit.metrics);
+    this._metrics = new SystemMetricsService(); // one instance per widget instance
+}
 
 this._timerId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 2, () => {
     const {cpu, memory, network, devices} = this._metrics.sample();
@@ -812,15 +880,6 @@ this._timerId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 2, () => {
 | `listNetworkDevices()` | `[{name}]` — everything found, including `lo` |
 | `sample()` | all four combined in one call — convenient for a single timer |
 
-**Path restriction:** the relative import above only works for widgets
-bundled inside this extension (like `system-monitor`). Third-party widgets
-installed under `~/.local/share/gnome-widget-center/widgets/` **cannot**
-import this file — there's no path connecting the two folders (same
-restriction as `lib/mediaApi.js` in §9.1), and it isn't exposed as
-`api.system` yet. Exposing it that way would be an intentional API
-addition (`widgetLoader.js`'s `_buildApi()` + this doc, together), not a
-side effect of something else.
-
 Must-follow: never call these from a timer tighter than actually needed
 (each call re-reads `/proc/*`; 1–10s, like `system-monitor`'s own
 default,
@@ -834,18 +893,15 @@ need a correct value from the very first real frame.
 
 `lib/widgetVisualKit.js` holds the small pure-function helpers almost
 every card-style widget needs: drop-shadow CSS, hex/rgba color
-conversion, and Pango font-description parsing. Import the pieces you
-need instead of pasting a local copy:
+conversion, and Pango font-description parsing. Take the pieces you need
+from `api.host.kit.visual` instead of pasting a local copy:
 
 ```js
-import {
-    SHADOW_DEFAULTS,
-    shadowBoxShadowCss,
-    hexToRgba,
-    toCssColor,
-    parseFontDescription,
-} from '../../lib/widgetVisualKit.js';
-// bundled widgets only - see the path restriction below
+let SHADOW_DEFAULTS, shadowBoxShadowCss, hexToRgba, toCssColor, parseFontDescription;
+
+constructor(api) {
+    ({ SHADOW_DEFAULTS, shadowBoxShadowCss, hexToRgba, toCssColor, parseFontDescription } = api.host.kit.visual);
+}
 ```
 
 | Export | Use it for |
@@ -856,18 +912,12 @@ import {
 | `toCssColor(hex, fallback)` | 8-digit `"#rrggbbaa"` → `"rgba(...)"` for St CSS (St doesn't understand 8-digit hex) |
 | `parseFontDescription(fontStr, fallbackFamily, fallbackSize)` | one Pango string (`"Sans Bold 22"`) → `{family, size}` for St's separate `font-family`/`font-size` |
 
-**Path restriction:** same as §9.1/§9.2 — the relative import only
-resolves for widgets bundled inside this extension. Third-party widgets
-under `~/.local/share/gnome-widget-center/widgets/` cannot reach this
-file and must keep their own local copy of any of these helpers they
-need.
-
 Do **not** re-introduce a local `_shadowBoxShadowCss()`/`_hexToRgba()`/
-`_toCssColor()`/`_parseFontDescription()` in a new bundled widget — copy
-the import above instead. (Earlier bundled widgets each carried their own
-byte-identical copy of these; that's been consolidated here as of the
-2026-08 cleanup pass. If you're editing an old widget and still find a
-local copy, replace it with this import while you're in there.)
+`_toCssColor()`/`_parseFontDescription()` in a new widget: destructure it from
+the kit as above. (Earlier bundled widgets each carried their own
+byte-identical copy of these; they were consolidated into one module and, with
+widget API 3, handed out through the kit. If you're editing an old widget and
+still find a local copy, replace it while you're in there.)
 
 **Shadow bleed past the block-type edge:** a widget's `box-shadow` is
 painted on the same root actor `widgetLoader.js`'s `_enforceBlockSize()`
@@ -909,7 +959,7 @@ Never invent per-widget names such as `cardColor`, `paperColor`, `widgetCornerRa
 | `card-blur-enabled` | boolean | `false` |
 | `card-blur-radius` | 0-100 px | `24` |
 
-Constants live in `lib/cardSettingKeys.js` (`CARD_KEYS`). Keys contain hyphens, so read them
+The host keeps these names in `lib/cardSettingKeys.js` (`CARD_KEYS`); that module is not part of the kit, so a widget declares the keys it uses as plain strings (the bundled widgets keep a small `CARD = { "card-background-color": ..., }` defaults object). Keys contain hyphens, so read them
 with brackets: `settings["card-background-color"]`. Old names are migrated automatically on load
 by `migrateCardSettings()` (storageService) - including old `.gwct` packs.
 
@@ -1051,8 +1101,8 @@ Must-follow when touching `Main.*`:
 
 ## 10. Minimum supported version
 
-- GNOME Shell 45+ (ES module extension API) — developed and tested mainly
-  on GNOME 50 / Wayland.
+- GNOME Shell 50+ — the extension declares `shell-version` 50 and 51, and is developed
+  and tested mainly on GNOME 50 / Wayland.
 - If a widget needs a feature only present on a newer Shell, declare it
   via `shell-version` in `metadata.json`.
 
@@ -1064,3 +1114,6 @@ Must-follow when touching `Main.*`:
 - [ ] Tested across screen lock/unlock (widget must never appear on the
       lock screen)
 - [ ] No hardcoded paths, no dev-machine absolute paths
+- [ ] `metadata.json` has `"api-version": 3` and a `version`
+- [ ] No `../../lib/...` imports: host helpers come from `api.host.kit` (§9.0), taken in the constructor
+- [ ] Works when installed under `~/.local/share/gnome-widget-center/widgets/` (no `lib/` next to it)

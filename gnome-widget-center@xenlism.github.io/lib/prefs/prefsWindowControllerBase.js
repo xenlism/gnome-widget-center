@@ -40,7 +40,6 @@ class PrefsWindowControllerBase {
         this._storage = null;
         this._discovered = [];
         this._preferencesPage = null;
-        this._storePage = null;
     }
     showPreferencesPage(window) {
         if (!this._preferencesPage) return;
@@ -53,11 +52,12 @@ class PrefsWindowControllerBase {
             return GLib.SOURCE_REMOVE;
         });
     }
+    // there is no Store tab any more: store items are in the Widgets / Themes tabs (--focus=store opens the Widgets tab)
     showStorePage(window) {
-        if (!this._storePage) return;
+        if (!this._overviewPage) return;
         GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
             try {
-                window.set_visible_page(this._storePage);
+                window.set_visible_page(this._overviewPage);
             } catch (e) {
                 logError(e, "[widget-center] prefs: showStorePage() failed");
             }
